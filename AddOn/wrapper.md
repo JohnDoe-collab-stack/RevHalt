@@ -1,15 +1,6 @@
-# On_the_side: Experimental Modules
+# Wrapper Architecture
 
-This folder contains **experimental modules** that extend the RevHalt framework
-with profile-based classification and quantitative invariants.
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `RevHaltDelta.lean` | Finite halting counters (countTrue, allTrue, deltaScaled) and DR0/DR1 theorems |
-| `Profiles.lean` | Cut×Bit classification grid (CutRank, BitRank, NumberKind, NumberProfile) |
-| `ProfilesOmega.lean` | Links profiles to Ω via Kolmogorov complexity K |
+This document explains how the `ProfilesOmega` module simplifies understanding of the wrapper in `ChaitinOmega`.
 
 ---
 
@@ -28,7 +19,7 @@ with profile-based classification and quantitative invariants.
 │           ▼                      ▼                      ▼                   │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
 │  │  CutRank        │    │  BitRank        │    │  codeLength     │         │
-│  │  {local, ilm}   │    │  {local,transcend}   │  (ℕ)            │         │
+│  │  {local, ilm}   │    │ {local,transcend}│   │  (ℕ)            │         │
 │  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘         │
 │           │                      │                      │                   │
 │           └──────────┬───────────┴──────────────────────┘                   │
@@ -109,21 +100,7 @@ theorem omegaBitRank_is_transcend_because_K_random :
 | Component | Responsibility | File |
 |-----------|----------------|------|
 | T1/T2/T3 | Cut axis (internal decidability) | `RevHalt.lean` |
-| K, OmegaPrefix | Bit axis (complexity) | `ChaitinOmega.lean` |
-| Wrapper | Bridge bit-local → short program | `ConcreteUniversal.lean` |
-| Profiles | Cut×Bit vocabulary | `Profiles.lean` |
-| ProfilesOmega | Anchor K → BitRank | `ProfilesOmega.lean` |
-
----
-
-## Building
-
-These files are not in the main Lake build path. To compile:
-
-```bash
-lake env lean On_the_side/RevHaltDelta.lean
-lake env lean On_the_side/Profiles.lean
-lake env lean On_the_side/ProfilesOmega.lean
-```
-
-All files compile without errors or `sorry`.
+| K, OmegaPrefix | Bit axis (complexity) | `AddOn/ChaitinOmega.lean` |
+| Wrapper | Bridge bit-local → short program | `AddOn/ConcreteUniversalMachine.lean` |
+| Profiles | Cut×Bit vocabulary | `AddOn/Profiles.lean` |
+| ProfilesOmega | Anchor K → BitRank | `AddOn/ProfilesOmega.lean` |
