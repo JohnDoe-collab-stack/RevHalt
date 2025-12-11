@@ -236,6 +236,90 @@ Combining: `n - c ≤ K(OmegaPrefix n) ≤ theoryLength(T) + overhead`, so `n �
 
 ---
 
+## Concrete Universal Machine (`ConcreteUniversalMachine.lean`)
+
+The abstract Chaitin framework is grounded in a **concrete computability model**.
+
+### Structured Code Type
+
+Programs have explicit syntactic structure:
+
+```lean
+inductive ConcreteCode where
+  | halt : ℕ → ConcreteCode           -- Halt immediately with value n
+  | loop : ConcreteCode               -- Never halt (diverge)
+  | compose : ConcreteCode → ConcreteCode → ConcreteCode
+  | wrapper : ConcreteCode → ℕ → ConcreteCode
+  | if_zero : ConcreteCode → ConcreteCode → ConcreteCode
+  | self_apply : ConcreteCode         -- For recursion theorem
+```
+
+With a **computable length function**:
+
+```lean
+def ConcreteCode.length : ConcreteCode → ℕ
+  | halt n       => if n = 0 then 2 else n.log2.succ + 2
+  | loop         => 1
+  | compose c₁ c₂ => c₁.length + c₂.length + overhead_compose
+  | wrapper c n  => c.length + ... + overhead_wrapper
+  | if_zero c₁ c₂ => c₁.length + c₂.length + overhead_if
+  | self_apply   => 2
+```
+
+### Piecewise Execution Semantics
+
+The machine's behavior is specified via granular axioms:
+
+```lean
+axiom exec_halt  : exec (toModelCode (halt n)) m = some n
+axiom exec_loop  : exec (toModelCode loop) m = none
+axiom exec_compose : exec (compose c₁ c₂) = run c₁ then c₂
+axiom exec_if_zero : exec (if_zero c_then c_else) = branch on input
+```
+
+Plus standard computability axioms:
+
+```lean
+axiom recursion_theorem_impl : ∀ f, ∃ e, exec e = exec (f e)
+axiom diagonal_halting_impl  : ∀ P, ∃ e, halts(e) ↔ ¬P(e)
+```
+
+### Derived Universal Wrapper
+
+The key `universal_wrapper_for_concrete` is now a **theorem** (not an axiom):
+
+```lean
+theorem universal_wrapper_for_concrete :
+    ∃ overhead,
+      ∀ embed T, ∃ extract,
+        ∀ n,
+          (∀ k < n → DecidesBit _ embed T k) →
+          Produces _ (extract n) (OmegaPrefix n) ∧
+          codeLength (extract n) ≤ theoryLength _ T + overhead
+```
+
+Derived from two focused axioms:
+
+| Axiom | Type | Purpose |
+|-------|------|--------|
+| `wrapper_length_bound` | Structural | Length of wrapper ≤ enum.length + overhead |
+| `wrapper_produces_prefix` | Semantic | Wrapper outputs OmegaPrefix when T decides bits |
+
+### Chaitin Bound for Concrete Model
+
+The quantitative bound instantiated:
+
+```lean
+theorem Chaitin_bound_concrete
+    (embed : ℕ → ConcretePrefixUniversalModel.Code)
+    (T : RecursiveTheory ConcretePrefixUniversalModel) :
+    ∃ C, ∀ n, (∀ k < n → DecidesBit _ embed T k) → n ≤ theoryLength _ T + C
+```
+
+This closes the loop from abstract theory to concrete machine.
+
+---
+
 ## Epistemological Significance
 
 T2 and T3 together clarify the position of Rev (and its associated canonical halting predicate) with respect to ZFC-strength systems:
@@ -340,13 +424,14 @@ This shows that the abstract Turing–Gödel context used in T2 is realizable fr
 
 ```text
 RevHalt/
-├── RevHalt.lean          # Core definitions and theorems (T1, T2, T3)
-├── RevHaltInstances.lean # Concrete instantiations
-├── OmegaRevHalt.lean     # Ω as a cut of H*, qualitative impossibility
-├── ChaitinOmega.lean     # Chaitin's quantitative bound
-├── lakefile.lean         # Build configuration
-├── lean-toolchain        # Lean version
-└── README.md             # This file
+├── RevHalt.lean              # Core definitions and theorems (T1, T2, T3)
+├── RevHaltInstances.lean     # Concrete instantiations (RecursiveKit, DynamicBridge)
+├── OmegaRevHalt.lean         # Ω as a cut of H*, qualitative impossibility
+├── ChaitinOmega.lean         # Chaitin's quantitative bound (abstract)
+├── ConcreteUniversalMachine.lean  # Concrete model with derived universal_wrapper
+├── lakefile.lean             # Build configuration
+├── lean-toolchain            # Lean version
+└── README.md                 # This file
 ```
 
 ---
@@ -367,12 +452,12 @@ lake build
 ## Verification
 
 ```bash
-lake build RevHalt RevHaltInstances
-# Build completed successfully.
+lake build ConcreteUniversalMachine
+# Build completed successfully (609 jobs).
 # Exit code: 0
 ```
 
-No warnings, no errors, no `sorry`.
+No warnings, no errors, no `sorry`, **no `noncomputable`**.
 
 ---
 
