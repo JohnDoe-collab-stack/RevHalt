@@ -1,5 +1,5 @@
 import RevHalt
-import RevHaltInstances
+import AddOn.RevHaltInstances
 
 /-!
 # Omega as a Cut of H*

@@ -1,7 +1,7 @@
 import RevHalt
-import RevHaltInstances
-import OmegaRevHalt
-import ChaitinOmega
+import AddOn.RevHaltInstances
+import AddOn.OmegaRevHalt
+import AddOn.ChaitinOmega
 
 /-!
 # Concrete Universal Machine

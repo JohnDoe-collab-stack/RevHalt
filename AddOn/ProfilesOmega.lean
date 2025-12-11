@@ -1,6 +1,6 @@
-import Profiles
-import ChaitinOmega
-import OmegaRevHalt
+import AddOn.Profiles
+import AddOn.ChaitinOmega
+import AddOn.OmegaRevHalt
 
 /-!
 # ProfilesOmega: Linking Profiles to Ω and Kolmogorov Complexity

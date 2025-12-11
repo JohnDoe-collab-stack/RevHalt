@@ -1,6 +1,6 @@
 import RevHalt
-import RevHaltInstances
-import OmegaRevHalt
+import AddOn.RevHaltInstances
+import AddOn.OmegaRevHalt
 import Mathlib.Data.Finset.Card
 
 /-!
