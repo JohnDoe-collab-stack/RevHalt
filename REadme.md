@@ -1,6 +1,3 @@
-Voici une version légèrement resserrée et corrigée, sans changer le contenu mathématique ni le ton général.
-
-````markdown
 # RevHalt: Formal Verification of Reverse-Halting Theory
 
 A Lean 4 formalization of the **Reverse-Halting (Rev)** framework, establishing canonicity, impossibility, and complementarity theorems for search-theoretic verification.
