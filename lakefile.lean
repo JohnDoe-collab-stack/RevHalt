@@ -16,3 +16,5 @@ lean_lib "RevHalt" where
 lean_lib "RevHaltInstances" where
 
 lean_lib "OmegaRevHalt" where
+
+lean_lib "ChaitinOmega" where
