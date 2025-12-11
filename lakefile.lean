@@ -22,3 +22,7 @@ lean_lib "ChaitinOmega" where
 lean_lib "ConcreteUniversalMachine" where
 
 lean_lib "RevHaltDelta" where
+
+lean_lib "Profiles" where
+
+lean_lib "ProfilesOmega" where
