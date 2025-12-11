@@ -102,6 +102,22 @@ theorem T3_strong ... (indep : InfiniteIndependentHalting Code PropT ctx)
 
 ---
 
+## Epistemological Significance
+
+T2 and T3 together establish that **Rev is complementary to any ZFC-strength system**:
+
+| Theorem | Implication |
+|---------|-------------|
+| **T2** | Formal systems (ZFC, PA) are inherently incomplete on halting |
+| **T3** | Rev, as external truth, can always extend any sound theory |
+
+This formalizes the relationship between **provability** (internal) and **truth** (external):
+formal systems approximate Rev without ever fully capturing it.
+
+Rev is not a competitor to ZFC — it is its **epistemic complement**.
+
+---
+
 ## Concrete Instances (`RevHaltInstances.lean`)
 
 ### RecursiveKit

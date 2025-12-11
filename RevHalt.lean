@@ -13,10 +13,21 @@ import Mathlib.Order.Disjoint
 This file implements the core definitions and theorems for the RevHalt project, derived from the
 Reverse-Halting (Rev) operator and its applications to verification and incompleteness.
 
-We establish three main results:
-* **T1**: Canonicity of Rev (it captures exactly the Halting property under mild assumptions).
-* **T2**: Impossibility of internalizing this specific Halting predicate (Godel/Turing obstruction).
-* **T3**: Foundation for complementarity (sound theories as partial views).
+## Main Results
+
+* **T1 (Canonicity)**: Rev captures exactly the Halting property under mild assumptions.
+* **T2 (Impossibility)**: No sound formal system can internally decide all halting questions.
+* **T3 (Complementarity)**: Sound theories are partial views of truth; Rev provides extensions.
+
+## Epistemological Significance
+
+T2 and T3 together establish that Rev is **complementary** to any ZFC-strength system:
+
+* T2 shows that formal systems (ZFC, PA, etc.) are inherently incomplete on halting.
+* T3 shows that Rev, as external truth, can always extend any sound theory.
+
+This formalizes the relationship between provability (internal) and truth (external):
+formal systems approximate Rev without ever fully capturing it.
 
 -/
 
