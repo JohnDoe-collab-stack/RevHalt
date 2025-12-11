@@ -50,10 +50,10 @@ structure PrefixUniversalModel extends ComputabilityModel where
 variable (U : PrefixUniversalModel)
 
 /--
-  Output type for programs: we use ℕ for simplicity.
-  In a full development, this would be List Bool or similar.
+  Output type for programs: we use ℕ as a binary encoding.
+  The natural number n encodes a binary string via its binary representation.
 -/
-def Output := ℕ
+abbrev Output := ℕ
 
 /--
   A program produces an output if it halts with that value.
@@ -81,25 +81,36 @@ axiom K_achievable (U : PrefixUniversalModel) :
   ∀ x : Output, ∃ e : U.Code, Produces U e x ∧ U.codeLength e = K U x
 
 -- ==============================================================================================
--- 3. Omega Prefix Encoding
+-- 3. Omega Prefix Encoding (axiomatized to avoid noncomputable)
 -- ==============================================================================================
 
 variable (embed : ℕ → U.Code)
 
 /--
-  Encode the first n bits of Ω as a natural number.
-  OmegaPrefix n represents the tuple (Ω(0), Ω(1), ..., Ω(n-1)).
+  OmegaPrefix n encodes the first n bits of Ω as a natural number.
+
+  Semantically, OmegaPrefix n = Σᵢ (Ω(i) * 2^i) for i = 0 to n-1,
+  where Ω(i) = 1 iff embed(i) halts.
+
+  This is axiomatized rather than defined because computing it would
+  require deciding halting, which would make it noncomputable.
 -/
-def OmegaPrefix (_ : PrefixUniversalModel) (n : ℕ) : Output :=
-  n  -- Simplified: we use n as a proxy for the actual prefix encoding
+axiom OmegaPrefix : ℕ → Output
+
+/--
+  Axiom: The k-th bit of OmegaPrefix n (when k < n) corresponds to OmegaBit.
+  This links the axiomatized OmegaPrefix to the propositional OmegaBit.
+-/
+axiom OmegaPrefix_bit_spec :
+  ∀ n k, k < n →
+    (Nat.testBit (OmegaPrefix n) k = true ↔ Omega.OmegaBit U.toComputabilityModel embed k)
 
 /--
   Axiom: Ω is K-random. The Kolmogorov complexity of any prefix of Ω
   is at least its length minus a constant.
-  Note: This is parameterized by U since K and OmegaPrefix depend on it.
 -/
-axiom Omega_K_random (U : PrefixUniversalModel) :
-  ∃ c : ℕ, ∀ n : ℕ, K U (OmegaPrefix U n) ≥ n - c
+axiom Omega_K_random' (U : PrefixUniversalModel) (embed : ℕ → U.Code) :
+  ∃ c : ℕ, ∀ n : ℕ, K U (OmegaPrefix n) ≥ n - c
 
 -- ==============================================================================================
 -- 4. Recursive Theory (enriched with encode/enum_spec)
@@ -170,7 +181,7 @@ axiom universal_wrapper (U : PrefixUniversalModel) :
       ∃ extract : ℕ → U.Code,
         ∀ n,
           (∀ k, k < n → DecidesBit U embed T k) →
-          Produces U (extract n) (OmegaPrefix U n) ∧
+          Produces U (extract n) (OmegaPrefix n) ∧
           U.codeLength (extract n) ≤ theoryLength U T + overhead
 
 -- ==============================================================================================
@@ -197,7 +208,7 @@ structure PrefixExtractor (U : PrefixUniversalModel)
   extract_spec :
     ∀ n,
       (∀ k, k < n → DecidesBit U embed T k) →
-      Produces U (extract n) (OmegaPrefix U n) ∧
+      Produces U (extract n) (OmegaPrefix n) ∧
       U.codeLength (extract n) ≤ theoryLength U T + overhead
 
 /--
@@ -235,7 +246,7 @@ theorem Chaitin_bound_on_Omega_prefix
       (∀ k, k < n → DecidesBit U embed T k) →
       n ≤ theoryLength U T + C := by
   -- Get the K-randomness constant
-  obtain ⟨c_random, h_random⟩ := Omega_K_random U
+  obtain ⟨c_random, h_random⟩ := Omega_K_random' U embed
   -- The bound is: overhead from extractor + K-randomness constant
   refine ⟨E.overhead + c_random, ?_⟩
   intro n h_dec
@@ -243,11 +254,11 @@ theorem Chaitin_bound_on_Omega_prefix
   have h_extract := E.extract_spec n h_dec
   obtain ⟨h_prod, h_len⟩ := h_extract
   -- 2. Upper bound: K(OmegaPrefix n) ≤ codeLength(extract n) ≤ theoryLength T + overhead
-  have hK_upper : K U (OmegaPrefix U n) ≤ theoryLength U T + E.overhead := by
-    have hK_le := K_upper_bound U (E.extract n) (OmegaPrefix U n) h_prod
+  have hK_upper : K U (OmegaPrefix n) ≤ theoryLength U T + E.overhead := by
+    have hK_le := K_upper_bound U (E.extract n) (OmegaPrefix n) h_prod
     exact le_trans hK_le h_len
   -- 3. Lower bound: K(OmegaPrefix n) ≥ n - c_random
-  have hK_lower : n - c_random ≤ K U (OmegaPrefix U n) := h_random n
+  have hK_lower : n - c_random ≤ K U (OmegaPrefix n) := h_random n
   -- 4. Combine: n - c_random ≤ theoryLength T + overhead
   have h_combined : n - c_random ≤ theoryLength U T + E.overhead :=
     le_trans hK_lower hK_upper
