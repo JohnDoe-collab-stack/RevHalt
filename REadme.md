@@ -317,7 +317,7 @@ If you use this work, please cite:
 RevHalt: A Lean 4 Formalization of Reverse-Halting Theory
 ```
 
-(Author and year to be filled in when published.)
+John Doe, December 12 2025
 
 ---
 
