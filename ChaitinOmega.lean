@@ -211,20 +211,6 @@ structure PrefixExtractor (U : PrefixUniversalModel)
       Produces U (extract n) (OmegaPrefix n) ∧
       U.codeLength (extract n) ≤ theoryLength U T + overhead
 
-/--
-  **PrefixExtractor_instance**: Construct a PrefixExtractor from the universal_wrapper axiom.
-  Uses Classical.choose to extract witnesses from existentials.
--/
-noncomputable def PrefixExtractor_instance
-    (U : PrefixUniversalModel)
-    (embed : ℕ → U.Code)
-    (T : RecursiveTheory U) :
-    PrefixExtractor U embed T :=
-  let overhead := Classical.choose (universal_wrapper U)
-  let h_wrapper := Classical.choose_spec (universal_wrapper U)
-  let extract := Classical.choose (h_wrapper embed T)
-  let h_extract := Classical.choose_spec (h_wrapper embed T)
-  ⟨overhead, extract, h_extract⟩
 
 -- ==============================================================================================
 -- 8. Chaitin's Bound (prefix version, no sorry)
@@ -283,7 +269,13 @@ theorem Chaitin_bound
     (T : RecursiveTheory U) :
     ∃ C : ℕ, ∀ n : ℕ,
       (∀ k, k < n → DecidesBit U embed T k) →
-      n ≤ theoryLength U T + C :=
-  Chaitin_bound_on_Omega_prefix U embed T (PrefixExtractor_instance U embed T)
+      n ≤ theoryLength U T + C := by
+  -- Obtain the extractor components from the axiom (inside proof = no noncomputable needed)
+  obtain ⟨overhead, h_wrapper⟩ := universal_wrapper U
+  obtain ⟨extract, h_extract⟩ := h_wrapper embed T
+  -- Construct the extractor structure inline
+  let E : PrefixExtractor U embed T := ⟨overhead, extract, h_extract⟩
+  -- Apply the Chaitin bound theorem for this extractor
+  exact @Chaitin_bound_on_Omega_prefix U embed T E
 
 end Chaitin

@@ -18,3 +18,5 @@ lean_lib "RevHaltInstances" where
 lean_lib "OmegaRevHalt" where
 
 lean_lib "ChaitinOmega" where
+
+lean_lib "ConcreteUniversalMachine" where
