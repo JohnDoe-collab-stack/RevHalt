@@ -41,16 +41,14 @@ def countTrue (N : ℕ) (T : Trace) [DecidablePred T] : ℕ :=
 def allTrue (N : ℕ) (T : Trace) : Prop :=
   ∀ k < N, T k
 
-/-- `allTrue` is decidable when we have a decidable predicate. -/
-instance allTrue_decidable (N : ℕ) (T : Trace) [DecidablePred T] : Decidable (allTrue N T) :=
-  decidable_of_iff (∀ k ∈ range N, T k) (by simp [allTrue, mem_range])
-
 /-- List-based version: equivalence between `allTrue` and a property on `range N`. -/
 lemma allTrue_iff_range (N : ℕ) (T : Trace) :
     allTrue N T ↔ ∀ k ∈ range N, T k := by
   simp [allTrue, mem_range]
 
-
+/-- `allTrue` is decidable when we have a decidable predicate. -/
+instance allTrue_decidable (N : ℕ) (T : Trace) [DecidablePred T] : Decidable (allTrue N T) :=
+  decidable_of_iff (∀ k ∈ range N, T k) (allTrue_iff_range N T).symm
 
 /-! ## 2. Delta scalar on a finite window -/
 
@@ -78,18 +76,24 @@ the case "everything halted" on the window.
 theorem DR0 (N : ℕ) (T : Trace) [DecidablePred T] :
     deltaScaled N T = 0 ↔ allTrue N T := by
   unfold deltaScaled
-  split_ifs with hAll
-  · -- Case: allTrue T N
+  constructor
+  · -- (→) if delta = 0 then allTrue
+    intro hδ
+    by_contra hNotAll
+    -- Under ¬allTrue, we are in the branch N + countTrue
+    have hsum : N + countTrue N T = 0 := by
+      simpa [hNotAll] using hδ
+    -- On ℕ, a + b = 0 ⇒ a = 0 ∧ b = 0
+    have hzero : N = 0 ∧ countTrue N T = 0 :=
+      Nat.add_eq_zero_iff.mp hsum
+    have hN0 : N = 0 := hzero.1
+    subst hN0
+    -- But allTrue 0 T is trivially true, contradiction
+    have : allTrue 0 T := by simp [allTrue]
+    exact hNotAll this
+  · -- (←) if allTrue then delta = 0
+    intro hAll
     simp [hAll]
-  · -- Case: ¬ allTrue T N
-    simp only [Nat.add_eq_zero_iff]
-    constructor
-    · intro ⟨hN0, _⟩
-      -- If N = 0, then allTrue 0 T is vacuously true
-      subst hN0
-      simp [allTrue]
-    · intro hAll'
-      exact absurd hAll' hAll
 
 /-! ## 4. DR1 : if not all true, then delta ≥ N -/
 
