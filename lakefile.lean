@@ -14,3 +14,5 @@ require "mathlib" from git
 lean_lib "RevHalt" where
 
 lean_lib "RevHaltInstances" where
+
+lean_lib "OmegaRevHalt" where
