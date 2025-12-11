@@ -277,5 +277,3 @@ theorem Chaitin_bound
   let E : PrefixExtractor U embed T := ⟨overhead, extract, h_extract⟩
   -- Apply the Chaitin bound theorem for this extractor
   exact @Chaitin_bound_on_Omega_prefix U embed T E
-
-end Chaitin
