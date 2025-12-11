@@ -9,11 +9,11 @@ A Lean 4 formalization of the **Reverse-Halting (Rev)** framework, establishing 
 
 This project formalizes three core theorems about the Rev predicate — a cumulative, observable counterpart to the classical Halting predicate:
 
-| Theorem | Statement                        | Status   |
-|---------|----------------------------------|----------|
-| **T1**  | Canonicity of Rev                | ✅ Proven |
-| **T2**  | Impossibility of Internalization | ✅ Proven |
-| **T3**  | Complementarity (Weak + Strong)  | ✅ Proven |
+| Theorem | Statement                        | Status |
+|---------|----------------------------------|--------|
+| **T1**  | Canonicity of Rev                | Proven |
+| **T2**  | Impossibility of Internalization | Proven |
+| **T3**  | Complementarity (Weak + Strong)  | Proven |
 
 All proofs are verified by the Lean 4 kernel with **no `sorry`** statements.
 
@@ -324,6 +324,3 @@ John Doe, December 12 2025
 ## License
 
 MIT License
-
-```
-```
