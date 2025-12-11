@@ -102,17 +102,25 @@ axiom Omega_K_random (U : PrefixUniversalModel) :
   ∃ c : ℕ, ∀ n : ℕ, K U (OmegaPrefix U n) ≥ n - c
 
 -- ==============================================================================================
--- 4. Recursive Theory
+-- 4. Recursive Theory (enriched with encode/enum_spec)
 -- ==============================================================================================
 
 /--
   A recursive theory is a theory whose theorems can be enumerated by a program.
+
+  The enriched version includes:
+  - `encode`: how to encode propositions as outputs
+  - `enum_spec`: the enumerator produces exactly the provable propositions
 -/
 structure RecursiveTheory where
   /-- The underlying Turing-Gödel context. -/
   ctx : TuringGodelContext' U.Code (HaltProp U.toComputabilityModel)
   /-- The code of the program that enumerates theorems. -/
   enumCode : U.Code
+  /-- Encoding of propositions as outputs. -/
+  encode : HaltProp U.toComputabilityModel → Output
+  /-- Specification: enumCode produces encoded versions of provable statements. -/
+  enum_spec : ∀ p, ctx.Provable p ↔ ∃ n, U.Program enumCode n = some (encode p)
   /-- Soundness: everything provable is true. -/
   sound : ∀ p, ctx.Provable p → HaltProvable U.toComputabilityModel p
 
@@ -142,7 +150,31 @@ def DecidableBits : Set ℕ :=
   { n | DecidesBit U embed T n }
 
 -- ==============================================================================================
--- 6. Prefix Extractor (the missing brick for Chaitin's proof)
+-- 6. Universal Wrapper Axiom
+-- ==============================================================================================
+
+/--
+  **Universal Wrapper Axiom**:
+  Given any recursive theory T, there exists a program schema that:
+  - Takes the enumerator of T
+  - For any n, if T decides all bits 0..n-1, produces OmegaPrefix n
+  - Has length bounded by theoryLength T + a fixed overhead
+
+  This axiom captures the "programmability" of the extraction process.
+  It could be derived from a more detailed model of computation, but
+  we axiomatize it here for modularity.
+-/
+axiom universal_wrapper (U : PrefixUniversalModel) :
+  ∃ overhead : ℕ,
+    ∀ (embed : ℕ → U.Code) (T : RecursiveTheory U),
+      ∃ extract : ℕ → U.Code,
+        ∀ n,
+          (∀ k, k < n → DecidesBit U embed T k) →
+          Produces U (extract n) (OmegaPrefix U n) ∧
+          U.codeLength (extract n) ≤ theoryLength U T + overhead
+
+-- ==============================================================================================
+-- 7. PrefixExtractor Instance (derived from universal_wrapper)
 -- ==============================================================================================
 
 /--
@@ -153,7 +185,6 @@ def DecidableBits : Set ℕ :=
   the prefix OmegaPrefix(n) with bounded overhead.
 
   This is the "program that extracts a prefix of Ω from T's proofs".
-  The actual construction of this extractor is deferred to a later phase.
 -/
 structure PrefixExtractor (U : PrefixUniversalModel)
     (embed : ℕ → U.Code) (T : RecursiveTheory U) where
@@ -169,8 +200,23 @@ structure PrefixExtractor (U : PrefixUniversalModel)
       Produces U (extract n) (OmegaPrefix U n) ∧
       U.codeLength (extract n) ≤ theoryLength U T + overhead
 
+/--
+  **PrefixExtractor_instance**: Construct a PrefixExtractor from the universal_wrapper axiom.
+  Uses Classical.choose to extract witnesses from existentials.
+-/
+noncomputable def PrefixExtractor_instance
+    (U : PrefixUniversalModel)
+    (embed : ℕ → U.Code)
+    (T : RecursiveTheory U) :
+    PrefixExtractor U embed T :=
+  let overhead := Classical.choose (universal_wrapper U)
+  let h_wrapper := Classical.choose_spec (universal_wrapper U)
+  let extract := Classical.choose (h_wrapper embed T)
+  let h_extract := Classical.choose_spec (h_wrapper embed T)
+  ⟨overhead, extract, h_extract⟩
+
 -- ==============================================================================================
--- 7. Chaitin's Bound (prefix version, no sorry)
+-- 8. Chaitin's Bound (prefix version, no sorry)
 -- ==============================================================================================
 
 /--
@@ -207,5 +253,26 @@ theorem Chaitin_bound_on_Omega_prefix
     le_trans hK_lower hK_upper
   -- 5. Convert to: n ≤ theoryLength T + overhead + c_random
   omega
+
+-- ==============================================================================================
+-- 9. Chaitin's Theorem (final standalone version)
+-- ==============================================================================================
+
+/--
+  **Chaitin's Theorem (Standalone):**
+  For any recursive theory T, there exists a constant C such that
+  if T decides all bits of Ω from 0 to n-1, then n ≤ theoryLength(T) + C.
+
+  This is the version that doesn't require the user to provide a PrefixExtractor;
+  it's derived automatically from the universal_wrapper axiom.
+-/
+theorem Chaitin_bound
+    (U : PrefixUniversalModel)
+    (embed : ℕ → U.Code)
+    (T : RecursiveTheory U) :
+    ∃ C : ℕ, ∀ n : ℕ,
+      (∀ k, k < n → DecidesBit U embed T k) →
+      n ≤ theoryLength U T + C :=
+  Chaitin_bound_on_Omega_prefix U embed T (PrefixExtractor_instance U embed T)
 
 end Chaitin
