@@ -2,6 +2,9 @@ import Mathlib.Data.Nat.Basic
 import Mathlib.Order.Basic
 import Mathlib.Logic.Basic
 import Mathlib.Order.Monotone.Basic
+import Mathlib.Data.Set.Basic
+import Mathlib.Logic.Function.Basic
+import Mathlib.Data.Finite.Defs
 
 /-!
 # RevHalt: Reverse Halting & Canonical Verification
@@ -139,10 +142,6 @@ theorem T1_semantics (K : RHKit) (hK : DetectsMonotone K)
 -- T2: Impossibility of Internalizing Rev (Abstract Turing-Godel)
 -- ==============================================================================================
 
--- ==============================================================================================
--- T2: Impossibility of Internalizing Rev (Abstract Turing-Godel)
--- ==============================================================================================
-
 /--
   Context for the impossibility result.
   Represents a computing system with:
@@ -207,3 +206,52 @@ theorem T2_impossibility {Code : Type} {PropT : Type} (ctx : TuringGodelContext'
     have hRealContradiction : ctx.RealHalts e := hImpliesReal hProvNotH
     -- Contradiction with hypothesis hReal
     exact hReal hRealContradiction
+
+-- ==============================================================================================
+-- T3: Complementarity
+-- ==============================================================================================
+
+/--
+  **T3.1: Weak Complementarity (Extension by Truth)**
+  Concept: Any sound theory T0 (representing a partial view of Truth) that is incomplete
+  can be extended to a stronger sound theory T1 by adding a true underlying fact.
+-/
+theorem T3_weak_extension {Code PropT : Type} (ctx : TuringGodelContext' Code PropT)
+    (Truth : PropT → Prop) -- Meta-level truth predicate
+    (_ : ∀ p, ctx.Provable p → Truth p) -- Base system is sound
+    (T0 : Set PropT) -- Initial theory
+    (h_T0_sound : ∀ p ∈ T0, Truth p) -- T0 consists only of truths
+    (p_undef : PropT)
+    (h_p_true : Truth p_undef) -- p is True
+    (_ : ¬ (ctx.Provable p_undef)) -- (Simplification: just needs to be consistent with T0)
+    : ∃ T1 : Set PropT, T0 ⊆ T1 ∧ (∀ p ∈ T1, Truth p) ∧ p_undef ∈ T1 := by
+  -- Construct T1 = T0 ∪ {p_undef}
+  let T1 := T0 ∪ {p_undef}
+  use T1
+  constructor
+  · -- T0 ⊆ T1
+    intro q hq
+    exact Set.mem_union_left {p_undef} hq
+  · constructor
+    · -- T1 is sound
+      intro q hq
+      cases hq with
+      | inl h_old => exact h_T0_sound q h_old
+      | inr h_new => rw [h_new]; exact h_p_true
+    · -- p_undef ∈ T1
+      exact Set.mem_union_right T0 rfl
+
+/--
+  **T3.2: Strong Complementarity (Framework for Disjoint Families)**
+  Requires the existence of infinitely many independent halting statements.
+  We axiomatize this capability.
+-/
+structure InfiniteIndependentHalting (Code PropT : Type) (ctx : TuringGodelContext' Code PropT) where
+  -- An infinite index set
+  Index : Type
+  InfiniteIndex : Infinite Index
+  -- A family of codes e_i
+  family : Index → Code
+  -- Independence placeholder (needs full logic formalization to be useful)
+  -- Here we simply require strict distinction in codes as a minimum.
+  distinct : Function.Injective family
