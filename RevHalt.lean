@@ -211,6 +211,14 @@ theorem T2_impossibility {Code : Type} {PropT : Type} (ctx : TuringGodelContext'
 -- T3: Complementarity
 -- ==============================================================================================
 
+/-
+  Refining the complementarity landscape:
+  * **T3-Weak** (Extension by Truth): Any sound partial theory can be strictly extended by
+    adding a true undecidable statement.
+  * **T3-Strong** (Disjoint Families): Relies on an infinite family of independent halting
+    instances to construct disjoint but complementary theories.
+-/
+
 /--
   **T3.1: Weak Complementarity (Extension by Truth)**
   Concept: Any sound theory T0 (representing a partial view of Truth) that is incomplete
