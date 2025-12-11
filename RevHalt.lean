@@ -1,6 +1,7 @@
 import Mathlib.Data.Nat.Basic
 import Mathlib.Order.Basic
 import Mathlib.Logic.Basic
+import Mathlib.Order.Monotone.Basic
 
 /-!
 # RevHalt: Reverse Halting & Canonical Verification
@@ -82,7 +83,8 @@ theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
   intro T
   unfold Rev0_K Rev_K
   -- 1. Apply DetectsMonotone to the trace (up T), which is monotone.
-  have h_equiv := hK (up T) (up_mono T)
+  have h_mono : Monotone (up T) := up_mono T
+  have h_equiv := hK (up T) h_mono
   rw [h_equiv]
   -- 2. Use the fact that ∃ n, up T n ↔ ∃ n, T n
   exact exists_up_iff T
@@ -129,16 +131,17 @@ theorem T1_semantics (K : RHKit) (hK : DetectsMonotone K)
     (hBridge : DynamicBridge Sat LR) :
     ∀ Γ φ, SemConsequences Sat Γ φ ↔ verdict_K LR K Γ φ := by
   intro Γ φ
+  unfold verdict_K
   rw [hBridge Γ φ]
   rw [T1_traces K hK]
-  rfl
 
 -- ==============================================================================================
 -- T2: Impossibility of Internalizing Rev (Abstract Turing-Godel)
 -- ==============================================================================================
 
-variable {Code : Type}
-variable {PropT : Type}
+-- ==============================================================================================
+-- T2: Impossibility of Internalizing Rev (Abstract Turing-Godel)
+-- ==============================================================================================
 
 /--
   Context for the impossibility result.
@@ -149,7 +152,7 @@ variable {PropT : Type}
   - `Provable`: an internal provability predicate
   - `diagonal_program`: the ability to construct self-referential sentences
 -/
-structure TuringGodelContext' where
+structure TuringGodelContext' (Code : Type) (PropT : Type) where
   RealHalts : Code → Prop
   Provable  : PropT → Prop
   FalseT    : PropT
@@ -168,7 +171,7 @@ structure TuringGodelContext' where
   2. Correct (if leads to Yes, it really halts).
   3. Complete (if leads to No, it really doesn't halt).
 -/
-structure InternalHaltingPredicate (ctx : TuringGodelContext' Code PropT) where
+structure InternalHaltingPredicate {Code : Type} {PropT : Type} (ctx : TuringGodelContext' Code PropT) where
   H : Code → PropT
   total    : ∀ e, ctx.Provable (H e) ∨ ctx.Provable (ctx.Not (H e))
   correct  : ∀ e, ctx.RealHalts e → ctx.Provable (H e)
@@ -179,8 +182,8 @@ structure InternalHaltingPredicate (ctx : TuringGodelContext' Code PropT) where
   There is no internal predicate I that is simultaneously Total, Correct, and Complete
   with respect to RealHalts.
 -/
-theorem T2_impossibility (ctx : TuringGodelContext' Code PropT) :
-    ¬ ∃ I : InternalHaltingPredicate ctx, True := by
+theorem T2_impossibility {Code : Type} {PropT : Type} (ctx : TuringGodelContext' Code PropT) :
+    ¬ ∃ _ : InternalHaltingPredicate ctx, True := by
   intro h
   obtain ⟨I, _⟩ := h
   -- 1. Construct the diagonal program e for the predicate I.H
