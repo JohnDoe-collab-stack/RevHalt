@@ -12,3 +12,5 @@ require "mathlib" from git
 
 @[default_target]
 lean_lib "RevHalt" where
+
+lean_lib "RevHaltInstances" where
