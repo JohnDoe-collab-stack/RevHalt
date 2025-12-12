@@ -60,7 +60,9 @@ This means:
 - Rev is not merely "bigger" than PA/ZFC — it is **what they lack**
 - Truth and provability are not opposed — they are **complementary**
 
-The theorem `T3_strong` proves that this complementarity is **rich**: there exist infinitely many disjoint directions of extension, not just one. Rev is a **structured source of completion**, not an amorphous "everything else".
+The theorem `T3_strong` proves that this complementarity is **structured and rich**. The space of true-but-unprovable statements is not an amorphous limiting void, but a **partitioned landscape**.
+
+We prove the existence of **infinitely many disjoint, compatible directions** of extension. This means that completing a theory is not a single forced step, but a **dynamical choice** — a navigation through the geography of computational truth.
 
 **This concept has no classical analog.** It transforms incompleteness from a limitative statement into a structural dynamical relationship.
 
