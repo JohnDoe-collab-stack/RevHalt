@@ -141,10 +141,16 @@ theorem LOmega_hard_beyond_bound_range (T : RecursiveTheory U) :
 /-! ## 5. Connection to BitRank -/
 
 /--
-The fact that LOmega bits beyond a certain index are undecidable
-is the complexity-theoretic manifestation of BitRank.transcend.
+The complexity barrier ultimately derives from K-randomness of Ω.
 
-Omega_K_random' (Ω is K-random) implies LOmega_hard_beyond_bound.
+**Conceptual chain**:
+1. `Omega_K_random'` (axiom): K(OmegaPrefix n) ≥ n - c
+2. `Chaitin_bound` (theorem): uses K-randomness to show n ≤ theoryLength(T) + C
+3. `Chaitin_complexity_barrier` (this file): reformulation in complexity terms
+
+This lemma makes the dependency explicit in its hypothesis, though in our
+axiomatization, `Chaitin_bound` already internally relies on `Omega_K_random'`.
+The hypothesis is kept for conceptual clarity: it shows *why* the barrier exists.
 -/
 theorem K_random_implies_complexity_barrier :
     (∃ c : ℕ, ∀ n : ℕ, K U (OmegaPrefix n) ≥ n - c) →
@@ -153,6 +159,8 @@ theorem K_random_implies_complexity_barrier :
         TheoryDecidesBitRange U embed T n →
         n ≤ theoryLength U T + C := by
   intro _hKRandom T
+  -- Note: _hKRandom represents the K-randomness assumption, which is
+  -- already axiomatized as Omega_K_random' and used inside Chaitin_bound.
   exact Chaitin_complexity_barrier U embed T
 
 /-! ## 6. ProfiledOmega: The Canonical Hard Language -/

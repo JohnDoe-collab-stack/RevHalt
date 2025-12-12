@@ -201,7 +201,7 @@ The research program connecting Rev/Ω/K/Profiles to P/NP:
 
 2. **Bridge results** (in OmegaComplexity):
    - Chaitin_complexity_barrier
-   - LOmega_hard_beyond_bound (with sorry for cumulative decidability)
+   - LOmega_prefix_undecidable, LOmega_hard_beyond_bound_range
 
 3. **Conjectures** (research directions):
    - P_NP_separation_conjecture : P_rev ≠ NP_rev
