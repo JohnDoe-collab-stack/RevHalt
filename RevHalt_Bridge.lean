@@ -16,16 +16,15 @@ Retrieved from previous improvements and adapted for SoundLogicEncoded.
 -/
 theorem strict_extension_sound {Code PropT : Type} (ctx : EnrichedContext Code PropT)
     (h_sound : ∀ p, ctx.Provable p → ctx.Truth p) :
-    ∃ T1 : Set PropT, {p | ctx.Provable p} ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p) := by
+    ∃ T1 : Set PropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p) := by
   obtain ⟨p, h_true, h_not_prov⟩ := true_but_unprovable_exists ctx
-  let T0 := {q : PropT | ctx.Provable q}
-  have h_sound_T0 : ∀ q ∈ T0, ctx.Truth q := fun q hq => h_sound q hq
-  have h_fresh : p ∉ T0 := h_not_prov
-  use T0 ∪ {p}
+  have h_sound_T0 : ∀ q ∈ ProvableSet ctx, ctx.Truth q := fun q hq => h_sound q hq
+  have h_fresh : p ∉ ProvableSet ctx := h_not_prov
+  use ProvableSet ctx ∪ {p}
   constructor
   · constructor
     · exact Set.subset_union_left
-    · intro h_eq; exact h_fresh (h_eq (Set.mem_union_right T0 rfl))
+    · intro h_eq; exact h_fresh (h_eq (Set.mem_union_right (ProvableSet ctx) rfl))
   · intro q hq
     rcases hq with h_in | h_eq
     · exact h_sound_T0 q h_in
@@ -59,9 +58,9 @@ def EnrichedContext_from_Encoded
     H := L.HaltEncode
     h_truth_H := by
       intro e
-      -- Bridge: RealHalts -> rmCompile -> RMHalts -> Truth(HaltEncode)
-      -- Use dsimp to unfold RealHalts definition from TGContext_from_RM
-      dsimp [ctxTG, TGContext_from_RM]
+      -- Robust proof: explicitly change goal to underlying definition
+      -- ctxTG.RealHalts e = Rev0_K K (rmCompile M e)
+      change Rev0_K K (rmCompile M e) ↔ L.Truth (L.HaltEncode e)
       rw [T1_traces K hK (rmCompile M e)]
       rw [rm_compile_halts_equiv M e]
       exact L.encode_correct e
@@ -79,7 +78,7 @@ theorem RealHalts_eq_Halts
     let ctx := EnrichedContext_from_Encoded M K hK L
     ∀ e, ctx.RealHalts e ↔ Halts (rmCompile M e) := by
   intro ctx e
-  exact T1_traces K hK (rmCompile M e)
+  simpa using (T1_traces K hK (rmCompile M e))
 
 /--
 **FINAL COMPLETE MASTER THEOREM**
@@ -96,18 +95,24 @@ theorem RevHalt_Master_Complete
     (K : RHKit) (hK : DetectsMonotone K)
     (L : SoundLogicEncoded M PropT) :
     let ctx := EnrichedContext_from_Encoded M K hK L
+    -- (1) T1 equivalent: RealHalts matches Model Execution
+    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile M e)) ∧
+    -- (2) T2: True w/o Proof
     (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
+    -- (3) T2': Independence
     (∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e))) ∧
-    (∃ T1 : Set PropT, {p | ctx.Provable p} ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
+    -- (4) T3: Strict Sound Extension
+    (∃ T1 : Set PropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
   let ctx := EnrichedContext_from_Encoded M K hK L
-  refine ⟨?_, ?_, ?_⟩
-  · -- (1) True but unprovable (T2)
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · -- (1) T1
+    intro e
+    exact T1_traces K hK (rmCompile M e)
+  · -- (2) T2
     exact true_but_unprovable_exists ctx
-  · -- (2) Independence (T2')
-    -- Pass L.soundness as the required hypothesis
+  · -- (3) T2'
     exact independent_code_exists ctx L.soundness
-  · -- (3) Strict Sound Extension (T3)
-    -- Pass L.soundness to strict_extension_sound
+  · -- (4) T3
     obtain ⟨T1, h_strict, h_sound⟩ := strict_extension_sound ctx L.soundness
     use T1, h_strict, h_sound
 
