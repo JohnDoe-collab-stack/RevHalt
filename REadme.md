@@ -66,7 +66,7 @@ The framework establishes a precise correspondence:
 | RevHalt (syntax) | Instance L (semantics) |
 |------------------|------------------------|
 | `RMHalts e` — halting defined by the computability model | `L.Truth (HaltEncode e)` — truth as seen by the theory |
-| `M.PredDef` — definability in the abstract model | `L.Provable` — derivability in the theory |
+| `M.PredDef` — definability in the abstract model | `L.Provable` via arithmetization — derivability as seen by the theory |
 | Diagonalization (`diagonal_halting`) | Arithmetization (`repr_provable_not`) |
 
 The theorems then express structural gaps between syntactic truth and semantic observability:
