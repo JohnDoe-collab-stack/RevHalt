@@ -83,17 +83,46 @@ structure ProfiledLanguage (α : Type) where
 
 /-! ## 3. Canonical Profile Families -/
 
-/-- Profile for "easy" languages: local on all axes. -/
+/--
+Profile for "easy" languages: local on all axes.
+Example archetype: constant languages, membership tests for finite sets.
+-/
 def easyProfile : LanguageProfile :=
   { cutRank := .local, bitRank := .local, timeRank := .poly }
 
-/-- Profile for NP-like languages: poly verification but not decision. -/
+/--
+Profile for NP-like languages: poly verification but not (known) decision.
+Example archetype: SAT, CLIQUE, factoring products of two primes.
+-/
 def npLikeProfile : LanguageProfile :=
   { cutRank := .local, bitRank := .local, timeRank := .superPoly }
 
-/-- Profile for Omega-derived languages: hard on all axes. -/
+/--
+Profile for Omega-derived languages: hard on all axes.
+Example archetype: `LOmega` (queries on Chaitin's Ω bits).
+-/
 def omegaDerivedProfile : LanguageProfile :=
   { cutRank := .ilm, bitRank := .transcend, timeRank := .superPoly }
+
+/-! ## 3b. Concrete ProfiledLanguage Examples -/
+
+/--
+The trivial always-true language with easy profile.
+This is in P_rev (proven in `true_lang_in_P`).
+-/
+def profiledTrivialTrue : ProfiledLanguage Unit :=
+  { L := fun _ => True
+    size := fun _ => 0
+    profile := easyProfile }
+
+/--
+The trivial always-false language with easy profile.
+This is in P_rev (proven in `false_lang_in_P`).
+-/
+def profiledTrivialFalse : ProfiledLanguage Unit :=
+  { L := fun _ => False
+    size := fun _ => 0
+    profile := easyProfile }
 
 /-! ## 4. The P_rev and NP_rev Classes -/
 

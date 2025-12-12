@@ -48,7 +48,26 @@ inductive BitRank
 
 /--
 Abstract 4-way classification where each kind is a point in the
-(CutRank × BitRank) grid. This is agnostic to concrete objects.
+(CutRank × BitRank) grid.
+
+**Conceptual examples** (from classical mathematics):
+
+* `intLike` — (local, local): Integers, rationals, computable algebraic numbers.
+  Both their cuts and their bits are finitely describable.
+  Example: 42, 3/7, √2 (as a computable real).
+
+* `irrationalLike` — (ilm, local): Irrationals requiring infinite approximation
+  on the cut axis, but with compressible bit patterns.
+  Example: Classical irrationals like √2, ∛3 (viewed non-constructively).
+
+* `transcendLike` — (local, transcend): Numbers whose cut membership is
+  locally decidable, but whose bits are incompressible/random.
+  Example: Computable transcendentals like e, π (their bits are determined
+  but not compressible below their length).
+
+* `omegaLike` — (ilm, transcend): The hardest class. Both cut membership
+  requires infinite approximation AND bits are K-random/incompressible.
+  Example: Chaitin's Ω. This is the canonical prototype for this class.
 -/
 inductive NumberKind
   | intLike        -- (local, local)
