@@ -57,7 +57,7 @@ lemma toy_no_complement_halts :
   have h_not_halt1 : ¬∃ n, (toyProgram (1 : ToyCode) n).isSome := by
     simp [toyProgram]
   have hFalse : toyPredDef pc (1 : ToyCode) := (hpc 1).2 h_not_halt1
-  simpa [toyPredDef] using hFalse
+  simp [toyPredDef] at hFalse
 
 -- 4. Construct RigorousModel with PROOFS (no axioms)
 def ToyModel : RigorousModel where
