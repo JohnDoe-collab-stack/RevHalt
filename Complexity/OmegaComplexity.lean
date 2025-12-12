@@ -103,31 +103,38 @@ theorem LOmega_not_uniformly_in_inP :
   Chaitin_complexity_barrier U embed
 
 /--
-**Corollary**: The "difficulty" of LOmega grows with the index k.
+**Corollary**: The "difficulty" of LOmega grows with the prefix length.
 
-For indices k > theoryLength(T) + C, theory T cannot decide
-whether (k, true) or (k, false) is in LOmega.
+For any theory T, there exists a bound C such that T cannot decide
+**all** bits 0..k-1 when k > theoryLength(T) + C.
 
-This gives a concrete sense in which LOmega is "hard" for any fixed T.
+This is the direct contrapositive of Chaitin's bound.
 -/
-theorem LOmega_hard_beyond_bound (T : RecursiveTheory U) :
+theorem LOmega_prefix_undecidable (T : RecursiveTheory U) :
     ∃ C : ℕ, ∀ k : ℕ,
       k > theoryLength U T + C →
-      ¬ DecidesBit U embed T k := by
+      ¬ TheoryDecidesBitRange U embed T k := by
   obtain ⟨C, hC⟩ := Chaitin_complexity_barrier U embed T
-  refine ⟨C, fun k hk hDec => ?_⟩
-  -- If T decides bit k, then by monotonicity it decides bits 0..k
-  -- But then k+1 ≤ theoryLength(T) + C, contradiction with k > theoryLength(T) + C
-  have hRange : TheoryDecidesBitRange U embed T (k + 1) := by
-    intro j hj
-    by_cases hjk : j < k
-    · -- For j < k, we need T decides bit j
-      -- This requires additional structure; we use sorry here
-      sorry -- Would need cumulative decidability assumption
-    · -- j = k
-      have : j = k := Nat.eq_of_lt_succ_of_not_lt hj hjk
-      rw [this]
-      exact hDec
+  refine ⟨C, fun k hk hRange => ?_⟩
+  have hBound := hC k hRange
+  omega
+
+/--
+**Corollary (Single Bit Version)**:
+
+If a theory T decides all bits up to and including k, then k is bounded.
+Equivalently: for large enough k, T fails to decide the full prefix [0,k].
+
+Note: This does NOT say T fails to decide bit k alone; it says T fails
+to decide the *entire range* [0,k). The distinction matters because
+a theory might "guess" isolated bits without properly deciding them.
+-/
+theorem LOmega_hard_beyond_bound_range (T : RecursiveTheory U) :
+    ∃ C : ℕ, ∀ k : ℕ,
+      TheoryDecidesBitRange U embed T (k + 1) →
+      k ≤ theoryLength U T + C := by
+  obtain ⟨C, hC⟩ := Chaitin_complexity_barrier U embed T
+  refine ⟨C, fun k hRange => ?_⟩
   have hBound := hC (k + 1) hRange
   omega
 
