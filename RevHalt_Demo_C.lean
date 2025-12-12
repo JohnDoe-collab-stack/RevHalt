@@ -55,15 +55,8 @@ def toyHaltEncode : ToyCode → ToyPropT := fun e => if e = 0 then 0 else 1
 
 lemma toy_truth_not_iff : ∀ p, toyTruth (toyNot p) ↔ ¬ toyTruth p := by
   intro p
-  simp [toyTruth, toyNot]
-  rw [Nat.add_mod]
-  rcases Nat.mod_two_eq_zero_or_one p with h | h
-  · -- Case p%2 = 0 (Even)
-    rw [h]
-    simp
-  · -- Case p%2 = 1 (Odd)
-    rw [h]
-    simp
+  rcases Nat.mod_two_eq_zero_or_one p with hp | hp <;>
+    simp [toyTruth, toyNot, Nat.add_mod, hp]
 
 -- Logic Lemmas
 lemma toy_soundness : ∀ p, toyProvable p → toyTruth p := by
@@ -77,45 +70,52 @@ lemma toy_consistent : ¬toyProvable toyFalse := by
 
 lemma toy_absurd : ∀ p, toyProvable p → toyProvable (toyNot p) → toyProvable toyFalse := by
   intro p hp hnp
-  simp [toyProvable] at *
+  -- unfold goal/assumptions: Provable q := q=0, False := 1
+  dsimp [toyProvable, toyFalse] at *
   subst hp
+  -- hnp : toyNot 0 = 0, but toyNot 0 = 1, so hnp is exactly the goal 1=0
   simp [toyNot] at hnp
-  -- hnp : 0+1=0 -> False. simp closes it?
 
 -- Model Coherence
-lemma toy_diagonal_halting : ∀ pc : ToyPredCode, ∃ e : ToyCode, (∃ n, (toyProgram e n).isSome) ↔ toyPredDef pc e := by
+lemma toy_diagonal_halting :
+  ∀ pc : ToyPredCode, ∃ e : ToyCode, (∃ n, (toyProgram e n).isSome) ↔ toyPredDef pc e := by
   intro pc
-  rcases pc with _ | _ | _ | n <;> try simp [toyPredDef]
-  · -- Case 0: False. Need e s.t. Halt(e) <-> False. Pick e=1.
-    use 1
-    simp [toyProgram]
-  · -- Case 1: True. Need e s.t. Halt(e) <-> True. Pick e=0.
-    use 0
-    simp [toyProgram]
-  · -- Case 2: e=0. Need e s.t. Halt(e) <-> e=0. Pick e=0.
-    use 0
-    simp [toyProgram]
-  · -- Case 3+: False. Pick e=1.
-    use 1
-    simp [toyProgram]
+  cases pc with
+  | zero =>
+      refine ⟨1, by simp [toyProgram, toyPredDef]⟩
+  | succ pc =>
+      cases pc with
+      | zero =>
+          refine ⟨0, by simp [toyProgram, toyPredDef]⟩
+      | succ pc =>
+          cases pc with
+          | zero =>
+              refine ⟨0, by simp [toyProgram, toyPredDef]⟩
+          | succ n =>
+              refine ⟨1, by simp [toyProgram, toyPredDef]⟩
 
 lemma toy_non_halting : ¬∃ n, (toyProgram 1 n).isSome := by
   simp [toyProgram]
 
 lemma toy_no_complement_halts :
   ¬∃ pc : ToyPredCode, ∀ e, toyPredDef pc e ↔ ¬∃ n, (toyProgram e n).isSome := by
-  intro h
-  rcases h with ⟨pc, hpc⟩
-  -- Evaluate at e=1. LHS: PredDef pc 1. RHS: ¬Halt(1) (True).
+  rintro ⟨pc, hpc⟩
   have h_true_at_1 : toyPredDef pc 1 := by
-    rw [hpc 1]
-    simp [toyProgram]
-  -- Evaluate at e=0. LHS: PredDef pc 0. RHS: ¬Halt(0) (False).
-  have h_false_at_0 : ¬toyPredDef pc 0 := by
+    have : ¬∃ n, (toyProgram (1 : ToyCode) n).isSome := by simp [toyProgram]
+    exact (hpc 1).2 this
+  have h_false_at_0 : ¬ toyPredDef pc 0 := by
     rw [hpc 0]
     simp [toyProgram]
-  -- Now check cases for pc
-  rcases pc with _ | _ | _ | n <;> simp [toyPredDef] at h_true_at_1 h_false_at_0
+  -- now split on pc
+  cases pc with
+  | zero => simp [toyPredDef] at h_true_at_1
+  | succ pc =>
+      cases pc with
+      | zero => simp [toyPredDef] at h_false_at_0
+      | succ pc =>
+          cases pc with
+          | zero => simp [toyPredDef] at h_true_at_1
+          | succ n => simp [toyPredDef] at h_true_at_1
 
 -- 4. Construct RigorousModel
 def ToyModel : RigorousModel where
@@ -128,16 +128,12 @@ def ToyModel : RigorousModel where
   nonHalting := toy_non_halting
   no_complement_halts := toy_no_complement_halts
 
-lemma toy_repr_provable_not : ∀ G : ToyCode → ToyPropT, ∃ pc : ToyPredCode, ∀ e, toyPredDef pc e ↔ toyProvable (toyNot (G e)) := by
+lemma toy_repr_provable_not :
+  ∀ G : ToyCode → ToyPropT, ∃ pc : ToyPredCode, ∀ e, toyPredDef pc e ↔ toyProvable (toyNot (G e)) := by
   intro G
-  -- Show that Provable(toyNot (G e)) is always False.
-  have h_always_false : ∀ e, ¬toyProvable (toyNot (G e)) := by
-    intro e
-    simp [toyProvable, toyNot]
-  -- Pick pc = 0 (False predicate)
-  use 0
+  refine ⟨0, ?_⟩
   intro e
-  simp [toyPredDef, h_always_false]
+  simp [toyPredDef, toyProvable, toyNot]
 
 lemma toy_encode_correct : ∀ e, RMHalts ToyModel e ↔ toyTruth (toyHaltEncode e) := by
   intro e
