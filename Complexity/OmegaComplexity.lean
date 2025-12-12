@@ -63,13 +63,6 @@ This is exactly the condition in Chaitin's theorem.
 def TheoryDecidesBitRange (T : RecursiveTheory U) (n : ℕ) : Prop :=
   ∀ k, k < n → DecidesBit U embed T k
 
-/--
-The maximum number of bits a theory T can decide is bounded.
-This is a reformulation of `Chaitin_bound`.
--/
-def MaxDecidableBits (T : RecursiveTheory U) : ℕ → Prop :=
-  fun n => TheoryDecidesBitRange U embed T n
-
 /-! ## 3. The Chaitin Complexity Barrier -/
 
 /--

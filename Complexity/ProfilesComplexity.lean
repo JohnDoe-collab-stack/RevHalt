@@ -72,6 +72,15 @@ structure LanguageProfile where
   timeRank : TimeRank
   deriving Repr
 
+/--
+A profiled language bundles a language with its profile.
+This ensures the profile is explicitly attached to the language.
+-/
+structure ProfiledLanguage (α : Type) where
+  L       : α → Prop
+  size    : α → ℕ
+  profile : LanguageProfile
+
 /-! ## 3. Canonical Profile Families -/
 
 /-- Profile for "easy" languages: local on all axes. -/
@@ -127,36 +136,58 @@ polynomial-time recognition?"
 def P_NP_separation_conjecture (α : Type) : Prop :=
   P_rev α ≠ NP_rev α
 
-/-! ## 6. Profile-Based Hardness -/
+/-! ## 6. Profile-Based Hardness Conjectures -/
 
 /--
 **Transcend Barrier Conjecture**
 
-Languages with `bitRank = transcend` (derived from K-random sources)
-are not in P_rev for any reasonable size function.
+A profiled language with `bitRank = transcend` (derived from K-random sources)
+is not in P_rev.
 
-This is NOT a theorem; it's a research direction connecting
-Kolmogorov complexity to computational complexity.
+This conjecture states: if a language is explicitly tagged with a transcend
+profile (meaning it derives from incompressible/K-random data), then it
+cannot be in P_rev.
+
+Note: This properly binds the profile to the language via `ProfiledLanguage`.
 -/
 def transcend_barrier_conjecture (α : Type) : Prop :=
-  ∀ L : α → Prop,
-    (∃ (profile : LanguageProfile), profile.bitRank = BitRank.transcend) →
-    L ∉ P_rev α
+  ∀ P : ProfiledLanguage α,
+    P.profile.bitRank = BitRank.transcend →
+    P.L ∉ P_rev α
 
 /--
 **ILM Barrier Conjecture**
 
-Languages with `cutRank = ilm` (requiring infinite approximation)
-resist uniform polynomial decidability across all theories.
+A profiled language with `cutRank = ilm` (requiring infinite approximation)
+resists polynomial decidability uniformly across all theories of bounded length.
 
-This is a weaker statement than P_rev ≠ NP_rev, but more tractable
-given what we've formalized about T2 and Chaitin's bound.
+More precisely: for any theory length bound, there exist inputs where no
+polynomial-time trace family can decide the language.
+
+Note: The size function here comes from the profiled language itself,
+which is the correct design (size depends on input, not on theory length).
 -/
 def ilm_barrier_conjecture (α : Type) : Prop :=
-  ∀ L : α → Prop,
-    (∃ (profile : LanguageProfile), profile.cutRank = CutRank.ilm) →
-    ∀ T_length : ℕ, ∃ x : α, ¬ ∃ (T : α → RevComplexity.Trace) (f : ℕ → ℕ),
-      PolyBound f ∧ DecidableInTime T L (fun _ => T_length) f
+  ∀ P : ProfiledLanguage α,
+    P.profile.cutRank = CutRank.ilm →
+    ∀ theoryBound : ℕ,
+      ∃ x : α, P.size x > theoryBound ∧
+        ¬ ∃ (T : α → RevComplexity.Trace) (f : ℕ → ℕ),
+          PolyBound f ∧ DecidableInTime T P.L P.size f
+
+/--
+**Profile Consistency Conjecture**
+
+The timeRank in a profile should be consistent with P_rev/NP_rev membership:
+- timeRank = poly implies L ∈ P_rev
+- timeRank = superPoly implies L ∉ P_rev (or at least not known to be in P_rev)
+
+This is more of a design constraint: profiles should accurately reflect
+the computational status of the language.
+-/
+def profile_consistency (α : Type) (P : ProfiledLanguage α) : Prop :=
+  (P.profile.timeRank = TimeRank.poly → P.L ∈ P_rev α) ∧
+  (P.L ∈ P_rev α → P.profile.timeRank = TimeRank.poly)
 
 /-! ## 7. Summary: The Research Program -/
 
@@ -170,15 +201,15 @@ The research program connecting Rev/Ω/K/Profiles to P/NP:
 
 2. **Bridge results** (in OmegaComplexity):
    - Chaitin_complexity_barrier
-   - LOmega_hard_beyond_bound
+   - LOmega_hard_beyond_bound (with sorry for cumulative decidability)
 
 3. **Conjectures** (research directions):
-   - P_NP_separation_conjecture
-   - transcend_barrier_conjecture
-   - ilm_barrier_conjecture
+   - P_NP_separation_conjecture : P_rev ≠ NP_rev
+   - transcend_barrier_conjecture : bitRank.transcend → ∉ P_rev
+   - ilm_barrier_conjecture : cutRank.ilm → resists uniform poly
 
 4. **Methodology**:
-   - Use profiles (CutRank × BitRank × TimeRank) to classify languages
+   - Use ProfiledLanguage to attach profiles to languages
    - Identify languages with "hard" profiles (omegaDerivedProfile)
    - Apply Chaitin-style arguments to show they resist P_rev membership
 -/
