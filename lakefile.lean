@@ -15,3 +15,6 @@ lean_lib "RevHalt" where
 
 lean_lib "AddOn" where
   globs := #[.submodules `AddOn]
+
+lean_lib "Complexity" where
+  globs := #[.submodules `Complexity]
