@@ -3,6 +3,7 @@
 
 import RevHalt.Demo.DemoA
 import RevHalt.Demo.DemoC
+import RevHalt.Demo.SimpDemo
 
 /-!
 # RevHalt Demo Suite
