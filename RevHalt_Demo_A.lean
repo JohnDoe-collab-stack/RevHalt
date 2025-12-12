@@ -60,7 +60,7 @@ lemma toy_no_complement_halts :
   simpa [toyPredDef] using hFalse
 
 -- 4. Construct RigorousModel with PROOFS (no axioms)
-noncomputable def ToyModel : RigorousModel where
+def ToyModel : RigorousModel where
   Code := ToyCode
   Program := toyProgram
   PredCode := ToyPredCode
@@ -106,7 +106,7 @@ lemma toy_repr_provable_not : ∀ G : ToyModel.Code → ToyPropT, ∃ pc : ToyMo
   intro e
   simp [ToyModel, toyPredDef, toyProvable]
 
-noncomputable def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT :=
+def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT :=
 {
   Provable := toyProvable
   Truth := toyTruth
