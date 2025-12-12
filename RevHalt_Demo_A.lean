@@ -3,16 +3,30 @@ import RevHalt_Bridge
 namespace RevHalt_Demo_A
 open RevHalt_Unified
 
+/-!
+# RevHalt Demo B: Non-Degenerate Model
+
+This instance has:
+- A program that halts (code 0).
+- A program that loops (code 1, and all others).
+- Truth is `p = 0`.
+- Provability is `False` (for now).
+
+This validates that the logic holds even when Halting is non-trivial.
+-/
+
 -- 1. Toy Types (Concrete Nat)
 abbrev ToyCode := ℕ
 abbrev ToyPredCode := ℕ
 abbrev ToyPropT := ℕ
 
--- 2. Toy Semantics (Degenerate: nothing halts, nothing is defined)
-def toyProgram : ToyCode → ℕ → Option ℕ := fun _ _ => none
+-- 2. Toy Semantics
+-- Code 0 halts immediately. Others loop.
+def toyProgram : ToyCode → ℕ → Option ℕ := fun e _ => if e = 0 then some 0 else none
+-- Predicates are empty / False everywhere.
 def toyPredDef : ToyPredCode → ToyCode → Prop := fun _ _ => False
 
--- 3. Toy Logic (Consistent degenerate logic)
+-- 3. Toy Logic
 -- Truth is p=0. Provability is empty.
 def toyProvable : ToyPropT → Prop := fun _ => False
 def toyTruth   : ToyPropT → Prop := fun p => p = 0
@@ -25,21 +39,34 @@ lemma toy_truth_not_iff : ∀ p, toyTruth (toyNot p) ↔ ¬ toyTruth p := by
   · subst h; simp [toyTruth, toyNot]
   · simp [toyTruth, toyNot, h]
 
--- Lemmas for Model Coherence (Extracted)
+-- Lemmas for Model Coherence
 lemma toy_diagonal_halting : ∀ pc : ToyPredCode, ∃ e : ToyCode, (∃ n, (toyProgram e n).isSome) ↔ toyPredDef pc e := by
   intro pc
-  refine ⟨0, ?_⟩
+  -- PredDef is always False.
+  -- We need e such that Halt e <-> False. i.e., ¬Halt e.
+  -- Code 1 loops.
+  refine ⟨1, ?_⟩
   simp [toyProgram, toyPredDef]
 
-lemma toy_non_halting : ¬∃ n, (toyProgram 0 n).isSome := by
+lemma toy_non_halting : ¬∃ n, (toyProgram 1 n).isSome := by
   simp [toyProgram]
 
 lemma toy_no_complement_halts : ¬∃ pc : ToyPredCode, ∀ e, toyPredDef pc e ↔ ¬∃ n, (toyProgram e n).isSome := by
   intro h
   rcases h with ⟨pc, hpc⟩
-  -- hpc 0 : False <-> True
-  have h0 : False ↔ True := by simpa [toyPredDef, toyProgram] using hpc 0
-  exact (h0.mpr trivial)
+  -- hpc says: ∀ e, False ↔ ¬Halt e
+  -- This implies: ∀ e, Halt e (since ¬Halt e must be False)
+  have h_univ_halt : ∀ e, ∃ n, (toyProgram e n).isSome := by
+    intro e
+    have he := hpc e
+    simp [toyPredDef] at he
+    -- he : ∃ x, ¬toyProgram e x = none
+    -- Goal : ∃ n, (toyProgram e n).isSome
+    simp [Option.ne_none_iff_isSome] at he
+    exact he
+  -- But code 1 does not halt.
+  have h1 := h_univ_halt 1
+  simp [toyProgram] at h1
 
 -- 4. Construct RigorousModel with PROOFS (no axioms)
 noncomputable def ToyModel : RigorousModel where
@@ -48,7 +75,7 @@ noncomputable def ToyModel : RigorousModel where
   PredCode := ToyPredCode
   PredDef := toyPredDef
   diagonal_halting := toy_diagonal_halting
-  nonHaltingCode := 0
+  nonHaltingCode := 1
   nonHalting := toy_non_halting
   no_complement_halts := toy_no_complement_halts
 
@@ -61,13 +88,15 @@ theorem toy_kit_correct : DetectsMonotone ToyKit := by
   rfl
 
 -- 6. Logic Construction
-def toyHaltEncode : ToyCode → ToyPropT := fun _ => 1 -- Always False
+-- Encode Halting: 0 if halts (Truth), 1 if loops (False).
+def toyHaltEncode : ToyCode → ToyPropT := fun e => if e = 0 then 0 else 1
 
 lemma toy_encode_correct : ∀ e, RMHalts ToyModel e ↔ toyTruth (toyHaltEncode e) := by
   intro e
-  simp [RMHalts, ToyModel, toyProgram, toyTruth, toyHaltEncode]
+  simp only [toyHaltEncode]
+  split <;> simp_all [RMHalts, ToyModel, toyProgram, toyTruth]
 
--- Logic Lemmas (Extracted)
+-- Logic Lemmas
 lemma toy_soundness : ∀ p, toyProvable p → toyTruth p := by
   intro p hp
   exact (False.elim hp)
@@ -81,8 +110,6 @@ lemma toy_absurd : ∀ p, toyProvable p → toyProvable (toyNot p) → toyProvab
 
 lemma toy_repr_provable_not : ∀ G : ToyModel.Code → ToyPropT, ∃ pc : ToyModel.PredCode, ∀ e, ToyModel.PredDef pc e ↔ toyProvable (toyNot (G e)) := by
   intro G
-  -- Use explicit type annotation or simple 0.
-  -- ToyModel.PredCode is strictly ToyPredCode (Nat).
   refine ⟨(0 : ToyPredCode), ?_⟩
   intro e
   simp [ToyModel, toyPredDef, toyProvable]
@@ -102,7 +129,7 @@ noncomputable def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT
   encode_correct := toy_encode_correct
 }
 
--- 7. FINAL DEMONSTRATION
+-- 7. FINAL DEMONSTRATION & SANITY CHECKS
 theorem Toy_Master_Theorem :
     let ctx := RevHalt_Unified.EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic
     (∀ e, ctx.RealHalts e ↔ Halts (RevHalt_Unified.rmCompile ToyModel e)) ∧
@@ -111,6 +138,18 @@ theorem Toy_Master_Theorem :
     (∃ T1 : Set ToyPropT, RevHalt_Unified.ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
   simpa using
     (RevHalt_Unified.RevHalt_Master_Complete (PropT := ToyPropT) ToyModel ToyKit toy_kit_correct ToyLogic)
+
+-- Check 1: Truth(0) is True. Provable(0) is False.
+example : toyTruth 0 ∧ ¬toyProvable 0 := ⟨rfl, id⟩
+
+-- Check 2: Halts(0) is True.
+example : RMHalts ToyModel (0 : ToyCode) := by
+  use 0; simp [ToyModel, toyProgram]
+
+-- Check 3: Halts(1) is False.
+example : ¬RMHalts ToyModel (1 : ToyCode) := by
+  intro h; rcases h with ⟨n, hn⟩
+  simp [ToyModel, toyProgram] at hn
 
 #print Toy_Master_Theorem
 
