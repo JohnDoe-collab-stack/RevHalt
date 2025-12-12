@@ -24,7 +24,7 @@ The **Cut axis** concerns whether halting can be internalized by a theory.
 **T1 (Canonicity):** There is essentially one notion of halting.
 ```lean
 theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
-    Rev K.T = Halts K.T
+    ∀ T, Rev0_K K T ↔ Halts T
 ```
 Any correct detection/reversal pair yields the same halting predicate.
 

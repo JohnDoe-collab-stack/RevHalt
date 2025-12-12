@@ -246,7 +246,7 @@ structure ResearchProgram where
   /-- Formal theorems already proven in the framework. -/
   formal_theorems : List String := ["T1", "T2", "T3", "Chaitin_bound", "Omega_K_random'"]
   /-- Bridge results connecting Ω/K to complexity. -/
-  bridge_results : List String := ["Chaitin_complexity_barrier", "LOmega_hard_beyond_bound"]
+  bridge_results : List String := ["Chaitin_complexity_barrier", "LOmega_prefix_undecidable", "LOmega_hard_beyond_bound_range"]
   /-- Open conjectures for future work. -/
   conjectures : List String := ["P_NP_separation", "transcend_barrier", "ilm_barrier"]
 
