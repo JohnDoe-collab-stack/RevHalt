@@ -73,7 +73,7 @@ lemma toy_absurd : ∀ p, toyProvable p → toyProvable (toyNot p) → toyProvab
   dsimp [toyProvable, toyFalse] at *
   subst hp
   -- but: 1 = 0, and hnp is exactly (0+1=0)
-  simpa [toyNot] using hnp
+  simp [toyNot] at hnp
 
 -- Model Coherence
 lemma toy_diagonal_halting :
@@ -111,7 +111,7 @@ lemma toy_no_complement_halts :
 
   cases pc with
   | zero =>
-      exact (by simpa [toyPredDef] using h_true_at_1)
+      simp [toyPredDef] at h_true_at_1
   | succ pc =>
       cases pc with
       | zero =>
@@ -120,9 +120,9 @@ lemma toy_no_complement_halts :
       | succ pc =>
           cases pc with
           | zero =>
-              exact (by simpa [toyPredDef] using h_true_at_1)
+              simp [toyPredDef] at h_true_at_1
           | succ n =>
-              exact (by simpa [toyPredDef] using h_true_at_1)
+              simp [toyPredDef] at h_true_at_1
 
 -- 4. Construct RigorousModel
 def ToyModel : RigorousModel where
