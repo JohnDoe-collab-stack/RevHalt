@@ -51,16 +51,13 @@ lemma toy_diagonal_halting : ∀ pc : ToyPredCode, ∃ e : ToyCode, (∃ n, (toy
 lemma toy_non_halting : ¬∃ n, (toyProgram 1 n).isSome := by
   simp [toyProgram]
 
-lemma toy_no_complement_halts : ¬∃ pc : ToyPredCode, ∀ e, toyPredDef pc e ↔ ¬∃ n, (toyProgram e n).isSome := by
+lemma toy_no_complement_halts :
+  ¬∃ pc : ToyPredCode, ∀ e, toyPredDef pc e ↔ ¬∃ n, (toyProgram e n).isSome := by
   rintro ⟨pc, hpc⟩
-  -- Evaluate at e=1 (which does not halt)
   have h_not_halt1 : ¬∃ n, (toyProgram (1 : ToyCode) n).isSome := by
     simp [toyProgram]
-  -- If pc represented comp(K), then PredDef pc 1 <-> ¬Halt 1 (True)
-  have : toyPredDef pc (1 : ToyCode) := (hpc 1).2 h_not_halt1
-  -- But PredDef is False everywhere.
-  simp [toyPredDef] at this
-  -- simp finds False in 'this' and closes the goal.
+  have hFalse : toyPredDef pc (1 : ToyCode) := (hpc 1).2 h_not_halt1
+  simpa [toyPredDef] using hFalse
 
 -- 4. Construct RigorousModel with PROOFS (no axioms)
 noncomputable def ToyModel : RigorousModel where
@@ -87,29 +84,9 @@ def toyHaltEncode : ToyCode → ToyPropT := fun e => if e = 0 then 0 else 1
 
 lemma toy_encode_correct : ∀ e, RMHalts ToyModel e ↔ toyTruth (toyHaltEncode e) := by
   intro e
-  simp only [toyHaltEncode]
-  split
-  next h => -- case e=0
-    -- h : e=0
-    subst h
-    constructor
-    · intro _
-      simp [toyTruth]
-    · intro _
-      use 0
-      simp [ToyModel, toyProgram]
-  next h => -- case e!=0
-    -- h : ¬e=0
-    constructor
-    · intro h_halt
-      rcases h_halt with ⟨n, hn⟩
-      -- h implies toyProgram e n = none
-      simp [ToyModel, toyProgram, h] at hn
-      -- simp finds False in hn and closes goal.
-    · intro h_truth
-      -- toyTruth 1 is false
-      simp [toyTruth] at h_truth
-      -- simp finds False in h_truth and closes goal.
+  classical
+  by_cases h : e = (0 : ToyCode) <;>
+    simp [RMHalts, ToyModel, toyProgram, toyTruth, toyHaltEncode, h]
 
 -- Logic Lemmas
 lemma toy_soundness : ∀ p, toyProvable p → toyTruth p := by
