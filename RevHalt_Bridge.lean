@@ -1,8 +1,11 @@
+-- RevHalt_Bridge.lean (Legacy Facade)
+-- Re-exports RevHalt.Unified.Bridge for backward compatibility
+
 import RevHalt.Unified.Bridge
 
 /-!
-# RevHalt_Bridge (Facade)
+# RevHalt_Bridge (Legacy Facade)
 
-This file is now a facade for the modularized architecture in `RevHalt/Unified/`.
-- `RevHalt.Unified.Bridge`: Connections between RigorousModel and the Core logic.
+This file provides backward compatibility for code importing `RevHalt_Bridge`.
+New code should import `RevHalt.Unified` or `RevHalt.Unified.Bridge` directly.
 -/

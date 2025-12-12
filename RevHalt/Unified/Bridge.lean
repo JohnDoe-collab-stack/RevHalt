@@ -9,11 +9,38 @@ namespace RevHalt_Unified
 This file closes the loop by enriching `SoundLogicDef` with a halting encoding,
 allowing us to build an `EnrichedContext` and prove the final Master Theorem.
 
-**Hypothesis Classification (Phase 2)**:
-1. **Computability (M)**: `RigorousModel`
-2. **Logic (L)**: `SoundLogicDef (PropT)` - Pure logic, no model dependency
-3. **Arithmetization (A)**: `Arithmetization M PropT L` - repr_provable_not
-4. **Encoding (E)**: `HaltEncode` - The logic can express "e halts"
+## Hypothesis Classification (M/L/A/E)
+
+| Component | Structure | Key Fields |
+|-----------|-----------|------------|
+| **M** (Computability) | `RigorousModel` | `Code`, `Program`, `PredCode`, `PredDef`, `diagonal_halting`, `no_complement_halts` |
+| **L** (Logic) | `SoundLogicDef PropT` | `Provable`, `Truth`, `soundness`, `Not`, `FalseP`, `consistent`, `absurd`, `truth_not_iff` |
+| **A** (Arithmetization) | `Arithmetization M PropT L` | `repr_provable_not` |
+| **E** (Encoding) | (in `SoundLogicEncoded`) | `HaltEncode`, `encode_correct` |
+
+## Requirements by Theorem
+
+### T2 (Existence of unprovable truth)
+- **Required**: M + L (consistency, absurd) + A (repr_provable_not via diagonal_halting)
+- **Proven by**: `true_but_unprovable_exists`
+
+### T2' (Independence: ¬Provable(H e) ∧ ¬Provable(¬H e))
+- **Required**: M + L (+ soundness) + A + E (encode_correct)
+- **Proven by**: `independent_code_exists`
+
+### T3 (Sound extension of provable set)
+- **Required**: T2 result + L.soundness
+- **Proven by**: `strict_extension_sound`
+
+## Instantiation Guide
+
+To instantiate the framework, provide:
+1. A `RigorousModel` with `diagonal_halting` and `no_complement_halts`
+2. A `SoundLogicDef PropT` with all 8 fields
+3. An `Arithmetization` with `repr_provable_not`
+4. A `HaltEncode` function with `encode_correct`
+
+Bundle into `SoundLogicEncoded`, then call `RevHalt_Master_Complete`.
 -/
 
 /--
@@ -100,6 +127,39 @@ theorem RealHalts_eq_Halts
   show Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e)
   exact T1_traces K hK (rmCompile M e)
 
+-- ==============================================================================================
+-- Simp lemmas for ergonomic proofs
+-- ==============================================================================================
+
+@[simp] theorem Provable_encoded_simp
+    {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+    (L : SoundLogicEncoded M PropT) (p : PropT) :
+    (EnrichedContext_from_Encoded M K hK L).Provable p ↔ L.Logic.Provable p := Iff.rfl
+
+@[simp] theorem Truth_encoded_simp
+    {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+    (L : SoundLogicEncoded M PropT) (p : PropT) :
+    (EnrichedContext_from_Encoded M K hK L).Truth p ↔ L.Logic.Truth p := Iff.rfl
+
+@[simp] theorem Not_encoded_simp
+    {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+    (L : SoundLogicEncoded M PropT) (p : PropT) :
+    (EnrichedContext_from_Encoded M K hK L).Not p = L.Logic.Not p := rfl
+
+@[simp] theorem FalseT_encoded_simp
+    {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+    (L : SoundLogicEncoded M PropT) :
+    (EnrichedContext_from_Encoded M K hK L).FalseT = L.Logic.FalseP := rfl
+
+@[simp] theorem H_encoded_simp
+    {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+    (L : SoundLogicEncoded M PropT) (e : M.Code) :
+    (EnrichedContext_from_Encoded M K hK L).H e = L.HaltEncode e := rfl
+
+@[simp] theorem ProvableSet_mem
+    {Code PropT : Type} (ctx : EnrichedContext Code PropT) (p : PropT) :
+    p ∈ ProvableSet ctx ↔ ctx.Provable p := Iff.rfl
+
 /--
 **FINAL COMPLETE MASTER THEOREM**
 Proves T2 (True but unprovable), T2' (Independence), and T3 (Sound Extension)
@@ -125,10 +185,9 @@ theorem RevHalt_Master_Complete
     (∃ T1 : Set PropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
   let ctx := EnrichedContext_from_Encoded M K hK L
   refine ⟨?_, ?_, ?_, ?_⟩
-  · -- (1) T1
+  · -- (1) T1: use stable simp lemma instead of unfolding definitions
     intro e
-    simp only [EnrichedContext_from_Encoded, TGContext_from_RM]
-    exact T1_traces K hK (rmCompile M e)
+    simp [RealHalts_encoded_simp]
   · -- (2) T2
     exact true_but_unprovable_exists ctx
   · -- (3) T2'

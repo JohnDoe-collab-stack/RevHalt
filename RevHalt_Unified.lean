@@ -1,10 +1,11 @@
-import RevHalt.Unified.Core
-import RevHalt.Unified.RigorousModel
+-- RevHalt_Unified.lean (Legacy Facade)
+-- Re-exports RevHalt.Unified for backward compatibility
+
+import RevHalt.Unified
 
 /-!
-# RevHalt_Unified (Facade)
+# RevHalt_Unified (Legacy Facade)
 
-This file is now a facade for the modularized architecture in `RevHalt/Unified/`.
-- `RevHalt.Unified.Core`: Abstract T1-T2-T3 logic.
-- `RevHalt.Unified.RigorousModel`: Concrete Model definitions.
+This file provides backward compatibility for code importing `RevHalt_Unified`.
+New code should import `RevHalt.Unified` directly.
 -/
