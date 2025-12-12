@@ -185,9 +185,10 @@ theorem RevHalt_Master_Complete
     (∃ T1 : Set PropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
   let ctx := EnrichedContext_from_Encoded M K hK L
   refine ⟨?_, ?_, ?_, ?_⟩
-  · -- (1) T1: use stable simp lemma instead of unfolding definitions
+  · -- (1) T1: use stable simp lemma, targeted via ctx
     intro e
-    simp [RealHalts_encoded_simp]
+    set_option linter.unnecessarySimpa false in
+    simpa [ctx] using RealHalts_encoded_simp (M := M) (K := K) (hK := hK) (L := L) e
   · -- (2) T2
     exact true_but_unprovable_exists ctx
   · -- (3) T2'
