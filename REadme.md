@@ -47,15 +47,22 @@ T2 extracts their **common abstract core** via `TuringGodelContext'`:
 
 This is not a reformulation; it is an **abstraction** that reveals the structural unity of Turing and Gödel.
 
-#### T3 — Complementarity theorem (novel)
+#### T3 — Complementarity: the central concept
 
-Classical incompleteness tells you what theories *cannot* do. T3 says what computational truth *can* do for them:
+Classical incompleteness is **limitative**: it tells you what theories *cannot* do.
 
-> **For any sound theory T, Rev provides a strict sound extension.**
+T3 introduces a **new concept** — **complementarity** — and proves it formally:
 
-Moreover, `T3_strong` proves the existence of **infinitely many disjoint extension directions**. This positions Rev as a **structured source of completion** for formal systems — not merely an external observer, but a complement.
+> **Rev is the complement of any sound formal system.**
 
-This has no classical analog.
+This means:
+- Formal systems are not "failures" for being incomplete — they are **structurally partial**
+- Rev is not merely "bigger" than PA/ZFC — it is **what they lack**
+- Truth and provability are not opposed — they are **complementary**
+
+The theorem `T3_strong` proves that this complementarity is **rich**: there exist infinitely many disjoint directions of extension, not just one. Rev is a **structured source of completion**, not an amorphous "everything else".
+
+**This concept has no classical analog.** It transforms incompleteness from a limitative statement into a structural dynamical relationship.
 
 ---
 
