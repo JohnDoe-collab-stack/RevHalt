@@ -1,6 +1,11 @@
 # RevHalt
 
-A Lean 4 formalization of incompleteness and undecidability results, where the framework itself serves as the syntactic foundation and formal theories (PA, ZFC, etc.) appear as semantic instances.
+A Lean 4 framework proving that computational truth (halting) is:
+- **Canonical** — independent of how you observe it
+- **Inaccessible** — no sound formal system fully captures it
+- **Complementary** — any sound theory can be strictly extended toward it
+
+Unlike classical presentations of Gödel's theorems, which work *inside* a specific theory, RevHalt provides the abstract framework and treats theories (PA, ZFC) as instances to be plugged in.
 
 ---
 
