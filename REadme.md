@@ -15,6 +15,43 @@ This project inverts the perspective:
 
 In this formulation, the "proof strength" of any particular theory is not a primitive notion but rather emerges as a local property: it measures how much of the externally-defined computational truth the theory's provability predicate can capture.
 
+### Original contributions
+
+This project establishes three main results, each with distinct novelty:
+
+#### T1 — Canonicity of computational truth
+
+Classical result (Turing): *The halting problem is undecidable.*
+
+T1 proves something different: **computational truth is objective** — independent of the observation mechanism.
+
+The framework introduces `RHKit`, an abstract "observation mechanism" for traces. T1 proves:
+- `T1_traces`: Any valid Kit yields the same verdict as standard halting
+- `T1_uniqueness`: Two valid Kits are extensionally equivalent
+- `T1_semantics`: Under the DynamicBridge hypothesis, Rev captures model-theoretic consequence
+
+This is not Turing's theorem. It is a **canonicity result**: all valid observers converge to the same truth.
+
+#### T2 — Abstract Turing-Gödel synthesis
+
+Classical results: Turing (algorithmic undecidability) and Gödel I (true unprovable sentences) are typically presented separately.
+
+T2 extracts their **common abstract core** via `TuringGodelContext'`:
+- `diagonal_program`: the diagonal fixed-point axiom unifying both arguments
+- Result: no internal predicate can be simultaneously Total, Correct, and Complete
+
+This is not a reformulation; it is an **abstraction** that reveals the structural unity of Turing and Gödel.
+
+#### T3 — Complementarity theorem (novel)
+
+Classical incompleteness tells you what theories *cannot* do. T3 says what computational truth *can* do for them:
+
+> **For any sound theory T, Rev provides a strict sound extension.**
+
+Moreover, `T3_strong` proves the existence of **infinitely many disjoint extension directions**. This positions Rev as a **structured source of completion** for formal systems — not merely an external observer, but a complement.
+
+This has no classical analog.
+
 ---
 
 ## Syntax–semantics correspondence
@@ -31,9 +68,10 @@ The theorems then express structural gaps between syntactic truth and semantic o
 
 | Theorem | Interpretation |
 |---------|----------------|
-| **T2** : `∃ p, Truth p ∧ ¬Provable p` | The semantic instance cannot capture all syntactic truths |
-| **T2'** : `∃ e, ¬Provable(H e) ∧ ¬Provable(¬H e)` | Some halting facts are invisible to the semantic observer |
-| **T3** : `∃ T₁ ⊃ ProvableSet, sound` | The semantic theory admits strict sound extensions toward syntactic truth |
+| **T1** : `∀ T, Rev0_K K T ↔ Halts T` | **Canonicity**: computational truth is objective, independent of observation mechanism |
+| **T2** : `∃ p, Truth p ∧ ¬Provable p` | **Synthesis**: no internal predicate captures external truth (Turing-Gödel core) |
+| **T2'** : `∃ e, ¬Provable(H e) ∧ ¬Provable(¬H e)` | **Independence**: some halting facts are invisible to the semantic observer |
+| **T3** : `∃ T₁ ⊃ ProvableSet, sound` | **Complementarity**: Rev provides structured infinite extensions for any sound theory |
 
 This is the reverse of classical incompleteness proofs, which work *in* a theory *about* that theory. Here, the proofs work *in* RevHalt *about* any conforming semantic instance.
 
@@ -94,10 +132,10 @@ The framework factors assumptions into four components:
 For any semantic instance `(M, K, L)` satisfying the interface:
 
 ```
-(1) ∀ e, RealHalts e ↔ Halts (compile e)           -- T1: alignment
-(2) ∃ p, Truth p ∧ ¬Provable p                     -- T2: incompleteness
+(1) ∀ e, RealHalts e ↔ Halts (compile e)           -- T1: canonicity
+(2) ∃ p, Truth p ∧ ¬Provable p                     -- T2: synthesis
 (3) ∃ e, ¬Provable (H e) ∧ ¬Provable (Not (H e))   -- T2': independence
-(4) ∃ T₁ ⊃ ProvableSet, ∀ p ∈ T₁, Truth p         -- T3: strict extension
+(4) ∃ T₁ ⊃ ProvableSet, ∀ p ∈ T₁, Truth p         -- T3: complementarity
 ```
 
 ---
