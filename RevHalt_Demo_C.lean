@@ -70,11 +70,10 @@ lemma toy_consistent : ¬toyProvable toyFalse := by
 
 lemma toy_absurd : ∀ p, toyProvable p → toyProvable (toyNot p) → toyProvable toyFalse := by
   intro p hp hnp
-  -- unfold goal/assumptions: Provable q := q=0, False := 1
   dsimp [toyProvable, toyFalse] at *
   subst hp
-  -- hnp : toyNot 0 = 0, but toyNot 0 = 1, so hnp is exactly the goal 1=0
-  simp [toyNot] at hnp
+  -- but: 1 = 0, and hnp is exactly (0+1=0)
+  simpa [toyNot] using hnp
 
 -- Model Coherence
 lemma toy_diagonal_halting :
@@ -103,19 +102,27 @@ lemma toy_no_complement_halts :
   have h_true_at_1 : toyPredDef pc 1 := by
     have : ¬∃ n, (toyProgram (1 : ToyCode) n).isSome := by simp [toyProgram]
     exact (hpc 1).2 this
+
   have h_false_at_0 : ¬ toyPredDef pc 0 := by
-    rw [hpc 0]
-    simp [toyProgram]
-  -- now split on pc
+    intro hPred
+    have hNot : ¬∃ n, (toyProgram (0 : ToyCode) n).isSome := (hpc 0).1 hPred
+    have hYes : ∃ n, (toyProgram (0 : ToyCode) n).isSome := ⟨0, by simp [toyProgram]⟩
+    exact hNot hYes
+
   cases pc with
-  | zero => simp [toyPredDef] at h_true_at_1
+  | zero =>
+      exact (by simpa [toyPredDef] using h_true_at_1)
   | succ pc =>
       cases pc with
-      | zero => simp [toyPredDef] at h_false_at_0
+      | zero =>
+          have : toyPredDef (1 : ToyPredCode) 0 := by simp [toyPredDef]
+          exact h_false_at_0 this
       | succ pc =>
           cases pc with
-          | zero => simp [toyPredDef] at h_true_at_1
-          | succ n => simp [toyPredDef] at h_true_at_1
+          | zero =>
+              exact (by simpa [toyPredDef] using h_true_at_1)
+          | succ n =>
+              exact (by simpa [toyPredDef] using h_true_at_1)
 
 -- 4. Construct RigorousModel
 def ToyModel : RigorousModel where
