@@ -17,6 +17,28 @@ In this formulation, the "proof strength" of any particular theory is not a prim
 
 ---
 
+## Syntax–semantics correspondence
+
+The framework establishes a precise correspondence:
+
+| RevHalt (syntax) | Instance L (semantics) |
+|------------------|------------------------|
+| `RMHalts e` — halting defined by the computability model | `L.Truth (HaltEncode e)` — truth as seen by the theory |
+| `M.PredDef` — definability in the abstract model | `L.Provable` — derivability in the theory |
+| Diagonalization (`diagonal_halting`) | Arithmetization (`repr_provable_not`) |
+
+The theorems then express structural gaps between syntactic truth and semantic observability:
+
+| Theorem | Interpretation |
+|---------|----------------|
+| **T2** : `∃ p, Truth p ∧ ¬Provable p` | The semantic instance cannot capture all syntactic truths |
+| **T2'** : `∃ e, ¬Provable(H e) ∧ ¬Provable(¬H e)` | Some halting facts are invisible to the semantic observer |
+| **T3** : `∃ T₁ ⊃ ProvableSet, sound` | The semantic theory admits strict sound extensions toward syntactic truth |
+
+This is the reverse of classical incompleteness proofs, which work *in* a theory *about* that theory. Here, the proofs work *in* RevHalt *about* any conforming semantic instance.
+
+---
+
 ## Structure
 
 ### Core modules
