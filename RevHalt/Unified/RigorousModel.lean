@@ -84,10 +84,10 @@ theorem no_anti_halting (M : RigorousModel) :
   simp only [RMHalts]
 
 /--
-**Sound Logic with Representability (Prop-based)**
+**Sound Logic Definition** (Pure Logic - NO dependency on RigorousModel)
 Uses Prop for representability (not Bool), avoiding decidability assumption.
 -/
-structure SoundLogicDef (M : RigorousModel) (PropT : Type) where
+structure SoundLogicDef (PropT : Type) where
   /-- Derivability (syntactic) -/
   Provable : PropT → Prop
   /-- Truth (semantic) -/
@@ -104,18 +104,26 @@ structure SoundLogicDef (M : RigorousModel) (PropT : Type) where
   absurd : ∀ p, Provable p → Provable (Not p) → Provable FalseP
   /-- Classical negation for Truth -/
   truth_not_iff : ∀ p, Truth (Not p) ↔ ¬Truth p
-  /-- **KEY**: Provable(Not(G e)) is DEFINABLE (not decidable) for any G -/
-  repr_provable_not : ∀ G : M.Code → PropT, ∃ pc : M.PredCode,
-    ∀ e, M.PredDef pc e ↔ Provable (Not (G e))
 
 /--
-**Build TuringGodelContext' without any sorry!**
+**Arithmetization Hypothesis** (Bridge between M and L)
+Captures the Gödelian representability of "Provable(Not(G e))" in the definability system.
+This is SEPARATE from pure logic.
+-/
+structure Arithmetization (M : RigorousModel) (PropT : Type) (L : SoundLogicDef PropT) where
+  /-- **KEY**: Provable(Not(G e)) is DEFINABLE (not decidable) for any G -/
+  repr_provable_not : ∀ G : M.Code → PropT, ∃ pc : M.PredCode,
+    ∀ e, M.PredDef pc e ↔ L.Provable (L.Not (G e))
+
+/--
+**Build TuringGodelContext'** from Model(M), Kit(K), Logic(L), and Arithmetization(A).
 -/
 def TGContext_from_RM
     {PropT : Type}
     (M : RigorousModel)
     (K : RHKit) (hK : DetectsMonotone K)
-    (L : SoundLogicDef M PropT) :
+    (L : SoundLogicDef PropT)
+    (A : Arithmetization M PropT L) :
     TuringGodelContext' M.Code PropT where
   RealHalts := fun e => Rev0_K K (rmCompile M e)
   Provable := L.Provable
@@ -125,7 +133,7 @@ def TGContext_from_RM
   absurd := L.absurd
   diagonal_program := by
     intro G
-    obtain ⟨pc, hpc⟩ := L.repr_provable_not G
+    obtain ⟨pc, hpc⟩ := A.repr_provable_not G
     obtain ⟨e, he⟩ := M.diagonal_halting pc
     use e
     rw [T1_traces K hK (rmCompile M e)]
@@ -140,9 +148,10 @@ theorem RevHalt_Master_Rigorous
     {PropT : Type}
     (M : RigorousModel)
     (K : RHKit) (hK : DetectsMonotone K)
-    (L : SoundLogicDef M PropT) :
+    (L : SoundLogicDef PropT)
+    (A : Arithmetization M PropT L) :
     (∀ G : M.Code → PropT, ∃ e, Rev0_K K (rmCompile M e) ↔ L.Provable (L.Not (G e))) := by
   intro G
-  exact (TGContext_from_RM M K hK L).diagonal_program G
+  exact (TGContext_from_RM M K hK L A).diagonal_program G
 
 end RevHalt_Unified

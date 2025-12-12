@@ -8,12 +8,17 @@ namespace RevHalt_Unified
 
 This file closes the loop by enriching `SoundLogicDef` with a halting encoding,
 allowing us to build an `EnrichedContext` and prove the final Master Theorem.
+
+**Hypothesis Classification (Phase 2)**:
+1. **Computability (M)**: `RigorousModel`
+2. **Logic (L)**: `SoundLogicDef (PropT)` - Pure logic, no model dependency
+3. **Arithmetization (A)**: `Arithmetization M PropT L` - repr_provable_not
+4. **Encoding (E)**: `HaltEncode` - The logic can express "e halts"
 -/
 
 /--
 **Strict Sound Extension (T3)**
 Theorem: The set of provable truths can be strictly extended while preserving soundness.
-Retrieved from previous improvements and adapted for SoundLogicEncoded.
 -/
 theorem strict_extension_sound {Code PropT : Type} (ctx : EnrichedContext Code PropT)
     (h_sound : ∀ p, ctx.Provable p → ctx.Truth p) :
@@ -32,15 +37,19 @@ theorem strict_extension_sound {Code PropT : Type} (ctx : EnrichedContext Code P
     · rw [h_eq]; exact h_true
 
 /--
-**Sound Logic with Halting Encoding**
-Extends `SoundLogicDef` with the ability to express "program e halts".
+**Sound Logic with Halting Encoding** (Full Package)
+Bundles: Logic (L) + Arithmetization (A) + HaltEncode (E).
 This is the final requirement for T2 and T3.
 -/
-structure SoundLogicEncoded (M : RigorousModel) (PropT : Type) extends SoundLogicDef M PropT where
+structure SoundLogicEncoded (M : RigorousModel) (PropT : Type) where
+  /-- Pure Logic -/
+  Logic : SoundLogicDef PropT
+  /-- Arithmetization (links M and Logic) -/
+  Arith : Arithmetization M PropT Logic
   /-- Halting Encoding: The logic can express "e halts" -/
   HaltEncode : M.Code → PropT
   /-- Semantic correctness of HaltEncode -/
-  encode_correct : ∀ e, RMHalts M e ↔ Truth (HaltEncode e)
+  encode_correct : ∀ e, RMHalts M e ↔ Logic.Truth (HaltEncode e)
 
 /--
 **Bridge to EnrichedContext**
@@ -52,20 +61,18 @@ def EnrichedContext_from_Encoded
     (K : RHKit) (hK : DetectsMonotone K)
     (L : SoundLogicEncoded M PropT) :
     EnrichedContext M.Code PropT :=
-  let ctxTG := TGContext_from_RM M K hK L.toSoundLogicDef
+  let ctxTG := TGContext_from_RM M K hK L.Logic L.Arith
   {
     toTuringGodelContext' := ctxTG
-    Truth := L.Truth
+    Truth := L.Logic.Truth
     H := L.HaltEncode
     h_truth_H := by
       intro e
-      -- Robust proof: explicitly change goal to underlying definition
-      -- ctxTG.RealHalts e = Rev0_K K (rmCompile M e)
-      change Rev0_K K (rmCompile M e) ↔ L.Truth (L.HaltEncode e)
+      change Rev0_K K (rmCompile M e) ↔ L.Logic.Truth (L.HaltEncode e)
       rw [T1_traces K hK (rmCompile M e)]
       rw [rm_compile_halts_equiv M e]
       exact L.encode_correct e
-    truth_not_iff := L.truth_not_iff
+    truth_not_iff := L.Logic.truth_not_iff
   }
 
 /--
@@ -78,8 +85,9 @@ theorem RealHalts_eq_Halts
     (L : SoundLogicEncoded M PropT) :
     let ctx := EnrichedContext_from_Encoded M K hK L
     ∀ e, ctx.RealHalts e ↔ Halts (rmCompile M e) := by
-  intro ctx e
-  simpa using (T1_traces K hK (rmCompile M e))
+  intro _ e
+  show Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e)
+  exact T1_traces K hK (rmCompile M e)
 
 /-- Simp lemma: RealHalts in the constructed context is just standard Halts. -/
 @[simp] theorem RealHalts_encoded_simp
@@ -89,7 +97,8 @@ theorem RealHalts_eq_Halts
     (L : SoundLogicEncoded M PropT)
     (e : M.Code) :
     (EnrichedContext_from_Encoded M K hK L).RealHalts e ↔ Halts (rmCompile M e) := by
-  simpa using (T1_traces K hK (rmCompile M e))
+  show Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e)
+  exact T1_traces K hK (rmCompile M e)
 
 /--
 **FINAL COMPLETE MASTER THEOREM**
@@ -118,13 +127,14 @@ theorem RevHalt_Master_Complete
   refine ⟨?_, ?_, ?_, ?_⟩
   · -- (1) T1
     intro e
+    simp only [EnrichedContext_from_Encoded, TGContext_from_RM]
     exact T1_traces K hK (rmCompile M e)
   · -- (2) T2
     exact true_but_unprovable_exists ctx
   · -- (3) T2'
-    exact independent_code_exists ctx L.soundness
+    exact independent_code_exists ctx L.Logic.soundness
   · -- (4) T3
-    obtain ⟨T1, h_strict, h_sound⟩ := strict_extension_sound ctx L.soundness
+    obtain ⟨T1, h_strict, h_sound⟩ := strict_extension_sound ctx L.Logic.soundness
     use T1, h_strict, h_sound
 
 end RevHalt_Unified

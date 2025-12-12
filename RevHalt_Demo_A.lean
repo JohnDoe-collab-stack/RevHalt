@@ -108,15 +108,19 @@ lemma toy_repr_provable_not : ∀ G : ToyModel.Code → ToyPropT, ∃ pc : ToyMo
 
 def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT :=
 {
-  Provable := toyProvable
-  Truth := toyTruth
-  soundness := toy_soundness
-  Not := toyNot
-  FalseP := toyFalse
-  consistent := toy_consistent
-  absurd := toy_absurd
-  truth_not_iff := toy_truth_not_iff
-  repr_provable_not := toy_repr_provable_not
+  Logic := {
+    Provable := toyProvable
+    Truth := toyTruth
+    soundness := toy_soundness
+    Not := toyNot
+    FalseP := toyFalse
+    consistent := toy_consistent
+    absurd := toy_absurd
+    truth_not_iff := toy_truth_not_iff
+  }
+  Arith := {
+    repr_provable_not := toy_repr_provable_not
+  }
   HaltEncode := toyHaltEncode
   encode_correct := toy_encode_correct
 }
