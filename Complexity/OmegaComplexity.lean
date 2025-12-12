@@ -2,6 +2,7 @@ import RevHalt
 import AddOn.ChaitinOmega
 import AddOn.OmegaRevHalt
 import Complexity.RevComplexity
+import Complexity.ProfilesComplexity
 
 /-!
 # OmegaComplexity: Connecting Ω/K to Complexity Classes
@@ -146,5 +147,54 @@ theorem K_random_implies_complexity_barrier :
         n ≤ theoryLength U T + C := by
   intro _hKRandom T
   exact Chaitin_complexity_barrier U embed T
+
+/-! ## 6. ProfiledOmega: The Canonical Hard Language -/
+
+open ProfilesComplexity in
+/--
+`profiledLOmega` is the canonical instance of a profiled language:
+- Language: LOmega (the Omega bits language)
+- Size: sizeOmega (the bit index k)
+- Profile: omegaDerivedProfile (ilm, transcend, superPoly)
+
+This closes the loop between OmegaComplexity and ProfilesComplexity.
+LOmega is the **prototype** of a hard language on all three axes.
+-/
+def profiledLOmega : ProfiledLanguage (ℕ × Bool) :=
+  { L       := LOmega U embed
+    size    := sizeOmega
+    profile := omegaDerivedProfile }
+
+open ProfilesComplexity Profiles in
+/-- LOmega has cutRank = ilm. -/
+theorem profiledLOmega_cutRank :
+    (profiledLOmega U embed).profile.cutRank = CutRank.ilm := rfl
+
+open ProfilesComplexity Profiles in
+/-- LOmega has bitRank = transcend. -/
+theorem profiledLOmega_bitRank :
+    (profiledLOmega U embed).profile.bitRank = BitRank.transcend := rfl
+
+open ProfilesComplexity in
+/-- LOmega has timeRank = superPoly. -/
+theorem profiledLOmega_timeRank :
+    (profiledLOmega U embed).profile.timeRank = TimeRank.superPoly := rfl
+
+open ProfilesComplexity Profiles in
+/--
+**Main Result**: If transcend_barrier_conjecture holds,
+then LOmega is not in P_rev.
+
+This is not a theorem (the conjecture is not proven), but it shows
+how the framework connects: profiledLOmega satisfies the hypothesis
+of transcend_barrier_conjecture, so if the conjecture holds,
+LOmega ∉ P_rev.
+-/
+theorem LOmega_not_in_P_rev_if_conjecture :
+    transcend_barrier_conjecture (ℕ × Bool) →
+    (profiledLOmega U embed).L ∉ P_rev (ℕ × Bool) := by
+  intro h_conj
+  apply h_conj (profiledLOmega U embed)
+  rfl
 
 end OmegaComplexity
