@@ -6,20 +6,39 @@ import Mathlib.Data.Nat.Basic
 
 This module adds a **time complexity** layer on top of the RevHalt framework.
 
-Core idea:
+## Core Idea
+
 * We stay in the world of `Trace := ℕ → Prop` and `Halts T := ∃ n, T n`.
 * We introduce "halts in time ≤ t".
 * We define abstract complexity classes P and NP in terms of
   time-bounded halting controlled by polynomial bounds.
+
+## Important: One-Sided Classes
+
+> **Warning:** The classes `inP` and `inNP` defined here are **one-sided**:
+> the trace halts **only on YES instances** (i.e., when `L x` is true).
+> On NO instances, the trace never halts at all.
+>
+> This is the natural behavior in the RevHalt world, where "halting" is
+> the YES signal. It differs from classical P/NP where the machine must
+> **always halt** (with accept or reject).
+>
+> Correspondingly:
+> - `inP` here is analogous to **semi-decidability in polynomial time**
+>   (recognizable, not decidable).
+> - To model classical P (total deciders), one would need two traces:
+>   one for YES, one for NO, both halting in polynomial time.
 
 No new axioms are introduced.
 -/
 
 namespace RevComplexity
 
-/-- Reuse core RevHalt definitions. -/
+/-- Reuse Trace from RevHalt. -/
 abbrev Trace := ℕ → Prop
-def Halts (T : Trace) : Prop := ∃ n, T n
+
+/-- Reuse Halts from RevHalt (existence of a halting step). -/
+abbrev Halts : Trace → Prop := fun T => ∃ n, T n
 
 /-! ## 1. Time-Bounded Halting -/
 
