@@ -259,11 +259,21 @@ This shows that the abstract Turing–Gödel context used in T2 is realizable fr
 
 ```text
 RevHalt/
-├── RevHalt.lean          # Core definitions and theorems (T1, T2, T3)
-├── RevHaltInstances.lean # Concrete instantiations
-├── lakefile.lean         # Build configuration
-├── lean-toolchain        # Lean version
-└── README.md             # This file
+├── RevHalt.lean              # Core: T1/T2/T3
+├── ThreeAxisTheory.md        # Synthesis: Cut/Bit/Time axes
+├── AddOn/
+│   ├── RevHaltInstances.lean # ComputabilityModel, TuringGodelFromModel
+│   ├── OmegaRevHalt.lean     # Ω as cut of H*, T2 for Ω
+│   ├── ChaitinOmega.lean     # K, Chaitin_bound, Omega_K_random'
+│   ├── Profiles.lean         # CutRank, BitRank, NumberKind
+│   └── ProfilesOmega.lean    # omegaNumberProfile
+├── Complexity/
+│   ├── RevComplexity.lean    # HaltsInTime, inP, inNP, P⊆NP
+│   ├── OmegaComplexity.lean  # LOmega, barriers, profiledLOmega
+│   └── ProfilesComplexity.lean # TimeRank, P_rev, NP_rev, conjectures
+├── lakefile.lean
+├── lean-toolchain
+└── README.md
 ```
 
 ---
