@@ -226,79 +226,61 @@ theorem pr_no_complement_halts :
     simp only [Part.mem_map_iff]
     exact ⟨Part.get (Code.eval pc (Encodable.encode c)) hDef, Part.get_mem hDef, trivial⟩
 
-/-- The constructive RigorousModel instance.
-    Uses ℕ as Code type (Gödel numbers), with PRCode as the underlying representation.
+/-- The RigorousModel instance using Mathlib's Partrec.Code directly.
 
-    **Key insight**: Program n t uses `t` as TIME BUDGET (via evaln), not as INPUT.
-    Input is fixed to 0. This aligns with pr_diagonal_halting's semantics. -/
-noncomputable def PRModel : RigorousModel where
-  Code := ℕ  -- Use ℕ directly as Gödel numbers
-  Program := fun n t =>
-    -- t = time budget, input fixed to 0
-    let c := Denumerable.ofNat PRCode n
-    Code.evaln t c 0
-  PredCode := ℕ  -- Predicate codes are also ℕ
-  PredDef := fun pc e =>
-    -- pc halts on input e means e is in the set defined by pc
-    let predCode := Denumerable.ofNat PRCode pc
-    PRHalts predCode e
+    **No Denumerable conversion needed** - Code = PRCode directly.
+    **Program is computable** - uses only evaln (not Part.toOption).
+
+    Semantics: Program c t = evaln t c 0
+    - `t` = time budget
+    - `0` = input (fixed)
+
+    So: `∃ t, (Program c t).isSome` ↔ "c halts on input 0 in finite time" -/
+def PRModel : RigorousModel where
+  Code := PRCode
+  Program := fun c t => Code.evaln t c 0
+  PredCode := PRCode
+  PredDef := fun p e => PRHalts p (Encodable.encode e)
   diagonal_halting := by
-    intro pNat
-    let p : PRCode := Denumerable.ofNat PRCode pNat
+    intro p
     obtain ⟨e, he⟩ := pr_diagonal_halting p
-    use Encodable.encode e
-    -- Goal: (∃ t, (Program (encode e) t).isSome) ↔ PredDef pNat (encode e)
-    -- Program (encode e) t = evaln t (ofNat (encode e)) 0 = evaln t e 0 = PRProgram_time e t
-    have heq : Denumerable.ofNat PRCode (Encodable.encode e) = e := Denumerable.ofNat_encode e
+    use e
+    -- Goal: (∃ t, (evaln t e 0).isSome) ↔ PredDef p e
+    -- PredDef p e = PRHalts p (encode e) = PRPredDef p e
+    -- he : PRHalts e 0 ↔ PRPredDef p e
     constructor
     · intro ⟨t, ht⟩
-      simp only [heq] at ht
-      -- ht : (evaln t e 0).isSome
       have hHalt : PRHalts e 0 := (halts0_iff_exists_time e).mp ⟨t, ht⟩
-      -- By he: PRHalts e 0 → PRPredDef p e
       have hPredDef : PRPredDef p e := he.mp hHalt
       unfold PRPredDef at hPredDef
       exact hPredDef
     · intro hDef
-      -- hDef : PRHalts (ofNat pNat) (encode e) = PRHalts p (encode e) = PRPredDef p e
       have hPredDef : PRPredDef p e := hDef
       have hHalt : PRHalts e 0 := he.mpr hPredDef
       obtain ⟨t, ht⟩ := (halts0_iff_exists_time e).mpr hHalt
-      simp only [heq]
       exact ⟨t, ht⟩
-  nonHaltingCode := Encodable.encode loopCode
+  nonHaltingCode := loopCode
   nonHalting := by
-    -- Goal: ¬∃ t, (Program (encode loopCode) t).isSome
-    -- Program (encode loopCode) t = evaln t loopCode 0
     intro ⟨t, ht⟩
-    have heq : Denumerable.ofNat PRCode (Encodable.encode loopCode) = loopCode :=
-      Denumerable.ofNat_encode loopCode
-    simp only [heq] at ht
     have hHalt : PRHalts loopCode 0 := (halts0_iff_exists_time loopCode).mp ⟨t, ht⟩
     exact pr_loop_non_halting 0 hHalt
   no_complement_halts := by
-    -- Goal: ¬∃ pc, ∀ e, PredDef pc e ↔ ¬∃ t, (Program e t).isSome
-    intro ⟨pcNat, hpc⟩
-    let pc : PRCode := Denumerable.ofNat PRCode pcNat
+    intro ⟨pc, hpc⟩
     apply pr_no_complement_halts
     use pc
     intro e
     -- Goal: PRPredDef pc e ↔ ¬PRHalts e 0
-    have hspec := hpc (Encodable.encode e)
-    -- hspec : PRHalts pc (encode e) ↔ ¬∃ t, (evaln t (ofNat (encode e)) 0).isSome
-    have heq : Denumerable.ofNat PRCode (Encodable.encode e) = e := Denumerable.ofNat_encode e
+    -- hpc e : PRHalts pc (encode e) ↔ ¬∃ t, (evaln t e 0).isSome
+    have hspec := hpc e
     unfold PRPredDef
     constructor
     · intro hDef
       have hNotExists := hspec.mp hDef
-      simp only [heq] at hNotExists
-      -- hNotExists : ¬∃ t, (evaln t e 0).isSome = ¬∃ t, (PRProgram_time e t).isSome
       intro hHalt
       have ⟨t, ht⟩ := (halts0_iff_exists_time e).mpr hHalt
       exact hNotExists ⟨t, ht⟩
     · intro hNotHalt
       apply hspec.mpr
-      simp only [heq]
       intro ⟨t, ht⟩
       have hHalt := (halts0_iff_exists_time e).mp ⟨t, ht⟩
       exact hNotHalt hHalt
