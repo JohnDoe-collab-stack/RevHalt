@@ -1,17 +1,16 @@
 /-
   RevHalt.Instances.PA.Main
 
-  Entry point for the PA instance.
+  Entry point for the PA instance using PRModel.
   Assembles all components and invokes the Master Theorem.
 
-  ## Status
+  ## Key Design
 
-  This file assembles the complete PA pipeline:
-  - PAModel : RigorousModel
-  - PAKit : RHKit
-  - PALogicEncodedCoded : SoundLogicEncodedCoded
+  - Uses PRModel from Instances.Arithmetization (proven, no sorry)
+  - PAFamilyCoding provides coded formula families
+  - H_code = 0 gives identity family e ↦ Halt(encode e)
 
-  Then invokes RevHalt_Master_Complete_Coded.
+  ## No sorry, no noncomputable, no axiom
 -/
 import RevHalt.Instances.PA.Kit
 import RevHalt.Instances.PA.Arithmetization
@@ -20,21 +19,37 @@ import RevHalt.Unified.Coded.Master
 namespace RevHalt.Instances.PA
 open RevHalt_Unified
 open RevHalt_Unified.Coded
+open Nat.Partrec
+open RevHalt.Instances.Arithmetization
 
 -- ==============================================================================================
 -- Halting Encoding Package
 -- ==============================================================================================
 
-/-- HaltingEncoding instance for PA.
-    Connects RMHalts PAModel to PATruth via PAHaltEncode. -/
-def PAHaltingEncoding : HaltingEncoding PAModel PASentence PALogicDef where
-  HaltEncode := PAHaltEncode
-  encode_correct := by
-    intro e
-    -- RMHalts PAModel e = ∃ t, (PAProgram e t).isSome
-    -- PATruth (PAHaltEncode e) = PATruth (Halt e) = haltsOnZero e = PAHalts e
-    simp only [RMHalts, PAModel]
-    exact pa_halts_iff_exists_time e
+/-- HaltEncode for PRCode: e ↦ Halt(encode e). -/
+def PAHaltEncode_PR (e : PRCode) : PASentence :=
+  PASentence.Halt (Encodable.encode e)
+
+/-- encode_correct: RMHalts PRModel e ↔ PATruth (PAHaltEncode_PR e).
+
+    RMHalts PRModel e = ∃ t, (PRProgram_time e t).isSome ↔ PRHalts e 0
+    PATruth (Halt (encode e)) = haltsOnZero (encode e)
+                              = (eval (ofNat (encode e)) 0).Dom
+                              = (eval e 0).Dom  [by ofNat ∘ encode = id]
+                              = PRHalts e 0 -/
+lemma pa_encode_correct_pr :
+    ∀ e : PRCode, RMHalts PRModel e ↔ PALogicDef.Truth (PAHaltEncode_PR e) := by
+  intro e
+  simp only [RMHalts, PRModel, PAHaltEncode_PR, PALogicDef, PATruth, haltsOnZero]
+  -- RMHalts PRModel e = ∃ t, (PRProgram_time e t).isSome
+  -- PATruth (Halt (encode e)) = (eval (ofNat (encode e)) 0).Dom
+  rw [Denumerable.ofNat_encode]
+  exact halts0_iff_exists_time e
+
+/-- HaltingEncoding instance for PRModel. -/
+def PAHaltingEncoding : HaltingEncoding PRModel PASentence PALogicDef where
+  HaltEncode := PAHaltEncode_PR
+  encode_correct := pa_encode_correct_pr
 
 -- ==============================================================================================
 -- Full Package: SoundLogicEncodedCoded
@@ -42,7 +57,7 @@ def PAHaltingEncoding : HaltingEncoding PAModel PASentence PALogicDef where
 
 /-- Complete SoundLogicEncodedCoded instance for PA.
     Packages: FC + Logic (L) + Arithmetization (A) + HaltEncoding (E). -/
-def PALogicEncodedCoded : SoundLogicEncodedCoded PAModel PASentence where
+def PALogicEncodedCoded : SoundLogicEncodedCoded PRModel PASentence where
   FC := PAFamilyCoding
   Logic := PALogicDef
   Arith := PAArith
@@ -52,24 +67,15 @@ def PALogicEncodedCoded : SoundLogicEncodedCoded PAModel PASentence where
 -- H_code: Code for the Halting Formula Family
 -- ==============================================================================================
 
-/-- H_code: The code in PAGCode that represents the halting family.
-    PAEvalG (n+2) _ = Halt n, so for identity (e ↦ Halt e), we need
-    a family where evalG g e = Halt e.
+/-- H_code = 0: The identity family e ↦ Halt(encode e).
+    By definition of PAEvalG 0 e = Halt (encode e) = PAHaltEncode_PR e. -/
+def PA_H_code : PAGCode := 0
 
-    Current PAEvalG doesn't support this directly (it's (n+2) ↦ Halt n for all inputs).
-    We need to extend PAEvalG to support identity families.
-
-    For now, use a placeholder. -/
-def PA_H_code : PAGCode := 0  -- Placeholder
-
-/-- Proof that evalG PA_H_code e = PAHaltEncode e.
-    This requires extending PAEvalG to support identity families.
-    TODO: Implement proper PAEvalG with identity support. -/
-lemma pa_H_code_correct : ∀ e, PAFamilyCoding.evalG PA_H_code e = PAHaltEncode e := by
+/-- Proof that evalG PA_H_code e = PAHaltEncode_PR e.
+    This is direct by definition of PAEvalG. -/
+lemma pa_H_code_correct : ∀ e, PAFamilyCoding.evalG PA_H_code e = PAHaltEncode_PR e := by
   intro e
-  -- Current PAEvalG 0 _ = FalseS, but we need Halt e
-  -- This is a limitation of our simple PAEvalG definition
-  sorry  -- TODO: Extend PAEvalG to support identity families
+  rfl  -- PAEvalG 0 e = Halt (encode e) = PAHaltEncode_PR e
 
 -- ==============================================================================================
 -- Master Theorem for PA
@@ -78,15 +84,14 @@ lemma pa_H_code_correct : ∀ e, PAFamilyCoding.evalG PA_H_code e = PAHaltEncode
 /-- **MASTER THEOREM FOR PA (CODED)**
 
     Proves T1 + Diagonal for PA.
-
-    Note: pa_H_code_correct has a sorry - needs proper PAEvalG extension. -/
+    NO sorry, NO noncomputable, NO axiom (except standard Mathlib). -/
 theorem PA_Master_Theorem :
-    let ctx := EnrichedContextCoded_from_RM PAModel PAKit pa_kit_correct PALogicEncodedCoded
+    let ctx := EnrichedContextCoded_from_RM PRModel PAKit pa_kit_correct PALogicEncodedCoded
     -- (1) T1: RealHalts matches Truth of H
     (∀ e, ctx.RealHalts e ↔ ctx.Truth (ctx.H e)) ∧
     -- (2) Diagonal for H_code
     (∃ e, ctx.RealHalts e ↔ ctx.Provable (ctx.Not (ctx.H e))) :=
-  RevHalt_Master_Complete_Coded PAModel PAKit pa_kit_correct PALogicEncodedCoded
+  RevHalt_Master_Complete_Coded PRModel PAKit pa_kit_correct PALogicEncodedCoded
     PA_H_code pa_H_code_correct
 
 -- ==============================================================================================
