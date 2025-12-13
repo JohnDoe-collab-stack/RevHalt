@@ -21,13 +21,10 @@ open Classical
 /-- Code type is Mathlib's partial recursive code. -/
 abbrev PRCode := Code
 
-/-- Program execution: `evaln k c n` runs code `c` on input `n` with fuel `k`.
-    Returns `some m` if it halts with output `m`, `none` if it doesn't halt within fuel. -/
-def PRProgram (c : PRCode) (n : ℕ) : Option ℕ :=
-  -- We need unbounded fuel to get a proper halting predicate.
-  -- Use Part.toOption with classical decidability for constructive "halting".
-  -- Actually, let's define halting directly from eval.
-  sorry -- placeholder, will use Part directly
+/-- Program execution: converts Part to Option using classical logic.
+    This is noncomputable but gives us a proper Option ℕ interface. -/
+noncomputable def PRProgram (c : PRCode) (n : ℕ) : Option ℕ :=
+  (Code.eval c n).toOption
 
 /-- Halts if `eval c input` is defined (has a value). -/
 def PRHalts (c : PRCode) (input : ℕ) : Prop :=
@@ -55,13 +52,26 @@ def PRPredDef (p : PRPredCode) (e : PRCode) : Prop :=
   For any definable predicate `p`, there exists a code `e` such that:
   `Halts(e) ↔ PredDef p e`
 
-  This follows from Mathlib's `fixed_point` theorem.
+  This follows from Mathlib's `fixed_point` theorem and the smn theorem.
+  Note: This is a structural theorem about the existence of fixed points.
+  The actual construction uses Kleene's recursion theorem.
 -/
 theorem pr_diagonal_halting : ∀ p : PRPredCode, ∃ e, PRHalts e 0 ↔ PRPredDef p e := by
   intro p
-  -- Use Kleene's fixed point: there exists e such that eval e = eval (some_function_of e)
-  -- This requires careful construction using smn theorem.
-  -- For now, we use the structure of the framework.
+  -- The key insight: we need to construct a code e such that
+  -- "e halts on 0" ↔ "p halts on (encode e)"
+  -- This is a diagonal construction similar to the halting problem.
+  -- We use the smn theorem: there exists f computable such that
+  -- eval (f c n) m = eval c (pair n m)
+  -- Combined with fixed point: ∃ e, eval e = eval (g e) for computable g
+  -- For now, we provide a constructive witness using classical logic
+  classical
+  -- Use Mathlib's exists_code to get the diagonal
+  -- The diagonal program: given input 0, check if p halts on our own code
+  -- This is non-constructive but mathematically valid
+  use Code.rfind' (Code.comp p (Code.pair (Code.const 0) Code.id))
+  -- This is a placeholder structure - the actual proof requires
+  -- carefully applying fixed_point with the right computable function
   sorry
 
 /-- A code that never halts. -/
@@ -72,18 +82,61 @@ def loopCode : PRCode := Code.rfind' (Code.const 1)
 theorem pr_loop_non_halting : ∀ n, ¬PRHalts loopCode n := by
   intro n
   unfold PRHalts loopCode
-  -- rfind' on const 1 never finds a zero, so it loops forever on any input.
-  sorry
+  -- rfind' (const 1) searches for the first input that returns 0
+  -- But const 1 always returns 1, so it never terminates
+  simp only [Code.eval]
+  -- Now have: ¬(Nat.unpaired (fun a m => (Nat.rfind ...).map ...) n).Dom
+  intro h
+  -- Unfold the Part definition to get at the rfind
+  simp only [Nat.unpaired] at h
+  -- The map preserves domains, so we need rfind to have domain
+  have hmap := Part.dom_iff_mem.mp h
+  obtain ⟨v, hv⟩ := hmap
+  simp only [Part.map_eq_map, Part.mem_map_iff] at hv
+  obtain ⟨m, hm, _⟩ := hv
+  -- hm : m ∈ Nat.rfind (fun k => (fun m => m = 0) <$> Code.eval (Code.const 1) ...)
+  -- Nat.rfind returns m when the predicate first becomes true at m
+  -- But Code.eval (const 1) always returns Part.some 1, so predicate is always false
+  simp only [Code.eval_const, Part.map_some] at hm
+  -- hm : m ∈ Nat.rfind (fun _ => Part.some (decide (1 = 0)))
+  -- Nat.rfind p returns n when p n = Part.some true for the first time
+  -- But decide (1 = 0) = false always, so this can never happen
+  -- Use Nat.mem_rfind to extract the specification
+  rw [Nat.mem_rfind] at hm
+  -- hm.1 says: true ∈ Part.some (decide (1 = 0))
+  -- Part.mem_some_iff: a ∈ Part.some b ↔ a = b
+  have h1 := hm.1
+  rw [Part.mem_some_iff] at h1
+  -- h1 : true = decide (1 = 0)
+  -- But decide (1 = 0) = false (since 1 ≠ 0), so true = false, contradiction
+  simp only [decide_eq_false_iff_not, ne_eq, not_true_eq_false] at h1
 
 /--
   **No Complement Halting**: The complement of the halting set is not RE.
-  This follows from Rice's theorem / halting problem undecidability in Mathlib.
+  This follows from Mathlib's `halting_problem_not_re` theorem.
 -/
 theorem pr_no_complement_halts :
     ¬∃ pc : PRPredCode, ∀ e : PRCode, PRPredDef pc e ↔ ¬PRHalts e 0 := by
   intro ⟨pc, hpc⟩
-  -- If such a pc existed, we could decide halting, contradicting undecidability.
-  -- Use Mathlib's halting_problem or rice theorem.
+  -- If such a pc existed, it would make the complement of halting RE
+  -- But halting_problem_not_re says: ¬REPred (fun c => ¬(eval c 0).Dom)
+  -- PRPredDef pc e = PRHalts pc (encode e)
+  -- If ∀ e, PRPredDef pc e ↔ ¬PRHalts e 0, then
+  -- the predicate "fun c => ¬(eval c 0).Dom" is semi-decidable
+  -- This contradicts halting_problem_not_re
+  have := ComputablePred.halting_problem_not_re 0
+  -- halting_problem_not_re : ¬REPred (fun c => ¬(eval c 0).Dom)
+  -- Show that hpc implies REPred (fun c => ¬(eval c 0).Dom)
+  apply this
+  -- Need to show: REPred (fun c => ¬(eval c 0).Dom)
+  -- Use that pc defines the complement via halting
+  unfold REPred
+  -- Partrec (fun c => Part.assert (¬(eval c 0).Dom) (fun _ => Part.some ()))
+  -- We need to show this is Partrec
+  -- The key: PRPredDef pc e ↔ PRHalts pc (encode e) ↔ (eval pc (encode e)).Dom
+  -- And by hpc: PRPredDef pc e ↔ ¬PRHalts e 0 ↔ ¬(eval e 0).Dom
+  -- So (eval pc (encode e)).Dom ↔ ¬(eval e 0).Dom
+  -- This means the complement of halting is RE, contradiction
   sorry
 
 /-- The constructive RigorousModel instance.
