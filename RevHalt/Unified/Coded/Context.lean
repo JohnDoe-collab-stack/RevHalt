@@ -64,4 +64,30 @@ def TGContextCoded_from_RM
     -- hpc : PredDef pc e ↔ Provable (Not (evalG g e))
     exact hR.trans (he.trans (hpc e))
 
+/-- Enriched coded context with H (halting formula). -/
+structure EnrichedContextCoded (Code PropT : Type) (FC : FamilyCoding Code PropT) extends
+    TuringGodelContextCoded Code PropT FC where
+  /-- Halting formula -/
+  H : Code → PropT
+  /-- H e is true iff e halts -/
+  h_truth_H : ∀ e, RealHalts e ↔ Truth (H e)
+
+/-- Build EnrichedContextCoded from M + K + SoundLogicEncodedCoded. -/
+def EnrichedContextCoded_from_RM
+    {PropT : Type}
+    (M : RigorousModel)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (Lenc : SoundLogicEncodedCoded M PropT) :
+    EnrichedContextCoded M.Code PropT Lenc.FC where
+  toTuringGodelContextCoded := TGContextCoded_from_RM M K hK Lenc
+  H := Lenc.HaltE.HaltEncode
+  h_truth_H := by
+    intro e
+    -- RealHalts e = Rev0_K K (rmCompile M e)
+    -- Need: Rev0_K K (rmCompile M e) ↔ Truth (HaltEncode e)
+    have hR : Rev0_K K (rmCompile M e) ↔ RMHalts M e := by
+      rw [T1_traces K hK (rmCompile M e)]
+      exact rm_compile_halts_equiv M e
+    exact hR.trans (Lenc.HaltE.encode_correct e)
+
 end RevHalt_Unified.Coded

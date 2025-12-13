@@ -1,15 +1,16 @@
 /-
   RevHalt.Unified.Coded.Interface
 
-  Introduces **coded** versions of the Arithmetization interface.
+  Generic coded interface for Arithmetization.
+  This layer is INDEPENDENT of any specific logic (PA, ZFC, etc).
 
   ## Motivation
 
   The original `Arithmetization` quantifies over `∀ G : Code → PropT`, which is
-  impossible to instantiate for a real logic like PA (we can't compile a PredCode
+  impossible to instantiate for a real logic (we can't compile a PredCode
   from an arbitrary Lean function).
 
-  The solution: restrict to **coded families** of formulas, where `G` is itself
+  Solution: restrict to **coded families** of formulas, where `G` is itself
   computable/representable.
 
   ## Key Types

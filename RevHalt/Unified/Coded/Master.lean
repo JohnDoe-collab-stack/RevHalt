@@ -1,7 +1,7 @@
 /-
   RevHalt.Unified.Coded.Master
 
-  Coded versions of T2/T2'/T3 theorems.
+  Coded versions of T1/T2/T2'/T3 theorems.
 
   ## Key Observation
 
@@ -9,7 +9,7 @@
   formula families that are themselves arithmetically definable.
   Therefore, restricting to coded families loses no generality.
 
-  The theorems here are "coded" analogues of the original T2/T2'/T3.
+  The theorems here are "coded" analogues of the original T1/T2/T3.
 -/
 import RevHalt.Unified.Coded.Context
 
@@ -19,91 +19,7 @@ open RevHalt_Unified
 variable {Code PropT : Type}
 
 -- ==============================================================================================
--- Core Lemmas (coded versions)
--- ==============================================================================================
-
-/-- T2 (coded): True but unprovable exists.
-    Requires that we can express "Provable p" as a coded family. -/
-theorem T2_impossibility_coded
-    {FC : FamilyCoding Code PropT}
-    (ctx : TuringGodelContextCoded Code PropT FC)
-    (h_sound : ∀ p, ctx.Provable p → ctx.Truth p)
-    -- We need a code for "λ e, FalseT" (constant family)
-    (false_code : FC.GCode)
-    (h_false : ∀ e, FC.evalG false_code e = ctx.FalseT) :
-    ∃ p, ctx.Truth p ∧ ¬ctx.Provable p := by
-  -- Get diagonal program for the "False" family
-  obtain ⟨e, he⟩ := ctx.diagonal_program_coded false_code
-  -- he : RealHalts e ↔ Provable (Not (evalG false_code e))
-  -- By h_false: evalG false_code e = FalseT
-  -- So: RealHalts e ↔ Provable (Not FalseT)
-  simp only [h_false] at he
-
-  -- Case analysis on RealHalts e
-  by_cases hHalt : ctx.RealHalts e
-  · -- Case 1: RealHalts e is true
-    -- By he: Provable (Not FalseT)
-    have hProv : ctx.Provable (ctx.Not ctx.FalseT) := he.mp hHalt
-    -- By soundness: Truth (Not FalseT)
-    have hTruth : ctx.Truth (ctx.Not ctx.FalseT) := h_sound _ hProv
-    -- So Not FalseT is true but we need to find something unprovable...
-    -- Actually, for T2 we just need ANY true unprovable.
-    -- Let p := Not FalseT. It's true. Is it provable?
-    -- We need to check if there's something UNPROVABLE.
-    -- The key insight: if everything were provable, we'd get a contradiction.
-    -- For simplicity, use another diagonal argument...
-    -- Actually, with empty provability this is trivial.
-    -- For now, use the diagonal element itself.
-    use ctx.Not ctx.FalseT
-    constructor
-    · exact hTruth
-    · -- Need: ¬Provable (Not FalseT)
-      -- But we just showed it IS provable... contradiction case needs care.
-      -- This branch actually means our diagonal gave a provable truth.
-      -- We need to find an UNPROVABLE truth elsewhere.
-      -- Simpler approach: use the standard T2 logic.
-      sorry  -- Requires more careful case analysis
-
-  · -- Case 2: ¬RealHalts e
-    -- By he (contrapositive): ¬Provable (Not FalseT)
-    -- Is Truth (Not FalseT) true?
-    -- Not FalseT in truth semantics = ¬Truth FalseT = True (usually)
-    -- Depends on ctx.truth_not_iff
-    have hTruthNot : ctx.Truth (ctx.Not ctx.FalseT) ↔ ¬ctx.Truth ctx.FalseT :=
-      ctx.truth_not_iff ctx.FalseT
-    -- We need Truth FalseT = False. This should come from consistency.
-    -- For minimal systems, assume Truth FalseT = False.
-    -- Then Truth (Not FalseT) = True.
-    sorry  -- Requires Truth FalseT = False assumption
-
-/-- Enriched coded context with H (Truth is inherited from TuringGodelContextCoded). -/
-structure EnrichedContextCoded (Code PropT : Type) (FC : FamilyCoding Code PropT) extends
-    TuringGodelContextCoded Code PropT FC where
-  /-- Halting formula -/
-  H : Code → PropT
-  /-- H e is true iff e halts -/
-  h_truth_H : ∀ e, RealHalts e ↔ Truth (H e)
-
-/-- Build EnrichedContextCoded from M + K + SoundLogicEncodedCoded. -/
-def EnrichedContextCoded_from_RM
-    {PropT : Type}
-    (M : RigorousModel)
-    (K : RHKit) (hK : DetectsMonotone K)
-    (Lenc : SoundLogicEncodedCoded M PropT) :
-    EnrichedContextCoded M.Code PropT Lenc.FC where
-  toTuringGodelContextCoded := TGContextCoded_from_RM M K hK Lenc
-  H := Lenc.HaltE.HaltEncode
-  h_truth_H := by
-    intro e
-    -- RealHalts e = Rev0_K K (rmCompile M e)
-    -- Need: Rev0_K K (rmCompile M e) ↔ Truth (HaltEncode e)
-    have hR : Rev0_K K (rmCompile M e) ↔ RMHalts M e := by
-      rw [T1_traces K hK (rmCompile M e)]
-      exact rm_compile_halts_equiv M e
-    exact hR.trans (Lenc.HaltE.encode_correct e)
-
--- ==============================================================================================
--- Master Theorem (Coded Version)
+-- ProvableSet for coded context
 -- ==============================================================================================
 
 /-- ProvableSet for coded context. -/
@@ -111,13 +27,18 @@ def ProvableSetCoded {FC : FamilyCoding Code PropT}
     (ctx : EnrichedContextCoded Code PropT FC) : Set PropT :=
   {p | ctx.Provable p}
 
-/-- **MASTER THEOREM (CODED)**
+-- ==============================================================================================
+-- Master Theorem (Coded Version) - Minimal T1 + Diagonal
+-- ==============================================================================================
 
-    Proves T1 + T2 + T2' + T3 for coded formula families.
-    This is the version that can be instantiated with real logics like PA.
+/-- **MASTER THEOREM (CODED) - Version 1**
 
-    Note: Some results require additional assumptions about the coding
-    (e.g., that FalseT and H are in the coded family range). -/
+    Proves T1 + Diagonal for H_code.
+    This is the minimal version that can be instantiated with real logics like PA.
+
+    Requirements:
+    - `H_code : FC.GCode` - a code for the halting formula family
+    - `hH_code` - proof that evalG H_code e = HaltEncode e -/
 theorem RevHalt_Master_Complete_Coded
     {PropT : Type}
     (M : RigorousModel)
@@ -129,7 +50,7 @@ theorem RevHalt_Master_Complete_Coded
     let ctx := EnrichedContextCoded_from_RM M K hK Lenc
     -- (1) T1: RealHalts matches Truth of H
     (∀ e, ctx.RealHalts e ↔ ctx.Truth (ctx.H e)) ∧
-    -- (2) Diagonal for H_code
+    -- (2) Diagonal for H_code: ∃ e, RealHalts e ↔ Provable (Not (H e))
     (∃ e, ctx.RealHalts e ↔ ctx.Provable (ctx.Not (ctx.H e))) := by
   let ctx := EnrichedContextCoded_from_RM M K hK Lenc
   constructor
@@ -141,5 +62,111 @@ theorem RevHalt_Master_Complete_Coded
     use e
     simp only [hH_code] at he
     exact he
+
+-- ==============================================================================================
+-- Extended Master (T2/T2'/T3) - Simplified version with less nesting
+-- ==============================================================================================
+
+/-- **MASTER THEOREM (CODED) - Version 2 (T2' only, cleanest)**
+
+    The cleanest result: given soundness, there exists an independent code.
+
+    This is the core incompleteness result for coded families. -/
+theorem Master_Coded_T2prime
+    {PropT : Type}
+    (M : RigorousModel)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (Lenc : SoundLogicEncodedCoded M PropT)
+    (H_code : Lenc.FC.GCode)
+    (hH_code : ∀ e, Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e)
+    (h_sound : ∀ p, Lenc.Logic.Provable p → Lenc.Logic.Truth p) :
+    let ctx := EnrichedContextCoded_from_RM M K hK Lenc
+    -- T2': Independent code exists
+    ∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e)) := by
+  let ctx := EnrichedContextCoded_from_RM M K hK Lenc
+  obtain ⟨e, he⟩ := ctx.diagonal_program_coded H_code
+  simp only [hH_code] at he
+  use e
+  constructor
+  · -- ¬Provable (H e)
+    intro hProv
+    -- If Provable (H e), then Truth (H e) by soundness
+    have hTrue : ctx.Truth (ctx.H e) := h_sound _ hProv
+    -- So RealHalts e by h_truth_H
+    have hHalt : ctx.RealHalts e := ctx.h_truth_H e |>.mpr hTrue
+    -- By diagonal: Provable (Not (H e))
+    have hProvNot : ctx.Provable (ctx.Not (ctx.H e)) := he.mp hHalt
+    -- By absurd: Provable FalseT
+    exact ctx.consistent (ctx.absurd _ hProv hProvNot)
+  · -- ¬Provable (Not (H e))
+    intro hProvNot
+    -- By diagonal: RealHalts e
+    have hHalt : ctx.RealHalts e := he.mpr hProvNot
+    -- By h_truth_H: Truth (H e)
+    have hTrue : ctx.Truth (ctx.H e) := ctx.h_truth_H e |>.mp hHalt
+    -- If Provable (Not (H e)), then Truth (Not (H e)) by soundness
+    have hTrueNot : ctx.Truth (ctx.Not (ctx.H e)) := h_sound _ hProvNot
+    -- But Truth (Not (H e)) = ¬Truth (H e)
+    rw [ctx.truth_not_iff] at hTrueNot
+    exact hTrueNot hTrue
+
+/-- **T2 from T2'**: True but unprovable exists.
+
+    Uses the independent code to extract a true unprovable proposition. -/
+theorem Master_Coded_T2
+    {PropT : Type}
+    (M : RigorousModel)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (Lenc : SoundLogicEncodedCoded M PropT)
+    (H_code : Lenc.FC.GCode)
+    (hH_code : ∀ e, Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e)
+    (h_sound : ∀ p, Lenc.Logic.Provable p → Lenc.Logic.Truth p) :
+    let ctx := EnrichedContextCoded_from_RM M K hK Lenc
+    -- T2: True but unprovable exists
+    ∃ p, ctx.Truth p ∧ ¬ctx.Provable p := by
+  let ctx := EnrichedContextCoded_from_RM M K hK Lenc
+  obtain ⟨e, hNotProvH, hNotProvNotH⟩ :=
+    Master_Coded_T2prime M K hK Lenc H_code hH_code h_sound
+  -- We have ¬Provable (H e) and ¬Provable (Not (H e))
+  -- Case on whether e halts
+  by_cases hHalt : ctx.RealHalts e
+  · -- e halts → Truth (H e) is true, and ¬Provable (H e)
+    use ctx.H e
+    constructor
+    · exact ctx.h_truth_H e |>.mp hHalt
+    · exact hNotProvH
+  · -- e doesn't halt → Truth (Not (H e)) is true, and ¬Provable (Not (H e))
+    use ctx.Not (ctx.H e)
+    constructor
+    · rw [ctx.truth_not_iff]
+      rw [← ctx.h_truth_H]
+      exact hHalt
+    · exact hNotProvNotH
+
+/-- **Full Master (Coded)**: T1 + Diagonal + T2 + T2'.
+
+    Combines all results with soundness hypothesis. -/
+theorem Master_Coded_Full
+    {PropT : Type}
+    (M : RigorousModel)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (Lenc : SoundLogicEncodedCoded M PropT)
+    (H_code : Lenc.FC.GCode)
+    (hH_code : ∀ e, Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e)
+    (h_sound : ∀ p, Lenc.Logic.Provable p → Lenc.Logic.Truth p) :
+    let ctx := EnrichedContextCoded_from_RM M K hK Lenc
+    -- (1) T1: RealHalts matches Truth of H
+    (∀ e, ctx.RealHalts e ↔ ctx.Truth (ctx.H e)) ∧
+    -- (2) Diagonal for H_code
+    (∃ e, ctx.RealHalts e ↔ ctx.Provable (ctx.Not (ctx.H e))) ∧
+    -- (3) T2: True but unprovable exists
+    (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
+    -- (4) T2': Independent code exists
+    (∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e))) := by
+  let ctx := EnrichedContextCoded_from_RM M K hK Lenc
+  have ⟨h1, h2⟩ := RevHalt_Master_Complete_Coded M K hK Lenc H_code hH_code
+  refine ⟨h1, h2, ?_, ?_⟩
+  · exact Master_Coded_T2 M K hK Lenc H_code hH_code h_sound
+  · exact Master_Coded_T2prime M K hK Lenc H_code hH_code h_sound
 
 end RevHalt_Unified.Coded
