@@ -380,12 +380,13 @@ theorem pr_repr_provable_not :
   intro G
   use loopCode
   intro e
+  -- Provide Encodable instance for PRModel.Code (= PRCode)
+  haveI : Encodable PRModel.Code := inferInstanceAs (Encodable PRCode)
   unfold PRLogic PRProvable
   simp only [iff_false]
   -- Goal: ¬PRModel.PredDef loopCode e
   -- PRModel.PredDef loopCode e = PRHalts loopCode (encode e)
   unfold PRModel
-  -- Now e is properly typed as PRCode
   intro hDef
   exact pr_loop_non_halting (Encodable.encode e) hDef
 
