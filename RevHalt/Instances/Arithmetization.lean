@@ -4,37 +4,25 @@
   Uses Mathlib's `Nat.Partrec.Code` for a fully constructive implementation.
   No `opaque`, no `axiom` in the core definitions.
 
-  ## Status
+  ## Status: ✅ COMPLETE - No sorry!
 
-  **Proven without sorry:**
+  **All theorems proven:**
   - `pr_loop_non_halting` : loopCode never halts
   - `pr_diagonal_halting` : Kleene's fixed point for halting on input 0
   - `pr_no_complement_halts` : complement of halting is not RE (for input 0)
+  - `halts0_iff_exists_time` : bridges time semantics with halting on input 0
+  - `PRModel` : complete RigorousModel instance
 
-  **Contains sorry (PRModel):**
-  - `PRModel.diagonal_halting` : blocked on architectural mismatch
-  - `PRModel.no_complement_halts` : blocked on architectural mismatch
+  ## Key Insight: Time vs Input Semantics
 
-  ## Architectural Issue
+  The `RigorousModel.Program e n` interprets `n` as a **time/step index**.
+  The fix uses `Code.evaln t c 0` where:
+  - `t` = time budget
+  - `0` = input (fixed)
 
-  There is a **fundamental mismatch** between two halting definitions:
-
-  | Component | Halting Definition |
-  |-----------|-------------------|
-  | `RigorousModel.diagonal_halting` | `∃ n, (Program e n).isSome` (halts on **some** input) |
-  | `pr_diagonal_halting` | `PRHalts e 0` (halts on input **0**) |
-
-  These are not equivalent: a program may halt on input 5 but not on input 0.
-
-  ### Resolution Options
-
-  1. **Modify `RigorousModel`** to use `(Program e 0).isSome` instead of `∃ n, ...`
-  2. **Modify `pr_diagonal_halting`** to use `∃ n, PRHalts e n` instead of `PRHalts e 0`
-  3. **Accept sorry** in `PRModel` and document it as a known limitation
-
-  The core theorems (`pr_diagonal_halting`, `pr_no_complement_halts`) are correct
-  for the "halts on input 0" semantics. The issue is only in connecting them
-  to `RigorousModel` which uses "halts on some input" semantics.
+  This aligns with `pr_diagonal_halting` which uses "halts on input 0" semantics.
+  The lemma `halts0_iff_exists_time` bridges:
+    `(∃ t, (evaln t c 0).isSome) ↔ (eval c 0).Dom`
 -/
 import RevHalt.Unified
 import Mathlib.Computability.PartrecCode
@@ -61,6 +49,28 @@ noncomputable def PRProgram (c : PRCode) (n : ℕ) : Option ℕ :=
 /-- Halts if `eval c input` is defined (has a value). -/
 def PRHalts (c : PRCode) (input : ℕ) : Prop :=
   (Code.eval c input).Dom
+
+/-- Time-bounded program execution on input 0.
+    Uses Mathlib's `evaln` which provides a computable approximation.
+    `t` is the time budget, input is fixed to 0. -/
+def PRProgram_time (c : PRCode) (t : ℕ) : Option ℕ :=
+  Code.evaln t c 0
+
+/-- Key lemma: existence of a time bound ↔ halts on input 0.
+    This bridges the RigorousModel's `∃ n, (Program e n).isSome` with `PRHalts e 0`. -/
+lemma halts0_iff_exists_time (c : PRCode) :
+    (∃ t, (PRProgram_time c t).isSome) ↔ PRHalts c 0 := by
+  simp only [PRProgram_time, PRHalts]
+  constructor
+  · intro ⟨t, ht⟩
+    simp only [Option.isSome_iff_exists] at ht
+    obtain ⟨x, hx⟩ := ht
+    have := Code.evaln_sound hx
+    exact Part.dom_iff_mem.mpr ⟨x, this⟩
+  · intro hDom
+    obtain ⟨x, hx⟩ := Part.dom_iff_mem.mp hDom
+    obtain ⟨k, hk⟩ := Code.evaln_complete.mp hx
+    exact ⟨k, Option.isSome_iff_exists.mpr ⟨x, hk⟩⟩
 
 /-- The key insight: Mathlib's `Code.eval` is the universal partial function.
     This is constructive in the sense that `evaln` provides the approximation. -/
@@ -218,12 +228,16 @@ theorem pr_no_complement_halts :
     exact ⟨Part.get (Code.eval pc (Encodable.encode c)) hDef, Part.get_mem hDef, trivial⟩
 
 /-- The constructive RigorousModel instance.
-    Uses ℕ as Code type (Gödel numbers), with PRCode as the underlying representation. -/
+    Uses ℕ as Code type (Gödel numbers), with PRCode as the underlying representation.
+
+    **Key insight**: Program n t uses `t` as TIME BUDGET (via evaln), not as INPUT.
+    Input is fixed to 0. This aligns with pr_diagonal_halting's semantics. -/
 noncomputable def PRModel : RigorousModel where
   Code := ℕ  -- Use ℕ directly as Gödel numbers
-  Program := fun n k =>
+  Program := fun n t =>
+    -- t = time budget, input fixed to 0
     let c := Denumerable.ofNat PRCode n
-    if h : (Code.eval c k).Dom then some (Part.get (Code.eval c k) h) else none
+    Code.evaln t c 0
   PredCode := ℕ  -- Predicate codes are also ℕ
   PredDef := fun pc e =>
     -- pc halts on input e means e is in the set defined by pc
@@ -231,111 +245,64 @@ noncomputable def PRModel : RigorousModel where
     PRHalts predCode e
   diagonal_halting := by
     intro pNat
-    -- pNat : ℕ is the Gödel number of a predicate code
     let p : PRCode := Denumerable.ofNat PRCode pNat
-    -- Use pr_diagonal_halting to get e : PRCode with the diagonal property
     obtain ⟨e, he⟩ := pr_diagonal_halting p
-    -- Return encode e as the Gödel number
     use Encodable.encode e
-    -- Now prove: (∃ n, Program (encode e) n).isSome ↔ PredDef pNat (encode e)
+    -- Goal: (∃ t, (Program (encode e) t).isSome) ↔ PredDef pNat (encode e)
+    -- Program (encode e) t = evaln t (ofNat (encode e)) 0 = evaln t e 0 = PRProgram_time e t
+    have heq : Denumerable.ofNat PRCode (Encodable.encode e) = e := Denumerable.ofNat_encode e
     constructor
-    · -- Forward: halts → predicate holds
-      intro ⟨k, hk⟩
-      -- hk : Program (encode e) k is some
-      -- Program (encode e) k = if (eval (ofNat (encode e)) k).Dom then ...
-      have heq : Denumerable.ofNat PRCode (Encodable.encode e) = e := Denumerable.ofNat_encode e
-      simp only [heq] at hk
-      -- hk : (if h : (Code.eval e k).Dom then some ... else none).isSome
-      have hDom : (Code.eval e k).Dom := by
-        simp only [Option.isSome_iff_exists] at hk
-        obtain ⟨v, hv⟩ := hk
-        split_ifs at hv with h
-        · exact h
-      -- So PRHalts e k is true
-      -- But we need PRHalts e 0 for the diagonal
-      -- Wait, the statement is: ∃ n, halts on some n
-      -- Actually for RigorousModel, it's ∃ n, (Program e n).isSome
-      -- Which means e halts on SOME input
-      -- But pr_diagonal_halting gives: PRHalts e 0 ↔ PRPredDef p e
-      -- We have halts on k, but need halts on 0
-      -- This is a mismatch - the RigorousModel uses "halts on some input"
-      -- while pr_diagonal_halting uses "halts on input 0"
-      -- For now, we use the weaker condition: if halts on 0, then halts on some
-      -- Actually the structure of RigorousModel says:
-      -- diagonal_halting : ∀ p, ∃ e, (∃ n, (Program e n).isSome) ↔ PredDef p e
-      -- So we need: halts-on-any-input ↔ p defines e
-      -- This requires a different construction
-      sorry
-    · -- Backward: predicate holds → halts
-      intro hDef
-      sorry
+    · intro ⟨t, ht⟩
+      simp only [heq] at ht
+      -- ht : (evaln t e 0).isSome
+      have hHalt : PRHalts e 0 := (halts0_iff_exists_time e).mp ⟨t, ht⟩
+      -- By he: PRHalts e 0 → PRPredDef p e
+      have hPredDef : PRPredDef p e := he.mp hHalt
+      unfold PRPredDef at hPredDef
+      exact hPredDef
+    · intro hDef
+      -- hDef : PRHalts (ofNat pNat) (encode e) = PRHalts p (encode e) = PRPredDef p e
+      have hPredDef : PRPredDef p e := hDef
+      have hHalt : PRHalts e 0 := he.mpr hPredDef
+      obtain ⟨t, ht⟩ := (halts0_iff_exists_time e).mpr hHalt
+      simp only [heq]
+      exact ⟨t, ht⟩
   nonHaltingCode := Encodable.encode loopCode
   nonHalting := by
-    intro ⟨k, hk⟩
-    -- Show encoded loopCode never halts
-    -- loopCode is rfind' on const 1, which never halts
+    -- Goal: ¬∃ t, (Program (encode loopCode) t).isSome
+    -- Program (encode loopCode) t = evaln t loopCode 0
+    intro ⟨t, ht⟩
     have heq : Denumerable.ofNat PRCode (Encodable.encode loopCode) = loopCode :=
       Denumerable.ofNat_encode loopCode
-    simp only [heq] at hk
-    -- hk : (if h : (Code.eval loopCode k).Dom then some ... else none).isSome
-    -- Need to show False by applying pr_loop_non_halting k
-    have hDom : (Code.eval loopCode k).Dom := by
-      simp only [Option.isSome_iff_exists] at hk
-      obtain ⟨v, hv⟩ := hk
-      split_ifs at hv with h
-      · exact h
-    exact pr_loop_non_halting k hDom
+    simp only [heq] at ht
+    have hHalt : PRHalts loopCode 0 := (halts0_iff_exists_time loopCode).mp ⟨t, ht⟩
+    exact pr_loop_non_halting 0 hHalt
   no_complement_halts := by
-    -- The complement of halting is not RE
+    -- Goal: ¬∃ pc, ∀ e, PredDef pc e ↔ ¬∃ t, (Program e t).isSome
     intro ⟨pcNat, hpc⟩
-    -- pcNat : ℕ, hpc : ∀ e, PredDef pcNat e ↔ ¬∃ n, (Program e n).isSome
-    -- PredDef pcNat e = PRHalts (ofNat pcNat) e
-    -- So: ∀ e : ℕ, PRHalts (ofNat pcNat) e ↔ ¬∃ n, (Program e n).isSome
     let pc : PRCode := Denumerable.ofNat PRCode pcNat
-    -- We need to apply pr_no_complement_halts
     apply pr_no_complement_halts
     use pc
-    intro e  -- e : PRCode
-    -- Need: PRPredDef pc e ↔ ¬PRHalts e 0
-    -- PRPredDef pc e = PRHalts pc (encode e)
-    -- From hpc with (encode e): PRHalts pc (encode e) ↔ ¬∃ n, (Program (encode e) n).isSome
+    intro e
+    -- Goal: PRPredDef pc e ↔ ¬PRHalts e 0
     have hspec := hpc (Encodable.encode e)
-    -- hspec : PRHalts (ofNat pcNat) (encode e) ↔ ¬∃ n, (Program (encode e) n).isSome
-    simp only [pc] at hspec ⊢
+    -- hspec : PRHalts pc (encode e) ↔ ¬∃ t, (evaln t (ofNat (encode e)) 0).isSome
+    have heq : Denumerable.ofNat PRCode (Encodable.encode e) = e := Denumerable.ofNat_encode e
     unfold PRPredDef
-    -- Goal: PRHalts pc (encode e) ↔ ¬PRHalts e 0
     constructor
     · intro hDef
-      -- hDef : PRHalts pc (encode e)
-      have hNotHalts := hspec.mp hDef
-      -- hNotHalts : ¬∃ n, (Program (encode e) n).isSome
-      intro hHalt0
-      -- hHalt0 : PRHalts e 0 = (Code.eval e 0).Dom
-      -- Program (encode e) 0 = if (eval (ofNat (encode e)) 0).Dom then some ... else none
-      apply hNotHalts
-      use 0
-      have heq : Denumerable.ofNat PRCode (Encodable.encode e) = e := Denumerable.ofNat_encode e
-      simp only [heq]
-      unfold PRHalts at hHalt0
-      simp only [Option.isSome_iff_exists]
-      exact ⟨Part.get (Code.eval e 0) hHalt0, by simp [hHalt0]⟩
-    · intro hNotHalt0
-      -- hNotHalt0 : ¬PRHalts e 0
+      have hNotExists := hspec.mp hDef
+      simp only [heq] at hNotExists
+      -- hNotExists : ¬∃ t, (evaln t e 0).isSome = ¬∃ t, (PRProgram_time e t).isSome
+      intro hHalt
+      have ⟨t, ht⟩ := (halts0_iff_exists_time e).mpr hHalt
+      exact hNotExists ⟨t, ht⟩
+    · intro hNotHalt
       apply hspec.mpr
-      intro ⟨k, hk⟩
-      -- hk : (Program (encode e) k).isSome
-      have heq : Denumerable.ofNat PRCode (Encodable.encode e) = e := Denumerable.ofNat_encode e
-      simp only [heq] at hk
-      have hDom : (Code.eval e k).Dom := by
-        simp only [Option.isSome_iff_exists] at hk
-        obtain ⟨v, hv⟩ := hk
-        split_ifs at hv with h
-        · exact h
-      -- We have: e halts on k, need to derive contradiction
-      -- But hNotHalt0 says e doesn't halt on 0
-      -- This doesn't work - halting on k doesn't imply halting on 0!
-      -- The issue is the mismatch in halting definitions
-      sorry
+      simp only [heq]
+      intro ⟨t, ht⟩
+      have hHalt := (halts0_iff_exists_time e).mp ⟨t, ht⟩
+      exact hNotHalt hHalt
 
 -- ==============================================================================================
 -- 3. Logic (same as before, but we could also use Mathlib's logic)
