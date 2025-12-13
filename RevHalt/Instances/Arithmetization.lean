@@ -3,30 +3,25 @@
 
   Based on Mathlib's `Nat.Partrec.Code` and `evaln`.
   No `opaque`, no `axiom` in the core definitions.
-  Uses classical logic (open Classical, noncomputable) for Part/Option conversion.
 
   ## Status: ✅ COMPLETE - No sorry!
 
-  **All theorems proven:**
-  - `pr_loop_non_halting` : loopCode never halts
-  - `pr_diagonal_halting` : Kleene's fixed point for halting on input 0
-  - `pr_no_complement_halts` : complement of halting is not RE
-  - `halts0_iff_exists_time` : bridges time semantics with halting semantics
-  - `PRModel` : complete RigorousModel instance
+  **Fully proven:**
+  - `PRModel` : RigorousModel using Code = PRCode directly (no Denumerable encoding)
+  - `PRLogicEncoded` : Complete L+A+E package
+  - `PRModel_Master_Theorem` : T1 + T2 + T2' + T3
 
-  ## Key Insight: Time vs Input Semantics
+  ## Key Design
 
-  The `RigorousModel.Program e n` interprets `n` as a **time/step budget**.
-  We use `Code.evaln t c 0` where:
-  - `t` = time budget (the variable index)
-  - `0` = input (fixed)
+  - **Code** = `Nat.Partrec.Code` directly
+  - **Program** uses `evaln` only; classical logic appears only in proofs (not definitions)
+  - **Time semantics**: `Program c t` = evaln with time budget `t`, input fixed to `0`
 
-  This gives: `∃ t, (Program e t).isSome` ↔ "halts on input 0 in finite time"
+  ## Provability
 
-  ## Code Encoding
-
-  We identify codes with ℕ via `Denumerable.ofNat` / `Encodable.encode`.
-  The round-trip property `Denumerable.ofNat_encode` ensures consistency.
+  This instance uses empty provability (`Provable := False`) which trivially validates
+  the pipeline. It demonstrates "the transport architecture works end-to-end" rather
+  than "incompleteness of a meaningful theory".
 -/
 import RevHalt.Unified
 import Mathlib.Computability.PartrecCode
@@ -36,7 +31,6 @@ namespace RevHalt.Instances.Arithmetization
 
 open RevHalt_Unified
 open Nat.Partrec
-open Classical
 
 -- ==============================================================================================
 -- 1. Constructive Computability Model using Mathlib
@@ -184,6 +178,7 @@ theorem pr_loop_non_halting : ∀ n, ¬PRHalts loopCode n := by
 -/
 theorem pr_no_complement_halts :
     ¬∃ pc : PRPredCode, ∀ e : PRCode, PRPredDef pc e ↔ ¬PRHalts e 0 := by
+  classical
   intro ⟨pc, hpc⟩
   -- halting_problem_not_re : ¬REPred (fun c => ¬(eval c 0).Dom)
   have hNotRE := ComputablePred.halting_problem_not_re 0
@@ -319,7 +314,8 @@ def PRKit : RHKit where
   Proj := fun X => ∃ n, X n
 
 theorem pr_kit_correct : DetectsMonotone PRKit := by
-  intro X _hMono; rfl
+  intro X _hMono
+  rfl
 
 -- ==============================================================================================
 -- 5. Halting Encoding (E)
@@ -384,8 +380,6 @@ theorem pr_repr_provable_not :
   haveI : Encodable PRModel.Code := inferInstanceAs (Encodable PRCode)
   unfold PRLogic PRProvable
   simp only [iff_false]
-  -- Goal: ¬PRModel.PredDef loopCode e
-  -- PRModel.PredDef loopCode e = PRHalts loopCode (encode e)
   unfold PRModel
   intro hDef
   exact pr_loop_non_halting (Encodable.encode e) hDef
@@ -430,5 +424,13 @@ theorem PRModel_Master_Theorem :
   RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
 
 #print PRModel_Master_Theorem
+
+-- ==============================================================================================
+-- 10. Axiom Check: Verify no unexpected axioms
+-- ==============================================================================================
+
+#print axioms PRModel
+#print axioms PRLogicEncoded
+#print axioms PRModel_Master_Theorem
 
 end RevHalt.Instances.Arithmetization
