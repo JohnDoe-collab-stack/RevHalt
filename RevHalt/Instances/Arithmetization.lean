@@ -1,28 +1,32 @@
 /-
-  RevHalt Constructive Arithmetization Instance
+  RevHalt Arithmetization Instance via Mathlib
 
-  Uses Mathlib's `Nat.Partrec.Code` for a fully constructive implementation.
+  Based on Mathlib's `Nat.Partrec.Code` and `evaln`.
   No `opaque`, no `axiom` in the core definitions.
+  Uses classical logic (open Classical, noncomputable) for Part/Option conversion.
 
   ## Status: ✅ COMPLETE - No sorry!
 
   **All theorems proven:**
   - `pr_loop_non_halting` : loopCode never halts
   - `pr_diagonal_halting` : Kleene's fixed point for halting on input 0
-  - `pr_no_complement_halts` : complement of halting is not RE (for input 0)
-  - `halts0_iff_exists_time` : bridges time semantics with halting on input 0
+  - `pr_no_complement_halts` : complement of halting is not RE
+  - `halts0_iff_exists_time` : bridges time semantics with halting semantics
   - `PRModel` : complete RigorousModel instance
 
   ## Key Insight: Time vs Input Semantics
 
-  The `RigorousModel.Program e n` interprets `n` as a **time/step index**.
-  The fix uses `Code.evaln t c 0` where:
-  - `t` = time budget
+  The `RigorousModel.Program e n` interprets `n` as a **time/step budget**.
+  We use `Code.evaln t c 0` where:
+  - `t` = time budget (the variable index)
   - `0` = input (fixed)
 
-  This aligns with `pr_diagonal_halting` which uses "halts on input 0" semantics.
-  The lemma `halts0_iff_exists_time` bridges:
-    `(∃ t, (evaln t c 0).isSome) ↔ (eval c 0).Dom`
+  This gives: `∃ t, (Program e t).isSome` ↔ "halts on input 0 in finite time"
+
+  ## Code Encoding
+
+  We identify codes with ℕ via `Denumerable.ofNat` / `Encodable.encode`.
+  The round-trip property `Denumerable.ofNat_encode` ensures consistency.
 -/
 import RevHalt.Unified
 import Mathlib.Computability.PartrecCode
@@ -40,11 +44,6 @@ open Classical
 
 /-- Code type is Mathlib's partial recursive code. -/
 abbrev PRCode := Code
-
-/-- Program execution: converts Part to Option using classical logic.
-    This is noncomputable but gives us a proper Option ℕ interface. -/
-noncomputable def PRProgram (c : PRCode) (n : ℕ) : Option ℕ :=
-  (Code.eval c n).toOption
 
 /-- Halts if `eval c input` is defined (has a value). -/
 def PRHalts (c : PRCode) (input : ℕ) : Prop :=
