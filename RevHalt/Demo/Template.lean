@@ -1,7 +1,7 @@
 -- RevHalt/Demo/Template.lean
 -- Minimal instantiation template for the RevHalt framework
 
-import RevHalt.Unified
+import RevHalt.Bridge
 
 /-!
 # RevHalt Framework Instantiation Template
@@ -23,7 +23,7 @@ Copy this file and fill in the stubs to create your own model.
 
 namespace MyModel
 
-open RevHalt_Unified
+open RevHalt
 
 -- ==============================================================================================
 -- Step 1: Define your types

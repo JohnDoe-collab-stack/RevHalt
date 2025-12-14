@@ -9,237 +9,256 @@ Unlike classical presentations of Gödel's theorems, which work *inside* a speci
 
 ---
 
-## Architecture
-
-The project follows a **Two-Level Architecture** to ensure compositionality and rigorous separation of concerns:
-
-### 1. Abstract Level (Theory-Independent)
-*Locations: `RevHalt.lean`, `RevHalt/Unified/Core.lean`*
-- Formalizes the structural invariants of incompleteness (T2, T3) for **any** external truth predicate `RealHalts` inside a `TuringGodelContext`.
-- At this level, theorems are logical validities independent of any specific theory or computation model.
-- **Key Objects**: `RHKit`, `Trace`, `TuringGodelContext`.
-
-### 2. Instantiated Level (The Bridge)
-*Locations: `RevHalt/Unified/Bridge.lean`, `RevHalt/Unified/Coded/*.lean`, `RevHalt/Instances/*`*
-- Connects the abstract world to concrete theories via the **M/L/A/E Interface**:
-  - **M** (Model): A `RigorousModel` of computation (e.g., `PartrecCode`).
-  - **L** (Logic): A `SoundLogicDef` (e.g., Peano Arithmetic).
-  - **A** (Arithmetization): Maps definability in **M** to provability in **L**.
-  - **E** (Encoding): Maps model halting to semantic truth.
-- **Mechanism (Standard & Coded)**: The bridge instantiates `RealHalts` as `Rev0_K`. The `Coded` adapter handles theories (like PA) where only coded formula families are representable.
-- **Result**: The abstract theorems (T1–T3) are automatically transported to the concrete theory without re-proof.
-
-### How the Bridge Works
-
-The goal is **compositionality**: once a theory provides an M/L/A/E instance, the entire T1 → T2 → T2' → T3 chain transports without rewriting proofs.
-
-**Mechanism** (`Unified/Bridge.lean`):
-1. **Instantiation**: Sets `RealHalts := Rev0_K K (rmCompile M e)` via `TGContext_from_RM`.
-2. **Equivalence Chain**: Connects abstract halting to semantic truth using:
-   - `T1_traces` (Rev0_K ↔ Halts)
-   - `rm_compile_halts_equiv` (Halts ↔ RMHalts)
-   - `encode_correct` (RMHalts ↔ Truth(HaltEncode))
-3. **Transport**: `RevHalt_Master_Complete` delivers T1+T2+T2'+T3 for any valid instance.
-
-This turns the framework into a **reference layer** for comparing theories in a common format.
-
-
-### Original contributions
-
-This project establishes three main results, each with distinct novelty:
-
-#### T1 — Canonicity of computational truth
-
-Classical result (Turing): *The halting problem is undecidable.*
-
-T1 proves something different: **computational truth is objective** — independent of the observation mechanism.
-
-The framework introduces `RHKit`, an abstract "observation mechanism" for traces. T1 proves:
-- `T1_traces`: Any valid Kit yields the same verdict as standard halting
-- `T1_uniqueness`: Two valid Kits are extensionally equivalent
-- `T1_semantics`: Under the DynamicBridge hypothesis, Rev captures model-theoretic consequence
-
-This is not Turing's theorem. It is a **canonicity result**: all valid observers converge to the same truth.
-
-#### T2 — Abstract Turing-Gödel synthesis
-
-Classical results: Turing (algorithmic undecidability) and Gödel I (true unprovable sentences) are typically presented separately.
-
-T2 extracts their **common abstract core** via `TuringGodelContext'`:
-- `diagonal_program`: the diagonal fixed-point axiom unifying both arguments
-- Result: no internal predicate can be simultaneously Total, Correct, and Complete
-
-This is not a reformulation; it is an **abstraction** that reveals the structural unity of Turing and Gödel.
-
-#### The Oracle Perspective (New!)
-
-We formalize the framework itself as a **Truth Oracle** (`RevHalt/Unified/Oracle.lean`).
-- **Definition**: A `TruthOracle` is an external semantic authority that correctly judges propositions.
-- **Theorem**: `oracle_not_internalizable`. A sound theory cannot "internalize" this oracle (i.e., simulate it via provability) without proving its own inconsistency (via T2).
-- **Implication**: The bridge (`Truth ↔ Halts LR`) is not just a connector; it is an **essential oracular link** providing verdicts inaccessible to the theory's internal logic.
-
-#### T3 — Complementarity: the central concept
-
-Classical incompleteness is **limitative**: it tells you what theories *cannot* do.
-
-T3 introduces a **new concept** — **complementarity** — and proves it formally:
-
-> **Rev is the complement of any sound formal system.**
-
-This means:
-- Formal systems are not "failures" for being incomplete — they are **structurally partial**
-- Rev is not merely "bigger" than PA/ZFC — it is **what they lack**
-- Truth and provability are not opposed — they are **complementary**
-
-The theorem `T3_strong` proves that this complementarity is **structured and rich**, given an `InfiniteIndependentHalting` hypothesis (an infinite family of independent halting codes). Under this assumption, we prove the existence of **infinitely many disjoint, compatible directions** of extension. This means that completing a theory is not a single forced step, but a **dynamical choice** — a navigation through the geography of computational truth.
-
-**This concept has no classical analog.** It transforms incompleteness from a limitative statement into a structural dynamical relationship.
-
----
-
-## Syntax–semantics correspondence
-
-The framework establishes a precise correspondence:
-
-| RevHalt (syntax) | Instance L (semantics) |
-|------------------|------------------------|
-| `RMHalts e` — halting defined by the computability model | `L.Truth (HaltEncode e)` — truth as seen by the theory |
-| `M.PredDef` — definability in the abstract model | `L.Provable` via arithmetization — derivability as seen by the theory |
-| Diagonalization (`diagonal_halting`) | Arithmetization (`repr_provable_not`) |
-
-The theorems then express structural gaps between syntactic truth and semantic observability:
-
-| Theorem | Interpretation |
-|---------|----------------|
-| **T1** : `∀ T, Rev0_K K T ↔ Halts T` | **Canonicity**: computational truth is objective, independent of observation mechanism |
-| **T2** : `∃ p, Truth p ∧ ¬Provable p` | **Synthesis**: no internal predicate captures external truth (Turing-Gödel core) |
-| **T2'** : `∃ e, ¬Provable(H e) ∧ ¬Provable(¬H e)` | **Independence**: some halting facts are invisible to the semantic observer |
-| **T3** : `∃ T₁ ⊃ ProvableSet, sound` | **Complementarity**: Rev provides structured infinite extensions for any sound theory |
-
-This is the reverse of classical incompleteness proofs, which work *in* a theory *about* that theory. Here, the proofs work *in* RevHalt *about* any conforming semantic instance.
-
----
-
-## Structure
-
-### New Modular Architecture (v2)
-
-```
-RevHalt/
-├── Base/           # Foundation: Trace, Halts, RHKit
-│   ├── Trace.lean
-│   └── Kit.lean
-├── Theory/         # Abstract theorems T1/T2/T3
-│   ├── Canonicity.lean     # T1, DynamicBridge
-│   ├── Impossibility.lean  # T2, TuringGodelContext'
-│   └── Complementarity.lean # T3
-├── Kinetic/        # Dynamic semantics
-│   ├── Closure.lean        # CloK, CloRev
-│   ├── MasterClosure.lean  # VerifiableContext, TheGreatChain
-│   └── System.lean         # Gap, GapSystem
-├── Oracle/         # Framework as Oracle
-│   └── Oracle.lean
-├── Bridge/         # M/L/A/E instantiation
-│   ├── RigorousModel.lean  # RigorousModel, SoundLogicDef
-│   ├── Context.lean        # EnrichedContext, ProvableSet
-│   └── Master.lean         # RevHalt_Master_Complete
-├── Extensions/     # OmegaChaitin, RefSystem
-├── Instances/      # PA, Mathlib PRModel
-└── Main.lean       # Public API entry point
-```
-
-### Entry point (New)
+## Quick Start
 
 ```lean
 import RevHalt.Main
 open RevHalt
+
+-- Access all core definitions and theorems
+#check T1_traces
+#check T2_impossibility
+#check T3_strong
+#check RevHalt_Master_Complete
 ```
-
-### Legacy Entry point (Unified)
-
-```lean
-import RevHalt.Unified
-open RevHalt_Unified
-```
-
----
-
-## Interface (M / L / A / E)
-
-The framework factors assumptions into four components:
-
-### M — Computability model (`RigorousModel`)
-
-- `Code`, `Program : Code → ℕ → Option ℕ`
-- `PredCode`, `PredDef : PredCode → Code → Prop` (definability, not decidability)
-- `diagonal_halting` (fixed-point over definable predicates)
-- `no_complement_halts` (non-halting is not definable)
-
-### L — Logic (`SoundLogicDef PropT`)
-
-- `Provable`, `Truth : PropT → Prop`
-- `soundness : Provable p → Truth p`
-- `Not`, `FalseP`, `consistent`, `absurd`, `truth_not_iff`
-
-### A — Arithmetization (`Arithmetization M PropT L`)
-
-- `repr_provable_not` : for any `G : Code → PropT`, the predicate `Provable (Not (G e))` is definable in `PredCode`.
-
-### E — Encoding (in `SoundLogicEncoded`)
-
-- `HaltEncode : Code → PropT`
-- `encode_correct : RMHalts e ↔ Truth (HaltEncode e)`
-
----
-
-## Main theorem
-
-### `RevHalt_Master_Complete`
-
-For any semantic instance `(M, K, L)` satisfying the interface:
-
-```
-(1) ∀ e, RealHalts e ↔ Halts (compile e)           -- T1: canonicity
-(2) ∃ p, Truth p ∧ ¬Provable p                     -- T2: synthesis
-(3) ∃ e, ¬Provable (H e) ∧ ¬Provable (Not (H e))   -- T2': independence
-(4) ∃ T₁ ⊃ ProvableSet, ∀ p ∈ T₁, Truth p         -- T3: complementarity
-```
-
----
-
-## Demos
-
-- `RevHalt_Demo_A` : trivial model (empty provability)
-- `RevHalt_Demo_C` : non-trivial model (non-empty provability, structured predicates)
-- `RevHalt/Demo/Template.lean` : instantiation skeleton
-
----
-
-## Build
 
 ```bash
 lake build
-lake env lean RevHalt/Demo/All.lean
 ```
 
 ---
 
-## Design notes
+## Architecture
 
-- `PredDef` is `Prop`-valued (definability), avoiding implicit decidability assumptions.
-- `no_complement_halts` blocks trivial instantiations where "not halts" would be definable.
-- Soundness (`Provable → Truth`) is an explicit hypothesis, not an ambient assumption.
+The project follows a **Layered Modular Architecture**:
+
+```
+RevHalt/
+├── Base/                # Foundation layer
+│   ├── Trace.lean       # Trace, Halts, up operator
+│   └── Kit.lean         # RHKit, DetectsMonotone, Rev_K
+│
+├── Theory/              # Abstract theorems (theory-independent)
+│   ├── Canonicity.lean  # T1_traces, DynamicBridge, verdict_K
+│   ├── Impossibility.lean # T2_impossibility, TuringGodelContext'
+│   └── Complementarity.lean # T3_strong, InfiniteIndependentHalting
+│
+├── Kinetic/             # Dynamic semantics
+│   ├── Closure.lean     # CloK, CloRev, Stage
+│   ├── MasterClosure.lean # VerifiableContext, TheGreatChain
+│   └── System.lean      # Gap, GapTruth, GapSystem
+│
+├── Oracle.lean          # Framework as Truth Oracle
+│
+├── Bridge/              # M/L/A/E instantiation layer
+│   ├── RigorousModel.lean # RigorousModel, SoundLogicDef, Arithmetization
+│   ├── Context.lean     # EnrichedContext, ProvableSet
+│   ├── Master.lean      # RevHalt_Master_Complete
+│   └── Coded/           # Coded formula families (for PA/ZFC)
+│       ├── Interface.lean
+│       ├── Context.lean
+│       └── Master.lean
+│
+├── Extensions/          # Advanced applications
+│   ├── RefSystem.lean   # Cut/Bit dynamic verification
+│   └── OmegaChaitin.lean # Chaitin's Ω as RefSystem
+│
+├── Instances/           # Concrete theory instances
+│   ├── Arithmetization.lean # PRModel (Mathlib Partrec)
+│   └── PA/              # Peano Arithmetic instance
+│
+└── Main.lean            # Public API entry point
+```
+
+### Layer Dependencies
+
+```
+Base → Theory → Kinetic → Oracle
+  ↓       ↓                  ↓
+  └───────┴──────→ Bridge ←──┘
+                      ↓
+              Extensions / Instances
+```
+
+---
+
+## The Three Theorems
+
+### T1 — Canonicity
+
+**Claim**: Computational truth is objective — independent of observation mechanism.
+
+```lean
+theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
+    ∀ T, Rev0_K K T ↔ Halts T
+```
+
+- Any valid Kit yields the same verdict as standard halting
+- `T1_uniqueness`: Two valid Kits are extensionally equivalent
+- `T1_semantics`: Under DynamicBridge, Rev captures model-theoretic consequence
+
+### T2 — Impossibility (Turing-Gödel Synthesis)
+
+**Claim**: No internal predicate can be Total, Correct, and Complete.
+
+```lean
+theorem T2_impossibility {Code PropT : Type} (ctx : TuringGodelContext' Code PropT) :
+    ¬∃ H : InternalHaltingPredicate ctx, H.total ∧ H.correct ∧ H.complete
+```
+
+This extracts the common abstract core of Turing's undecidability and Gödel's incompleteness via the `diagonal_program` axiom.
+
+### T3 — Complementarity
+
+**Claim**: Rev is the complement of any sound formal system.
+
+```lean
+theorem T3_strong {Code PropT : Type} (ctx : TuringGodelContext' Code PropT)
+    (iih : InfiniteIndependentHalting Code PropT ctx) :
+    ∃ (Index : Type) (π : Partition Index),
+      π.infinite ∧ π.disjoint ∧ (∀ i, extends_proven (π.family i))
+```
+
+Under the `InfiniteIndependentHalting` hypothesis, there exist **infinitely many disjoint, compatible directions** of extension. Truth and provability are not opposed — they are **complementary**.
+
+---
+
+## The Oracle Perspective
+
+The framework acts as a **Truth Oracle** external to any internal theory.
+
+```lean
+structure TruthOracle (PropT : Type) where
+  judge : PropT → Prop
+  sound : ∀ p, judge p → Truth p
+
+theorem oracle_not_internalizable (ctx : VerifiableContext PropT) :
+    ¬∃ (internal : PropT → Prop), (∀ p, internal p ↔ oracle.judge p)
+```
+
+The bridge (`Truth ↔ Halts LR`) provides verdicts inaccessible to the theory's internal logic.
+
+---
+
+## M/L/A/E Interface
+
+The framework factors assumptions into four pluggable components:
+
+| Component | Type | Purpose |
+|-----------|------|---------|
+| **M** | `RigorousModel` | Computability model (Code, Program, diagonal_halting) |
+| **L** | `SoundLogicDef PropT` | Logic (Provable, Truth, soundness) |
+| **A** | `Arithmetization M PropT L` | Maps definability to provability |
+| **E** | `HaltEncode + encode_correct` | Maps halting to semantic truth |
+
+### Master Theorem
+
+```lean
+theorem RevHalt_Master_Complete (M : RigorousModel) (K : RHKit)
+    (hK : DetectsMonotone K) (L : SoundLogicEncoded M PropT) :
+    let ctx := EnrichedContext_from_Encoded M K hK L
+    -- T1: Canonicity
+    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile M e)) ∧
+    -- T2: True but unprovable exists
+    (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
+    -- T2': Independent code exists
+    (∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e))) ∧
+    -- T3: Strict sound extension exists
+    (∃ T1 : Set PropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p))
+```
+
+---
+
+## Kinetic Layer
+
+The dynamic semantics formalize the evolution of truth over time:
+
+| Concept | Definition |
+|---------|------------|
+| `CloK Γ` | Kinetic closure: sentences eventually true |
+| `CloRev K Γ` | Rev-based closure via halting |
+| `Gap` | Difference between kinetic truth and provability |
+| `GapSystem` | Kit-invariant gap reasoning |
+| `TheGreatChain` | Truth = CloK = Halts = Rev verdict |
+
+---
+
+## Instances
+
+### PRModel (Mathlib)
+
+Complete instance using `Nat.Partrec.Code`:
+
+```lean
+-- RevHalt/Instances/Arithmetization.lean
+def PRModel : RigorousModel  -- No sorry, no axioms
+theorem PRModel_Master_Theorem : ... -- Full T1+T2+T2'+T3
+```
+
+### Peano Arithmetic
+
+Coded instance for PA:
+
+```lean
+-- RevHalt/Instances/PA/Main.lean
+theorem PA_Master_Theorem : ... -- T1 + Diagonal for coded families
+```
+
+---
+
+## Extensions
+
+### RefSystem
+
+Cut/Bit framework for dynamic verification:
+
+```lean
+structure RefSystem (Model Sentence Referent : Type) where
+  Sat : Model → Sentence → Prop
+  Cut : ℚ → Referent → Sentence
+  Bit : ℕ → ℕ → Referent → Sentence
+  cut_mono : ...
+  bit_cut_link : ...
+```
+
+### OmegaChaitin
+
+Chaitin's Ω as a RefSystem instance, enabling Rev-based reasoning about algorithmic randomness.
+
+---
+
+## Build & Validate
+
+```bash
+# Build everything
+lake build
+
+# Validate demos
+lake env lean RevHalt/Demo/All.lean
+
+# Check specific modules
+lake build RevHalt.Main
+lake build RevHalt.Instances.PA.Main
+```
+
+---
+
+## Design Principles
+
+1. **Compositionality**: Once a theory provides M/L/A/E, all theorems transport automatically
+2. **No implicit decidability**: `PredDef` is `Prop`-valued (definability, not decidability)
+3. **Explicit soundness**: `Provable → Truth` is a hypothesis, not ambient
+4. **Modular layers**: Each layer has clear responsibilities and dependencies
 
 ---
 
 ## LLM Disclosure
 
-The code and documentation in this repository were primarily generated by Large Language Models (specifically ChatGPT) under the strict conceptual guidance of the author.
+The code and documentation in this repository were primarily generated by Large Language Models under strict conceptual guidance from the author.
 
 **Methodology:**
-- **Conceptual Design**: The core definitions, architectural constraints, and theorem statements were specified by the author.
-- **Implementation**: The expansion of these concepts into valid Lean 4 code was performed by the LLM through an iterative process of generation, compilation, error analysis, and refinement.
-- **Verification**: The final authority is the Lean 4 kernel. The role of the LLM was to produce a formal text that satisfies the compiler's strict consistency checks.
+- **Conceptual Design**: Core definitions and theorem statements specified by the author
+- **Implementation**: Expansion into Lean 4 code via iterative generation and refinement
+- **Verification**: The Lean 4 kernel is the final authority
 
-This project demonstrates how agentic AI can be used to translate private conceptual frameworks into rigorous, machine-checked mathematical artifacts.
-
+This project demonstrates how agentic AI can translate private conceptual frameworks into rigorous, machine-checked mathematical artifacts.

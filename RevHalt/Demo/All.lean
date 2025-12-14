@@ -30,7 +30,7 @@ A successful compilation (Exit 0) validates the entire framework.
 
 section SmokeTests
 
-open RevHalt_Unified
+open RevHalt
 
 -- Core structures
 #check RigorousModel

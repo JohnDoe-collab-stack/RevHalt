@@ -23,13 +23,13 @@
   the pipeline. It demonstrates "the transport architecture works end-to-end" rather
   than "incompleteness of a meaningful theory".
 -/
-import RevHalt.Unified
+import RevHalt.Bridge
 import Mathlib.Computability.PartrecCode
 import Mathlib.Computability.Halting
 
 namespace RevHalt.Instances.Arithmetization
 
-open RevHalt_Unified
+open RevHalt
 open Nat.Partrec
 
 -- ==============================================================================================

@@ -1,7 +1,7 @@
 -- RevHalt/Demo/SimpDemo.lean
 -- Contract tests for simp lemmas
 
-import RevHalt.Unified
+import RevHalt.Bridge
 import RevHalt.Demo.DemoC
 
 /-!
@@ -12,7 +12,7 @@ If these tests fail, the simp policy may need adjustment.
 -/
 
 namespace RevHalt_Demo_Simp
-open RevHalt_Unified
+open RevHalt
 
 -- Use the robust model from DemoC
 open RevHalt_Demo_C

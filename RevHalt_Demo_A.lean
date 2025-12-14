@@ -1,10 +1,10 @@
-import RevHalt_Bridge
+import RevHalt.Bridge
 
 namespace RevHalt_Demo_A
-open RevHalt_Unified
+open RevHalt
 
 /-!
-# RevHalt Demo B: Non-Degenerate Model
+# RevHalt Demo A: Non-Degenerate Model
 
 This instance has:
 - A program that halts (code 0).
@@ -106,7 +106,7 @@ lemma toy_repr_provable_not : ∀ G : ToyModel.Code → ToyPropT, ∃ pc : ToyMo
   intro e
   simp [ToyModel, toyPredDef, toyProvable]
 
-def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT :=
+def ToyLogic : SoundLogicEncoded ToyModel ToyPropT :=
 {
   Logic := {
     Provable := toyProvable
@@ -127,13 +127,13 @@ def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT :=
 
 -- 7. FINAL DEMONSTRATION & SANITY CHECKS
 theorem Toy_Master_Theorem :
-    let ctx := RevHalt_Unified.EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic
-    (∀ e, ctx.RealHalts e ↔ Halts (RevHalt_Unified.rmCompile ToyModel e)) ∧
+    let ctx := EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic
+    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile ToyModel e)) ∧
     (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
     (∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e))) ∧
-    (∃ T1 : Set ToyPropT, RevHalt_Unified.ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
+    (∃ T1 : Set ToyPropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
   simpa using
-    (RevHalt_Unified.RevHalt_Master_Complete (PropT := ToyPropT) ToyModel ToyKit toy_kit_correct ToyLogic)
+    (RevHalt_Master_Complete (PropT := ToyPropT) ToyModel ToyKit toy_kit_correct ToyLogic)
 
 -- Check 1: Truth(0) is True. Provable(0) is False.
 example : toyTruth 0 ∧ ¬toyProvable 0 := ⟨rfl, id⟩

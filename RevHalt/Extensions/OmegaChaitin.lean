@@ -1,5 +1,5 @@
 /-
-  RevHalt.Instances.OmegaChaitin
+  RevHalt.Extensions.OmegaChaitin
 
   Chaitin's Ω as a RefSystem instance.
 
@@ -17,13 +17,12 @@
   This matches how Ω is actually computed in practice.
 -/
 
-import RevHalt.Unified.RefSystem
-import RevHalt.Unified.Closure
+import RevHalt.Extensions.RefSystem
 import Mathlib.Computability.Halting
 
-namespace RevHalt.Instances.OmegaChaitin
+namespace RevHalt.Extensions.OmegaChaitin
 
-open RevHalt_Unified
+open RevHalt
 open Nat.Partrec
 
 -- ==============================================================================================
@@ -126,18 +125,41 @@ def CloK_omega (Γ : Set OmegaSentence) : Set OmegaSentence :=
   { φ | Halts (LR_omega Γ φ) }
 
 -- ==============================================================================================
--- 5. Connection to Closure.lean theorems
+-- 5. Semantic definitions for Ω (local, avoiding Unified dependency)
 -- ==============================================================================================
+
+/-- ModE for Ω. -/
+def ModE_omega (Γ : Set OmegaSentence) : Set OmegaModel :=
+  { M | ∀ φ ∈ Γ, OmegaSat M φ }
+
+/-- ThE for Ω. -/
+def ThE_omega (K : Set OmegaModel) : Set OmegaSentence :=
+  { φ | ∀ M ∈ K, OmegaSat M φ }
+
+/-- CloE for Ω. -/
+def CloE_omega (Γ : Set OmegaSentence) : Set OmegaSentence :=
+  ThE_omega (ModE_omega Γ)
+
+/-- SemConsequences for Ω. -/
+def SemConsequences_omega (Γ : Set OmegaSentence) (φ : OmegaSentence) : Prop :=
+  φ ∈ CloE_omega Γ
 
 /-- DynamicBridge for Ω. -/
 def OmegaDynamicBridge : Prop :=
-  RevHalt_Unified.DynamicBridge (Sat := OmegaSat) (LR := LR_omega)
+  ∀ Γ φ, SemConsequences_omega Γ φ ↔ Halts (LR_omega Γ φ)
+
+-- ==============================================================================================
+-- 6. DR0/DR1 for Ω
+-- ==============================================================================================
 
 /-- DR0 specialized to Ω. -/
 theorem DR0_omega (K : RHKit) (hK : DetectsMonotone K)
     (hBridge : OmegaDynamicBridge) :
-    ∀ Γ φ, RevHalt_Unified.SemConsequences OmegaSat Γ φ ↔ Rev0_K K (LR_omega Γ φ) :=
-  DR0_semantic_iff_verdict (Sat := OmegaSat) (LR := LR_omega) K hK hBridge
+    ∀ Γ φ, SemConsequences_omega Γ φ ↔ Rev0_K K (LR_omega Γ φ) := by
+  intro Γ φ
+  have h1 : SemConsequences_omega Γ φ ↔ Halts (LR_omega Γ φ) := hBridge Γ φ
+  have h2 : Rev0_K K (LR_omega Γ φ) ↔ Halts (LR_omega Γ φ) := T1_traces K hK _
+  exact h1.trans h2.symm
 
 /-- DR1 specialized to Ω. -/
 theorem DR1_omega
@@ -149,7 +171,7 @@ theorem DR1_omega
   exact hL.trans hR.symm
 
 -- ==============================================================================================
--- 6. Key properties
+-- 7. Key properties
 -- ==============================================================================================
 
 /-- Each bit verification eventually halts (if the bit stabilizes). -/
@@ -167,4 +189,4 @@ theorem omega_bit_halts (n : ℕ) (a : ℕ) :
 axiom Omega_not_computable : ¬∃ (f : ℕ → ℕ), ∀ n, ∀ T,
     (⌊(2 ^ n : ℕ) * OmegaApprox T⌋.toNat) % 2 = f n
 
-end RevHalt.Instances.OmegaChaitin
+end RevHalt.Extensions.OmegaChaitin

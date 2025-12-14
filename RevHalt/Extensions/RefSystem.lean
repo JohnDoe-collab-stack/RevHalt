@@ -4,7 +4,7 @@
 Reference system layer: connecting `Cut` / `Bit` families to semantics and dynamics.
 
 This module defines a minimal `RefSystem` interface compatible with the
-`Closure.lean` framework, to express the relation between continuous
+RevHalt framework, to express the relation between continuous
 (cut-based) and discrete (bit-based) encodings of a same referent `x : Referent`.
 
 It provides:
@@ -14,12 +14,12 @@ It provides:
 * The bridge condition `DynamicBridge` specialized to this system
 -/
 
-import RevHalt.Unified.Closure
+import RevHalt.Theory
 import Mathlib.Data.Rat.Floor
 
 universe u v
 
-namespace RevHalt_Unified
+namespace RevHalt
 
 open Set
 
@@ -74,32 +74,50 @@ def LR_ref (Γ : Set Sentence) (φ : Sentence) : Trace :=
 The kinetic closure induced by LR_ref:
 `CloK_ref Γ` is the set of sentences that eventually stabilize true under LR_ref.
 -/
-def CloK_ref [Inhabited Referent] (Γ : Set Sentence) : Set Sentence :=
+def CloK_ref (Γ : Set Sentence) : Set Sentence :=
   { φ | ∃ t, LR_ref E Γ φ t }
 
 /-- Canonical Rev-based closure. -/
-def CloRev_ref [Inhabited Referent] (K : RHKit) (Γ : Set Sentence) : Set Sentence :=
+def CloRev_ref (K : RHKit) (Γ : Set Sentence) : Set Sentence :=
   { φ | Rev0_K K (LR_ref E Γ φ) }
+
+/-!
+## Semantic consequence for RefSystem (using E.Sat directly)
+-/
+
+/-- ModE specialized to RefSystem. -/
+def ModE_ref (Γ : Set Sentence) : Set Model := { M | ∀ φ ∈ Γ, E.Sat M φ }
+
+/-- ThE specialized to RefSystem. -/
+def ThE_ref (K_models : Set Model) : Set Sentence := { φ | ∀ M ∈ K_models, E.Sat M φ }
+
+/-- CloE specialized to RefSystem. -/
+def CloE_ref (Γ : Set Sentence) : Set Sentence := ThE_ref E (ModE_ref E Γ)
+
+/-- SemConsequences specialized to RefSystem. -/
+def SemConsequences_ref (Γ : Set Sentence) (φ : Sentence) : Prop := φ ∈ CloE_ref E Γ
 
 /-!
 ## Bridge condition
 To align semantics (`Sat`) and dynamics (`LR_ref`), we require a bridge hypothesis:
 for every Γ, φ, the semantic consequence matches halting of the LR trace.
 -/
-def DynamicBridge_ref [Inhabited Referent] : Prop :=
-  ∀ Γ φ, SemConsequences E.Sat Γ φ ↔ Halts (LR_ref E Γ φ)
+def DynamicBridge_ref : Prop :=
+  ∀ Γ φ, SemConsequences_ref E Γ φ ↔ Halts (LR_ref E Γ φ)
 
 /-!
 ## Canonical theorems DR0 / DR1 specialized to RefSystem
-These reuse the general theorems from Closure.lean
 -/
 
 /-- DR0: semantic consequence ↔ kinetic verdict (via Rev). -/
 theorem DR0_ref
     (K : RHKit) (hK : DetectsMonotone K)
     (hBridge : DynamicBridge_ref E) :
-    ∀ Γ φ, SemConsequences E.Sat Γ φ ↔ Rev0_K K (LR_ref E Γ φ) :=
-  DR0_semantic_iff_verdict (Sat := E.Sat) (LR := LR_ref E) K hK hBridge
+    ∀ Γ φ, SemConsequences_ref E Γ φ ↔ Rev0_K K (LR_ref E Γ φ) := by
+  intro Γ φ
+  have h1 : SemConsequences_ref E Γ φ ↔ Halts (LR_ref E Γ φ) := hBridge Γ φ
+  have h2 : Rev0_K K (LR_ref E Γ φ) ↔ Halts (LR_ref E Γ φ) := T1_traces K hK _
+  exact h1.trans h2.symm
 
 /-- DR1: verdict is invariant across valid kits. -/
 theorem DR1_ref
@@ -112,4 +130,4 @@ theorem DR1_ref
 
 end RefSystem
 
-end RevHalt_Unified
+end RevHalt

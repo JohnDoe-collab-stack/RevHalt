@@ -14,11 +14,11 @@
   This gives a non-trivial logic that satisfies all required properties
   without requiring axioms or noncomputable.
 -/
-import RevHalt.Unified
+import RevHalt.Bridge.RigorousModel
 import Mathlib.Computability.PartrecCode
 
 namespace RevHalt.Instances.PA
-open RevHalt_Unified
+
 open Nat.Partrec
 
 -- ==============================================================================================

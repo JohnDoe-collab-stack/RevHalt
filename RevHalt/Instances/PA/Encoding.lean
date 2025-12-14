@@ -11,11 +11,9 @@
   - encode_correct connects RMHalts to PATruth
 -/
 import RevHalt.Instances.PA.Logic
-import RevHalt.Unified.Coded.Interface
 
 namespace RevHalt.Instances.PA
-open RevHalt_Unified
-open RevHalt_Unified.Coded
+
 open Nat.Partrec
 
 -- ==============================================================================================

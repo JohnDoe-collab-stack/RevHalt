@@ -4,10 +4,9 @@
   Standard Kit for PA instance.
   Same as PRModel: Proj := ∃ n, X n
 -/
-import RevHalt.Unified
+import RevHalt.Base
 
 namespace RevHalt.Instances.PA
-open RevHalt_Unified
 
 /-- Standard existence-based kit. -/
 def PAKit : RHKit where

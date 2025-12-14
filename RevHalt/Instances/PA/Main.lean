@@ -14,11 +14,11 @@
 -/
 import RevHalt.Instances.PA.Kit
 import RevHalt.Instances.PA.Arithmetization
-import RevHalt.Unified.Coded.Master
+import RevHalt.Bridge.Coded.Master
 
 namespace RevHalt.Instances.PA
-open RevHalt_Unified
-open RevHalt_Unified.Coded
+
+open RevHalt.Coded
 open Nat.Partrec
 open RevHalt.Instances.Arithmetization
 

@@ -1,7 +1,7 @@
-import RevHalt_Bridge
+import RevHalt.Bridge
 
 namespace RevHalt_Demo_C
-open RevHalt_Unified
+open RevHalt
 
 /-!
 # RevHalt Demo C: Robustness Model
@@ -160,7 +160,7 @@ theorem toy_kit_correct : DetectsMonotone ToyKit := by
   rfl
 
 -- 6. Logic Construction
-def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT :=
+def ToyLogic : SoundLogicEncoded ToyModel ToyPropT :=
 {
   Logic := {
     Provable := toyProvable
@@ -181,13 +181,13 @@ def ToyLogic : RevHalt_Unified.SoundLogicEncoded ToyModel ToyPropT :=
 
 -- 7. FINAL DEMONSTRATION
 theorem Toy_C_Master_Theorem :
-    let ctx := RevHalt_Unified.EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic
-    (∀ e, ctx.RealHalts e ↔ Halts (RevHalt_Unified.rmCompile ToyModel e)) ∧
+    let ctx := EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic
+    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile ToyModel e)) ∧
     (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
     (∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e))) ∧
-    (∃ T1 : Set ToyPropT, RevHalt_Unified.ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
+    (∃ T1 : Set ToyPropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by
   simpa using
-    (RevHalt_Unified.RevHalt_Master_Complete (PropT := ToyPropT) ToyModel ToyKit toy_kit_correct ToyLogic)
+    (RevHalt_Master_Complete (PropT := ToyPropT) ToyModel ToyKit toy_kit_correct ToyLogic)
 
 #print Toy_C_Master_Theorem
 
