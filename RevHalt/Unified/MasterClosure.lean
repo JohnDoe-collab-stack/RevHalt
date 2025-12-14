@@ -5,7 +5,7 @@
 
   This module connects the abstract T1/T2/T3 results to the Closure framework.
   It characterizes the incompleteness gap dynamically:
-
+  
   "True but Unprovable" ↔ "Kinetically Verifiable but Statically Unprovable"
 
   ## Main Theorem: `Master_Closure`
@@ -36,7 +36,7 @@ structure VerifiableContext (Code PropT : Type) extends EnrichedContext Code Pro
 
 /--
   **Master Closure Theorem**
-
+  
   Shows that `CloK` (Kinetic Closure) is a strict superset of `ProvableSet`.
   The "gap" is exactly the set of kinetically verifiable truths.
 -/
@@ -48,9 +48,9 @@ theorem Master_Closure
     (ProvableSet ctx.toEnrichedContext ⊆ CloK_empty) ∧
     -- (2) Strictness: Verifiable \ Provable ≠ ∅
     (∃ p, p ∈ CloK_empty ∧ p ∉ ProvableSet ctx.toEnrichedContext) := by
-
+  
   let CloK_empty := CloK (LR := ctx.LR) ∅
-
+  
   constructor
   · -- (1) Provable ⊆ CloK
     intro p hProv
@@ -91,5 +91,32 @@ theorem Truth_is_CloK (ctx : VerifiableContext Code PropT) :
     intro hCloK
     rw [mem_CloK_iff (LR := ctx.LR)] at hCloK
     exact (ctx.h_bridge p).mpr hCloK
+
+/--
+  **The Great Chain of Equivalence**
+  
+  Unifies Truth, Kinetic Closure, Halting, and Observational Verdicts.
+  We prove the conjunction of equivalences to establish mutual equivalence.
+  
+  $$ Truth(p) \iff p \in CloK \iff Halts(LR(p)) \iff Rev0_K(LR(p)) $$
+-/
+theorem TheGreatChain (ctx : VerifiableContext Code PropT)
+    (K : RHKit) (hK : DetectsMonotone K) :
+    ∀ p,
+      (ctx.Truth p ↔ p ∈ CloK (LR := ctx.LR) ∅) ∧      -- 1 ↔ 2
+      (p ∈ CloK (LR := ctx.LR) ∅ ↔ Halts (ctx.LR ∅ p)) ∧  -- 2 ↔ 3
+      (Halts (ctx.LR ∅ p) ↔ Rev0_K K (ctx.LR ∅ p))         -- 3 ↔ 4
+    := by
+  intro p
+  -- Link 1-2: Truth ↔ CloK (via Truth_is_CloK)
+  have h1 : ctx.Truth p ↔ p ∈ CloK (LR := ctx.LR) ∅ := Truth_is_CloK ctx p
+  
+  -- Link 2-3: CloK ↔ Halts (Definition)
+  have h2 : p ∈ CloK (LR := ctx.LR) ∅ ↔ Halts (ctx.LR ∅ p) := mem_CloK_iff (LR := ctx.LR) ∅ p
+
+  -- Link 3-4: Halts ↔ Rev0_K (via T1 Canonicity)
+  have h3 : Halts (ctx.LR ∅ p) ↔ Rev0_K K (ctx.LR ∅ p) := (T1_traces K hK (ctx.LR ∅ p)).symm
+
+  exact ⟨h1, h2, h3⟩
 
 end RevHalt_Unified
