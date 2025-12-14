@@ -71,6 +71,13 @@ T2 extracts their **common abstract core** via `TuringGodelContext'`:
 
 This is not a reformulation; it is an **abstraction** that reveals the structural unity of Turing and Gödel.
 
+#### The Oracle Perspective (New!)
+
+We formalize the framework itself as a **Truth Oracle** (`RevHalt/Unified/Oracle.lean`).
+- **Definition**: A `TruthOracle` is an external semantic authority that correctly judges propositions.
+- **Theorem**: `oracle_not_internalizable`. A sound theory cannot "internalize" this oracle (i.e., simulate it via provability) without proving its own inconsistency (via T2).
+- **Implication**: The bridge (`Truth ↔ Halts LR`) is not just a connector; it is an **essential oracular link** providing verdicts inaccessible to the theory's internal logic.
+
 #### T3 — Complementarity: the central concept
 
 Classical incompleteness is **limitative**: it tells you what theories *cannot* do.
@@ -121,6 +128,7 @@ This is the reverse of classical incompleteness proofs, which work *in* a theory
 |--------|----------|
 | `RevHalt.lean` | Base layer: `Trace`, `Halts`, `RHKit`, `TuringGodelContext'`, `T2_impossibility` |
 | `RevHalt.Unified.Core` | Abstract results: `EnrichedContext`, `ProvableSet`, `true_but_unprovable_exists`, `independent_code_exists` |
+| `RevHalt.Unified.Oracle` | Meta-theory: `TruthOracle`, `InternalizesOracle`, `oracle_not_internalizable`, `bridge_is_oracular` |
 | `RevHalt.Unified.RigorousModel` | Computability model: `RigorousModel`, `SoundLogicDef`, `Arithmetization` |
 | `RevHalt.Unified.Bridge` | Integration: `SoundLogicEncoded`, `EnrichedContext_from_Encoded`, `RevHalt_Master_Complete` |
 
