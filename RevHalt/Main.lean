@@ -51,6 +51,8 @@ open RevHalt
 ### Kinetic Layer
 - `CloK`, `CloRev` — Kinetic closures
 - `VerifiableContext`, `GapSystem` — Gap reasoning
+- `Chain`, `MasterClo`, `GapLayer` — Stratified dynamic gaps
+- `Truth_for_all_of_MasterClo_univ` — Local→global reduction
 
 ### Oracle Perspective
 - `TruthOracle`, `oracle_not_internalizable`
