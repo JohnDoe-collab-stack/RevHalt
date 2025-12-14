@@ -1,3 +1,6 @@
+import RevHalt.Extensions.RefSystem
+import RevHalt.Extensions.OmegaChaitin
+
 /-!
 # RevHalt.Extensions
 
@@ -7,6 +10,3 @@ These extensions use the `RevHalt` namespace and provide:
 - `RefSystem`: Cut/Bit encoding framework for dynamic verification
 - `OmegaChaitin`: Chaitin's Ω as a RefSystem instance
 -/
-
-import RevHalt.Extensions.RefSystem
-import RevHalt.Extensions.OmegaChaitin

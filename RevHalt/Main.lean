@@ -13,6 +13,12 @@ import RevHalt.Kinetic
 -- Oracle Layer: Framework as oracle
 import RevHalt.Oracle
 
+-- Extensions: RefSystem, OmegaChaitin
+import RevHalt.Extensions
+
+-- Instances: PRModel, PA
+import RevHalt.Instances
+
 /-!
 # RevHalt
 
