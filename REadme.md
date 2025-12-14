@@ -122,17 +122,40 @@ This is the reverse of classical incompleteness proofs, which work *in* a theory
 
 ## Structure
 
-### Core modules
+### New Modular Architecture (v2)
 
-| Module | Contents |
-|--------|----------|
-| `RevHalt.lean` | Base layer: `Trace`, `Halts`, `RHKit`, `TuringGodelContext'`, `T2_impossibility` |
-| `RevHalt.Unified.Core` | Abstract results: `EnrichedContext`, `ProvableSet`, `true_but_unprovable_exists`, `independent_code_exists` |
-| `RevHalt.Unified.Oracle` | Meta-theory: `TruthOracle`, `InternalizesOracle`, `oracle_not_internalizable`, `bridge_is_oracular` |
-| `RevHalt.Unified.RigorousModel` | Computability model: `RigorousModel`, `SoundLogicDef`, `Arithmetization` |
-| `RevHalt.Unified.Bridge` | Integration: `SoundLogicEncoded`, `EnrichedContext_from_Encoded`, `RevHalt_Master_Complete` |
+```
+RevHalt/
+├── Base/           # Foundation: Trace, Halts, RHKit
+│   ├── Trace.lean
+│   └── Kit.lean
+├── Theory/         # Abstract theorems T1/T2/T3
+│   ├── Canonicity.lean     # T1, DynamicBridge
+│   ├── Impossibility.lean  # T2, TuringGodelContext'
+│   └── Complementarity.lean # T3
+├── Kinetic/        # Dynamic semantics
+│   ├── Closure.lean        # CloK, CloRev
+│   ├── MasterClosure.lean  # VerifiableContext, TheGreatChain
+│   └── System.lean         # Gap, GapSystem
+├── Oracle/         # Framework as Oracle
+│   └── Oracle.lean
+├── Bridge/         # M/L/A/E instantiation
+│   ├── RigorousModel.lean  # RigorousModel, SoundLogicDef
+│   ├── Context.lean        # EnrichedContext, ProvableSet
+│   └── Master.lean         # RevHalt_Master_Complete
+├── Extensions/     # OmegaChaitin, RefSystem
+├── Instances/      # PA, Mathlib PRModel
+└── Main.lean       # Public API entry point
+```
 
-### Entry point
+### Entry point (New)
+
+```lean
+import RevHalt.Main
+open RevHalt
+```
+
+### Legacy Entry point (Unified)
 
 ```lean
 import RevHalt.Unified

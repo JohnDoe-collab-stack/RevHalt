@@ -12,7 +12,8 @@ require "mathlib" from git
 
 @[default_target]
 lean_lib "RevHalt" where
-  roots := #[`RevHalt, `RevHalt_Unified, `RevHalt_Bridge, `RevHalt_Demo_A, `RevHalt_Demo_C, `RevHalt.Instances.Arithmetization]
+  -- New modular structure entry point + legacy compatibility roots
+  roots := #[`RevHalt.Main, `RevHalt, `RevHalt_Unified, `RevHalt_Bridge, `RevHalt_Demo_A, `RevHalt_Demo_C, `RevHalt.Instances.Arithmetization]
 
 lean_lib "AddOn" where
   globs := #[.submodules `AddOn]
