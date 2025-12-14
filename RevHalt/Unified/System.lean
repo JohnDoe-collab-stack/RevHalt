@@ -1,7 +1,6 @@
 import RevHalt.Unified.Core
 import RevHalt.Unified.Closure
 import RevHalt.Unified.MasterClosure
-import RevHalt.Unified.RefSystem
 
 import Mathlib.Data.Set.Basic
 
@@ -75,28 +74,24 @@ theorem independent_witness {Code PropT : Type}
     ∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e)) :=
   independent_code_exists ctx.toEnrichedContext h_sound
 
+/-- Gap witness in "Truth" form: extract a true but unprovable proposition. -/
+theorem gap_witness_truth {Code PropT : Type} (ctx : VerifiableContext Code PropT) :
+    ∃ p, ctx.Truth p ∧ ¬ctx.Provable p :=
+  true_but_unprovable_exists ctx.toEnrichedContext
+
+/-- Gap witness in "Halts" form: extract a halting-but-unprovable proposition. -/
+theorem gap_witness_halts {Code PropT : Type} (ctx : VerifiableContext Code PropT) :
+    ∃ p, Halts (ctx.LR ∅ p) ∧ ¬ctx.Provable p := by
+  obtain ⟨p, hT, hNP⟩ := true_but_unprovable_exists ctx.toEnrichedContext
+  refine ⟨p, (ctx.h_bridge p).1 hT, hNP⟩
+
 /-
   =========================
   Kit-invariance add-on
   =========================
 
-  If you want kit-invariance of the “verifiable” side, phrase it through CloRev.
-  This is orthogonal to VerifiableContext (which only mentions Halts/LR),
-  but your Closure file already gives invariance in K under DetectsMonotone.
-
-  So define a “kit-gap” and prove it is invariant in K.
--/
-
-/-- Gap defined via kit-verdict closure instead of Halts (robust verifiability). -/
-def GapRev {_ PropT : Type}
-    (LR : Set PropT → PropT → Trace)
-    (K : RHKit) : Set PropT :=
-  (CloRev (LR := LR) K (∅ : Set PropT)) \ (∅ : Set PropT) -- placeholder: you usually subtract ProvableSet of some ctx
-
-/-
-  In practice you’ll want:
-  GapRev ctx K := CloRev K ∅ \ ProvableSet ctx
-  but that needs ctx.Provable; keep it in a structure that includes both LR and Provable.
+  For kit-invariant gap reasoning, use `GapSystem` which bundles
+  VerifiableContext + a validated RHKit.
 -/
 
 /-- A compact “system” bundle for robust gap reasoning (LR + Provable + kits). -/
@@ -146,6 +141,24 @@ theorem VerRev_invariant {Code PropT : Type}
     ∀ p, (p ∈ CloRev (LR := S.LR) S.K (∅ : Set PropT)) ↔ (p ∈ CloRev (LR := S.LR) K₂ (∅ : Set PropT)) := by
   intro p
   exact CloRev_mem_invariant (LR := S.LR) S.K K₂ S.hK h₂ (∅ : Set PropT) p
+
+/-- GapK itself is kit-invariant: the verifiable-but-unprovable gap doesn't depend on kit choice. -/
+theorem GapK_invariant {Code PropT : Type}
+    (S : GapSystem Code PropT) (K₂ : RHKit) (h₂ : DetectsMonotone K₂) :
+    ∀ p, (p ∈ GapK S) ↔
+         (p ∈ ((CloRev (LR := S.LR) K₂ (∅ : Set PropT)) \ ProvableSet S.toEnrichedContext)) := by
+  intro p
+  constructor
+  · intro hp
+    rcases hp with ⟨hV, hNP⟩
+    have hV' : p ∈ CloRev (LR := S.LR) K₂ (∅ : Set PropT) :=
+      (S.VerRev_invariant K₂ h₂ p).1 (by simpa [VerRev] using hV)
+    exact ⟨hV', hNP⟩
+  · intro hp
+    rcases hp with ⟨hV, hNP⟩
+    have hV' : p ∈ CloRev (LR := S.LR) S.K (∅ : Set PropT) :=
+      (S.VerRev_invariant K₂ h₂ p).2 hV
+    exact ⟨by simpa [VerRev] using hV', hNP⟩
 
 end GapSystem
 
