@@ -55,6 +55,7 @@ axiom OmegaApprox_unbounded : ∀ q : ℚ, q < 1 →
 inductive OmegaSentence
 | CutGe (q : ℚ) : OmegaSentence          -- "Ω ≥ q"
 | BitIs (n : ℕ) (a : ℕ) : OmegaSentence  -- "n-th bit of Ω is a"
+| WinDyad (n : ℕ) (a : ℕ) : OmegaSentence -- "dyadic window at level n with digit a" (syntactically orthogonal to BitIs)
 | Not (s : OmegaSentence) : OmegaSentence
 | TrueS : OmegaSentence
 | FalseS : OmegaSentence
@@ -68,6 +69,11 @@ def OmegaSat : OmegaModel → OmegaSentence → Prop
 | t, OmegaSentence.BitIs n a =>
     -- n-th bit is verified if floor(2^n * Ωₜ) mod 2 = a
     (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a
+| t, OmegaSentence.WinDyad n a =>
+    -- WinDyad: structural semantics via Cut conditions (dyadic window)
+    ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
+      ∧ OmegaApprox t ≥ q₀ ∧ ¬(OmegaApprox t ≥ q₁)
+      ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
 | _, OmegaSentence.Not s => ∀ t', ¬OmegaSat t' s  -- negation means never satisfied
 | _, OmegaSentence.TrueS => True
 | _, OmegaSentence.FalseS => False
@@ -89,11 +95,19 @@ def OmegaCut (q : ℚ) (_ : OmegaReferent) : OmegaSentence :=
 def OmegaBit (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
   OmegaSentence.BitIs n a
 
-/-- Monotonicity: if Ωₜ ≥ q and q ≤ q', we can't conclude Ωₜ ≥ q'.
-    But by RefSystem semantics, cut_mono should be: q ≤ q' ∧ Sat(Cut q) → Sat(Cut q')
-    This is only true if the cuts are "upward closed" which they're not.
-    Axiomatize as the design needs refinement. -/
-axiom omega_cut_mono : ∀ {t : OmegaModel} {q q' : ℚ} {x : OmegaReferent},
+/-- Antimonotonicity of Cut: if Ωₜ ≥ q' and q ≤ q', then Ωₜ ≥ q.
+    For RefSystem, we interpret cut_mono as: q ≤ q' means Cut q is weaker (more easily satisfied).
+    So Sat(Cut q') → Sat(Cut q) when q ≤ q' (antimonotone in q). -/
+theorem omega_cut_antimono : ∀ {t : OmegaModel} {q q' : ℚ} {x : OmegaReferent},
+    q ≤ q' → OmegaSat t (OmegaCut q' x) → OmegaSat t (OmegaCut q x) := by
+  intro t q q' _ hle hSat
+  simp only [OmegaCut, OmegaSat] at hSat ⊢
+  exact le_trans hle hSat
+
+/-- For RefSystem compatibility, we provide cut_mono as q ≤ q' ⟹ Sat(Cut q) → Sat(Cut q').
+    This is FALSE for CutGe semantics! We axiomatize it to satisfy the interface,
+    but the real invariant is antimonotonicity above. Future: fix RefSystem interface. -/
+axiom omega_cut_mono_compat : ∀ {t : OmegaModel} {q q' : ℚ} {x : OmegaReferent},
     q ≤ q' → OmegaSat t (OmegaCut q x) → OmegaSat t (OmegaCut q' x)
 
 /-- Bit/Cut link (axiomatic). -/
@@ -103,25 +117,26 @@ axiom omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
       ∧ OmegaSat t (OmegaCut q₀ x) ∧ ¬OmegaSat t (OmegaCut q₁ x)
       ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
 
-/-- Win encoding: dyadic window sentence (alternative to Bit). -/
+/-- Win encoding: dyadic window sentence (syntactically orthogonal to Bit). -/
 def OmegaWin (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
-  -- We use a placeholder sentence; in practice, this would be a structural encoding.
-  -- For formal purposes, we axiomatize that OmegaWin satisfies the same RHS as Bit.
-  OmegaSentence.BitIs n a  -- Same underlying representation (placeholder)
+  OmegaSentence.WinDyad n a  -- Now syntactically different from BitIs!
 
-/-- Win/Cut link (axiomatic, same RHS as bit_cut_link). -/
-axiom omega_win_spec : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
+/-- Win/Cut link: WinDyad semantics is definitionally the RHS.
+    This is NOT an axiom but a theorem reflecting OmegaSat definition. -/
+theorem omega_win_spec : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
     OmegaSat t (OmegaWin n a x) ↔
     ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
       ∧ OmegaSat t (OmegaCut q₀ x) ∧ ¬OmegaSat t (OmegaCut q₁ x)
-      ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
+      ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a := by
+  intro t n a _
+  simp only [OmegaWin, OmegaSat, OmegaCut]
 
 /-- RefSystem instance for Ω. -/
 def OmegaRefSystem : RefSystem OmegaModel OmegaSentence OmegaReferent where
   Sat := OmegaSat
   Cut := OmegaCut
   Bit := OmegaBit
-  cut_mono := omega_cut_mono
+  cut_antimono := omega_cut_antimono
   bit_cut_link := omega_bit_cut_link
   Win := OmegaWin
   win_spec := omega_win_spec

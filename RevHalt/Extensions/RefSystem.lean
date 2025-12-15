@@ -36,8 +36,9 @@ structure RefSystem (Model : Type v) (Sentence : Type u) (Referent : Type*) wher
   Cut : ℚ → Referent → Sentence
   Bit : ℕ → ℕ → Referent → Sentence
 
-  /-- Monotonicity of Cut: if q ≤ q', then Sat M (Cut q x) → Sat M (Cut q' x). -/
-  cut_mono : ∀ {M q q' x}, q ≤ q' → Sat M (Cut q x) → Sat M (Cut q' x)
+  /-- Antimonotonicity of Cut: if q ≤ q', then Sat M (Cut q' x) → Sat M (Cut q x).
+      Interpretation: Cut q means "value ≥ q", so larger q is harder to satisfy. -/
+  cut_antimono : ∀ {M q q' x}, q ≤ q' → Sat M (Cut q' x) → Sat M (Cut q x)
 
   /--
   Bit/Cut compatibility: for each bit position n and digit a,
@@ -72,7 +73,7 @@ variable (E : RefSystem Model Sentence Referent)
 We interpret a local reading LR Γ φ as a discrete-time trace expressing
 progressive verification of φ under a reference system E.
 -/
-
+section InhabitedReferent
 variable [Inhabited Referent]
 
 /-- Local reading: at time t, we test all cuts and bits of depth ≤ t. -/
@@ -139,11 +140,13 @@ theorem DR1_ref
   have hR : Rev0_K K₂ (LR_ref E Γ φ) ↔ Halts (LR_ref E Γ φ) := T1_traces K₂ h₂ _
   exact hL.trans hR.symm
 
-/-!
-## Non-Trivial Equivalence: Bit ↔ Win
+end InhabitedReferent
 
-Two syntactically orthogonal sentences (Bit vs Win) have the same Rev verdict.
-This is a certified, local, kit-invariant result.
+/-!
+## Non-Trivial Equivalence: Bit ↔ Win (Semantic Level)
+
+Two syntactically orthogonal sentences (Bit vs Win) have the same satisfaction.
+These theorems don't require [Inhabited Referent].
 -/
 
 /-- Bit and Win have the same satisfaction (pointwise). -/
@@ -164,6 +167,14 @@ theorem sem_conseq_of_sat_equiv
   · intro hψ M hM
     rw [h M]
     exact hψ M hM
+
+/-!
+## Non-Trivial Equivalence: Bit ↔ Win (Operative Level)
+
+These theorems require [Inhabited Referent] because they use LR_ref.
+-/
+section InhabitedReferent2
+variable [Inhabited Referent]
 
 /-- Bit and Win have the same Rev verdict (via DR0). -/
 theorem bit_win_rev_equiv
@@ -187,6 +198,8 @@ theorem bit_win_kit_invariant
       (Rev0_K K₂ (LR_ref E Γ (E.Bit n a x)) ↔ Rev0_K K₂ (LR_ref E Γ (E.Win n a x))) := by
   intro Γ n a x
   exact ⟨bit_win_rev_equiv E K₁ h₁ hBridge Γ n a x, bit_win_rev_equiv E K₂ h₂ hBridge Γ n a x⟩
+
+end InhabitedReferent2
 
 end RefSystem
 
