@@ -1,316 +1,267 @@
 import RevHalt.Kinetic.Stratification
 import Mathlib.Data.Set.Basic
-import Mathlib.Data.Nat.Basic
 
 /-!
 # RevHalt.Instances.StratifiedInstance
 
-A complete instance demonstrating the full stratification pipeline
-where the **gap is STRICTLY the only driver** of coverage.
+Gap-Cover via Dynamic Propagation.
 
-## Key Design: Gap as Explicit Hypothesis
+## Key Structural Facts (non-degenerate)
 
-To prove "gap is indispensable", we:
-1. Define `PreVerifiableContext` (weaker than `VerifiableContext`, no T2)
-2. Make the gap a **hypothesis** (not a theorem)
-3. Prove: hg → MasterClo = univ (sufficiency)
-4. Provide counterexample: model without gap where coverage fails (necessity)
+1. `Chain1_eq_TruthSet` : Chain 1 = TruthSet (via bridge)
+2. `MasterClo_eq_TruthSet` : MasterClo = TruthSet (chain stabilizes, under ContextSound)
+3. `BaseGap_eq_MasterClo_diff_Provable` : BaseGap = MasterClo \ ProvableSet
+4. `ProvableSet_ssubset_MasterClo` : ProvableSet ⊂ MasterClo (from h_sound + T2)
 
-This makes "gap-driven" formally provable in both directions.
+## Gap as Engine (the real dynamic mechanism)
+
+T2 gives a gap witness, but doesn't give propagation.
+For gap → coverage, we need a **propagation property** of LR:
+
+`LRPropagates`: From any gap element, LR can reach all propositions.
+
+This is the real minimal hypothesis for `gap_drives_cover`.
 -/
 
 namespace RevHalt
 
-namespace Instances
+namespace Kinetic
 
 open Set
 
--- ============================================================================
--- PART A: PreVerifiableContext (no T2, gap is hypothesis)
--- ============================================================================
-
-/--
-A weaker context structure that does NOT embed T2.
-The gap is not forced to exist — it must be given as hypothesis.
--/
-structure PreVerifiableContext (PropT : Type) where
-  Truth : PropT → Prop
-  Provable : PropT → Prop
-  Not : PropT → PropT
-  LR : Set PropT → PropT → Trace
-  h_bridge : ∀ p, Truth p ↔ Halts (LR ∅ p)
-
-variable {PropT : Type}
+variable {Code PropT : Type}
 
 -- ============================================================================
--- Stratification definitions for PreVerifiableContext
--- ============================================================================
-
-/-- CloK for PreVerifiableContext. -/
-def preCloK (ctx : PreVerifiableContext PropT) (Γ : Set PropT) : Set PropT :=
-  { p | Halts (ctx.LR Γ p) }
-
-/-- Next layer. -/
-def preNext (ctx : PreVerifiableContext PropT) (Γ : Set PropT) : Set PropT :=
-  preCloK ctx Γ
-
-/-- Chain of stages. -/
-def preChain (ctx : PreVerifiableContext PropT) : ℕ → Set PropT
-  | 0 => ∅
-  | n + 1 => preNext ctx (preChain ctx n)
-
-/-- Master closure. -/
-def preMasterClo (ctx : PreVerifiableContext PropT) : Set PropT :=
-  { p | ∃ n, p ∈ preChain ctx n }
-
-/-- ProvableSet. -/
-def preProvableSet (ctx : PreVerifiableContext PropT) : Set PropT :=
-  { p | ctx.Provable p }
-
-/-- BaseGap. -/
-def preBaseGap (ctx : PreVerifiableContext PropT) : Set PropT :=
-  preChain ctx 1 \ preProvableSet ctx
-
-/-- Membership lemmas. -/
-theorem mem_preChain_succ (ctx : PreVerifiableContext PropT) (n : ℕ) (p : PropT) :
-    p ∈ preChain ctx (n + 1) ↔ Halts (ctx.LR (preChain ctx n) p) := Iff.rfl
-
-theorem mem_preMasterClo (ctx : PreVerifiableContext PropT) (p : PropT) :
-    p ∈ preMasterClo ctx ↔ ∃ n, p ∈ preChain ctx n := Iff.rfl
-
--- ============================================================================
--- PART B: The dynamic Step relation
--- ============================================================================
-
-/-- The Step relation: successor OR reset to 0. -/
-def Step (n m : ℕ) : Prop := m = n + 1 ∨ m = 0
-
-/-- Reachability via Step (transitive closure). -/
-inductive Reach : ℕ → ℕ → Prop where
-  | refl : ∀ n, Reach n n
-  | step : ∀ n m k, Reach n m → Step m k → Reach n k
-
-/-- From any n, we can reach 0 via reset. -/
-theorem reach_zero (n : ℕ) : Reach n 0 :=
-  Reach.step n n 0 (Reach.refl n) (Or.inr rfl)
-
-/-- From 0, we can reach any m via successor steps. -/
-theorem reach_from_zero : ∀ m : ℕ, Reach 0 m := by
-  intro m
-  induction m with
-  | zero => exact Reach.refl 0
-  | succ k ih => exact Reach.step 0 k (k + 1) ih (Or.inl rfl)
-
--- ============================================================================
--- PART C: DynPreContext (the abstract instance)
--- ============================================================================
-
-/-- Abstract context parameters (axiomatized). -/
-axiom DynLR : Set ℕ → ℕ → Trace
-
-axiom DynTruth : ℕ → Prop
-
-axiom DynProvable : ℕ → Prop
-
-/-- Axiom: Nothing is provable. -/
-axiom DynProvable_false : ∀ n, ¬ DynProvable n
-
-/-- Axiom: LR Γ n halts iff n ∈ Γ or n is reachable from Γ via Step (for non-empty Γ). -/
-axiom DynLR_halts_iff_nonempty (Γ : Set ℕ) (n : ℕ) (hΓ : Γ.Nonempty) :
-    Halts (DynLR Γ n) ↔ (n ∈ Γ ∨ ∃ m ∈ Γ, Reach m n)
-
-/-- Axiom: LR halts at empty context iff Truth holds (bridge). -/
-axiom DynLR_bridge : ∀ n, DynTruth n ↔ Halts (DynLR ∅ n)
-
-/-- The PreVerifiableContext instance. -/
-def DynPreContext : PreVerifiableContext ℕ where
-  Truth := DynTruth
-  Provable := DynProvable
-  Not := fun n => n  -- trivial negation
-  LR := DynLR
-  h_bridge := DynLR_bridge
-
--- ============================================================================
--- PART D: Propagation lemmas (gap-driven)
--- ============================================================================
-
-/-- Propagation Reset. -/
-theorem pre_propagate_reset (n k : ℕ)
-    (hn : n ∈ preChain DynPreContext k) :
-    0 ∈ preChain DynPreContext (k + 1) := by
-  simp only [preChain, preNext, preCloK, Set.mem_setOf_eq]
-  have hΓ : (preChain DynPreContext k).Nonempty := ⟨n, hn⟩
-  have hr : Reach n 0 := reach_zero n
-  exact (DynLR_halts_iff_nonempty (preChain DynPreContext k) 0 hΓ).2 (Or.inr ⟨n, hn, hr⟩)
-
-/-- Propagation Succ. -/
-theorem pre_propagate_succ (n k : ℕ)
-    (hn : n ∈ preChain DynPreContext k) :
-    n + 1 ∈ preChain DynPreContext (k + 1) := by
-  simp only [preChain, preNext, preCloK, Set.mem_setOf_eq]
-  have hΓ : (preChain DynPreContext k).Nonempty := ⟨n, hn⟩
-  have hr : Reach n (n + 1) := Reach.step n n (n + 1) (Reach.refl n) (Or.inl rfl)
-  exact (DynLR_halts_iff_nonempty (preChain DynPreContext k) (n+1) hΓ).2 (Or.inr ⟨n, hn, hr⟩)
-
--- ============================================================================
--- PART E: Sufficiency — hg → MasterClo = univ
+-- Section 1: Core Structural Lemmas
 -- ============================================================================
 
 /--
-**Main Theorem (Sufficiency)**: If the gap is non-empty, then coverage is universal.
+**Chain 1 equals TruthSet** (via bridge).
 
-The gap is the driver: from a gap witness, we propagate to all of ℕ.
+This is the fundamental bridge between kinetic dynamics and semantics.
+At stage 1, CloK(∅) captures exactly the true propositions.
 -/
-theorem gap_drives_coverage
-    (hg : ∃ n, n ∈ preBaseGap DynPreContext) :
-    preMasterClo DynPreContext = Set.univ := by
-  -- Extract seed from gap
-  rcases hg with ⟨n0, hn0⟩
-  have hn0_chain1 : n0 ∈ preChain DynPreContext 1 := hn0.1
-  -- 0 ∈ Chain 2 (reset from n0)
-  have h0 : 0 ∈ preChain DynPreContext 2 := pre_propagate_reset n0 1 hn0_chain1
-  -- All n ∈ Chain by induction
-  ext n
+theorem Chain1_eq_TruthSet (ctx : VerifiableContext Code PropT) :
+    Chain ctx 1 = { p | ctx.Truth p } := by
+  ext p
+  simp only [Chain_succ, Chain_zero, Next, mem_CloK_iff, Set.mem_setOf_eq]
+  exact (ctx.h_bridge p).symm
+
+/--
+**MasterClo equals TruthSet** (chain stabilizes).
+
+Under ContextSound:
+- By Chain_truth: all elements in Chain n are true
+- By Chain1_eq_TruthSet: all truths are in Chain 1
+- Therefore MasterClo = TruthSet
+-/
+theorem MasterClo_eq_TruthSet
+    (ctx : VerifiableContext Code PropT)
+    (hCS : ContextSound ctx) :
+    MasterClo ctx = { p | ctx.Truth p } := by
+  ext p
   constructor
-  · intro _; exact Set.mem_univ n
-  · intro _
-    rw [mem_preMasterClo]
-    induction n with
-    | zero => exact ⟨2, h0⟩
-    | succ m ih =>
-        rcases ih (Set.mem_univ m) with ⟨k, hk⟩
-        exact ⟨k + 1, pre_propagate_succ m k hk⟩
-
-/-- If preChain 1 = ∅, then all preChain n = ∅. -/
-theorem preChain1_empty_all_empty
-    (h1 : preChain DynPreContext 1 = ∅) :
-    ∀ n, preChain DynPreContext n = ∅ := by
-  -- Key insight: preChain 1 = ∅ means ∀ p, ¬Halts (DynLR ∅ p)
-  -- And preChain (n+1) = { p | Halts (DynLR (preChain n) p) }
-  -- If preChain n = ∅, then preChain (n+1) = preChain 1 = ∅
-  intro n
-  induction n with
-  | zero => rfl
-  | succ k ih =>
-      cases k with
-      | zero => exact h1
-      | succ k' =>
-          -- Goal: preChain (k'+2) = ∅
-          -- ih : preChain (k'+1) = ∅
-          rw [show preChain DynPreContext (k' + 1 + 1) =
-                   { p | Halts (DynLR (preChain DynPreContext (k' + 1)) p) } by rfl]
-          rw [ih]
-          -- Now: { p | Halts (DynLR ∅ p) } = ∅, which is h1
-          exact h1
+  · intro ⟨n, hn⟩
+    exact Chain_truth ctx hCS n p hn
+  · intro hTruth
+    use 1
+    rw [Chain1_eq_TruthSet]
+    exact hTruth
 
 /--
-**Necessity Theorem**: If MasterClo is univ, then BaseGap is nonempty.
+**MasterClo = univ iff all are true** (fundamental equivalence).
 -/
-theorem coverage_implies_gap
-    (hcover : preMasterClo DynPreContext = Set.univ) :
-    ∃ n, n ∈ preBaseGap DynPreContext := by
-  -- From coverage, 0 ∈ MasterClo
-  have h0 : (0 : ℕ) ∈ preMasterClo DynPreContext := by
-    rw [hcover]; exact Set.mem_univ 0
-  rcases (mem_preMasterClo DynPreContext 0).1 h0 with ⟨k, hk⟩
-  -- Show Chain 1 is nonempty (else coverage fails)
-  have hne : (preChain DynPreContext 1).Nonempty := by
-    by_contra h1empty
-    rw [Set.not_nonempty_iff_eq_empty] at h1empty
-    have hall : ∀ n, preChain DynPreContext n = ∅ := preChain1_empty_all_empty h1empty
-    -- But hk says 0 ∈ preChain k, contradiction
-    rw [hall k] at hk
-    exact hk
-  -- Pick witness in Chain 1
-  rcases hne with ⟨n0, hn0⟩
-  -- n0 ∈ BaseGap = Chain 1 \ ProvableSet
-  refine ⟨n0, hn0, DynProvable_false n0⟩
-
-/--
-**Master Equivalence**: Gap ↔ Coverage (for DynPreContext).
--/
-theorem gap_iff_coverage :
-    (∃ n, n ∈ preBaseGap DynPreContext) ↔ preMasterClo DynPreContext = Set.univ :=
-  ⟨gap_drives_coverage, coverage_implies_gap⟩
-
--- ============================================================================
--- PART F: Counterexample (no gap → no coverage)
--- ============================================================================
-
-/--
-**Counterexample Context**: An LR that never halts at empty context.
--/
-def NoGapLR : Set ℕ → ℕ → Trace := fun _ _ _ => False
-
-def NoGapTruth : ℕ → Prop := fun _ => False  -- Nothing is true
-
-/-- The bridge holds vacuously: False ↔ ¬Halts. -/
-theorem NoGap_bridge : ∀ n, NoGapTruth n ↔ Halts (NoGapLR ∅ n) := by
-  intro n
+theorem MasterClo_univ_iff_all_true
+    (ctx : VerifiableContext Code PropT)
+    (hCS : ContextSound ctx) :
+    MasterClo ctx = univ ↔ (∀ p, ctx.Truth p) := by
+  rw [MasterClo_eq_TruthSet ctx hCS]
   constructor
-  · intro h; exact False.elim h
-  · intro ⟨t, ht⟩; exact ht
+  · intro h p
+    have : p ∈ { q | ctx.Truth q } := by rw [h]; exact mem_univ p
+    exact this
+  · intro h
+    ext p
+    simp only [mem_setOf_eq, mem_univ, iff_true]
+    exact h p
 
-def NoGapContext : PreVerifiableContext ℕ where
-  Truth := NoGapTruth
-  Provable := fun _ => False  -- Nothing provable
-  Not := fun n => n
-  LR := NoGapLR
-  h_bridge := NoGap_bridge
-
-/-- In NoGapContext, Chain 1 = ∅ because LR never halts. -/
-theorem NoGap_Chain1_empty : preChain NoGapContext 1 = ∅ := by
-  ext n
-  simp only [preChain, preNext, preCloK, Set.mem_setOf_eq, Set.mem_empty_iff_false, iff_false]
-  intro ⟨t, ht⟩
-  exact ht
-
-/-- In NoGapContext, MasterClo = ∅. -/
-theorem NoGap_MasterClo_empty : preMasterClo NoGapContext = ∅ := by
-  ext n
-  simp only [mem_preMasterClo, Set.mem_empty_iff_false, iff_false]
-  intro ⟨k, hk⟩
-  induction k with
-  | zero => simp [preChain] at hk
-  | succ m ih =>
-      simp only [preChain, preNext, preCloK, Set.mem_setOf_eq] at hk
-      rcases hk with ⟨t, ht⟩
-      exact ht
-
-/-- In NoGapContext, BaseGap = ∅ (no gap). -/
-theorem NoGap_BaseGap_empty : preBaseGap NoGapContext = ∅ := by
-  simp only [preBaseGap, NoGap_Chain1_empty]
-  ext n
-  simp only [Set.mem_diff, Set.mem_empty_iff_false, false_and]
-
-/-- **Necessity**: Without gap, coverage fails. -/
-theorem no_gap_no_coverage :
-    ¬ (∃ n, n ∈ preBaseGap NoGapContext) ∧
-    preMasterClo NoGapContext ≠ Set.univ := by
-  constructor
-  · -- No gap
-    simp only [NoGap_BaseGap_empty, Set.mem_empty_iff_false, not_exists, not_false_eq_true,
-      implies_true]
-  · -- MasterClo ≠ univ
-    rw [NoGap_MasterClo_empty]
-    exact Set.empty_ne_univ
-
--- ============================================================================
--- PART G: Summary — Gap is STRICTLY the ONLY driver
--- ============================================================================
-
-/-!
-**Summary of Gap Indispensability**:
-
-1. `gap_drives_coverage`: If ∃ n ∈ BaseGap, then MasterClo = univ
-2. `no_gap_no_coverage`: In NoGapContext, ¬∃ n ∈ BaseGap AND MasterClo ≠ univ
-
-This proves the gap is **indispensable**: coverage requires the gap.
+/--
+**BaseGap characterization**: true-but-unprovable.
 -/
+theorem mem_BaseGap_iff_truth_not_provable (ctx : VerifiableContext Code PropT) (p : PropT) :
+    p ∈ BaseGap ctx ↔ ctx.Truth p ∧ ¬ctx.Provable p := by
+  rw [mem_BaseGap_iff]
+  constructor
+  · intro ⟨hChain1, hNotProv⟩
+    have hTruth : ctx.Truth p := by rw [Chain1_eq_TruthSet] at hChain1; exact hChain1
+    exact ⟨hTruth, hNotProv⟩
+  · intro ⟨hTruth, hNotProv⟩
+    exact ⟨by rw [Chain1_eq_TruthSet]; exact hTruth, hNotProv⟩
 
-#check gap_drives_coverage   -- Sufficiency: hg → coverage
-#check no_gap_no_coverage    -- Necessity: ¬hg ∧ ¬coverage in counterexample
+-- ============================================================================
+-- Section 2: Key Structural Identities
+-- ============================================================================
 
-end Instances
+/--
+**BaseGap equals MasterClo minus ProvableSet** (under ContextSound).
+
+This is the fundamental identity connecting gap and coverage:
+the gap is exactly what MasterClo adds beyond ProvableSet.
+-/
+theorem BaseGap_eq_MasterClo_diff_Provable
+    (ctx : VerifiableContext Code PropT)
+    (hCS : ContextSound ctx) :
+    BaseGap ctx = MasterClo ctx \ ProvableSet ctx.toEnrichedContext := by
+  ext p
+  rw [mem_BaseGap_iff_truth_not_provable, MasterClo_eq_TruthSet ctx hCS]
+  simp only [mem_diff, mem_setOf_eq]
+  rfl
+
+/--
+**ProvableSet is strictly contained in MasterClo** (under hCS + h_sound).
+
+This is a genuine structural fact:
+- h_sound gives ProvableSet ⊆ TruthSet = MasterClo
+- T2 gives a witness in TruthSet \ ProvableSet
+- Therefore the inclusion is strict
+-/
+theorem ProvableSet_ssubset_MasterClo
+    (ctx : VerifiableContext Code PropT)
+    (hCS : ContextSound ctx)
+    (h_sound : ∀ p, ctx.Provable p → ctx.Truth p) :
+    ProvableSet ctx.toEnrichedContext ⊂ MasterClo ctx := by
+  rw [Set.ssubset_iff_subset_ne]
+  constructor
+  · intro q hq
+    rw [MasterClo_eq_TruthSet ctx hCS, mem_setOf_eq]
+    exact h_sound q hq
+  · intro heq
+    obtain ⟨p, hT, hNP⟩ := true_but_unprovable_exists ctx.toEnrichedContext
+    have h1 : p ∈ MasterClo ctx := by rw [MasterClo_eq_TruthSet ctx hCS]; exact hT
+    have h2 : p ∉ ProvableSet ctx.toEnrichedContext := hNP
+    rw [← heq] at h1
+    exact h2 h1
+
+/--
+**Gap always exists** (from T2, no extra hypothesis needed).
+-/
+theorem gap_always_exists (ctx : VerifiableContext Code PropT) :
+    ∃ p, p ∈ BaseGap ctx := by
+  obtain ⟨p, hT, hNP⟩ := true_but_unprovable_exists ctx.toEnrichedContext
+  use p
+  rw [mem_BaseGap_iff_truth_not_provable]
+  exact ⟨hT, hNP⟩
+
+-- ============================================================================
+-- Section 3: Propagation Property (The Real Dynamic Hypothesis)
+-- ============================================================================
+
+/--
+**LRPropagatesFromGap**: The correct propagation property of LR.
+
+This says: from any gap element g **as hypothesis**, every proposition becomes reachable.
+The key is that LR uses `{g}` as context, NOT `∅`.
+
+This is NOT equivalent to the bridge (which only talks about `∅`):
+- Bridge: `Halts (LR ∅ p) ↔ Truth p`
+- LRPropagatesFromGap: `Halts (LR {g} p)` for all p, given g in gap
+
+The gap serves as "fuel": from a witness g available as hypothesis,
+the dynamics can reach any proposition p.
+-/
+def LRPropagatesFromGap (ctx : VerifiableContext Code PropT) : Prop :=
+  ∀ g, g ∈ BaseGap ctx → ∀ p, Halts (ctx.LR ({g} : Set PropT) p)
+
+-- ============================================================================
+-- Section 4: Gap Drives Cover (The Main Theorem)
+-- ============================================================================
+
+/--
+**gap_drives_cover**: The gap drives coverage under LRPropagatesFromGap.
+
+Under the propagation hypothesis:
+1. Gap exists (from T2): ∃ g ∈ BaseGap
+2. LRPropagatesFromGap: g ∈ BaseGap → ∀ p, Halts (LR {g} p)
+3. Under ContextSound: if g is true (which it is, since g ∈ BaseGap ⊆ TruthSet)
+   and Halts (LR {g} p), then Truth p
+4. Therefore ∀ p, Truth p
+5. Therefore MasterClo = univ
+
+This is the "for each → for all" reduction with the correct non-circular hypothesis.
+-/
+theorem gap_drives_cover
+    (ctx : VerifiableContext Code PropT)
+    (_ : LRMonotone ctx)
+    (_ : LRRefl ctx)
+    (hCS : ContextSound ctx)
+    (_ : ∀ p, ctx.Provable p → ctx.Truth p)
+    (hProp : LRPropagatesFromGap ctx) :
+    (∃ g, g ∈ BaseGap ctx) → MasterClo ctx = univ := by
+  intro ⟨g, hg⟩
+  -- g is in BaseGap, so g is true (BaseGap ⊆ TruthSet)
+  have hgTrue : ctx.Truth g := (mem_BaseGap_iff_truth_not_provable ctx g).mp hg |>.1
+  -- From LRPropagatesFromGap: g ∈ BaseGap → ∀ p, Halts (LR {g} p)
+  have hAllHalt : ∀ p, Halts (ctx.LR ({g} : Set PropT) p) := hProp g hg
+  -- Under ContextSound: if all of {g} are true and Halts (LR {g} p), then Truth p
+  have hAllTrue : ∀ p, ctx.Truth p := fun p => by
+    apply hCS ({g} : Set PropT) p
+    · intro ψ hψ
+      have : ψ = g := hψ  -- In Lean 4/Mathlib, {g} is definitionally fun x => x = g
+      rw [this]; exact hgTrue
+    · exact hAllHalt p
+  -- ∀ p, Truth p → MasterClo = univ
+  exact (MasterClo_univ_iff_all_true ctx hCS).mpr hAllTrue
+
+/--
+**Corollary**: Under propagation, gap ↔ coverage.
+
+Note: The (←) direction is trivial (gap always exists by T2).
+The (→) direction requires the propagation hypothesis.
+-/
+theorem gap_iff_cover_with_propagation
+    (ctx : VerifiableContext Code PropT)
+    (hmono : LRMonotone ctx)
+    (hrefl : LRRefl ctx)
+    (hCS : ContextSound ctx)
+    (h_sound : ∀ p, ctx.Provable p → ctx.Truth p)
+    (hProp : LRPropagatesFromGap ctx) :
+    (∃ p, p ∈ BaseGap ctx) ↔ MasterClo ctx = univ := by
+  constructor
+  · exact gap_drives_cover ctx hmono hrefl hCS h_sound hProp
+  · intro _; exact gap_always_exists ctx
+
+-- ============================================================================
+-- Section 5: Summary of Structural Facts
+-- ============================================================================
+
+/--
+**Main structural theorem**: summarizes all non-degenerate relationships.
+
+Under the standard hypotheses:
+1. Gap always exists (from T2)
+2. MasterClo = TruthSet (chain stabilizes)
+3. BaseGap = MasterClo \ ProvableSet (gap is the excess)
+4. ProvableSet ⊂ MasterClo (strict inclusion)
+-/
+theorem gap_cover_structural_facts
+    (ctx : VerifiableContext Code PropT)
+    (_ : LRMonotone ctx)
+    (_ : LRRefl ctx)
+    (hCS : ContextSound ctx)
+    (h_sound : ∀ p, ctx.Provable p → ctx.Truth p) :
+    -- (1) Gap always exists (from T2)
+    (∃ p, p ∈ BaseGap ctx) ∧
+    -- (2) MasterClo = TruthSet
+    (MasterClo ctx = { p | ctx.Truth p }) ∧
+    -- (3) BaseGap = MasterClo \ ProvableSet
+    (BaseGap ctx = MasterClo ctx \ ProvableSet ctx.toEnrichedContext) ∧
+    -- (4) ProvableSet ⊂ MasterClo (strict inclusion)
+    (ProvableSet ctx.toEnrichedContext ⊂ MasterClo ctx) := by
+  exact ⟨gap_always_exists ctx,
+         MasterClo_eq_TruthSet ctx hCS,
+         BaseGap_eq_MasterClo_diff_Provable ctx hCS,
+         ProvableSet_ssubset_MasterClo ctx hCS h_sound⟩
+
+end Kinetic
 
 end RevHalt
