@@ -114,4 +114,45 @@ theorem TheGreatChain (ctx : VerifiableContext Code PropT)
 
   exact ⟨h1, h2, h3⟩
 
+-- ============================================================================
+-- GapWitnessV: Operative form for VerifiableContext
+-- ============================================================================
+
+/--
+**GapWitnessV**: Typed witness for VerifiableContext.
+
+Same as GapWitness but for VerifiableContext, giving access to the bridge.
+-/
+def GapWitnessV (ctx : VerifiableContext Code PropT) : Type :=
+  { p : PropT // ctx.Truth p ∧ ¬ctx.Provable p }
+
+/--
+**Gap witnesses exist for VerifiableContext** (via T2).
+-/
+theorem gapWitnessV_nonempty (ctx : VerifiableContext Code PropT) :
+    Nonempty (GapWitnessV ctx) := by
+  obtain ⟨p, hpT, hpNP⟩ := true_but_unprovable_exists ctx.toEnrichedContext
+  exact ⟨⟨p, hpT, hpNP⟩⟩
+
+/-- Extract the proposition from a gap witness. -/
+def GapWitnessV.prop {ctx : VerifiableContext Code PropT} (w : GapWitnessV ctx) : PropT := w.1
+
+/-- A gap witness is true. -/
+theorem GapWitnessV.truth {ctx : VerifiableContext Code PropT} (w : GapWitnessV ctx) :
+    ctx.Truth w.prop := w.2.1
+
+/-- A gap witness is not provable. -/
+theorem GapWitnessV.not_provable {ctx : VerifiableContext Code PropT} (w : GapWitnessV ctx) :
+    ¬ctx.Provable w.prop := w.2.2
+
+/--
+**Operative form**: A gap witness halts (via bridge).
+
+This is the "Collatz-like de Rev" object: a trace that halts but isn't provable.
+-/
+theorem gapWitnessV_halts (ctx : VerifiableContext Code PropT) :
+    ∀ w : GapWitnessV ctx, Halts (ctx.LR ∅ w.prop) := by
+  intro w
+  exact (ctx.h_bridge w.prop).mp w.truth
+
 end RevHalt

@@ -1,6 +1,7 @@
 import RevHalt.Theory
 import RevHalt.Kinetic
 import RevHalt.Oracle
+import RevHalt.Instances.StratifiedInstance
 import Mathlib.Logic.Function.Iterate
 import Mathlib.Data.Set.Basic
 
@@ -47,6 +48,36 @@ def CollatzTrace (n : ℕ) : Trace :=
   rfl
 
 -- ======================================================================================
+-- 1b) Set-equality formulations of Collatz (no ∀)
+-- ======================================================================================
+
+/-- Collatz global (set of n that reach 1) = univ -/
+def CollatzGlobal : Prop :=
+  ({ n : ℕ | CollatzHits1 n } = (univ : Set ℕ))
+
+/-- Equivalent: the set of counterexamples is empty -/
+def CollatzNoCounterexample : Prop :=
+  ({ n : ℕ | ¬ CollatzHits1 n } = (∅ : Set ℕ))
+
+/-- Equivalence between the two formulations -/
+theorem CollatzGlobal_iff_NoCounterexample :
+    CollatzGlobal ↔ CollatzNoCounterexample := by
+  simp only [CollatzGlobal, CollatzNoCounterexample]
+  constructor
+  · intro h
+    ext n
+    simp only [mem_setOf_eq, mem_empty_iff_false, iff_false, not_not]
+    have : n ∈ ({ m : ℕ | CollatzHits1 m } : Set ℕ) := by rw [h]; exact mem_univ n
+    exact this
+  · intro h
+    ext n
+    simp only [mem_setOf_eq, mem_univ, iff_true]
+    by_contra hc
+    have : n ∈ ({ m : ℕ | ¬ CollatzHits1 m } : Set ℕ) := hc
+    rw [h] at this
+    exact this
+
+-- ======================================================================================
 -- 2) "In your framework": a system instance over PropT = ℕ
 -- ======================================================================================
 
@@ -64,6 +95,36 @@ structure CollatzSystem (Code : Type) extends GapSystem Code ℕ where
 namespace CollatzSystem
 
 variable {Code : Type} (S : CollatzSystem Code)
+
+-- ======================================================================================
+-- 3a) Set-equality goals for CollatzSystem
+-- ======================================================================================
+
+/-- Goal: the set of Collatz-true inputs equals univ -/
+def GoalCollatz : Prop :=
+  ({ n : ℕ | CollatzHits1 n } = (univ : Set ℕ))
+
+/-- Goal: the Truth-set equals univ (depends on S) -/
+def GoalTruth : Prop :=
+  ({ n : ℕ | S.Truth n } = (univ : Set ℕ))
+
+/-- Goal: MasterClo equals univ (depends on S) -/
+def CoverGlobal : Prop :=
+  (Kinetic.MasterClo S.toVerifiableContext = (univ : Set ℕ))
+
+/-- GoalCollatz ↔ GoalTruth (via truth_collatz) -/
+theorem GoalCollatz_iff_GoalTruth :
+    GoalCollatz ↔ GoalTruth S := by
+  unfold GoalCollatz GoalTruth
+  constructor <;> intro h <;> ext n <;> simp only [mem_setOf_eq, mem_univ, iff_true]
+  · have : n ∈ ({ m : ℕ | CollatzHits1 m } : Set ℕ) := by rw [h]; exact mem_univ n
+    exact (S.truth_collatz n).mpr this
+  · have : n ∈ ({ m : ℕ | S.Truth m } : Set ℕ) := by rw [h]; exact mem_univ n
+    exact (S.truth_collatz n).mp this
+
+-- ======================================================================================
+-- 3b) Rev and Oracle
+-- ======================================================================================
 
 /-- The Rev-indexed predicate on ℕ (this is the "input n ↦ verdict" map). -/
 def RevPred (n : ℕ) : Prop :=
@@ -137,5 +198,50 @@ theorem Collatz_gap_witness
   exact ⟨n, hC, hNP⟩
 
 end CollatzSystem
+
+-- ======================================================================================
+-- 4) Conditional Collatz via Gap-Cover (But A)
+-- ======================================================================================
+
+/--
+**Collatz follows from ContextSound + LRPropagatesFromGap**.
+
+This is the conditional formulation: we do NOT prove these hypotheses,
+but we show that IF they hold for a CollatzSystem, THEN Collatz is true.
+
+Proof structure:
+1. Gap exists (from T2)
+2. LRPropagatesFromGap: g ∈ BaseGap → ∀ p, Halts (LR {g} p)
+3. ContextSound + Truth g → ∀ p, Truth p
+4. truth_collatz: Truth p ↔ CollatzHits1 p
+5. Therefore: ∀ n, CollatzHits1 n
+-/
+theorem Collatz_from_propagation
+    {Code : Type}
+    (S : CollatzSystem Code)
+    (hCS : Kinetic.ContextSound S.toVerifiableContext)
+    (hProp : Kinetic.LRPropagatesFromGap S.toVerifiableContext) :
+    ∀ n : ℕ, CollatzHits1 n := by
+  -- Step 1: Gap exists (from T2)
+  have hGap : ∃ g, g ∈ Kinetic.BaseGap S.toVerifiableContext :=
+    Kinetic.gap_always_exists S.toVerifiableContext
+  -- Step 2: Apply gap_drives_cover (needs to import StratifiedInstance theorems)
+  -- For now, inline the logic:
+  obtain ⟨g, hg⟩ := hGap
+  -- g is true (BaseGap ⊆ TruthSet)
+  have hgTrue : S.Truth g :=
+    (Kinetic.mem_BaseGap_iff_truth_not_provable S.toVerifiableContext g).mp hg |>.1
+  -- From LRPropagatesFromGap: ∀ p, Halts (LR {g} p)
+  have hAllHalt : ∀ p, Halts (S.LR ({g} : Set ℕ) p) := hProp g hg
+  -- Under ContextSound: ∀ p, Truth p
+  have hAllTrue : ∀ p, S.Truth p := fun p => by
+    apply hCS ({g} : Set ℕ) p
+    · intro ψ hψ
+      have : ψ = g := hψ
+      rw [this]; exact hgTrue
+    · exact hAllHalt p
+  -- Via truth_collatz: ∀ n, CollatzHits1 n
+  intro n
+  exact (S.truth_collatz n).mp (hAllTrue n)
 
 end RevHalt

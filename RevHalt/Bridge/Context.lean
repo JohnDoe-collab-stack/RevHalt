@@ -96,6 +96,34 @@ theorem true_but_unprovable_exists (ctx : EnrichedContext Code PropT) :
   · exact ⟨ctx.H e, ctx.h_truth_H e |>.mp hReal, hNotProv⟩
   · exact ⟨ctx.Not (ctx.H e), ctx.h_truth_not e hNotReal, hNotProvNeg⟩
 
+/--
+**GapWitness**: A typed witness for true-but-unprovable propositions.
+
+Encapsulates the indetermination (H e vs Not (H e)) as a local object.
+All downstream reasoning is parameterized by this witness.
+-/
+def GapWitness (ctx : EnrichedContext Code PropT) : Type :=
+  { p : PropT // ctx.Truth p ∧ ¬ctx.Provable p }
+
+/--
+**Gap witnesses exist** (via T2).
+-/
+theorem gapWitness_nonempty (ctx : EnrichedContext Code PropT) :
+    Nonempty (GapWitness ctx) := by
+  obtain ⟨p, hpT, hpNP⟩ := true_but_unprovable_exists ctx
+  exact ⟨⟨p, hpT, hpNP⟩⟩
+
+/-- Extract the proposition from a gap witness. -/
+def GapWitness.prop {ctx : EnrichedContext Code PropT} (w : GapWitness ctx) : PropT := w.1
+
+/-- A gap witness is true. -/
+theorem GapWitness.truth {ctx : EnrichedContext Code PropT} (w : GapWitness ctx) :
+    ctx.Truth w.prop := w.2.1
+
+/-- A gap witness is not provable. -/
+theorem GapWitness.not_provable {ctx : EnrichedContext Code PropT} (w : GapWitness ctx) :
+    ¬ctx.Provable w.prop := w.2.2
+
 -- ==============================================================================================
 -- Part D: Strengthen to true undecidability
 -- ==============================================================================================
