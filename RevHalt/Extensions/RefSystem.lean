@@ -42,26 +42,28 @@ structure RefSystem (Model : Type v) (Sentence : Type u) (Referent : Type*) wher
 
   /--
   Bit/Cut compatibility: for each bit position n and digit a,
-  the truth of `Bit n a x` corresponds to a dyadic window condition
-  on the cut values.
+  the truth of `Bit n a x` corresponds to a canonical dyadic window condition.
+  To ensure arithmetic equivalence, we quantify over the integer index k.
   -/
   bit_cut_link :
     ∀ {M n a x},
       Sat M (Bit n a x) ↔
-      ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
-        ∧ Sat M (Cut q₀ x) ∧ ¬ Sat M (Cut q₁ x)
-        ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
+      ∃ (k : ℤ),
+        Sat M (Cut ((k : ℚ) / (2 ^ n)) x) ∧
+        ¬ Sat M (Cut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
+        k.toNat % 2 = a
 
-  /-- Win: dyadic window sentence (alternative to Bit). -/
+  /-- Win: dyadic window sentence (equivalent to Bit). -/
   Win : ℕ → ℕ → Referent → Sentence
 
-  /-- Win specification: Win n a x ↔ same RHS as bit_cut_link. -/
+  /-- Win specification: Win n a x ↔ same canonical dyadic RHS as bit_cut_link. -/
   win_spec :
     ∀ {M n a x},
       Sat M (Win n a x) ↔
-      ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
-        ∧ Sat M (Cut q₀ x) ∧ ¬ Sat M (Cut q₁ x)
-        ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
+      ∃ (k : ℤ),
+        Sat M (Cut ((k : ℚ) / (2 ^ n)) x) ∧
+        ¬ Sat M (Cut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
+        k.toNat % 2 = a
 
 namespace RefSystem
 

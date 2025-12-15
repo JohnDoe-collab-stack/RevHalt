@@ -19,6 +19,11 @@
 
 import RevHalt.Extensions.RefSystem
 import Mathlib.Computability.Halting
+import Mathlib.Algebra.Order.Field.Basic
+import Mathlib.Data.Rat.Floor
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.NormNum
+import Mathlib.Algebra.Order.Ring.Pow
 
 namespace RevHalt.Extensions.OmegaChaitin
 
@@ -53,9 +58,9 @@ axiom OmegaApprox_unbounded : ∀ q : ℚ, q < 1 →
 
 /-- Sentences expressing knowledge about Ω (all in ℚ). -/
 inductive OmegaSentence
-| CutGe (q : ℚ) : OmegaSentence          -- "Ω ≥ q"
-| BitIs (n : ℕ) (a : ℕ) : OmegaSentence  -- "n-th bit of Ω is a"
-| WinDyad (n : ℕ) (a : ℕ) : OmegaSentence -- "dyadic window at level n with digit a" (syntactically orthogonal to BitIs)
+| CutGe (q : ℚ) : OmegaSentence
+| BitIs (n : ℕ) (a : ℕ) : OmegaSentence
+| WinDyad (n : ℕ) (a : ℕ) : OmegaSentence -- syntactically orthogonal to BitIs
 | Not (s : OmegaSentence) : OmegaSentence
 | TrueS : OmegaSentence
 | FalseS : OmegaSentence
@@ -67,14 +72,13 @@ abbrev OmegaModel := ℕ
 def OmegaSat : OmegaModel → OmegaSentence → Prop
 | t, OmegaSentence.CutGe q => OmegaApprox t ≥ q
 | t, OmegaSentence.BitIs n a =>
-    -- n-th bit is verified if floor(2^n * Ωₜ) mod 2 = a
     (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a
 | t, OmegaSentence.WinDyad n a =>
-    -- WinDyad: structural semantics via Cut conditions (dyadic window)
-    ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
-      ∧ OmegaApprox t ≥ q₀ ∧ ¬(OmegaApprox t ≥ q₁)
-      ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
-| _, OmegaSentence.Not s => ∀ t', ¬OmegaSat t' s  -- negation means never satisfied
+    ∃ (k : ℤ),
+      OmegaApprox t ≥ ((k : ℚ) / (2 ^ n)) ∧
+      ¬(OmegaApprox t ≥ (((k + 1) : ℚ) / (2 ^ n))) ∧
+      k.toNat % 2 = a
+| _, OmegaSentence.Not s => ∀ t', ¬OmegaSat t' s
 | _, OmegaSentence.TrueS => True
 | _, OmegaSentence.FalseS => False
 
@@ -95,33 +99,105 @@ def OmegaCut (q : ℚ) (_ : OmegaReferent) : OmegaSentence :=
 def OmegaBit (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
   OmegaSentence.BitIs n a
 
-/-- Antimonotonicity of Cut: if Ωₜ ≥ q' and q ≤ q', then Ωₜ ≥ q.
-    For RefSystem, we interpret cut_antimono as: q ≤ q' means Cut q is weaker (more easily satisfied).
-    So Sat(Cut q') → Sat(Cut q) when q ≤ q' (antimonotone in q). -/
+/-- Antimonotonicity of Cut: if Ωₜ ≥ q' and q ≤ q', then Ωₜ ≥ q. -/
 theorem omega_cut_antimono : ∀ {t : OmegaModel} {q q' : ℚ} {x : OmegaReferent},
     q ≤ q' → OmegaSat t (OmegaCut q' x) → OmegaSat t (OmegaCut q x) := by
   intro t q q' _ hle hSat
   simp only [OmegaCut, OmegaSat] at hSat ⊢
   exact le_trans hle hSat
 
-/-- Bit/Cut link (axiomatic). -/
-axiom omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
+/--
+Bit/Cut link (THEOREM, not an axiom):
+the bit definition is equivalent to the strict dyadic window condition.
+-/
+theorem omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
     OmegaSat t (OmegaBit n a x) ↔
-    ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
-      ∧ OmegaSat t (OmegaCut q₀ x) ∧ ¬OmegaSat t (OmegaCut q₁ x)
-      ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
+    ∃ (k : ℤ),
+      OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
+      ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
+      k.toNat % 2 = a := by
+  intro t n a x
+  simp only [OmegaSat, OmegaBit, OmegaCut]
+
+  -- work in ℚ with d = 2^n (as ℚ)
+  let r : ℚ := OmegaApprox t
+  let d : ℚ := (2 : ℚ) ^ n
+  have hdpos : (0 : ℚ) < d := by
+    simp [d, pow_pos (by norm_num : (0 : ℚ) < 2) n]
+
+  constructor
+  · -- BitIs -> window (exists k)
+    intro hBit
+    -- rewrite hBit onto the canonical d*r form
+    have hBit' : (⌊d * r⌋.toNat) % 2 = a := by
+      -- simp rewrites ↑(2^n) to (2:ℚ)^n, so this matches d
+      simpa [r, d, Nat.cast_pow, mul_assoc, mul_left_comm, mul_comm] using hBit
+
+    let k : ℤ := ⌊d * r⌋
+
+    have hk : ((k : ℚ) ≤ d * r) ∧ (d * r < (k : ℚ) + 1) := by
+      have : (⌊d * r⌋ : ℤ) = k := by simp [k]
+      -- floor_eq_iff gives: k ≤ d*r < k+1
+      simpa [add_comm, add_left_comm, add_assoc] using (Int.floor_eq_iff).1 this
+
+    refine ⟨k, ?_, ?_, ?_⟩
+    · -- OmegaApprox t ≥ k/d
+      have hle : (k : ℚ) / d ≤ r := by
+        have : (k : ℚ) ≤ r * d := by simpa [mul_comm] using hk.1
+        exact (div_le_iff₀ hdpos).2 this
+      simpa [r, d, ge_iff_le] using hle
+    · -- ¬ OmegaApprox t ≥ (k+1)/d
+      have hlt : r < ((k : ℚ) + 1) / d := by
+        apply (lt_div_iff₀ hdpos).2
+        have : r * d < (k : ℚ) + 1 := by
+          simpa [mul_comm] using hk.2
+        exact this
+      have : ¬ ((k : ℚ) + 1) / d ≤ r := not_le_of_gt hlt
+      -- match the goal shape ¬(r ≥ ((k+1)/2^n))
+      simpa [r, d, ge_iff_le, add_comm, add_left_comm, add_assoc] using this
+    · -- parity
+      simpa [k] using hBit'
+
+  · -- window -> BitIs
+    rintro ⟨k, hCut, hNotCut, hpar⟩
+
+    -- normalize hypotheses to r/d form
+    have hCut' : (k : ℚ) / d ≤ r := by
+      simpa [r, d, ge_iff_le] using hCut
+    have hNotCut' : ¬ r ≥ (((k + 1) : ℚ) / d) := by
+      -- same denominator normalization (2^n ↔ d)
+      simpa [r, d, Nat.cast_pow, mul_assoc, mul_left_comm, mul_comm] using hNotCut
+
+    have hk_le : (k : ℚ) ≤ d * r := by
+      have : (k : ℚ) ≤ r * d := (div_le_iff₀ hdpos).1 hCut'
+      simpa [mul_comm] using this
+
+    have hk_lt : d * r < (k : ℚ) + 1 := by
+      have hlt : r < (((k + 1) : ℚ) / d) := lt_of_not_ge hNotCut'
+      have : r * d < ((k + 1) : ℚ) := (lt_div_iff₀ hdpos).1 hlt
+      -- rewrite ((k+1):ℚ) as (k:ℚ)+1, and swap mul
+      simpa [mul_comm, add_comm, add_left_comm, add_assoc] using this
+
+    have hk_floor : (⌊d * r⌋ : ℤ) = k := by
+      exact (Int.floor_eq_iff).2 ⟨hk_le, by simpa [add_comm, add_left_comm, add_assoc] using hk_lt⟩
+
+    -- target: ⌊↑(2^n) * OmegaApprox t⌋.toNat % 2 = a
+    -- convert to ⌊d*r⌋ using simp, then rewrite by hk_floor, then use parity
+    have : (⌊d * r⌋.toNat) % 2 = a := by
+      simpa [hk_floor] using hpar
+    simpa [r, d, Nat.cast_pow, mul_assoc, mul_left_comm, mul_comm] using this
 
 /-- Win encoding: dyadic window sentence (syntactically orthogonal to Bit). -/
 def OmegaWin (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
-  OmegaSentence.WinDyad n a  -- Now syntactically different from BitIs!
+  OmegaSentence.WinDyad n a
 
-/-- Win/Cut link: WinDyad semantics is definitionally the RHS.
-    This is NOT an axiom but a theorem reflecting OmegaSat definition. -/
+/-- Win/Cut link: WinDyad semantics is definitionally the RHS. -/
 theorem omega_win_spec : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
     OmegaSat t (OmegaWin n a x) ↔
-    ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
-      ∧ OmegaSat t (OmegaCut q₀ x) ∧ ¬OmegaSat t (OmegaCut q₁ x)
-      ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a := by
+    ∃ (k : ℤ),
+      OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
+      ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
+      k.toNat % 2 = a := by
   intro t n a _
   simp only [OmegaWin, OmegaSat, OmegaCut]
 
