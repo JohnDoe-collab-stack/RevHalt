@@ -13,6 +13,7 @@ import RevHalt.Dynamics.Core.Laws
 import RevHalt.Dynamics.Core.Fuel
 import RevHalt.Dynamics.Core.Graph
 import RevHalt.Dynamics.Core.Path
+import RevHalt.Dynamics.Core.Fork
 import RevHalt.Dynamics.Operative.Invariant
 import RevHalt.Dynamics.Transport.Morphism
 

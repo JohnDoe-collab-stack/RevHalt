@@ -21,7 +21,8 @@ Dynamics/
 │   ├── Laws.lean   ← Preservation, Strictness, Bifurcation
 │   ├── Fuel.lean   ← T2 guarantees strict moves exist
 │   ├── Graph.lean  ← Edge relation, Reachability
-│   └── Path.lean   ← Path inductive (general)
+│   ├── Path.lean   ← Path inductive (general)
+│   └── Fork.lean   ← Bifurcation as object
 ├── Operative/      ← VerifiableContext level
 │   ├── Invariant.lean  ← RevLabel (operative invariant)
 │   └── ChainEmbed.lean ← Chain → Path relationship
