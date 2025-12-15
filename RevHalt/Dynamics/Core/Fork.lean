@@ -11,6 +11,7 @@
 
 import RevHalt.Dynamics.Core.Node
 import RevHalt.Dynamics.Core.Graph
+import RevHalt.Dynamics.Core.Path
 import RevHalt.Bridge.ComplementarityAPI
 
 namespace RevHalt.Dynamics.Core
@@ -115,6 +116,36 @@ theorem ofPivot_edge_right (ctx : RevHalt.EnrichedContext Code PropT) (T0 : Theo
     Edge ctx T0 ((ofPivot ctx T0 p).right hnp) := by
   use Move.extend (ctx.Not p) hnp
   rfl
+
+/-!
+## Fork-Path Integration
+
+The following lemmas enable Fork to be used directly in Path without global choice.
+-/
+
+/-- Path from T0 to left branch of ofPivot (1 step). -/
+def path_ofPivot_left (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+    (p : PropT) (hp : ctx.Truth p) :
+    Path ctx T0 ((ofPivot ctx T0 p).left hp) :=
+  Path.of_move (Move.extend p hp) T0
+
+/-- Path from T0 to right branch of ofPivot (1 step). -/
+def path_ofPivot_right (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+    (p : PropT) (hnp : ctx.Truth (ctx.Not p)) :
+    Path ctx T0 ((ofPivot ctx T0 p).right hnp) :=
+  Path.of_move (Move.extend (ctx.Not p) hnp) T0
+
+/-- Left branch of ofPivot is reachable from T0. -/
+theorem reachable_ofPivot_left (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+    (p : PropT) (hp : ctx.Truth p) :
+    Reachable ctx T0 ((ofPivot ctx T0 p).left hp) :=
+  Path.reachable_of_path (path_ofPivot_left ctx T0 p hp)
+
+/-- Right branch of ofPivot is reachable from T0. -/
+theorem reachable_ofPivot_right (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+    (p : PropT) (hnp : ctx.Truth (ctx.Not p)) :
+    Reachable ctx T0 ((ofPivot ctx T0 p).right hnp) :=
+  Path.reachable_of_path (path_ofPivot_right ctx T0 p hnp)
 
 end Fork
 
