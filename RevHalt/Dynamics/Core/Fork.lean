@@ -10,11 +10,12 @@
 -/
 
 import RevHalt.Dynamics.Core.Node
+import RevHalt.Dynamics.Core.Graph
 import RevHalt.Bridge.ComplementarityAPI
 
 namespace RevHalt.Dynamics.Core
 
-open Set RevHalt
+open Set
 
 variable {Code PropT : Type}
 
@@ -78,21 +79,42 @@ theorem ofPivot_right_extends (ctx : EnrichedContext Code PropT) (T0 : TheoryNod
   simp only [TheoryNode.le_def, right, ofPivot]
   exact subset_union_left
 
-/-- Fork from ofPivot: pivot is in the left branch. -/
-theorem ofPivot_pivot_mem_left (ctx : EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+/-- Fork from ofPivot: pivot is in the left branch theory. -/
+theorem ofPivot_pivot_mem_left (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
     (p : PropT) (hp : ctx.Truth p) :
-    p ∈ (ofPivot ctx T0 p).left hp := by
-  simp only [left, ofPivot, TheoryNode.mem_node_iff, Extend, mem_union, mem_singleton_iff]
+    p ∈ ((ofPivot ctx T0 p).left hp).theory := by
+  simp only [left, ofPivot, RevHalt.Extend, mem_union, mem_singleton_iff]
   right
   trivial
 
-/-- Fork from ofPivot: Not pivot is in the right branch. -/
-theorem ofPivot_not_pivot_mem_right (ctx : EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+/-- Fork from ofPivot: Not pivot is in the right branch theory. -/
+theorem ofPivot_not_pivot_mem_right (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
     (p : PropT) (hnp : ctx.Truth (ctx.Not p)) :
-    ctx.Not p ∈ (ofPivot ctx T0 p).right hnp := by
-  simp only [right, ofPivot, TheoryNode.mem_node_iff, Extend, mem_union, mem_singleton_iff]
+    ctx.Not p ∈ ((ofPivot ctx T0 p).right hnp).theory := by
+  simp only [right, ofPivot, RevHalt.Extend, mem_union, mem_singleton_iff]
   right
   trivial
+
+/-!
+## Fork-Edge Integration
+
+The following lemmas show that Fork branches are reachable via Edges,
+making Fork directly usable in Graph/Path without "global choice".
+-/
+
+/-- There is an edge from T0 to the left branch of ofPivot (via extend move). -/
+theorem ofPivot_edge_left (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+    (p : PropT) (hp : ctx.Truth p) :
+    Edge ctx T0 ((ofPivot ctx T0 p).left hp) := by
+  use Move.extend p hp
+  rfl
+
+/-- There is an edge from T0 to the right branch of ofPivot (via extend move). -/
+theorem ofPivot_edge_right (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
+    (p : PropT) (hnp : ctx.Truth (ctx.Not p)) :
+    Edge ctx T0 ((ofPivot ctx T0 p).right hnp) := by
+  use Move.extend (ctx.Not p) hnp
+  rfl
 
 end Fork
 
