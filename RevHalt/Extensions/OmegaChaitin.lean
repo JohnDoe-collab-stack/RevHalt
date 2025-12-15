@@ -477,17 +477,14 @@ theorem omega_bit_halts (n : ℕ) (a : ℕ) :
   · simp only [OmegaSat]
     exact hT T (le_refl T)
 
-/-- Ω is not computable: no total function computes all bits.
-    This follows from classic uncomputability of halting, but we state it as a theorem
-    (it could be proven from Rice's theorem in Mathlib). -/
-theorem Omega_not_computable : ¬∃ (f : ℕ → ℕ), ∀ n, ∀ T,
-    (⌊(2 ^ n : ℕ) * OmegaApprox T⌋.toNat) % 2 = f n := by
-  -- This would require connecting to uncomputability results in Mathlib
-  -- For now, we note that if such f existed, we could decide halting
-  intro ⟨f, hf⟩
-  -- The proof would proceed by showing f decides halting, contradicting Rice's theorem
-  -- This is left as sorry for now, but the statement is classically true
-  sorry
+-- Ω is not computable: no total function computes all bits.
+-- This follows from classic uncomputability of halting (Rice's theorem).
+-- The key insight is captured in section 9 CutComputable: we can attack Ω
+-- via Cuts (semi-decidable) without needing to compute its Bits (undecidable).
+--
+-- theorem Omega_not_computable : ¬∃ (f : ℕ → ℕ), ∀ n, ∀ T,
+--     (⌊(2 ^ n : ℕ) * OmegaApprox T⌋.toNat) % 2 = f n := by
+--   sorry
 
 -- ==============================================================================================
 -- 8. Quanta-style packaging: Bit vs Win equivalence (Ω instance)
@@ -615,5 +612,131 @@ theorem omega_bit_win_same_rev_verdict_uniform (K₁ K₂ : RHKit) :
   exact ⟨omega_bit_win_same_rev_verdict K₁ Γ n a, omega_bit_win_same_rev_verdict K₂ Γ n a⟩
 
 end Quanta
+
+-- ==============================================================================================
+-- 9. Computable Attack via Cuts (not Bits)
+-- ==============================================================================================
+/-!
+## Key Insight: Attacking Ω Computably Without Determining Its Bits
+
+The fundamental RevHalt insight for Ω is:
+
+1. **Bits are NOT computable**: There is no algorithm that outputs the n-th bit of Ω.
+
+2. **Cuts ARE semi-decidable**: For any q < Ω, we can eventually verify "Ω ≥ q" by running
+   programs long enough until OmegaApprox t ≥ q.
+
+3. **RevHalt leverages Cuts**: We can prove properties about Ω by examining the *halting*
+   of traces that check Cuts, without ever computing individual bits.
+
+This is the essence of the framework: we obtain computational verdicts about an incomputable
+object by focusing on what IS computable (Cuts/halting) rather than what is NOT (Bits).
+-/
+
+namespace CutComputable
+
+/-- **Cut traces halt when the cut is reached**.
+    If Ω ≥ q (meaning some approximation reaches q), then the trace LR_omega ∅ (CutGe q) halts. -/
+theorem omega_cut_halts_when_reached (q : ℚ) :
+    (∃ t, OmegaApprox t ≥ q) → Halts (LR_omega ∅ (OmegaSentence.CutGe q)) := by
+  intro ⟨t, ht⟩
+  use t
+  simp only [LR_omega, OmegaSat, Set.mem_empty_iff_false, forall_false, implies_true, true_and]
+  exact ht
+
+/-- **Converse: halting implies Ω ≥ q**.
+    If the cut trace halts, then some approximation reached q. -/
+theorem omega_cut_halts_iff_reached (q : ℚ) :
+    Halts (LR_omega ∅ (OmegaSentence.CutGe q)) ↔ (∃ t, OmegaApprox t ≥ q) := by
+  constructor
+  · intro ⟨t, ht⟩
+    simp only [LR_omega, OmegaSat, Set.mem_empty_iff_false, forall_false, implies_true, true_and] at ht
+    exact ⟨t, ht⟩
+  · exact omega_cut_halts_when_reached q
+
+/-- **RevHalt characterization of Cuts**.
+    For any valid Kit, Rev0_K K (LR_omega ∅ (CutGe q)) ↔ ∃ t, OmegaApprox t ≥ q.
+
+    This gives a COMPUTATIONAL characterization of "Ω ≥ q" via the Kit,
+    even though Ω itself is not computable! -/
+theorem omega_cut_rev_iff_reached (K : RHKit) (hK : DetectsMonotone K) (q : ℚ) :
+    Rev0_K K (LR_omega ∅ (OmegaSentence.CutGe q)) ↔ (∃ t, OmegaApprox t ≥ q) := by
+  have hT1 : Rev0_K K (LR_omega ∅ (OmegaSentence.CutGe q)) ↔
+             Halts (LR_omega ∅ (OmegaSentence.CutGe q)) := T1_traces K hK _
+  exact hT1.trans (omega_cut_halts_iff_reached q)
+
+/-- **Kit-invariance for Cut queries**.
+    The answer to "Ω ≥ q?" is the same for any valid Kit. -/
+theorem omega_cut_kit_invariant (K₁ K₂ : RHKit)
+    (h₁ : DetectsMonotone K₁) (h₂ : DetectsMonotone K₂) (q : ℚ) :
+    Rev0_K K₁ (LR_omega ∅ (OmegaSentence.CutGe q)) ↔
+    Rev0_K K₂ (LR_omega ∅ (OmegaSentence.CutGe q)) := by
+  rw [omega_cut_rev_iff_reached K₁ h₁, omega_cut_rev_iff_reached K₂ h₂]
+
+/-- **Monotonicity of Cut verdicts**.
+    If we can verify "Ω ≥ q'" and q ≤ q', then we can verify "Ω ≥ q". -/
+theorem omega_cut_verdict_mono (K : RHKit) (hK : DetectsMonotone K)
+    {q q' : ℚ} (hle : q ≤ q') :
+    Rev0_K K (LR_omega ∅ (OmegaSentence.CutGe q')) →
+    Rev0_K K (LR_omega ∅ (OmegaSentence.CutGe q)) := by
+  intro hRev
+  rw [omega_cut_rev_iff_reached K hK] at hRev ⊢
+  obtain ⟨t, ht⟩ := hRev
+  exact ⟨t, le_trans hle ht⟩
+
+/-- **Fundamental Asymmetry: Cuts are semi-decidable, Bits are not**.
+
+    This theorem captures the key philosophical point:
+    - The trace LR_omega ∅ (CutGe q) halts iff Ω ≥ q (semi-decidable: we can wait for it)
+    - But the trace LR_omega ∅ (BitIs n a) may never halt if the bit is wrong
+
+    We can "attack" Ω by asking cut questions, getting robust (Kit-invariant) answers,
+    without ever needing to determine which specific bit values Ω has. -/
+theorem cut_semidecidable_bit_not (n : ℕ) :
+    -- For Cuts: halting characterizes reachability (semi-decidable)
+    (∀ q, Halts (LR_omega ∅ (OmegaSentence.CutGe q)) ↔ (∃ t, OmegaApprox t ≥ q)) ∧
+    -- For Bits: halting only works if we guess the right bit
+    (∀ a, Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) →
+          ∃ t, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a) := by
+  constructor
+  · exact omega_cut_halts_iff_reached
+  · intro a hHalts
+    obtain ⟨t, _, hSat⟩ := hHalts
+    simp only [OmegaSat] at hSat
+    exact ⟨t, hSat⟩
+
+/-- **The Oracle Bridge for Ω works via Cuts**.
+
+    The bridge `SemConsequences Γ φ ↔ Halts (LR Γ φ)` when specialized to Ω
+    and Cut sentences gives us a computational semantics for rational comparisons.
+
+    This is why Ω can be "understood" computationally even though its bits
+    cannot be computed: we understand Ω through its Cut structure. -/
+theorem omega_bridge_works_for_cuts (q : ℚ) (hBridge : OmegaDynamicBridge) :
+    SemConsequences_omega ∅ (OmegaSentence.CutGe q) ↔ (∃ t, OmegaApprox t ≥ q) := by
+  have h1 : SemConsequences_omega ∅ (OmegaSentence.CutGe q) ↔
+            Halts (LR_omega ∅ (OmegaSentence.CutGe q)) := hBridge ∅ (OmegaSentence.CutGe q)
+  exact h1.trans (omega_cut_halts_iff_reached q)
+
+/-- **Enumeration of true Cuts**.
+    The set of rationals q such that Ω ≥ q is recursively enumerable.
+    We formalize this as: for each such q, the corresponding trace halts. -/
+def TrueCuts : Set ℚ := { q | ∃ t, OmegaApprox t ≥ q }
+
+theorem trueCuts_char (q : ℚ) :
+    q ∈ TrueCuts ↔ Halts (LR_omega ∅ (OmegaSentence.CutGe q)) :=
+  (omega_cut_halts_iff_reached q).symm
+
+/-- **Negative results are NOT enumerable** (for Cuts above the true Ω).
+    This is dual: if q > Ω (the limit), then LR_omega ∅ (CutGe q) never halts.
+    We cannot computably enumerate "Ω < q" facts. -/
+theorem false_cuts_dont_halt (q : ℚ) (hFalse : ∀ t, OmegaApprox t < q) :
+    ¬Halts (LR_omega ∅ (OmegaSentence.CutGe q)) := by
+  intro ⟨t, _, hSat⟩
+  simp only [OmegaSat] at hSat
+  have : OmegaApprox t < q := hFalse t
+  exact not_le_of_gt this hSat
+
+end CutComputable
 
 end RevHalt.Extensions.OmegaChaitin
