@@ -2,7 +2,7 @@
 
 **Axiom Dynamics**: a calculus for navigating the space of "what proves what."
 
-> This formalizes what Chen, Li & Oliveira do intuitively in reverse mathematics — treat provability relationships as a graph you can walk, with every step machine-checked.
+> This formalizes what [Chen, Li & Oliveira &Igor C. (2024)](https://wrap.warwick.ac.uk/id/eprint/187191/) do intuitively in reverse mathematics — treat provability relationships as a graph you can walk, with every step machine-checked.
 
 ## Overview
 

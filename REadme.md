@@ -80,11 +80,11 @@ RevHalt/
 ### Layer Dependencies
 
 ```
-Base → Theory → Kinetic → Oracle
-  ↓       ↓                  ↓
-  └───────┴──────→ Bridge ←──┘
-                      ↓
-              Extensions / Instances
+Base → Theory → Dynamics → Kinetic → Oracle
+  ↓       ↓         ↓          ↓        ↓
+  └───────┴─────────┴──────────┴→ Bridge ←┘
+                                    ↓
+                          Extensions / Instances
 ```
 
 ---
@@ -117,7 +117,7 @@ This extracts the common abstract core of Turing's undecidability and Gödel's i
 
 ### T3 — Complementarity
 
-**Claim**: Rev is the complement of any sound formal system.
+**Claim**: Any sound theory can be strictly extended toward Truth.
 
 ```lean
 theorem T3_strong {Code PropT : Type} (ctx : TuringGodelContext' Code PropT)
@@ -191,26 +191,36 @@ The dynamic semantics formalize the evolution of truth over time:
 
 ---
 
+## Dynamics Layer
+
+The axiom graph navigation framework:
+
+| Concept | Definition |
+|---------|------------|
+| `TheoryNode` | Sound theory bundled with soundness certificate |
+| `Move` | Monotone extension operation (`extend`, `extend_gap`) |
+| `Fork` | Bifurcation without global choice |
+| `fuel_from_T2` | T2 guarantees strict moves exist |
+| `Path` | Explicit sequence of moves |
+
+**Key insight**: T2 is not just impossibility — it's fuel for navigation.
+
+---
+
 ## Instances
 
 ### PRModel (Mathlib)
 
-Complete instance using `Nat.Partrec.Code`:
+Complete instance using `Nat.Partrec.Code` with no axioms:
 
 ```lean
--- RevHalt/Instances/Arithmetization.lean
-def PRModel : RigorousModel  -- No sorry, no axioms
-theorem PRModel_Master_Theorem : ... -- Full T1+T2+T2'+T3
+def PRModel : RigorousModel := ...
+theorem PRModel_diagonal_halting : ∃ e, PRHalts e ↔ ¬PRHalts (diag e)
 ```
 
 ### Peano Arithmetic
 
-Coded instance for PA:
-
-```lean
--- RevHalt/Instances/PA/Main.lean
-theorem PA_Master_Theorem : ... -- T1 + Diagonal for coded families
-```
+Coded instance for PA (requires `Representable` hypothesis).
 
 ---
 
