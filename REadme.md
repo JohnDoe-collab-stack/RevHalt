@@ -221,9 +221,25 @@ structure RefSystem (Model Sentence Referent : Type) where
   bit_cut_link : ...
 ```
 
-### OmegaChaitin
+### OmegaChaitin — Concrete Instantiation of Dynamics
 
-Chaitin's Ω as a RefSystem instance, enabling Rev-based reasoning about algorithmic randomness.
+Chaitin's Ω as a `RefSystem` instance, grounded in Mathlib's `Nat.Partrec.Code`.
+
+**Key insight**: Omega is not just a sanity check — it's the **proof that Dynamics works** on a real computability domain.
+
+| Dynamics (abstract) | OmegaChaitin (concrete) |
+|---------------------|-------------------------|
+| T2 = fuel (∃ strict move) | `TrueCuts` is RE — can always advance |
+| Fork = bifurcation without global choice | Bit = 0 or 1, but undecidable which |
+| Move.apply preserves soundness | `OmegaApprox_mono` — trace increases |
+| Gap = true but unprovable | Individual bits of Ω |
+
+**Constructive definitions (no axioms):**
+- `OmegaApprox` defined via `Partrec.Code.evaln`
+- All properties (`nonneg`, `le_one`, `mono`) proven
+- `omega_bit_cut_link` proven arithmetically
+
+**CutComputable section**: Formalizes attacking Ω via semi-decidable Cuts rather than undecidable Bits.
 
 ---
 
