@@ -289,4 +289,140 @@ theorem omega_bit_halts (n : ℕ) (a : ℕ) :
 axiom Omega_not_computable : ¬∃ (f : ℕ → ℕ), ∀ n, ∀ T,
     (⌊(2 ^ n : ℕ) * OmegaApprox T⌋.toNat) % 2 = f n
 
+
+
+
+-- ==============================================================================================
+-- 8. Quanta-style packaging: Bit vs Win equivalence (Ω instance)
+-- ==============================================================================================
+/-!
+## Overview
+
+This section proves that `BitIs` and `WinDyad` — two syntactically orthogonal representations
+of "the n-th bit of Ω is a" — have identical behavior at all levels:
+
+1. **Sat-level (Hard Theorem, No Oracle)**: `omega_bit_win_sat_equiv`
+   Pure arithmetic: the floor-based definition equals the dyadic window condition.
+
+2. **SemConsequences-level (No Oracle)**: `omega_bit_win_semConseq_equiv`
+   Lifted from Sat-equivalence via standard model-theoretic reasoning.
+
+3. **Rev-level (Conditional on Bridge)**: `omega_bit_win_same_rev_verdict`
+   Under `OmegaDynamicBridge`, the kinetic verdicts match.
+   This uses `LR_omega` (which actually reads `OmegaSat`), not the generic `LR_ref`.
+-/
+
+namespace Quanta
+
+open Set
+
+-- ============================================================================
+-- LEVEL 1: Sat-Equivalence (Hard Mathematical Theorem — No Oracle Required)
+-- ============================================================================
+
+/--
+**Core Mathematical Result**: `BitIs` and `WinDyad` have identical satisfaction.
+
+This is a pure arithmetic theorem about dyadic windows and floor functions.
+No oracle, no bridge hypothesis — this is the "non-trivial" content.
+-/
+theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
+    OmegaSat t (OmegaSentence.BitIs n a) ↔ OmegaSat t (OmegaSentence.WinDyad n a) := by
+  -- BitIs ↔ (∃k, Cut-window form) is omega_bit_cut_link (with x := ())
+  have hBit :
+      OmegaSat t (OmegaSentence.BitIs n a) ↔
+      ∃ k : ℤ,
+        OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) ()) ∧
+        ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) ()) ∧
+        k.toNat % 2 = a := by
+    simpa [OmegaBit] using (omega_bit_cut_link (t := t) (n := n) (a := a) (x := ()))
+
+  -- WinDyad ↔ same Cut-window form is omega_win_spec (with x := ())
+  have hWin :
+      OmegaSat t (OmegaSentence.WinDyad n a) ↔
+      ∃ k : ℤ,
+        OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) ()) ∧
+        ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) ()) ∧
+        k.toNat % 2 = a := by
+    simpa [OmegaWin] using (omega_win_spec (t := t) (n := n) (a := a) (x := ()))
+
+  exact hBit.trans hWin.symm
+
+-- ============================================================================
+-- LEVEL 2: Semantic Consequence Equivalence (No Oracle Required)
+-- ============================================================================
+
+/--
+**Semantic Consequence Equivalence**: Lifted from Sat-equivalence.
+
+If φ and ψ are Sat-equivalent at every model, they have the same semantic consequences.
+No bridge hypothesis needed — pure model theory.
+-/
+theorem omega_bit_win_semConseq_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
+    SemConsequences_omega Γ (OmegaSentence.BitIs n a) ↔
+    SemConsequences_omega Γ (OmegaSentence.WinDyad n a) := by
+  -- Lift from pointwise Sat-equivalence
+  simp only [SemConsequences_omega, CloE_omega, ThE_omega, ModE_omega, Set.mem_setOf_eq]
+  constructor
+  · intro hBit M hM
+    rw [← omega_bit_win_sat_equiv]
+    exact hBit M hM
+  · intro hWin M hM
+    rw [omega_bit_win_sat_equiv]
+    exact hWin M hM
+
+-- ============================================================================
+-- LEVEL 3: Operative (Rev) Equivalence — Conditional on OmegaDynamicBridge
+-- ============================================================================
+
+/--
+**Trace Equivalence Lemma**: `LR_omega` traces are propositionally equal for Bit vs Win.
+
+Since `LR_omega Γ φ t = (∀ ψ ∈ Γ, OmegaSat t ψ) ∧ OmegaSat t φ`, and we proved
+`OmegaSat t (BitIs n a) ↔ OmegaSat t (WinDyad n a)`, the traces are equal.
+-/
+theorem omega_bit_win_trace_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
+    LR_omega Γ (OmegaSentence.BitIs n a) = LR_omega Γ (OmegaSentence.WinDyad n a) := by
+  funext t
+  simp only [LR_omega]
+  apply propext
+  constructor
+  · intro ⟨hΓ, hBit⟩
+    exact ⟨hΓ, (omega_bit_win_sat_equiv t n a).mp hBit⟩
+  · intro ⟨hΓ, hWin⟩
+    exact ⟨hΓ, (omega_bit_win_sat_equiv t n a).mpr hWin⟩
+
+/--
+**Operative Corollary (Under Bridge Hypothesis)**: Same Rev verdict for Bit vs Win.
+
+This uses `LR_omega` (the actual Ω reading, which invokes `OmegaSat`), not `LR_ref`.
+The bridge hypothesis `OmegaDynamicBridge` links semantic consequence to halting.
+-/
+theorem omega_bit_win_same_rev_verdict
+    (K : RHKit) (_hK : DetectsMonotone K)
+    (_hBridge : OmegaDynamicBridge) :
+    ∀ Γ (n a : ℕ),
+      Rev0_K K (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
+      Rev0_K K (LR_omega Γ (OmegaSentence.WinDyad n a)) := by
+  intro Γ n a
+  -- The traces are equal, so Rev verdicts are equal (no bridge needed here!)
+  rw [omega_bit_win_trace_equiv]
+
+/--
+**Kit-Invariance**: The equivalence holds uniformly across all valid kits.
+-/
+theorem omega_bit_win_same_rev_verdict_kit_invariant
+    (K₁ K₂ : RHKit) (h₁ : DetectsMonotone K₁) (h₂ : DetectsMonotone K₂)
+    (hBridge : OmegaDynamicBridge) :
+    ∀ Γ (n a : ℕ),
+      (Rev0_K K₁ (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
+       Rev0_K K₁ (LR_omega Γ (OmegaSentence.WinDyad n a))) ∧
+      (Rev0_K K₂ (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
+       Rev0_K K₂ (LR_omega Γ (OmegaSentence.WinDyad n a))) := by
+  intro Γ n a
+  exact ⟨omega_bit_win_same_rev_verdict K₁ h₁ hBridge Γ n a,
+         omega_bit_win_same_rev_verdict K₂ h₂ hBridge Γ n a⟩
+
+end Quanta
+
 end RevHalt.Extensions.OmegaChaitin
