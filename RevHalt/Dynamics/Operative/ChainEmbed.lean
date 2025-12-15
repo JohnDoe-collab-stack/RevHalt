@@ -49,21 +49,12 @@ theorem chainTheory_zero_sound (ctx : VerifiableContext Code PropT) :
   intro p hp
   exact hp.elim
 
-/-- If ContextSound holds, then Chain n is sound for all n. -/
+/-- If ContextSound holds, then Chain n is sound for all n.
+    (Alias to Kinetic.Chain_truth) -/
 theorem chainTheory_sound (ctx : VerifiableContext Code PropT)
     (hSound : ContextSound ctx) (n : ℕ) :
-    TheorySound ctx.toEnrichedContext (Chain ctx n) := by
-  induction n with
-  | zero => exact chainTheory_zero_sound ctx
-  | succ n ih =>
-    intro p hp
-    -- p ∈ Chain (n+1) = Next ctx (Chain n) = CloK (Chain n)
-    simp only [Chain_succ, Next] at hp
-    -- hp : p ∈ CloK (LR := ctx.LR) (Chain ctx n)
-    rw [mem_CloK_iff] at hp
-    -- hp : Halts (ctx.LR (Chain ctx n) p)
-    -- Use ContextSound: if Chain n is sound, then Halts → Truth
-    exact hSound (Chain ctx n) p ih hp
+    TheorySound ctx.toEnrichedContext (Chain ctx n) :=
+  fun p hp => Chain_truth ctx hSound n p hp
 
 /-- ChainNode n: a TheoryNode based on Chain n (under ContextSound). -/
 noncomputable def ChainNode (ctx : VerifiableContext Code PropT)
@@ -71,32 +62,12 @@ noncomputable def ChainNode (ctx : VerifiableContext Code PropT)
   theory := Chain ctx n
   sound := chainTheory_sound ctx hSound n
 
-/-- Chain is monotone: Chain n ⊆ Chain (n+1) under LRRefl. -/
+/-- Chain is monotone: Chain n ⊆ Chain (n+1) under LRRefl.
+    (Alias to Kinetic.Chain_mono_succ) -/
 theorem chain_mono (ctx : VerifiableContext Code PropT)
     (hRefl : LRRefl ctx) (n : ℕ) :
-    Chain ctx n ⊆ Chain ctx (n+1) := by
-  induction n with
-  | zero =>
-    simp only [Chain_zero]
-    exact empty_subset _
-  | succ n ih =>
-    -- Chain (n+1) ⊆ Chain (n+2)
-    -- Chain (n+1) = CloK (Chain n)
-    -- Chain (n+2) = CloK (Chain (n+1))
-    intro p hp
-    simp only [Chain_succ, Next] at hp ⊢
-    -- Need: p ∈ CloK (Chain (n+1)) given p ∈ CloK (Chain n)
-    -- p ∈ CloK (Chain n) means Halts (LR (Chain n) p)
-    -- We need Halts (LR (Chain (n+1)) p)
-    -- If p ∈ Chain (n+1), then by LRRefl, Halts (LR (Chain (n+1)) p)
-    rw [mem_CloK_iff] at hp ⊢
-    -- Since Chain n ⊆ Chain (n+1) and LR is... this requires LRMonotone
-    -- For now, use that p ∈ Chain (n+1) and hRefl gives us what we need
-    have h_in : p ∈ Chain ctx (n+1) := by
-      simp only [Chain_succ, Next]
-      rw [mem_CloK_iff]
-      exact hp
-    exact hRefl h_in
+    Chain ctx n ⊆ Chain ctx (n+1) :=
+  Chain_mono_succ ctx hRefl n
 
 /-- ChainNode n ≤ ChainNode (n+1) under LRRefl. -/
 theorem chainNode_mono (ctx : VerifiableContext Code PropT)
