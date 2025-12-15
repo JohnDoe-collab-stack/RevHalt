@@ -1,5 +1,6 @@
 import RevHalt.Kinetic.Stratification
 import Mathlib.Data.Set.Basic
+import Mathlib.Data.Set.Lattice
 
 /-!
 # RevHalt.Instances.StratifiedInstance
@@ -206,8 +207,9 @@ theorem gap_drives_cover
   have hAllTrue : ∀ p, ctx.Truth p := fun p => by
     apply hCS ({g} : Set PropT) p
     · intro ψ hψ
-      have : ψ = g := hψ  -- In Lean 4/Mathlib, {g} is definitionally fun x => x = g
-      rw [this]; exact hgTrue
+      have : ψ = g := by
+        simpa [mem_singleton_iff] using hψ
+      simpa [this] using hgTrue
     · exact hAllHalt p
   -- ∀ p, Truth p → MasterClo = univ
   exact (MasterClo_univ_iff_all_true ctx hCS).mpr hAllTrue
