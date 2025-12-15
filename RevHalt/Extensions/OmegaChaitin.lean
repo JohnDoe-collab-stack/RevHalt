@@ -96,19 +96,13 @@ def OmegaBit (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
   OmegaSentence.BitIs n a
 
 /-- Antimonotonicity of Cut: if Ωₜ ≥ q' and q ≤ q', then Ωₜ ≥ q.
-    For RefSystem, we interpret cut_mono as: q ≤ q' means Cut q is weaker (more easily satisfied).
+    For RefSystem, we interpret cut_antimono as: q ≤ q' means Cut q is weaker (more easily satisfied).
     So Sat(Cut q') → Sat(Cut q) when q ≤ q' (antimonotone in q). -/
 theorem omega_cut_antimono : ∀ {t : OmegaModel} {q q' : ℚ} {x : OmegaReferent},
     q ≤ q' → OmegaSat t (OmegaCut q' x) → OmegaSat t (OmegaCut q x) := by
   intro t q q' _ hle hSat
   simp only [OmegaCut, OmegaSat] at hSat ⊢
   exact le_trans hle hSat
-
-/-- For RefSystem compatibility, we provide cut_mono as q ≤ q' ⟹ Sat(Cut q) → Sat(Cut q').
-    This is FALSE for CutGe semantics! We axiomatize it to satisfy the interface,
-    but the real invariant is antimonotonicity above. Future: fix RefSystem interface. -/
-axiom omega_cut_mono_compat : ∀ {t : OmegaModel} {q q' : ℚ} {x : OmegaReferent},
-    q ≤ q' → OmegaSat t (OmegaCut q x) → OmegaSat t (OmegaCut q' x)
 
 /-- Bit/Cut link (axiomatic). -/
 axiom omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},

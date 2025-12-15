@@ -93,8 +93,11 @@ def CloK_ref (Γ : Set Sentence) : Set Sentence :=
 def CloRev_ref (K : RHKit) (Γ : Set Sentence) : Set Sentence :=
   { φ | Rev0_K K (LR_ref E Γ φ) }
 
+end InhabitedReferent
+
 /-!
 ## Semantic consequence for RefSystem (using E.Sat directly)
+These definitions are purely semantic and don't require [Inhabited Referent].
 -/
 
 /-- ModE specialized to RefSystem. -/
@@ -110,10 +113,14 @@ def CloE_ref (Γ : Set Sentence) : Set Sentence := ThE_ref E (ModE_ref E Γ)
 def SemConsequences_ref (Γ : Set Sentence) (φ : Sentence) : Prop := φ ∈ CloE_ref E Γ
 
 /-!
-## Bridge condition
-To align semantics (`Sat`) and dynamics (`LR_ref`), we require a bridge hypothesis:
-for every Γ, φ, the semantic consequence matches halting of the LR trace.
+## Bridge condition and DR0/DR1
+These require [Inhabited Referent] because they use LR_ref.
 -/
+section InhabitedReferent
+variable [Inhabited Referent]
+
+/-- Bridge condition: semantic consequence matches halting of LR trace.
+    Note: This is a strong hypothesis linking universal (semantic) to existential (halting). -/
 def DynamicBridge_ref : Prop :=
   ∀ Γ φ, SemConsequences_ref E Γ φ ↔ Halts (LR_ref E Γ φ)
 
