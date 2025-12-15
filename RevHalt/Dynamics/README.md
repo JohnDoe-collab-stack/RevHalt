@@ -1,6 +1,8 @@
 # RevHalt.Dynamics
 
-Axiom Dynamics: a calculus for manipulating local theories within a graph structure.
+**Axiom Dynamics**: a calculus for navigating the space of "what proves what."
+
+> This formalizes what Chen, Li & Oliveira do intuitively in reverse mathematics — treat provability relationships as a graph you can walk, with every step machine-checked.
 
 ## Overview
 
@@ -10,6 +12,44 @@ This module provides a framework for navigating an **axiom graph** where:
 - **Paths** are sequences of moves between nodes
 
 The framework guarantees soundness without assuming global truth, using **Rev** as a transversal operative invariant.
+
+## The Key Insight: T2 as Fuel
+
+```lean
+theorem fuel_from_T2 (T : TheoryNode ctx) (hT : T.theory ⊆ ProvableSet ctx) :
+    ∃ m : Move ctx, T < Move.apply m T
+```
+
+**T2 is not just an impossibility theorem — it's a fuel generator.** From any node inside ProvableSet, there always exists a strict move forward. This transforms Gödel's incompleteness from a negative result into a positive navigation principle.
+
+## Fork: Bifurcation Without Global Choice
+
+The most elegant structure in the module:
+
+```lean
+structure Fork (ctx : EnrichedContext) (T0 : TheoryNode ctx) where
+  pivot : PropT
+  mkLeft : ctx.Truth pivot → TheoryNode
+  mkRight : ctx.Truth (ctx.Not pivot) → TheoryNode
+  exclusion : ¬ (TheorySound (Extend T0 pivot) ∧ TheorySound (Extend T0 (Not pivot)))
+```
+
+**Fork captures indetermination without resolving it:**
+- You don't choose which branch is true
+- You have two *conditional* constructors
+- The `exclusion` law is a *theorem*, not an assumption
+- Fork integrates natively with Graph/Path via `ofPivot_edge_left/right`
+
+## Concrete Example: OmegaChaitin
+
+`OmegaChaitin.lean` is the proof that Dynamics works on a real computability domain:
+
+| Dynamics (abstract) | OmegaChaitin (concrete) |
+|---------------------|-------------------------|
+| T2 = fuel | `TrueCuts` is RE — can always advance |
+| Fork = bifurcation | Bit = 0 or 1, undecidable which |
+| Move.apply preserves soundness | `OmegaApprox_mono` |
+| Gap = true but unprovable | Individual bits of Ω |
 
 ## Architecture
 
@@ -31,79 +71,13 @@ Dynamics/
 └── System.lean     ← Unified bundle
 ```
 
-## Key Concepts
-
-### Core Layer (EnrichedContext)
-
-| Concept | Definition |
-|---------|------------|
-| `TheoryNode` | Σ-type `(theory : Set PropT, sound : TheorySound ctx theory)` |
-| `Move` | `extend p hp \| extend_gap w` (monotone operations) |
-| `Move.apply` | Total function `Move → Node → Node` |
-| `Edge` | Exists a move connecting two nodes |
-| `Path` | Inductive sequence of moves |
-
-### Laws
+## Laws
 
 | Law | Meaning |
 |-----|---------|
 | **Preservation** | `apply` always produces sound nodes |
 | **Strictness** | Fresh extensions are strictly larger |
 | **Bifurcation** | No sound node contains both `p` and `Not p` |
-
-### Fuel (T2)
-
-```lean
-theorem fuel_from_T2 (T : TheoryNode ctx) (hT : T.theory ⊆ ProvableSet ctx) :
-    ∃ m : Move ctx, T < Move.apply m T
-```
-
-T2 guarantees that from any node inside ProvableSet, a strict move exists.
-
-### Operative Layer (VerifiableContext)
-
-**RevLabel (Invariant.lean):**
-```lean
-def RevLabel (ctx : VerifiableContext Code PropT) (p : PropT) : Prop :=
-  Halts (ctx.LR ∅ p)
-```
-
-RevLabel is kit-invariant and equals Truth via the bridge.
-
-**ChainEmbed (ChainEmbed.lean):**
-```lean
-def ChainNode (ctx : VerifiableContext) (hSound : ContextSound ctx) (n : ℕ) :
-    TheoryNode ctx.toEnrichedContext
-```
-
-Provides the bridge between Stratification's `Chain n` and Dynamics' `TheoryNode`.
-
-### Transport Layer
-
-```lean
-structure TheoryMorphism (ctx₁ ctx₂ : EnrichedContext) where
-  map : PropT₁ → PropT₂
-  preserves_truth : ∀ p, ctx₁.Truth p → ctx₂.Truth (map p)
-  preserves_not : ∀ p, map (ctx₁.Not p) = ctx₂.Not (map p)
-```
-
-Transport is **functorial** (between graphs), not an internal move.
-
-## Usage
-
-```lean
-import RevHalt.Dynamics.System
-
--- Core dynamics at EnrichedContext level
-def myDynamics : AxiomDynamicsCore Code PropT := { ctx := myContext }
-
--- Operative dynamics with Rev invariant
-def myOpDynamics : AxiomDynamicsOperative Code PropT := {
-  ctx := myContext.toEnrichedContext,
-  vctx := myVerifiableContext,
-  h_compat := rfl
-}
-```
 
 ## Design Principles
 
@@ -112,17 +86,10 @@ def myOpDynamics : AxiomDynamicsOperative Code PropT := {
 3. **Path ≠ Chain**: Path is general; Chain embeds as special case
 4. **Transport is functorial**: Maps between graphs, not within
 
-## Dependencies
-
-- `RevHalt.Bridge.Context` (EnrichedContext, GapWitness)
-- `RevHalt.Bridge.ComplementarityAPI` (TheorySound, Extend)
-- `RevHalt.Kinetic.MasterClosure` (VerifiableContext)
-- `RevHalt.Kinetic.Stratification` (Chain, ContextSound)
-- `RevHalt.Kinetic.System` (GapTruth)
-
 ## Validation
 
 ```bash
 lake build RevHalt.Dynamics.System
-lake build RevHalt.Dynamics.Operative.ChainEmbed
+lake build RevHalt.Dynamics.Core.Fork
 ```
+

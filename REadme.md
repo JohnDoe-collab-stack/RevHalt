@@ -7,6 +7,8 @@ A Lean 4 framework proving that computational truth (halting) is:
 
 Unlike classical presentations of Gödel's theorems, which work *inside* a specific theory, RevHalt provides the abstract framework and treats theories (PA, ZFC) as instances to be plugged in.
 
+> **RevHalt formalizes what Chen, Li & Oliveira do intuitively: treat "what can be proven from what" as a graph you can walk, with Lean 4 checking every step.**
+
 ---
 
 ## Quick Start
