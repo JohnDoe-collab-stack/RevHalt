@@ -58,8 +58,9 @@ theorem apply_le (m : Move ctx) (T : TheoryNode ctx) :
 /-- The new proposition is in the result. -/
 theorem prop_mem_apply (m : Move ctx) (T : TheoryNode ctx) :
     m.prop ∈ apply m T := by
-  simp only [TheoryNode.mem_def, apply, Extend, mem_union, mem_singleton_iff]
-  exact Or.inr rfl
+  simp only [TheoryNode.mem_node_iff, apply, Extend, mem_union, mem_singleton_iff]
+  right
+  trivial
 
 end Move
 

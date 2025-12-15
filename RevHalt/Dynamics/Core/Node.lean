@@ -54,13 +54,19 @@ instance : LT (TheoryNode ctx) where
 @[simp] theorem le_def (T₁ T₂ : TheoryNode ctx) : T₁ ≤ T₂ ↔ T₁.theory ⊆ T₂.theory := Iff.rfl
 @[simp] theorem lt_def (T₁ T₂ : TheoryNode ctx) : T₁ < T₂ ↔ T₁.theory ⊂ T₂.theory := Iff.rfl
 
+/-- Reflexivity for TheoryNode order. -/
+theorem node_le_refl (T : TheoryNode ctx) : T ≤ T :=
+  Set.Subset.refl T.theory
+
+/-- Transitivity for TheoryNode order. -/
+theorem node_le_trans {T₁ T₂ T₃ : TheoryNode ctx} (h₁ : T₁ ≤ T₂) (h₂ : T₂ ≤ T₃) : T₁ ≤ T₃ :=
+  Set.Subset.trans h₁ h₂
+
 /-- Membership in a node. -/
-def mem (p : PropT) (T : TheoryNode ctx) : Prop := p ∈ T.theory
-
 instance : Membership PropT (TheoryNode ctx) where
-  mem := fun p T => mem p T
+  mem := fun T p => p ∈ T.theory
 
-@[simp] theorem mem_def (p : PropT) (T : TheoryNode ctx) : p ∈ T ↔ p ∈ T.theory := Iff.rfl
+@[simp] theorem mem_node_iff (p : PropT) (T : TheoryNode ctx) : p ∈ T ↔ p ∈ T.theory := Iff.rfl
 
 /-- A proposition in a sound node is true. -/
 theorem truth_of_mem (T : TheoryNode ctx) (p : PropT) (hp : p ∈ T) : ctx.Truth p :=
