@@ -107,15 +107,15 @@ making Fork directly usable in Graph/Path without "global choice".
 theorem ofPivot_edge_left (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
     (p : PropT) (hp : ctx.Truth p) :
     Edge ctx T0 ((ofPivot ctx T0 p).left hp) := by
-  use Move.extend p hp
-  rfl
+  apply Edge.transport_target (Edge.of_move (Move.extend p hp) T0)
+  simp only [ofPivot, left, Move.apply_extend_theory]
 
 /-- There is an edge from T0 to the right branch of ofPivot (via extend move). -/
 theorem ofPivot_edge_right (ctx : RevHalt.EnrichedContext Code PropT) (T0 : TheoryNode ctx)
     (p : PropT) (hnp : ctx.Truth (ctx.Not p)) :
     Edge ctx T0 ((ofPivot ctx T0 p).right hnp) := by
-  use Move.extend (ctx.Not p) hnp
-  rfl
+  apply Edge.transport_target (Edge.of_move (Move.extend (ctx.Not p) hnp) T0)
+  simp only [ofPivot, right, Move.apply_extend_theory]
 
 /-!
 ## Fork-Path Integration

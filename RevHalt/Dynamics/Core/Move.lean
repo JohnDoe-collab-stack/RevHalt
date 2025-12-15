@@ -62,6 +62,16 @@ theorem prop_mem_apply (m : Move ctx) (T : TheoryNode ctx) :
   right
   trivial
 
+/-- Phase 1 simplification: apply extend p = Extend T p (on theory). -/
+@[simp] theorem apply_extend_theory (p : PropT) (hp : ctx.Truth p) (T : TheoryNode ctx) :
+    (apply (Move.extend p hp) T).theory = Extend T.theory p :=
+  rfl
+
+/-- Phase 1 simplification: apply extend_gap w = Extend T w.prop (on theory). -/
+@[simp] theorem apply_extend_gap_theory (w : GapWitness ctx) (T : TheoryNode ctx) :
+    (apply (Move.extend_gap w) T).theory = Extend T.theory w.prop :=
+  rfl
+
 end Move
 
 end RevHalt.Dynamics.Core

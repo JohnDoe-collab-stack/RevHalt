@@ -37,6 +37,13 @@ theorem le_of_edge (T T' : TheoryNode ctx) (h : Edge ctx T T') :
 -- Reflexivity is NOT automatic: Edge requires an actual move.
 -- Reachability is defined below as reflexive-transitive closure.
 
+/-- Edge transport: if T → U and U = V (theory-wise), then T → V. -/
+theorem transport_target {T U V : TheoryNode ctx} (h : Edge ctx T U) (heq : U.theory = V.theory) :
+    Edge ctx T V := by
+  obtain ⟨m, hm⟩ := h
+  use m
+  rw [hm, heq]
+
 end Edge
 
 /-- Reachability: reflexive-transitive closure of Edge. -/
