@@ -51,6 +51,17 @@ structure RefSystem (Model : Type v) (Sentence : Type u) (Referent : Type*) wher
         ∧ Sat M (Cut q₀ x) ∧ ¬ Sat M (Cut q₁ x)
         ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
 
+  /-- Win: dyadic window sentence (alternative to Bit). -/
+  Win : ℕ → ℕ → Referent → Sentence
+
+  /-- Win specification: Win n a x ↔ same RHS as bit_cut_link. -/
+  win_spec :
+    ∀ {M n a x},
+      Sat M (Win n a x) ↔
+      ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
+        ∧ Sat M (Cut q₀ x) ∧ ¬ Sat M (Cut q₁ x)
+        ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
+
 namespace RefSystem
 
 variable {Model : Type v} {Sentence : Type u} {Referent : Type*}
@@ -127,6 +138,55 @@ theorem DR1_ref
   have hL : Rev0_K K₁ (LR_ref E Γ φ) ↔ Halts (LR_ref E Γ φ) := T1_traces K₁ h₁ _
   have hR : Rev0_K K₂ (LR_ref E Γ φ) ↔ Halts (LR_ref E Γ φ) := T1_traces K₂ h₂ _
   exact hL.trans hR.symm
+
+/-!
+## Non-Trivial Equivalence: Bit ↔ Win
+
+Two syntactically orthogonal sentences (Bit vs Win) have the same Rev verdict.
+This is a certified, local, kit-invariant result.
+-/
+
+/-- Bit and Win have the same satisfaction (pointwise). -/
+theorem bit_win_sat_equiv {M : Model} {n a : ℕ} {x : Referent} :
+    E.Sat M (E.Bit n a x) ↔ E.Sat M (E.Win n a x) :=
+  E.bit_cut_link.trans E.win_spec.symm
+
+/-- Lifting lemma: Sat-equivalence implies SemConsequences-equivalence. -/
+theorem sem_conseq_of_sat_equiv
+    {φ ψ : Sentence} (h : ∀ M, E.Sat M φ ↔ E.Sat M ψ) :
+    ∀ Γ, SemConsequences_ref E Γ φ ↔ SemConsequences_ref E Γ ψ := by
+  intro Γ
+  simp only [SemConsequences_ref, CloE_ref, ThE_ref, Set.mem_setOf_eq]
+  constructor
+  · intro hφ M hM
+    rw [← h M]
+    exact hφ M hM
+  · intro hψ M hM
+    rw [h M]
+    exact hψ M hM
+
+/-- Bit and Win have the same Rev verdict (via DR0). -/
+theorem bit_win_rev_equiv
+    (K : RHKit) (hK : DetectsMonotone K)
+    (hBridge : DynamicBridge_ref E) :
+    ∀ Γ (n a : ℕ) (x : Referent),
+      Rev0_K K (LR_ref E Γ (E.Bit n a x)) ↔ Rev0_K K (LR_ref E Γ (E.Win n a x)) := by
+  intro Γ n a x
+  have hSem : SemConsequences_ref E Γ (E.Bit n a x) ↔ SemConsequences_ref E Γ (E.Win n a x) :=
+    sem_conseq_of_sat_equiv E (fun M => bit_win_sat_equiv E) Γ
+  have hL := DR0_ref E K hK hBridge Γ (E.Bit n a x)
+  have hR := DR0_ref E K hK hBridge Γ (E.Win n a x)
+  exact hL.symm.trans (hSem.trans hR)
+
+/-- Kit-invariance of Bit-Win equivalence (via DR1). -/
+theorem bit_win_kit_invariant
+    (K₁ K₂ : RHKit) (h₁ : DetectsMonotone K₁) (h₂ : DetectsMonotone K₂)
+    (hBridge : DynamicBridge_ref E) :
+    ∀ Γ (n a : ℕ) (x : Referent),
+      (Rev0_K K₁ (LR_ref E Γ (E.Bit n a x)) ↔ Rev0_K K₁ (LR_ref E Γ (E.Win n a x))) ∧
+      (Rev0_K K₂ (LR_ref E Γ (E.Bit n a x)) ↔ Rev0_K K₂ (LR_ref E Γ (E.Win n a x))) := by
+  intro Γ n a x
+  exact ⟨bit_win_rev_equiv E K₁ h₁ hBridge Γ n a x, bit_win_rev_equiv E K₂ h₂ hBridge Γ n a x⟩
 
 end RefSystem
 

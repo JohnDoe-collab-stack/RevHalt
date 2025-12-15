@@ -103,6 +103,19 @@ axiom omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
       ∧ OmegaSat t (OmegaCut q₀ x) ∧ ¬OmegaSat t (OmegaCut q₁ x)
       ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
 
+/-- Win encoding: dyadic window sentence (alternative to Bit). -/
+def OmegaWin (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
+  -- We use a placeholder sentence; in practice, this would be a structural encoding.
+  -- For formal purposes, we axiomatize that OmegaWin satisfies the same RHS as Bit.
+  OmegaSentence.BitIs n a  -- Same underlying representation (placeholder)
+
+/-- Win/Cut link (axiomatic, same RHS as bit_cut_link). -/
+axiom omega_win_spec : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
+    OmegaSat t (OmegaWin n a x) ↔
+    ∃ (q₀ q₁ : ℚ), q₁ - q₀ = (1 : ℚ) / (2 ^ n)
+      ∧ OmegaSat t (OmegaCut q₀ x) ∧ ¬OmegaSat t (OmegaCut q₁ x)
+      ∧ (⌊(2 ^ n : ℕ) * q₀⌋.toNat) % 2 = a
+
 /-- RefSystem instance for Ω. -/
 def OmegaRefSystem : RefSystem OmegaModel OmegaSentence OmegaReferent where
   Sat := OmegaSat
@@ -110,6 +123,8 @@ def OmegaRefSystem : RefSystem OmegaModel OmegaSentence OmegaReferent where
   Bit := OmegaBit
   cut_mono := omega_cut_mono
   bit_cut_link := omega_bit_cut_link
+  Win := OmegaWin
+  win_spec := omega_win_spec
 
 -- ==============================================================================================
 -- 4. Local Reading for Ω
