@@ -23,7 +23,8 @@ Dynamics/
 │   ├── Graph.lean  ← Edge relation, Reachability
 │   └── Path.lean   ← Path inductive (general)
 ├── Operative/      ← VerifiableContext level
-│   └── Invariant.lean  ← RevLabel (operative invariant)
+│   ├── Invariant.lean  ← RevLabel (operative invariant)
+│   └── ChainEmbed.lean ← Chain → Path relationship
 ├── Transport/      ← Inter-graph morphisms
 │   └── Morphism.lean   ← TheoryMorphism (functorial)
 └── System.lean     ← Unified bundle
@@ -60,12 +61,21 @@ T2 guarantees that from any node inside ProvableSet, a strict move exists.
 
 ### Operative Layer (VerifiableContext)
 
+**RevLabel (Invariant.lean):**
 ```lean
 def RevLabel (ctx : VerifiableContext Code PropT) (p : PropT) : Prop :=
   Halts (ctx.LR ∅ p)
 ```
 
 RevLabel is kit-invariant and equals Truth via the bridge.
+
+**ChainEmbed (ChainEmbed.lean):**
+```lean
+def ChainNode (ctx : VerifiableContext) (hSound : ContextSound ctx) (n : ℕ) :
+    TheoryNode ctx.toEnrichedContext
+```
+
+Provides the bridge between Stratification's `Chain n` and Dynamics' `TheoryNode`.
 
 ### Transport Layer
 
@@ -106,10 +116,12 @@ def myOpDynamics : AxiomDynamicsOperative Code PropT := {
 - `RevHalt.Bridge.Context` (EnrichedContext, GapWitness)
 - `RevHalt.Bridge.ComplementarityAPI` (TheorySound, Extend)
 - `RevHalt.Kinetic.MasterClosure` (VerifiableContext)
+- `RevHalt.Kinetic.Stratification` (Chain, ContextSound)
 - `RevHalt.Kinetic.System` (GapTruth)
 
 ## Validation
 
 ```bash
 lake build RevHalt.Dynamics.System
+lake build RevHalt.Dynamics.Operative.ChainEmbed
 ```
