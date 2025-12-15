@@ -43,6 +43,11 @@ RevHalt/
 │   ├── Impossibility.lean # T2_impossibility, TuringGodelContext'
 │   └── Complementarity.lean # T3_strong, InfiniteIndependentHalting
 │
+├── Dynamics/            # Axiom graph dynamics
+│   ├── Core/            # TheoryNode, Move, Fork, Fuel, Laws
+│   ├── Operative/       # RevLabel (invariant), ChainEmbed
+│   └── Transport/       # TheoryMorphism (functorial)
+│
 ├── Kinetic/             # Dynamic semantics
 │   ├── Closure.lean     # CloK, CloRev, Stage
 │   ├── MasterClosure.lean # VerifiableContext, TheGreatChain
@@ -60,7 +65,7 @@ RevHalt/
 │       └── Master.lean
 │
 ├── Extensions/          # Advanced applications
-│   ├── RefSystem.lean   # Cut/Bit dynamic verification
+│   ├── RefSystem.lean   # Cut/Bit/Win dynamic verification
 │   └── OmegaChaitin.lean # Chaitin's Ω as RefSystem
 │
 ├── Instances/           # Concrete theory instances
@@ -103,7 +108,7 @@ theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
 
 ```lean
 theorem T2_impossibility {Code PropT : Type} (ctx : TuringGodelContext' Code PropT) :
-    ¬∃ H : InternalHaltingPredicate ctx, H.total ∧ H.correct ∧ H.complete
+    ¬∃ _ : InternalHaltingPredicate ctx, True
 ```
 
 This extracts the common abstract core of Turing's undecidability and Gödel's incompleteness via the `diagonal_program` axiom.
@@ -128,12 +133,13 @@ Under the `InfiniteIndependentHalting` hypothesis, there exist **infinitely many
 The framework acts as a **Truth Oracle** external to any internal theory.
 
 ```lean
-structure TruthOracle (PropT : Type) where
-  judge : PropT → Prop
-  sound : ∀ p, judge p → Truth p
+structure TruthOracle (ctx : EnrichedContext Code PropT) where
+  O : PropT → Prop
+  O_correct : ∀ p, O p ↔ ctx.Truth p
 
-theorem oracle_not_internalizable (ctx : VerifiableContext PropT) :
-    ¬∃ (internal : PropT → Prop), (∀ p, internal p ↔ oracle.judge p)
+theorem oracle_not_internalizable (ctx : EnrichedContext Code PropT)
+    (oracle : TruthOracle ctx) :
+    ¬InternalizesOracle ctx oracle.O
 ```
 
 The bridge (`Truth ↔ Halts LR`) provides verdicts inaccessible to the theory's internal logic.
@@ -217,8 +223,10 @@ structure RefSystem (Model Sentence Referent : Type) where
   Sat : Model → Sentence → Prop
   Cut : ℚ → Referent → Sentence
   Bit : ℕ → ℕ → Referent → Sentence
-  cut_mono : ...
-  bit_cut_link : ...
+  Win : ℕ → ℕ → Referent → Sentence  -- Orthogonal to Bit
+  cut_antimono : ...    -- q ≤ q' → Sat(Cut q') → Sat(Cut q)
+  bit_cut_link : ...    -- Bit ↔ dyadic window condition
+  win_spec : ...        -- Win semantics matches bit_cut_link RHS
 ```
 
 ### OmegaChaitin — Concrete Instantiation of Dynamics
