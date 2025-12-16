@@ -5,8 +5,30 @@
   On définit une approximation rationnelle par somme finie sur les codes < t
   qui terminent dans `evaln t`.
 
-  Remarque : ce Ω est une halting-probability (poids 2^-(p+1)) d'une machine
-  prefix-free via un codage unaire implicite des programmes (index p ↦ longueur p+1).
+  # Core Philosophy
+  In OmegaChaitin.lean, I take two primitive coordinates of the same referent Ω:
+  discrete assertions `OmegaSentence.BitIs` and continuous assertions `OmegaSentence.CutGe`.
+  I invert the usual computability hierarchy by making rational cuts (semi-decidable)
+  the base layer, and then reconstructing the bits (non-computable) as boundaries
+  between cuts, via `omega_bit_cut_link`.
+
+  ## Key Definitions
+
+  1. **Primitives**:
+     ```lean
+     | CutGe (q : ℚ) : OmegaSentence         -- Continuous
+     | BitIs (n : ℕ) (a : ℕ) : OmegaSentence -- Discrete
+     ```
+
+  2. **The Link (Bit as Boundary)**:
+     ```lean
+     theorem omega_bit_cut_link : ...
+       OmegaSat t (OmegaBit n a x) ↔
+       ∃ (k : ℤ),
+         OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
+         ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
+         k.toNat % 2 = a
+     ```
 -/
 
 import RevHalt.Dynamics.Core.RefSystem
