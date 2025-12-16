@@ -110,23 +110,22 @@ This is the formal statement of K_Ω(n) ≥ n in terms of gap.
 -/
 theorem precision_requires_time (t n : ℕ) (h_prec : gap t ≤ resolution n) : t ≥ n := by
   have h_gap := gap_lower_bound t
-  -- gap t ≥ 1/2^t and gap t ≤ 1/2^n
-  -- So 1/2^t ≤ 1/2^n
   have h_ineq : (1 : ℚ) / 2^t ≤ (1 : ℚ) / 2^n := by
-    calc (1 : ℚ) / 2^t ≤ gap t := h_gap
+    calc
+      (1 : ℚ) / 2^t ≤ gap t := h_gap
       _ ≤ resolution n := h_prec
       _ = (1 : ℚ) / 2^n := rfl
-  -- 1/2^t ≤ 1/2^n ↔ 2^n ≤ 2^t ↔ n ≤ t
   have h2t_pos : (0 : ℚ) < 2^t := by positivity
   have h2n_pos : (0 : ℚ) < 2^n := by positivity
-  rw [div_le_div_iff h2t_pos h2n_pos, one_mul, one_mul] at h_ineq
-  -- h_ineq : 2^n ≤ 2^t
-  have h_nat : (2 : ℕ)^n ≤ (2 : ℕ)^t := by
-    have : ((2 : ℕ)^n : ℚ) ≤ ((2 : ℕ)^t : ℚ) := by
-      simp only [Nat.cast_pow, Nat.cast_ofNat]
-      exact h_ineq
-    exact Nat.cast_le.mp this
-  exact Nat.pow_le_pow_iff_right (by norm_num : 2 > 1) |>.mp h_nat
+  -- Clear denominators: (1/2^t ≤ 1/2^n) ↔ (2^n ≤ 2^t)
+  have h_pow : (2 : ℚ)^n ≤ (2 : ℚ)^t := by
+    have := (div_le_div_iff₀ h2t_pos h2n_pos).1 h_ineq
+    simpa [one_mul] using this
+
+  -- Since 1 < 2, exponent is monotone
+  have h_one_lt_two : (1 : ℚ) < (2 : ℚ) := by simpa using (one_lt_two : (1 : ℚ) < 2)
+  exact (pow_le_pow_iff_right₀ h_one_lt_two).1 h_pow
+
 
 /-- Equivalent form: if t < n then gap(t) > 2^{-n}. -/
 theorem insufficient_time_means_insufficient_precision (t n : ℕ) (h : t < n) :
