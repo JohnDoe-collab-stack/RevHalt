@@ -1,9 +1,9 @@
 /-
   RevHalt.Dynamics.Instances.OmegaChaitin
 
-  "Vrai" Ω : aucune axiomatisation de `OmegaApprox`.
-  On définit une approximation rationnelle par somme finie sur les codes < t
-  qui terminent dans `evaln t`.
+  "True" Ω: no axiomatization of `OmegaApprox`.
+  We define a rational approximation via finite sum over codes < t
+  that halt within `evaln t`.
 
   # Core Philosophy
   In OmegaChaitin.lean, I take two primitive coordinates of the same referent Ω:
