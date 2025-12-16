@@ -5,7 +5,8 @@
 
   # Main Result
 
-  K_Ω(n) ≥ n : "To determine n bits of Ω, one needs n units of computational resource."
+  K_gap(n) ≥ n : "To make the geometric residual gap(t)=1−OmegaApprox(t) fall below 2^{-n},
+  one needs t ≥ n."
 
   # The Core Argument (Simple)
 
@@ -13,17 +14,19 @@
   2. Therefore: gap(t) = 1 - OmegaApprox(t) ≥ 2^{-t}
   3. To achieve precision 2^{-n} (gap ≤ 2^{-n}), we need 2^{-t} ≤ 2^{-n}, so t ≥ n
   4. The parameter t is the computational resource (time/fuel)
-  5. Therefore: n bits of precision costs at least n
+  5. Therefore: n bits of *dyadic precision toward 1* costs at least n
 
-  This is the essence of K_Ω(n) ≥ n in the RevHalt framework.
+  This is the kinetic/arithmetic core: dyadic resolution 2^{-n} cannot be reached
+  before time n (via the geometric tail).
 
   # Connection to omega_bit_cut_link
 
   The theorem omega_bit_cut_link shows:
-    BitIs n a ↔ ∃ k, CutGe(k/2^n) ∧ ¬CutGe((k+1)/2^n) ∧ k%2=a
+    BitIs n a ↔ ∃ k, CutGe(k/2^n) ∧ ¬CutGe((k+1)/2^n) ∧ k%2=(a:ℕ)
 
-  This means: knowing bit n requires localizing Ω in an interval of width 2^{-n}.
-  By the gap bound, this requires t ≥ n.
+  BitIs/WinDyad is equivalent to a dyadic window for OmegaApprox t (local semantics).
+  The gap bound gives a lower bound on the time needed to reach cuts close to 1;
+  it does not by itself certify stabilization of the limit-bit of Ω.
 -/
 
 import RevHalt.Dynamics.Instances.OmegaChaitin
@@ -41,7 +44,8 @@ open Finset
 /-!
 ## §1. The Gap Function
 
-gap(t) = 1 - OmegaApprox(t) measures our uncertainty about Ω at time t.
+gap(t) = 1 - OmegaApprox t is the residual to the geometric upper bound 1
+(tail of dyadic weights). It is NOT the error |Ω - OmegaApprox t|.
 -/
 
 /-- The gap (uncertainty) about Ω at time t. -/
@@ -73,7 +77,7 @@ we have gap(t) = 1 - OmegaApprox(t) ≥ 2^{-t}.
 
 /-- **KEY THEOREM**: The gap is bounded below by 2^{-t}.
 
-This is the non-trivial arithmetic content from which K_Ω(n) ≥ n emerges.
+This is the non-trivial arithmetic content from which the gap-based bound emerges.
 -/
 theorem gap_lower_bound (t : ℕ) : gap t ≥ (1 : ℚ) / 2^t := by
   simp only [gap]
@@ -106,7 +110,7 @@ def resolution (n : ℕ) : ℚ := (1 : ℚ) / 2^n
 
 /-- **COROLLARY**: To achieve gap ≤ 2^{-n}, we need t ≥ n.
 
-This is the formal statement of K_Ω(n) ≥ n in terms of gap.
+This is the formal statement of K_gap(n) ≥ n: dyadic resolution requires time.
 -/
 theorem precision_requires_time (t n : ℕ) (h_prec : gap t ≤ resolution n) : t ≥ n := by
   have h_gap := gap_lower_bound t
@@ -159,39 +163,34 @@ Chaitin's theorem possible.
 -/
 
 /--
-**PURE KOLMOGOROV BOUND**:
+**PURE GAP BOUND**:
 
 To achieve precision 2^{-n} (i.e., gap ≤ 2^{-n}), computational time t ≥ n is required.
 
-This is the essence of K_Ω(n) ≥ n:
-- "n bits of information about Ω" = "precision 2^{-n}"
-- "computational cost n" = "time parameter t ≥ n"
+This is the kinetic/arithmetic core: dyadic resolution 2^{-n} cannot be reached
+before time n (via the geometric tail).
 -/
 theorem kolmogorov_bound (n : ℕ) :
     ∀ t, gap t ≤ resolution n → t ≥ n :=
   fun t h => precision_requires_time t n h
 
 /-!
-## §5. Connection to Bits
+## §5. Connection to Bits (Local Semantics)
 
 The theorem `omega_bit_cut_link` (in OmegaChaitin.lean) shows:
 
 ```
 OmegaSat t (BitIs n a) ↔
-  ∃ k, OmegaSat t (CutGe(k/2^n)) ∧ ¬OmegaSat t (CutGe((k+1)/2^n)) ∧ k%2=a
+  ∃ k, OmegaSat t (CutGe(k/2^n)) ∧ ¬OmegaSat t (CutGe((k+1)/2^n)) ∧ k%2=(a:ℕ)
 ```
 
-This means: to satisfy `BitIs n a`, `OmegaApprox t` must be in the interval
-`[k/2^n, (k+1)/2^n)` of width `2^{-n}`.
+BitIs/WinDyad is equivalent to a dyadic window for OmegaApprox t (local semantics).
+The gap bound gives a lower bound on the time needed to reach cuts close to 1;
+it does NOT by itself certify stabilization of the limit-bit of Ω.
 
-The connection to our bounds:
-- Determining bit n requires localizing Ω to precision 2^{-n}
-- By `gap_lower_bound`, we have gap(t) ≥ 2^{-t}
-- By `precision_requires_time`, achieving precision 2^{-n} requires t ≥ n
-
-Thus the bit-based interpretation of Kolmogorov complexity is captured
-indirectly through the gap bounds, with the operational connection via
-`omega_bit_cut_link`.
+To satisfy `BitIs n a`, `OmegaApprox t` must be in the interval
+`[k/2^n, (k+1)/2^n)` of width `2^{-n}`. The gap bound constrains how fast
+we can approach 1, not how the bits of Ω stabilize.
 -/
 
 /-!
@@ -206,19 +205,20 @@ gap_lower_bound              gap(t) ≥ 2^{-t}
         ↓
 precision_requires_time      gap(t) ≤ 2^{-n} → t ≥ n
         ↓
-kolmogorov_bound             K_Ω(n) ≥ n
+kolmogorov_bound             K_gap(n) ≥ n (dyadic precision toward 1)
 ```
 
 The key insight: the SAME parameter n appears as:
-1. Number of bits of precision
-2. Exponent in the resolution 2^{-n}
-3. Lower bound on computational time t
+1. Exponent in the resolution 2^{-n}
+2. Lower bound on computational time t
 
 This is NOT circular because:
 - sum_weight_range_eq is pure arithmetic (geometric series)
 - gap_lower_bound uses the structure of omegaWeight = 2^{-(p+1)}
 - precision_requires_time is arithmetic manipulation
-- The connection to bits comes from omega_bit_cut_link (dyadic intervals)
+
+Note: This is NOT the classical Chaitin theorem K(Ω_n) ≥ n - c about bits of Ω.
+We prove a structural precursor about the gap to the geometric bound.
 -/
 
 end RevHalt.Dynamics.Instances.OmegaKolmogorov

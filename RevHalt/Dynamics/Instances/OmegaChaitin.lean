@@ -16,8 +16,8 @@
 
   1. **Primitives**:
      ```lean
-     | CutGe (q : ℚ) : OmegaSentence         -- Continuous
-     | BitIs (n : ℕ) (a : ℕ) : OmegaSentence -- Discrete
+     | CutGe (q : ℚ) : OmegaSentence            -- Continuous
+     | BitIs (n : ℕ) (a : Fin 2) : OmegaSentence -- Discrete
      ```
 
   2. **The Link (Bit as Boundary)**:
@@ -27,7 +27,7 @@
        ∃ (k : ℤ),
          OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
          ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
-         k.toNat % 2 = a
+         k.toNat % 2 = (a : ℕ)
      ```
 -/
 
