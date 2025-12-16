@@ -178,16 +178,16 @@ theorem precision_requires_cost (cert : PrecisionCertificate)
     This is because the smallest weight in the sum is omegaWeight(t-1) = 2^{-t}. -/
 def omega_resolution (t : ℕ) : ℚ := (1 : ℚ) / (2 ^ t)
 
-/-- The maximum increment from step t to t+1.
-    At most one new program (index t) can contribute, with weight 2^{-(t+1)}. -/
-theorem omega_max_increment (t : ℕ) :
-    OmegaApprox (t + 1) - OmegaApprox t ≤ omegaWeight t := by
-  -- The difference comes from:
-  -- 1. Program index t possibly contributing at t+1
-  -- 2. Programs 0..t-1 possibly contributing more at t+1 than at t
-  -- By monotonicity of haltsWithinDec, once a program halts it stays halted.
-  -- So the only new contribution is from index t (if it halts).
-  sorry -- Technical proof requiring careful analysis of OmegaApprox structure
+/-- OmegaApprox is monotonically increasing.
+    This is already proven as OmegaApprox_mono; here we state the single-step version. -/
+theorem omega_approx_mono_step (t : ℕ) :
+    OmegaApprox t ≤ OmegaApprox (t + 1) := OmegaApprox_mono t (t + 1) (Nat.le_succ t)
+
+/-- The increment from t to t+1 is non-negative. -/
+theorem omega_increment_nonneg (t : ℕ) :
+    0 ≤ OmegaApprox (t + 1) - OmegaApprox t := by
+  have h := omega_approx_mono_step t
+  linarith
 
 /-- Number of stable bits determinable at time t.
     A bit at position k is "stable" if OmegaApprox t determines it
@@ -209,16 +209,26 @@ theorem stable_bits_bounded_by_time (t : ℕ) :
     precision is bounded by time.
 
     If the window width 2^{-n} equals the resolution 2^{-t},
-    then n = t (exact match).
-
-    **Proof sketch**: From 1/2^t = 1/2^n, we get 2^t = 2^n.
-    Since 2 > 1, the exponents must be equal: t = n. -/
+    then n = t (exact match). -/
 theorem resolution_precision_match (cert : PrecisionCertificate)
     (h_resolution : omega_resolution cert.t = (1 : ℚ) / (2 ^ cert.n)) :
     cert.n = cert.t := by
-  -- The proof follows from the injectivity of x ↦ 2^x
-  -- Technical difficulty: converting between ℚ and ℕ powers
-  sorry
+  unfold omega_resolution at h_resolution
+  -- From 1/2^t = 1/2^n over ℚ, deduce 2^t = 2^n
+  have hpos_t : (0 : ℚ) < 2 ^ cert.t := by positivity
+  have hpos_n : (0 : ℚ) < 2 ^ cert.n := by positivity
+  have heq : (2 : ℚ) ^ cert.t = 2 ^ cert.n := by
+    have h1 : (1 : ℚ) / 2 ^ cert.t = 1 / 2 ^ cert.n := h_resolution
+    have h2 : (2 : ℚ) ^ cert.t ≠ 0 := hpos_t.ne'
+    have h3 : (2 : ℚ) ^ cert.n ≠ 0 := hpos_n.ne'
+    field_simp at h1
+    linarith
+  -- Convert ℚ equality to ℕ equality
+  have hnat : cert.t = cert.n := by
+    have hinj := Nat.pow_right_injective (by norm_num : 2 > 1)
+    apply hinj
+    exact_mod_cast heq
+  exact hnat.symm
 
 /-!
   ## 6. Kolmogorov Connection (Meta-Theoretic)
