@@ -40,6 +40,22 @@ structure Fork (ctx : EnrichedContext) (T0 : TheoryNode ctx) where
 - The `exclusion` law is a *theorem*, not an assumption
 - Fork integrates natively with Graph/Path via `ofPivot_edge_left/right`
 
+## Chain-Dynamics Bridge: Parallel with Real Analysis
+
+The `Operative/` layer establishes a formal parallel between Dynamics and Real Analysis:
+
+| Real Analysis | RevHalt Dynamics |
+|---------------|------------------|
+| Increasing sequence (uₙ) | `InfiniteNodeChain` (sequence of Moves) |
+| uₙ₊₁ ≥ uₙ (monotonicity) | `Move.apply_le` (monotone moves) |
+| sup(uₙ) = L (limit) | `ChainLimit = ⋃ theories` |
+| ∀ε, ∃N, uₙ ∈ B(L,ε) | `finite_coverage` (ε-δ convergence) |
+
+Key theorems:
+- `advanceMove`: Converts `p ∈ Chain(n+1)` to a valid `Move` via `Chain_truth`
+- `layer_finite_coverability`: Any finite subset of Chain(n+1) is reachable
+- `stratChain_limit_eq_masterClo`: **Limit = MasterClo** (the convergence theorem)
+
 ## Concrete Example: OmegaChaitin
 
 `OmegaChaitin.lean` is the proof that Dynamics works on a real computability domain:
@@ -55,20 +71,24 @@ structure Fork (ctx : EnrichedContext) (T0 : TheoryNode ctx) where
 
 ```
 Dynamics/
-├── Core/           ← EnrichedContext level
-│   ├── Node.lean   ← TheoryNode = (theory, soundness)
-│   ├── Move.lean   ← Move inductive (extend, extend_gap)
-│   ├── Laws.lean   ← Preservation, Strictness, Bifurcation
-│   ├── Fuel.lean   ← T2 guarantees strict moves exist
-│   ├── Graph.lean  ← Edge relation, Reachability
-│   ├── Path.lean   ← Path inductive (general)
-│   └── Fork.lean   ← Bifurcation as object
-├── Operative/      ← VerifiableContext level
+├── Core/               ← EnrichedContext level
+│   ├── Node.lean       ← TheoryNode = (theory, soundness)
+│   ├── Move.lean       ← Move inductive (extend, extend_gap)
+│   ├── Laws.lean       ← Preservation, Strictness, Bifurcation
+│   ├── Fuel.lean       ← T2 guarantees strict moves exist
+│   ├── Graph.lean      ← Edge relation, Reachability
+│   ├── Path.lean       ← Path inductive (general)
+│   ├── Fork.lean       ← Bifurcation as object
+│   └── RefSystem.lean  ← Cut/Bit encoding framework
+├── Operative/          ← VerifiableContext level
 │   ├── Invariant.lean  ← RevLabel (operative invariant)
-│   └── ChainEmbed.lean ← Chain → Path relationship
-├── Transport/      ← Inter-graph morphisms
+│   ├── ChainEmbed.lean ← Chain → Move/Path bridge (advanceMove, layer_finite_coverability)
+│   └── Limit.lean      ← InfiniteNodeChain, ChainLimit = MasterClo (ε-δ convergence)
+├── Instances/          ← Concrete instances
+│   └── OmegaChaitin.lean ← Chaitin's Ω as RefSystem instance (743 lines)
+├── Transport/          ← Inter-graph morphisms
 │   └── Morphism.lean   ← TheoryMorphism (functorial)
-└── System.lean     ← Unified bundle
+└── System.lean         ← Unified bundle
 ```
 
 ## Laws
@@ -83,13 +103,16 @@ Dynamics/
 
 1. **Two-layer separation**: Core (pure set-theoretic) vs Operative (with LR/Halts/Rev)
 2. **Monotone moves only**: No `restrict` operation (avoids complexity)
-3. **Path ≠ Chain**: Path is general; Chain embeds as special case
+3. **Path ≠ Chain**: Path is general; Chain embeds as special case via `ChainEmbed`
 4. **Transport is functorial**: Maps between graphs, not within
+5. **Limit = MasterClo**: The limit of the canonical chain equals the kinetic closure
 
 ## Validation
 
 ```bash
 lake build RevHalt.Dynamics.System
 lake build RevHalt.Dynamics.Core.Fork
+lake build RevHalt.Dynamics.Core.RefSystem
+lake build RevHalt.Dynamics.Operative.Limit
+lake build RevHalt.Dynamics.Instances.OmegaChaitin
 ```
-

@@ -1,5 +1,5 @@
 /-
-  RevHalt.Extensions.OmegaChaitin
+  RevHalt.Dynamics.Instances.OmegaChaitin
 
   "Vrai" Ω : aucune axiomatisation de `OmegaApprox`.
   On définit une approximation rationnelle par somme finie sur les codes < t
@@ -9,7 +9,7 @@
   prefix-free via un codage unaire implicite des programmes (index p ↦ longueur p+1).
 -/
 
-import RevHalt.Extensions.RefSystem
+import RevHalt.Dynamics.Core.RefSystem
 import Mathlib.Computability.PartrecCode
 import Mathlib.Computability.Halting
 import Mathlib.Data.Rat.Floor
@@ -21,7 +21,7 @@ import Mathlib.Tactic.Ring
 
 open Finset
 
-namespace RevHalt.Extensions.OmegaChaitin
+namespace RevHalt.Dynamics.Instances.OmegaChaitin
 
 open RevHalt
 open Nat.Partrec
@@ -739,4 +739,4 @@ theorem false_cuts_dont_halt (q : ℚ) (hFalse : ∀ t, OmegaApprox t < q) :
 
 end CutComputable
 
-end RevHalt.Extensions.OmegaChaitin
+end RevHalt.Dynamics.Instances.OmegaChaitin

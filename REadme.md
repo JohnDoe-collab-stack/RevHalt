@@ -46,13 +46,15 @@ RevHalt/
 │   └── Complementarity.lean # T3_strong, InfiniteIndependentHalting
 │
 ├── Dynamics/            # Axiom graph dynamics
-│   ├── Core/            # TheoryNode, Move, Fork, Fuel, Laws
-│   ├── Operative/       # RevLabel (invariant), ChainEmbed
+│   ├── Core/            # TheoryNode, Move, Fork, Fuel, Laws, RefSystem
+│   ├── Operative/       # RevLabel, ChainEmbed, Limit (ε-δ convergence)
+│   ├── Instances/       # OmegaChaitin (Chaitin's Ω as RefSystem)
 │   └── Transport/       # TheoryMorphism (functorial)
 │
 ├── Kinetic/             # Dynamic semantics
 │   ├── Closure.lean     # CloK, CloRev, Stage
 │   ├── MasterClosure.lean # VerifiableContext, TheGreatChain
+│   ├── Stratification.lean # Chain, MasterClo, BaseGap
 │   └── System.lean      # Gap, GapTruth, GapSystem
 │
 ├── Oracle.lean          # Framework as Truth Oracle
@@ -62,13 +64,6 @@ RevHalt/
 │   ├── Context.lean     # EnrichedContext, ProvableSet
 │   ├── Master.lean      # RevHalt_Master_Complete
 │   └── Coded/           # Coded formula families (for PA/ZFC)
-│       ├── Interface.lean
-│       ├── Context.lean
-│       └── Master.lean
-│
-├── Extensions/          # Advanced applications
-│   ├── RefSystem.lean   # Cut/Bit/Win dynamic verification
-│   └── OmegaChaitin.lean # Chaitin's Ω as RefSystem
 │
 ├── Instances/           # Concrete theory instances
 │   ├── Arithmetization.lean # PRModel (Mathlib Partrec)
@@ -84,7 +79,7 @@ Base → Theory → Dynamics → Kinetic → Oracle
   ↓       ↓         ↓          ↓        ↓
   └───────┴─────────┴──────────┴→ Bridge ←┘
                                     ↓
-                          Extensions / Instances
+                                Instances
 ```
 
 ---
@@ -202,6 +197,8 @@ The axiom graph navigation framework:
 | `Fork` | Bifurcation without global choice |
 | `fuel_from_T2` | T2 guarantees strict moves exist |
 | `Path` | Explicit sequence of moves |
+| `ChainLimit` | ⋃ theories = MasterClo (ε-δ convergence) |
+| `RefSystem` | Cut/Bit encoding framework |
 
 **Key insight**: T2 is not just impossibility — it's fuel for navigation.
 
@@ -224,26 +221,9 @@ Coded instance for PA (requires `Representable` hypothesis).
 
 ---
 
-## Extensions
+## OmegaChaitin — Concrete Instantiation of Dynamics
 
-### RefSystem
-
-Cut/Bit framework for dynamic verification:
-
-```lean
-structure RefSystem (Model Sentence Referent : Type) where
-  Sat : Model → Sentence → Prop
-  Cut : ℚ → Referent → Sentence
-  Bit : ℕ → ℕ → Referent → Sentence
-  Win : ℕ → ℕ → Referent → Sentence  -- Orthogonal to Bit
-  cut_antimono : ...    -- q ≤ q' → Sat(Cut q') → Sat(Cut q)
-  bit_cut_link : ...    -- Bit ↔ dyadic window condition
-  win_spec : ...        -- Win semantics matches bit_cut_link RHS
-```
-
-### OmegaChaitin — Concrete Instantiation of Dynamics
-
-Chaitin's Ω as a `RefSystem` instance, grounded in Mathlib's `Nat.Partrec.Code`.
+Chaitin's Ω as a `RefSystem` instance, located in `Dynamics/Instances/OmegaChaitin.lean`.
 
 **Key insight**: Omega is not just a sanity check — it's the **proof that Dynamics works** on a real computability domain.
 
@@ -256,10 +236,8 @@ Chaitin's Ω as a `RefSystem` instance, grounded in Mathlib's `Nat.Partrec.Code`
 
 **Constructive definitions (no axioms):**
 - `OmegaApprox` defined via `Partrec.Code.evaln`
-- All properties (`nonneg`, `le_one`, `mono`) proven
 - `omega_bit_cut_link` proven arithmetically
-
-**CutComputable section**: Formalizes attacking Ω via semi-decidable Cuts rather than undecidable Bits.
+- `CutComputable` section: attacking Ω via semi-decidable Cuts
 
 ---
 

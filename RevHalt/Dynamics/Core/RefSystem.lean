@@ -1,5 +1,5 @@
 /-
-# RevHalt.Extensions.RefSystem
+# RevHalt.Dynamics.Core.RefSystem
 
 Reference system layer: connecting `Cut` / `Bit` families to semantics and dynamics.
 

@@ -13,8 +13,9 @@ import RevHalt.Kinetic
 -- Oracle Layer: Framework as oracle
 import RevHalt.Oracle
 
--- Extensions: RefSystem, OmegaChaitin
-import RevHalt.Extensions
+-- RefSystem and OmegaChaitin (in Dynamics/)
+import RevHalt.Dynamics.Core.RefSystem
+import RevHalt.Dynamics.Instances.OmegaChaitin
 
 -- Instances: PRModel, PA
 import RevHalt.Instances
