@@ -57,15 +57,15 @@ theorem omega_approx_upper_bound (t : ℕ) :
   have h := OmegaApprox_le_one t
   have hsum := sum_weight_range_eq t
   -- OmegaApprox t ≤ ∑ omegaWeight ≤ 1 - 2^{-t}
-  classical
   calc OmegaApprox t
       ≤ ∑ p ∈ Finset.range t, omegaWeight p := by
         unfold OmegaApprox
         apply Finset.sum_le_sum
         intro p _
-        by_cases hH : haltsWithin t p 0
-        · simp only [if_pos hH, le_refl]
-        · simp only [if_neg hH, omegaWeight]
+        by_cases hH : haltsWithinDec t p 0 = true
+        · simp only [hH, ↓reduceIte, le_refl]
+        · simp only [Bool.not_eq_true] at hH
+          simp only [hH, Bool.false_eq_true, ↓reduceIte, omegaWeight]
           apply div_nonneg
           · norm_num
           · apply pow_nonneg; norm_num

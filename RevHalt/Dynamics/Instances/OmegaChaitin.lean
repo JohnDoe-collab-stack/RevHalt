@@ -34,10 +34,26 @@ open Classical
 /-- Weight of program index `p` (dyadic). -/
 def omegaWeight (p : ℕ) : ℚ := (1 : ℚ) / ((2 : ℚ) ^ (p + 1))
 
+/-- Decidable version: program p halts within t steps on input n.
+    Returns Bool, so `if haltsWithinDec ...` is computable. -/
+def haltsWithinDec (t p n : ℕ) : Bool :=
+  (Nat.Partrec.Code.ofNatCode p).evaln t n |>.isSome
+
 /-- `haltsWithin t p n` : the decoded Partrec code `p` returns some value on input `n`
-    within the `evaln t` search bound. -/
+    within the `evaln t` search bound. (Prop version for proofs) -/
 def haltsWithin (t p n : ℕ) : Prop :=
   ∃ x : ℕ, x ∈ (Nat.Partrec.Code.ofNatCode p).evaln t n
+
+/-- Equivalence between Bool and Prop versions. -/
+theorem haltsWithinDec_iff (t p n : ℕ) :
+    haltsWithinDec t p n = true ↔ haltsWithin t p n := by
+  unfold haltsWithinDec haltsWithin
+  rw [Option.isSome_iff_exists]
+  constructor
+  · intro ⟨x, hx⟩
+    exact ⟨x, Option.mem_def.mpr hx⟩
+  · intro ⟨x, hx⟩
+    exact ⟨x, Option.mem_def.mp hx⟩
 
 /-- Monotonicity of `haltsWithin` in the bound `t`. -/
 theorem haltsWithin_mono {t₁ t₂ p n : ℕ} (h : t₁ ≤ t₂) :
@@ -46,24 +62,30 @@ theorem haltsWithin_mono {t₁ t₂ p n : ℕ} (h : t₁ ≤ t₂) :
   refine ⟨x, ?_⟩
   exact Nat.Partrec.Code.evaln_mono h hx
 
-/-- Finite approximation Ωₜ (rational). -/
-noncomputable def OmegaApprox (t : ℕ) : ℚ :=
+/-- Monotonicity of `haltsWithinDec` in the bound `t` (Bool version). -/
+theorem haltsWithinDec_mono {t₁ t₂ p n : ℕ} (h : t₁ ≤ t₂) :
+    haltsWithinDec t₁ p n = true → haltsWithinDec t₂ p n = true := by
+  rw [haltsWithinDec_iff, haltsWithinDec_iff]
+  exact haltsWithin_mono h
+
+/-- Finite approximation Ωₜ (rational). COMPUTABLE: uses haltsWithinDec (Bool). -/
+def OmegaApprox (t : ℕ) : ℚ :=
   ∑ p ∈ Finset.range t,
-    (if haltsWithin t p 0 then omegaWeight p else 0)
+    (if haltsWithinDec t p 0 then omegaWeight p else 0)
 
 /-- Approximations are non-negative. -/
 theorem OmegaApprox_nonneg : ∀ t, 0 ≤ OmegaApprox t := by
   intro t
-  classical
   unfold OmegaApprox
   apply Finset.sum_nonneg
   intro p _
-  by_cases hH : haltsWithin t p 0
-  · simp only [if_pos hH, omegaWeight]
+  by_cases hH : haltsWithinDec t p 0 = true
+  · simp only [hH, ↓reduceIte, omegaWeight]
     apply div_nonneg
     · norm_num
     · apply pow_nonneg; norm_num
-  · simp only [if_neg hH, le_refl]
+  · simp only [Bool.not_eq_true] at hH
+    simp only [hH, Bool.false_eq_true, ↓reduceIte, le_refl]
 
 /-- Closed form for the geometric upper bound: ∑_{p < t} 2^-(p+1) = 1 - 2^-t. -/
 theorem sum_weight_range_eq (t : ℕ) :
@@ -80,15 +102,15 @@ theorem sum_weight_range_eq (t : ℕ) :
 /-- Approximations are bounded by 1. -/
 theorem OmegaApprox_le_one : ∀ t, OmegaApprox t ≤ 1 := by
   intro t
-  classical
   have h_le_sumWeights :
       OmegaApprox t ≤ ∑ p ∈ Finset.range t, omegaWeight p := by
     unfold OmegaApprox
     apply Finset.sum_le_sum
     intro p _
-    by_cases hH : haltsWithin t p 0
-    · simp only [if_pos hH, le_refl]
-    · simp only [if_neg hH, omegaWeight]
+    by_cases hH : haltsWithinDec t p 0 = true
+    · simp only [hH, ↓reduceIte, le_refl]
+    · simp only [Bool.not_eq_true] at hH
+      simp only [hH, Bool.false_eq_true, ↓reduceIte, omegaWeight]
       apply div_nonneg
       · norm_num
       · apply pow_nonneg; norm_num
@@ -105,40 +127,42 @@ theorem OmegaApprox_le_one : ∀ t, OmegaApprox t ≤ 1 := by
 /-- Monotonicity of Ωₜ. -/
 theorem OmegaApprox_mono : ∀ t₁ t₂, t₁ ≤ t₂ → OmegaApprox t₁ ≤ OmegaApprox t₂ := by
   intro t₁ t₂ h12
-  classical
   have h_termwise :
       (∑ p ∈ Finset.range t₁,
-        (if haltsWithin t₁ p 0 then omegaWeight p else 0))
+        (if haltsWithinDec t₁ p 0 then omegaWeight p else 0))
       ≤
       (∑ p ∈ Finset.range t₁,
-        (if haltsWithin t₂ p 0 then omegaWeight p else 0)) := by
+        (if haltsWithinDec t₂ p 0 then omegaWeight p else 0)) := by
     apply Finset.sum_le_sum
     intro p _
-    by_cases hH : haltsWithin t₁ p 0
-    · have hH' : haltsWithin t₂ p 0 := haltsWithin_mono h12 hH
-      simp only [if_pos hH, if_pos hH', le_refl]
-    · by_cases hH' : haltsWithin t₂ p 0
-      · simp only [if_neg hH, if_pos hH', omegaWeight]
+    by_cases hH : haltsWithinDec t₁ p 0 = true
+    · have hH' : haltsWithinDec t₂ p 0 = true := haltsWithinDec_mono h12 hH
+      simp only [hH, ↓reduceIte, hH', le_refl]
+    · simp only [Bool.not_eq_true] at hH
+      by_cases hH' : haltsWithinDec t₂ p 0 = true
+      · simp only [hH, Bool.false_eq_true, ↓reduceIte, hH', omegaWeight]
         apply div_nonneg
         · norm_num
         · apply pow_nonneg; norm_num
-      · simp only [if_neg hH, if_neg hH', le_refl]
+      · simp only [Bool.not_eq_true] at hH'
+        simp only [hH, Bool.false_eq_true, ↓reduceIte, hH', le_refl]
   have h_extend :
       (∑ p ∈ Finset.range t₁,
-        (if haltsWithin t₂ p 0 then omegaWeight p else 0))
+        (if haltsWithinDec t₂ p 0 then omegaWeight p else 0))
       ≤
       (∑ p ∈ Finset.range t₂,
-        (if haltsWithin t₂ p 0 then omegaWeight p else 0)) := by
+        (if haltsWithinDec t₂ p 0 then omegaWeight p else 0)) := by
     apply Finset.sum_le_sum_of_subset_of_nonneg
     · intro p hp
       exact Finset.mem_range.2 (lt_of_lt_of_le (Finset.mem_range.1 hp) h12)
     · intro p _ _
-      by_cases hH : haltsWithin t₂ p 0
-      · simp only [if_pos hH, omegaWeight]
+      by_cases hH : haltsWithinDec t₂ p 0 = true
+      · simp only [hH, ↓reduceIte, omegaWeight]
         apply div_nonneg
         · norm_num
         · apply pow_nonneg; norm_num
-      · simp only [if_neg hH, le_refl]
+      · simp only [Bool.not_eq_true] at hH
+        simp only [hH, Bool.false_eq_true, ↓reduceIte, le_refl]
   simp only [OmegaApprox]
   exact le_trans h_termwise h_extend
 
