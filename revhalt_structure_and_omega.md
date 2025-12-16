@@ -1,84 +1,85 @@
-# RevHalt — structure et ancrage formel (référence synthétique)
+# RevHalt — Structure and Formal Grounding (Synthetic Reference)
 
-Ce document fixe une **lecture structurée** de la dynamique globale de RevHalt (5 axes) et explicite l’**ancrage formel** de l’instance **Ω (OmegaChaitin)** via ses primitives **discrètes** (bits) et **continues** (cuts rationnels), ainsi que leur **pont arithmétique**.
-
----
-
-## Mini-Glossaire contextuel
-
-*   **`OmegaModel`** : Index de temps `t` (souvent alias vers `ℕ` dans l'implémentation) utilisé comme modèle local.
-*   **`OmegaApprox t`** : Approximation rationnelle calculable de $\Omega$ au temps `t` (somme partielle des poids des programmes terminant avant `t`).
-*   **`OmegaSat t φ`** : Relation de satisfaction locale ; la propriété `φ` est-elle vérifiée au temps `t` par l'approximation courante ?
-*   **`LR_omega`** : *Local Reading*, la trace (suite de booléens dans le temps) qui surveille l'évolution de validité d'une formule.
-*   **`Kit`** : Mécanisme abstrait d'observation transformant une trace dynamique en verdict binaire limite.
-*   **`pathCost`** : Coût de trajectoire dans le graphe de moves (nombre d'étapes dynamiques), et non la longueur d'une preuve logique.
+This document provides a **structured reading** of RevHalt's global dynamics (5 axes) and explicates the **formal grounding** of the **Ω (OmegaChaitin)** instance via its **discrete** (bits) and **continuous** (rational cuts) primitives, as well as their **arithmetic bridge**.
 
 ---
 
-## Partie 1 — Les 5 axes structurels de la dynamique globale
+## Contextual Mini-Glossary
 
-### Axe 1 — Moteur d’incomplétude (Fuel)
-
-* **Pivot** : `fuel_from_T2`
-* **Fichier** : `RevHalt/Dynamics/Core/Fuel.lean`
-* **Rôle structurel** : l’incomplétude est modélisée comme une **énergie dynamique** (fuel) qui force l’extension perpétuelle du système, et non comme une simple barrière statique.
-
-### Axe 2 — Canonicité de l’observation
-
-* **Pivot** : `T1_traces`
-* **Fichier** : `RevHalt/Theory/Canonicity.lean`
-* **Rôle structurel** : l’arrêt (`Halts`) est posé comme **signature universelle** de vérité, robuste vis-à-vis des variations du mécanisme d’observation (*Kit*).
-    *   *Précision* : `T1_traces` montre que, pour toute classe de kits admissibles (satisfaisant `DetectsMonotone`), le verdict-limite dépend uniquement de la propriété d’arrêt de la trace (et coïncide avec `Halts` dans le cadre considéré).
-
-### Axe 3 — Vérité cinétique
-
-* **Pivot** : `Master_Closure`
-* **Fichier** : `RevHalt/Kinetic/MasterClosure.lean`
-* **Rôle structurel** : la vérité est définie comme une **limite inductive** (*Closure*) d’un processus de stratification, plutôt qu’un ensemble statique préexistant.
-    *   *Précision* : La *Closure* est le plus petit ensemble de sentences contenant la base et fermé par les règles dynamiques de RevHalt (moves / fuel-extension).
-
-### Axe 4 — Unification Turing–Gödel
-
-* **Pivot** : `T2_impossibility`
-* **Fichier** : `RevHalt/Theory/Impossibility.lean`
-* **Rôle structurel** : indécidabilité (Turing) et incomplétude (Gödel) sont formulées comme deux faces d’une **unique impossibilité structurelle** : absence d’un prédicat d’arrêt interne simultanément **total / correct / complet**.
-
-### Axe 5 — Dualité coût / information
-
-* **Pivot** : `cost_ge_info_gain`
-* **Fichier** : `RevHalt/Dynamics/Core/Complexity.lean`
-* **Rôle structurel** : toute émergence de vérité (gain d’information) admet un **coût certifiable** (`pathCost`). Le coût borne le gain d’information via un **témoin explicite** (un chemin de moves).
+*   **`OmegaModel`**: Time index `t` (often aliased to `ℕ` in implementation) used as local model.
+*   **`OmegaApprox t`**: Computable rational approximation of Ω at time `t` (partial sum of weights of programs halting before `t`).
+*   **`OmegaSat t φ`**: Local satisfaction relation; is property `φ` verified at time `t` by the current approximation?
+*   **`LR_omega`**: *Local Reading*, the trace (sequence of booleans over time) monitoring validity evolution of a formula.
+*   **`Kit`**: Abstract observation mechanism transforming a dynamic trace into a limit binary verdict.
+*   **`pathCost`**: Trajectory cost in the moves graph (number of dynamic steps), not the length of a logical proof.
 
 ---
 
-## Partie 2 — Ancrage formel OmegaChaitin (discret / continu)
+## Part 1 — The 5 Structural Axes of Global Dynamics
 
-**Fichier cible** : `RevHalt/Dynamics/Instances/OmegaChaitin.lean`
-Objet : implémentation de la hiérarchie inversée pour Ω via `OmegaSentence`.
+### Axis 1 — Incompleteness Engine (Fuel)
+
+* **Pivot**: `fuel_from_T2`
+* **File**: `RevHalt/Dynamics/Core/Fuel.lean`
+* **Structural role**: Incompleteness is modeled as a **dynamic energy** (fuel) that forces perpetual extension of the system, rather than as a simple static barrier.
+
+### Axis 2 — Observation Canonicity
+
+* **Pivot**: `T1_traces`
+* **File**: `RevHalt/Theory/Canonicity.lean`
+* **Structural role**: Halting (`Halts`) is established as the **universal signature** of truth, robust with respect to variations in the observation mechanism (*Kit*).
+    *   *Precision*: `T1_traces` shows that, for any class of admissible kits (satisfying `DetectsMonotone`), the limit verdict depends solely on the halting property of the trace (and coincides with `Halts` in the considered framework).
+
+### Axis 3 — Kinetic Truth
+
+* **Pivot**: `Master_Closure`
+* **File**: `RevHalt/Kinetic/MasterClosure.lean`
+* **Structural role**: Truth is defined as an **inductive limit** (*Closure*) of a stratification process, rather than a pre-existing static set.
+    *   *Precision*: The *Closure* is the smallest set of sentences containing the base and closed under RevHalt's dynamic rules (moves / fuel-extension).
+
+### Axis 4 — Turing–Gödel Unification
+
+* **Pivot**: `T2_impossibility`
+* **File**: `RevHalt/Theory/Impossibility.lean`
+* **Structural role**: Undecidability (Turing) and incompleteness (Gödel) are formulated as two faces of a **single structural impossibility**: absence of an internal halting predicate that is simultaneously **total / correct / complete**.
+
+### Axis 5 — Cost / Information Duality
+
+* **Pivot**: `cost_ge_info_gain`
+* **File**: `RevHalt/Dynamics/Core/Complexity.lean`
+* **Structural role**: Every emergence of truth (information gain) admits a **certifiable cost** (`pathCost`). The cost bounds information gain via an **explicit witness** (a path of moves).
 
 ---
 
-### 2.1 Primitif discret — bit de Ω
+## Part 2 — OmegaChaitin Formal Grounding (Discrete / Continuous)
 
-* **Concept** : coordonnée discrète (bit)
-* **Lean** : `OmegaBit` / `OmegaSentence.BitIs`
-* **Dépendances immédiates** : `OmegaSentence`, `OmegaReferent`
+**Target file**: `RevHalt/Dynamics/Instances/OmegaChaitin.lean`
+Object: Implementation of the inverted hierarchy for Ω via `OmegaSentence`.
+
+---
+
+### 2.1 Discrete Primitive — Ω Bit
+
+* **Concept**: Discrete coordinate (bit)
+* **Lean**: `OmegaBit` / `OmegaSentence.BitIs`
+* **Immediate dependencies**: `OmegaSentence`, `OmegaReferent`
 
 ```lean
 inductive OmegaSentence
-| BitIs (n : ℕ) (a : ℕ) : OmegaSentence
+| BitIs (n : ℕ) (a : Fin 2) : OmegaSentence
+| WinDyad (n : ℕ) (a : Fin 2) : OmegaSentence
 ...
 
-def OmegaBit (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
+def OmegaBit (n : ℕ) (a : Fin 2) (_ : OmegaReferent) : OmegaSentence :=
   OmegaSentence.BitIs n a
 ```
-*Note* : `BitIs n a` code un bit via `a % 2`.
+*Note*: The `Fin 2` typing directly enforces that `a` is a bit (0 or 1).
 
-### 2.2 Primitif continu — cut rationnel
+### 2.2 Continuous Primitive — Rational Cut
 
-* **Concept** : coordonnée continue rationnelle (cut)
-* **Lean** : `OmegaCut` / `OmegaSentence.CutGe`
-* **Dépendances immédiates** : `OmegaSentence`, `Rat` (ℚ)
+* **Concept**: Continuous rational coordinate (cut)
+* **Lean**: `OmegaCut` / `OmegaSentence.CutGe`
+* **Immediate dependencies**: `OmegaSentence`, `Rat` (ℚ)
 
 ```lean
 inductive OmegaSentence
@@ -91,40 +92,40 @@ def OmegaCut (q : ℚ) (_ : OmegaReferent) : OmegaSentence :=
 
 ---
 
-### 2.3 Hiérarchie inversée (asymétrie cuts/bits)
+### 2.3 Inverted Hierarchy (Cuts/Bits Asymmetry)
 
-* **Standard (classique)** : bits (base) → réel (dérivé)
-* **RevHalt** : **Cuts semi-décidables** (base / primitifs) → **Bits indécidables** (reconstruits / dérivés).
-* **Ancrage de semi-décidabilité** : `namespace CutComputable`
+* **Standard (classical)**: bits (base) → real (derived)
+* **RevHalt**: **Semi-decidable cuts** (base / primitives) → **Undecidable bits** (reconstructed / derived).
+* **Semi-decidability grounding**: `namespace CutComputable`
 
-**Explicite** : Le système prend comme primitives les prédicats `CutGe q`, qui sont semi-décidables (robustes via `OmegaApprox`), et **reconstruit** les bits comme des propriétés dérivées (intersections de fenêtres).
+**Explicit**: The system takes `CutGe q` predicates as primitives, which are semi-decidable (robust via `OmegaApprox`), and **reconstructs** bits as derived properties (window intersections).
 
-Extrait d’intention (asymétrie) :
+Asymmetry excerpt:
 
 ```lean
 theorem cut_semidecidable_bit_not (n : ℕ) :
     (∀ q, Halts (LR_omega ∅ (OmegaSentence.CutGe q)) ↔ (∃ t, OmegaApprox t ≥ q)) ∧
-    -- For Bits: halting only works if we guess the right bit
-    ...
+    (∀ a : Fin 2, Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) →
+          ∃ t, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = (a : ℕ))
 ```
 
-*Lecture* : `Halts (LR_omega ... (CutGe q))` caractérise `OmegaApprox ≥ q` (on peut attendre l'événement, c'est semi-décidable). Pour les bits, il n’existe pas de procédure d’arrêt uniforme garantissant de trancher le bit sans information supplémentaire (typiquement, il faut « tomber sur » le bon bit).
+*Reading*: `Halts (LR_omega ... (CutGe q))` characterizes `OmegaApprox ≥ q` (one can wait for the event, it's semi-decidable). For bits, there is no uniform halting procedure guaranteeing to decide the bit without additional information (typically, one must "guess" the right bit).
 
 ---
 
-### 2.4 Lien discret / continu — équivalence “fenêtre dyadique”
+### 2.4 Discrete / Continuous Link — Dyadic Window Equivalence
 
-* **Pivot** : `omega_bit_cut_link`
-* **Fichier** : `RevHalt/Dynamics/Instances/OmegaChaitin.lean`
+* **Pivot**: `omega_bit_cut_link`
+* **File**: `RevHalt/Dynamics/Instances/OmegaChaitin.lean`
 
 ```lean
-theorem omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
+theorem omega_bit_cut_link : ∀ {t : OmegaModel} {n : ℕ} {a : Fin 2} {x : OmegaReferent},
     OmegaSat t (OmegaBit n a x) ↔
     ∃ (k : ℤ),
       OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
       ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
-      k.toNat % 2 = a
+      k.toNat % 2 = (a : ℕ)
 ```
-*Note* : On peut lire `k` comme l’indice dyadique correspondant (typiquement proche de `⌊2^n * OmegaApprox t⌋`). Comme `OmegaApprox t ≥ 0`, `k` est un entier non-négatif, donc `k.toNat` préserve la valeur pour le test de parité.
+*Note*: One can read `k` as the corresponding dyadic index (typically close to `⌊2^n * OmegaApprox t⌋`). Since `OmegaApprox t ≥ 0`, `k` is a non-negative integer, so `k.toNat` preserves the value for parity testing.
 
-**Portée formelle** : un bit `a` à la précision `n` est équivalent à placer la valeur continue dans une **fenêtre dyadique** : *vrai au cut inférieur*, et *non-vrai au cut supérieur* (`¬ OmegaSat …`), avec contrainte de parité. Le bit est ainsi formalisé comme une **propriété émergente** d’une topologie continue, plutôt qu’un atome isolé.
+**Formal scope**: A bit `a` at precision `n` is equivalent to placing the continuous value in a **dyadic window**: *true at the lower cut*, and *not true at the upper cut* (`¬ OmegaSat …`), with parity constraint. The bit is thus formalized as an **emergent property** of a continuous topology, rather than an isolated atom.
