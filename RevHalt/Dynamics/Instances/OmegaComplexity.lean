@@ -236,23 +236,17 @@ The answer: at the first time T where OmegaSat T (BitIs n a).
 For this to give the CORRECT bit, we need stability, which requires T ≥ n.
 -/
 
-/-- The halting time of a bit trace (if it halts). -/
-noncomputable def bitHaltTime (n : ℕ) (a : Fin 2) (h : Halts (LR_omega ∅ (OmegaSentence.BitIs n a))) : ℕ :=
-  have : DecidablePred (LR_omega ∅ (OmegaSentence.BitIs n a)) := Classical.decPred _
-  Nat.find h
-
-/-- If a bit trace halts and the bit is stable, the halting time is ≥ n.
+/-- If a bit trace halts at time T and the bit is stable from T onwards, then T ≥ n.
 
 This connects the gap bound to the Halts framework.
+Note: We state this existentially to avoid noncomputable Nat.find.
 -/
-theorem bit_halt_time_bound (n : ℕ) (a : Fin 2)
-    (h_halts : Halts (LR_omega ∅ (OmegaSentence.BitIs n a)))
-    (h_stable : BitStableAt n a (bitHaltTime n a h_halts)) :
-    bitHaltTime n a h_halts ≥ n := by
-  -- The halting time T satisfies OmegaSat T (BitIs n a)
-  -- Stability at T means bit n is determined
-  -- By our bounds, T ≥ n
-  sorry -- Requires connecting stability to gap bound
+theorem bit_halt_time_lower_bound (n : ℕ) (a : Fin 2)
+    (h_halts : Halts (LR_omega ∅ (OmegaSentence.BitIs n a))) :
+    ∃ T, LR_omega ∅ (OmegaSentence.BitIs n a) T ∧
+         (BitStableAt n a T → T ≥ n) := by
+  obtain ⟨T, hT⟩ := h_halts
+  exact ⟨T, hT, fun _ => sorry⟩ -- Requires connecting stability to gap bound
 
 /-!
 ## Summary
