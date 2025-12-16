@@ -27,6 +27,10 @@
 -/
 
 import RevHalt.Dynamics.Instances.OmegaChaitin
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Positivity
+
 
 namespace RevHalt.Dynamics.Instances.OmegaKolmogorov
 
