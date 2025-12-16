@@ -149,21 +149,31 @@ theorem certificate_cost_computable (c : ComplexityCertificate ctx) :
 -/
 
 /-- An information gain measure on paths.
-    Concrete instances defined elsewhere (e.g., for Ω precision). -/
+    Concrete instances defined elsewhere (e.g., for Ω precision).
+
+    Required properties:
+    - `gain_nil`: empty path contributes 0 information
+    - `gain_subadditive`: concatenation doesn't exceed sum of gains -/
 class InfoGain (ctx : EnrichedContext Code PropT) where
-  gain : Path ctx T T' → ℕ
+  gain : {T T' : TheoryNode ctx} → Path ctx T T' → ℕ
+  gain_nil : ∀ T : TheoryNode ctx, gain (Path.nil T) = 0
+  gain_step : ∀ (m : Move ctx) (T : TheoryNode ctx) (tail : Path ctx (Move.apply m T) T'),
+    gain (Path.step m T tail) ≤ gain (Path.of_move m T) + gain tail
 
 /-- Information-theoretic lower bound: cost ≥ information gained.
     This is the abstract form; concrete proofs depend on the domain. -/
 theorem cost_ge_info_gain
     [ig : InfoGain ctx] (p : Path ctx T T')
-    (h_yield : ∀ m : Move ctx, ig.gain (Path.of_move m T) ≤ moveCost m) :
+    (h_yield : ∀ (m : Move ctx) (T : TheoryNode ctx), ig.gain (Path.of_move m T) ≤ moveCost m) :
     ig.gain p ≤ pathCost p := by
   induction p with
-  | nil _ =>
-    -- Empty path: gain ≤ 0 (needs assumption or definition)
-    sorry  -- Requires InfoGain instance to define gain(.nil) = 0
+  | nil T =>
+    simp only [ig.gain_nil, pathCost_nil, le_refl]
   | step m T tail ih =>
-    sorry  -- Requires compositional property of InfoGain
+    calc ig.gain (Path.step m T tail)
+        ≤ ig.gain (Path.of_move m T) + ig.gain tail := ig.gain_step m T tail
+      _ ≤ moveCost m + ig.gain tail := Nat.add_le_add_right (h_yield m T) _
+      _ ≤ moveCost m + pathCost tail := Nat.add_le_add_left ih _
+      _ = pathCost (Path.step m T tail) := by simp [pathCost]
 
 end RevHalt.Dynamics.Core.Complexity

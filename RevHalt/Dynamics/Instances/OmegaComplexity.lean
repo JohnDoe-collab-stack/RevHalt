@@ -138,49 +138,27 @@ theorem min_weight_at_time (t : ℕ) (ht : t > 0) :
       rw [ht_eq]
       exact mod_cast hpow
 
-/-- Resolution bound: for NON-TRIVIAL precision (k ≥ 1), we need t ≥ n.
+/-- Resolution bound: for NON-TRIVIAL precision (k ≥ 1), we need t > 0.
 
-    Proof:
-    - cert.lower_bound says: Ω_t ≥ k/2^n
-    - If k ≥ 1, then Ω_t ≥ 1/2^n > 0
-    - But Ω_t ≤ 1 - 1/2^t (by omega_approx_upper_bound)
-    - And all terms in Ω_t are of form 2^{-(p+1)} for p < t
-    - The smallest positive value of Ω_t is 2^{-t} (when only program t-1 halts)
-    - If Ω_t ≥ 1/2^n and the smallest step is 2^{-t}, we need 2^{-t} ≤ 1/2^n
-    - This gives t ≥ n
+    This is a direct corollary of `nontrivial_precision_requires_steps`.
+
+    **Note on t ≥ n:**
+    The stronger bound `t ≥ n` does NOT hold in general with just k ≥ 1.
+
+    Counterexample: Let t = 1, program 0 halts → OmegaApprox 1 = 1/2.
+    With n = 2, k = 2, the window [2/4, 3/4) = [1/2, 3/4) contains 1/2.
+    Here k ≥ 1, but t = 1 < n = 2.
+
+    A correct stronger bound would require additional hypotheses such as:
+    - The window [k/2^n, (k+1)/2^n) has width 1/2^n ≤ 1/2^t (i.e., n ≥ t), OR
+    - The certificate represents "stable" precision (bits won't change)
+
+    For the RevHalt framework, the bound t > 0 is sufficient to establish
+    that any non-trivial precision requires computational work.
 -/
-theorem precision_requires_cost_nontrivial (cert : PrecisionCertificate)
-    (h_nontrivial : cert.k ≥ 1) : cert.t ≥ cert.n := by
-  -- From h_nontrivial and cert.lower_bound: Ω_t ≥ k/2^n ≥ 1/2^n
-  have hpos : OmegaApprox cert.t ≥ (1 : ℚ) / (2 ^ cert.n) := by
-    calc OmegaApprox cert.t
-        ≥ (cert.k : ℚ) / (2 ^ cert.n) := cert.lower_bound
-      _ ≥ (1 : ℚ) / (2 ^ cert.n) := by
-        apply div_le_div_of_nonneg_right
-        · exact Nat.one_le_cast.mpr h_nontrivial
-        · apply pow_nonneg; norm_num
-
-  -- And Ω_t ≤ 1 - 1/2^t
-  have hbound := omega_approx_upper_bound cert.t
-
-  -- So 1/2^n ≤ Ω_t ≤ 1 - 1/2^t < 1
-  -- For t = 0: Ω_0 = 0, but we have Ω_t > 0, so t > 0 (already proven)
-  have ht_pos := nontrivial_precision_requires_steps cert h_nontrivial
-
-  -- Now we need: 1/2^n ≤ 1 - 1/2^t
-  -- Rearranging: 1/2^t ≤ 1 - 1/2^n < 1
-  -- So: 1/2^t + 1/2^n ≤ 1
-
-  -- The key insight: if Ω_t ≥ 1/2^n and Ω_t ≤ 1 - 1/2^t,
-  -- then 1/2^n ≤ 1 - 1/2^t, i.e., 1/2^t + 1/2^n ≤ 1.
-
-  -- From this we can derive n ≤ t? Not directly...
-  -- Actually, for n > t: 1/2^n < 1/2^t, so 1/2^n + 1/2^t < 2/2^t ≤ 1 when t ≥ 1.
-  -- So the constraint 1/2^n ≤ 1 - 1/2^t is not enough.
-
-  -- The real proof needs the discretization structure.
-  -- For now, we use sorry with a clear note about what's needed.
-  sorry
+theorem precision_requires_cost (cert : PrecisionCertificate)
+    (h_nontrivial : cert.k ≥ 1) : cert.t > 0 :=
+  nontrivial_precision_requires_steps cert h_nontrivial
 
 /-!
   ## 5. Summary
@@ -189,13 +167,13 @@ theorem precision_requires_cost_nontrivial (cert : PrecisionCertificate)
   1. `PrecisionCertificate`: meaningful localization of Ω
   2. `positive_requires_steps`: any progress requires t > 0
   3. `nontrivial_precision_requires_steps`: k ≥ 1 → t > 0
-  4. `precision_requires_cost_nontrivial`: n bits → n steps (with sorry)
+  4. `precision_requires_cost`: alias for (3), k ≥ 1 → t > 0
 
-  This captures the intuition that Omega's bits are revealed
-  progressively, at most one per time step.
+  Note: The stronger bound t ≥ n is NOT provable in general (see counterexample).
+  The bound t > 0 is sufficient to show that precision requires computational work.
 -/
 
-#check precision_requires_cost_nontrivial
+#check precision_requires_cost
 #check nontrivial_precision_requires_steps
 
 end RevHalt.Dynamics.Instances.OmegaComplexity
