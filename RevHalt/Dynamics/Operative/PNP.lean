@@ -104,7 +104,7 @@ theorem isPoly_monoHull {g : ℕ → ℕ} (hg : IsPoly g) : IsPoly (monoHull g) 
   refine Nat.recOn n ?_ ?_
   · exact hgBound 0
   · intro m ih
-    have h1 : RevHalt.Dynamics.Operative.PNP.monoHull g m ≤ B (m + 1) :=
+    have h1 : monoHull g m ≤ B (m + 1) :=
       le_trans ih (hBmono (Nat.le_succ m))
     have h2 : g (m + 1) ≤ B (m + 1) := hgBound (m + 1)
     exact Nat.max_le.2 ⟨h1, h2⟩
