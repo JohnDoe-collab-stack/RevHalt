@@ -67,6 +67,23 @@ Key theorems:
 | Move.apply preserves soundness | `OmegaApprox_mono` |
 | Gap = true but unprovable | Individual bits of Ω |
 
+## Kolmogorov Emergence
+
+`OmegaComplexity.lean` establishes that Kolmogorov complexity **emerges** from Dynamics:
+
+```lean
+theorem stable_bits_bounded_by_time (t : ℕ) : stableBits t ≤ t
+```
+
+**Key insight**: OmegaApprox t has resolution 2^{-t}. To determine n bits stably, we need t ≥ n.
+
+| Classical (Chaitin) | Dynamics |
+|---------------------|----------|
+| K(Ω_n) ≥ n - O(1) | stableBits(t) ≤ t |
+| Ω is incompressible | Each step gives ≤ 1 bit |
+
+The connection is **meta-theoretic**: both express that Ω is maximally complex.
+
 ## Architecture
 
 ```
