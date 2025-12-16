@@ -1,12 +1,34 @@
 /-
   RevHalt.Dynamics.Instances.OmegaChaitin
 
-  "Vrai" Ω : aucune axiomatisation de `OmegaApprox`.
-  On définit une approximation rationnelle par somme finie sur les codes < t
-  qui terminent dans `evaln t`.
+  "True" Ω: no axiomatization of `OmegaApprox`.
+  We define a rational approximation via finite sum over codes < t
+  that halt within `evaln t`.
 
-  Remarque : ce Ω est une halting-probability (poids 2^-(p+1)) d'une machine
-  prefix-free via un codage unaire implicite des programmes (index p ↦ longueur p+1).
+  # Core Philosophy
+  In OmegaChaitin.lean, I take two primitive coordinates of the same referent Ω:
+  discrete assertions `OmegaSentence.BitIs` and continuous assertions `OmegaSentence.CutGe`.
+  I invert the usual computability hierarchy by making rational cuts (semi-decidable)
+  the base layer, and then reconstructing the bits (non-computable) as boundaries
+  between cuts, via `omega_bit_cut_link`.
+
+  ## Key Definitions
+
+  1. **Primitives**:
+     ```lean
+     | CutGe (q : ℚ) : OmegaSentence            -- Continuous
+     | BitIs (n : ℕ) (a : Fin 2) : OmegaSentence -- Discrete
+     ```
+
+  2. **The Link (Bit as Boundary)**:
+     ```lean
+     theorem omega_bit_cut_link : ...
+       OmegaSat t (OmegaBit n a x) ↔
+       ∃ (k : ℤ),
+         OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
+         ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
+         k.toNat % 2 = (a : ℕ)
+     ```
 -/
 
 import RevHalt.Dynamics.Core.RefSystem
@@ -34,10 +56,20 @@ open Classical
 /-- Weight of program index `p` (dyadic). -/
 def omegaWeight (p : ℕ) : ℚ := (1 : ℚ) / ((2 : ℚ) ^ (p + 1))
 
+/-- Decidable version: program p halts within t steps on input n.
+    Returns Bool, so `if haltsWithinDec ...` is computable. -/
+def haltsWithinDec (t p n : ℕ) : Bool :=
+  (Nat.Partrec.Code.ofNatCode p).evaln t n |>.isSome
+
 /-- `haltsWithin t p n` : the decoded Partrec code `p` returns some value on input `n`
-    within the `evaln t` search bound. -/
+    within the `evaln t` search bound. (Prop version for proofs) -/
 def haltsWithin (t p n : ℕ) : Prop :=
   ∃ x : ℕ, x ∈ (Nat.Partrec.Code.ofNatCode p).evaln t n
+
+/-- Equivalence between Bool and Prop versions. -/
+theorem haltsWithinDec_iff (t p n : ℕ) :
+    haltsWithinDec t p n = true ↔ haltsWithin t p n := by
+  simp [haltsWithinDec, haltsWithin, Option.isSome_iff_exists, Option.mem_def]
 
 /-- Monotonicity of `haltsWithin` in the bound `t`. -/
 theorem haltsWithin_mono {t₁ t₂ p n : ℕ} (h : t₁ ≤ t₂) :
@@ -46,24 +78,26 @@ theorem haltsWithin_mono {t₁ t₂ p n : ℕ} (h : t₁ ≤ t₂) :
   refine ⟨x, ?_⟩
   exact Nat.Partrec.Code.evaln_mono h hx
 
-/-- Finite approximation Ωₜ (rational). -/
-noncomputable def OmegaApprox (t : ℕ) : ℚ :=
+/-- Monotonicity of `haltsWithinDec` in the bound `t` (Bool version). -/
+theorem haltsWithinDec_mono {t₁ t₂ p n : ℕ} (h : t₁ ≤ t₂) :
+    haltsWithinDec t₁ p n = true → haltsWithinDec t₂ p n = true := by
+  rw [haltsWithinDec_iff, haltsWithinDec_iff]
+  exact haltsWithin_mono h
+
+/-- Finite approximation Ωₜ (rational). COMPUTABLE: uses haltsWithinDec (Bool). -/
+def OmegaApprox (t : ℕ) : ℚ :=
   ∑ p ∈ Finset.range t,
-    (if haltsWithin t p 0 then omegaWeight p else 0)
+    (if haltsWithinDec t p 0 then omegaWeight p else 0)
 
 /-- Approximations are non-negative. -/
 theorem OmegaApprox_nonneg : ∀ t, 0 ≤ OmegaApprox t := by
   intro t
-  classical
   unfold OmegaApprox
   apply Finset.sum_nonneg
   intro p _
-  by_cases hH : haltsWithin t p 0
-  · simp only [if_pos hH, omegaWeight]
-    apply div_nonneg
-    · norm_num
-    · apply pow_nonneg; norm_num
-  · simp only [if_neg hH, le_refl]
+  by_cases hH : haltsWithinDec t p 0
+  · simp [hH, omegaWeight]
+  · simp [hH]
 
 /-- Closed form for the geometric upper bound: ∑_{p < t} 2^-(p+1) = 1 - 2^-t. -/
 theorem sum_weight_range_eq (t : ℕ) :
@@ -80,65 +114,54 @@ theorem sum_weight_range_eq (t : ℕ) :
 /-- Approximations are bounded by 1. -/
 theorem OmegaApprox_le_one : ∀ t, OmegaApprox t ≤ 1 := by
   intro t
-  classical
   have h_le_sumWeights :
       OmegaApprox t ≤ ∑ p ∈ Finset.range t, omegaWeight p := by
     unfold OmegaApprox
     apply Finset.sum_le_sum
     intro p _
-    by_cases hH : haltsWithin t p 0
-    · simp only [if_pos hH, le_refl]
-    · simp only [if_neg hH, omegaWeight]
-      apply div_nonneg
-      · norm_num
-      · apply pow_nonneg; norm_num
+    by_cases hH : haltsWithinDec t p 0
+    · simp [hH]
+    · simp only [Bool.eq_false_iff.mpr hH]
+      exact div_nonneg (by norm_num) (pow_nonneg (by norm_num : (0 : ℚ) ≤ 2) _)
   have h_sumWeights_le_one :
       (∑ p ∈ Finset.range t, omegaWeight p) ≤ 1 := by
     rw [sum_weight_range_eq]
-    have hpos : 0 ≤ (1 : ℚ) / ((2 : ℚ) ^ t) := by
-      apply div_nonneg
-      · norm_num
-      · apply pow_nonneg; norm_num
+    have hpos : 0 ≤ (1 : ℚ) / ((2 : ℚ) ^ t) := by positivity
     linarith
   exact le_trans h_le_sumWeights h_sumWeights_le_one
 
 /-- Monotonicity of Ωₜ. -/
 theorem OmegaApprox_mono : ∀ t₁ t₂, t₁ ≤ t₂ → OmegaApprox t₁ ≤ OmegaApprox t₂ := by
   intro t₁ t₂ h12
-  classical
   have h_termwise :
       (∑ p ∈ Finset.range t₁,
-        (if haltsWithin t₁ p 0 then omegaWeight p else 0))
+        (if haltsWithinDec t₁ p 0 then omegaWeight p else 0))
       ≤
       (∑ p ∈ Finset.range t₁,
-        (if haltsWithin t₂ p 0 then omegaWeight p else 0)) := by
+        (if haltsWithinDec t₂ p 0 then omegaWeight p else 0)) := by
     apply Finset.sum_le_sum
     intro p _
-    by_cases hH : haltsWithin t₁ p 0
-    · have hH' : haltsWithin t₂ p 0 := haltsWithin_mono h12 hH
-      simp only [if_pos hH, if_pos hH', le_refl]
-    · by_cases hH' : haltsWithin t₂ p 0
-      · simp only [if_neg hH, if_pos hH', omegaWeight]
-        apply div_nonneg
-        · norm_num
-        · apply pow_nonneg; norm_num
-      · simp only [if_neg hH, if_neg hH', le_refl]
+    by_cases hH : haltsWithinDec t₁ p 0
+    · have hH' : haltsWithinDec t₂ p 0 = true := haltsWithinDec_mono h12 (by simp [hH])
+      simp [hH, hH']
+    · by_cases hH' : haltsWithinDec t₂ p 0
+      · simp only [Bool.eq_false_iff.mpr hH, hH', if_true]
+        exact div_nonneg (by norm_num) (pow_nonneg (by norm_num : (0 : ℚ) ≤ 2) _)
+      · simp [hH, hH']
   have h_extend :
       (∑ p ∈ Finset.range t₁,
-        (if haltsWithin t₂ p 0 then omegaWeight p else 0))
+        (if haltsWithinDec t₂ p 0 then omegaWeight p else 0))
       ≤
       (∑ p ∈ Finset.range t₂,
-        (if haltsWithin t₂ p 0 then omegaWeight p else 0)) := by
+        (if haltsWithinDec t₂ p 0 then omegaWeight p else 0)) := by
     apply Finset.sum_le_sum_of_subset_of_nonneg
     · intro p hp
       exact Finset.mem_range.2 (lt_of_lt_of_le (Finset.mem_range.1 hp) h12)
     · intro p _ _
-      by_cases hH : haltsWithin t₂ p 0
-      · simp only [if_pos hH, omegaWeight]
-        apply div_nonneg
-        · norm_num
-        · apply pow_nonneg; norm_num
-      · simp only [if_neg hH, le_refl]
+      by_cases hH : haltsWithinDec t₂ p 0
+      · simp only [hH, if_true, omegaWeight]
+        exact div_nonneg (by norm_num) (pow_nonneg (by norm_num : (0 : ℚ) ≤ 2) _)
+      · simp [hH]
   simp only [OmegaApprox]
   exact le_trans h_termwise h_extend
 
@@ -168,8 +191,8 @@ theorem OmegaApprox_unbounded (q : ℚ) (_hq : q < 1) :
 /-- Sentences expressing knowledge about Ω (all in ℚ). -/
 inductive OmegaSentence
 | CutGe (q : ℚ) : OmegaSentence
-| BitIs (n : ℕ) (a : ℕ) : OmegaSentence
-| WinDyad (n : ℕ) (a : ℕ) : OmegaSentence -- syntactically orthogonal to BitIs
+| BitIs (n : ℕ) (a : Fin 2) : OmegaSentence
+| WinDyad (n : ℕ) (a : Fin 2) : OmegaSentence -- syntactically orthogonal to BitIs
 | Not (s : OmegaSentence) : OmegaSentence
 | TrueS : OmegaSentence
 | FalseS : OmegaSentence
@@ -181,12 +204,12 @@ abbrev OmegaModel := ℕ
 def OmegaSat : OmegaModel → OmegaSentence → Prop
 | t, OmegaSentence.CutGe q => OmegaApprox t ≥ q
 | t, OmegaSentence.BitIs n a =>
-    (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a
+    (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = (a : ℕ)
 | t, OmegaSentence.WinDyad n a =>
     ∃ (k : ℤ),
       OmegaApprox t ≥ ((k : ℚ) / (2 ^ n)) ∧
       ¬(OmegaApprox t ≥ (((k + 1) : ℚ) / (2 ^ n))) ∧
-      k.toNat % 2 = a
+      k.toNat % 2 = (a : ℕ)
 | t, OmegaSentence.Not s => ¬OmegaSat t s
 | _, OmegaSentence.TrueS => True
 | _, OmegaSentence.FalseS => False
@@ -205,7 +228,7 @@ def OmegaCut (q : ℚ) (_ : OmegaReferent) : OmegaSentence :=
   OmegaSentence.CutGe q
 
 /-- Bit encoding: "n-th bit of Ω is a". -/
-def OmegaBit (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
+def OmegaBit (n : ℕ) (a : Fin 2) (_ : OmegaReferent) : OmegaSentence :=
   OmegaSentence.BitIs n a
 
 /-- Antimonotonicity of Cut: if Ωₜ ≥ q' and q ≤ q', then Ωₜ ≥ q. -/
@@ -219,12 +242,12 @@ theorem omega_cut_antimono : ∀ {t : OmegaModel} {q q' : ℚ} {x : OmegaReferen
 Bit/Cut link (THEOREM, not an axiom):
 the bit definition is equivalent to the strict dyadic window condition.
 -/
-theorem omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
+theorem omega_bit_cut_link : ∀ {t : OmegaModel} {n : ℕ} {a : Fin 2} {x : OmegaReferent},
     OmegaSat t (OmegaBit n a x) ↔
     ∃ (k : ℤ),
       OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
       ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
-      k.toNat % 2 = a := by
+      k.toNat % 2 = (a : ℕ) := by
   intro t n a x
   simp only [OmegaSat, OmegaBit, OmegaCut]
 
@@ -239,7 +262,7 @@ theorem omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent
   · -- BitIs -> window (exists k)
     intro hBit
     -- rewrite hBit onto the canonical d*r form
-    have hBit' : (⌊d * r⌋.toNat) % 2 = a := by
+    have hBit' : (⌊d * r⌋.toNat) % 2 = (a : ℕ) := by
       simpa [r, d, Nat.cast_pow, mul_assoc, mul_left_comm, mul_comm] using hBit
 
     let k : ℤ := ⌊d * r⌋
@@ -287,22 +310,22 @@ theorem omega_bit_cut_link : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent
       · exact hk_le
       · simpa [add_comm] using hk_lt
 
-    have : (⌊d * r⌋.toNat) % 2 = a := by
+    have : (⌊d * r⌋.toNat) % 2 = (a : ℕ) := by
       simp only [hk_floor]
       exact hpar
     simpa [r, d, Nat.cast_pow, mul_assoc, mul_left_comm, mul_comm] using this
 
 /-- Win encoding: dyadic window sentence (syntactically orthogonal to Bit). -/
-def OmegaWin (n : ℕ) (a : ℕ) (_ : OmegaReferent) : OmegaSentence :=
+def OmegaWin (n : ℕ) (a : Fin 2) (_ : OmegaReferent) : OmegaSentence :=
   OmegaSentence.WinDyad n a
 
 /-- Win/Cut link: WinDyad semantics is definitionally the RHS. -/
-theorem omega_win_spec : ∀ {t : OmegaModel} {n a : ℕ} {x : OmegaReferent},
+theorem omega_win_spec : ∀ {t : OmegaModel} {n : ℕ} {a : Fin 2} {x : OmegaReferent},
     OmegaSat t (OmegaWin n a x) ↔
     ∃ (k : ℤ),
       OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) x) ∧
       ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
-      k.toNat % 2 = a := by
+      k.toNat % 2 = (a : ℕ) := by
   intro t n a _
   simp only [OmegaWin, OmegaSat, OmegaCut]
 
@@ -348,20 +371,20 @@ content from `omega_bit_cut_link`, not just extensionality.
 
 /-- LR_bit: Verification by floor computation.
     Checks `⌊2^n * OmegaApprox t⌋ % 2 = a` directly. -/
-def LR_bit (Γ : Set OmegaSentence) (n a : ℕ) : Trace :=
+def LR_bit (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) : Trace :=
   fun t => (∀ ψ ∈ Γ, OmegaSat t ψ) ∧
-           (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a
+           (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = (a : ℕ)
 
 /-- LR_win: Verification by dyadic window search.
     Searches for k such that `k/2^n ≤ Ωₜ < (k+1)/2^n` and `k % 2 = a`. -/
-def LR_win (Γ : Set OmegaSentence) (n a : ℕ) : Trace :=
+def LR_win (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) : Trace :=
   fun t => (∀ ψ ∈ Γ, OmegaSat t ψ) ∧
            ∃ (k : ℤ), OmegaApprox t ≥ (k : ℚ) / (2 ^ n) ∧
                       ¬(OmegaApprox t ≥ ((k + 1) : ℚ) / (2 ^ n)) ∧
-                      k.toNat % 2 = a
+                      k.toNat % 2 = (a : ℕ)
 
 /-- LR_bit and LR_win are pointwise equivalent (via omega_bit_cut_link). -/
-theorem LR_bit_win_equiv (Γ : Set OmegaSentence) (n a : ℕ) (t : ℕ) :
+theorem LR_bit_win_equiv (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) (t : ℕ) :
     LR_bit Γ n a t ↔ LR_win Γ n a t := by
   simp only [LR_bit, LR_win]
   constructor
@@ -383,7 +406,7 @@ theorem LR_bit_win_equiv (Γ : Set OmegaSentence) (n a : ℕ) (t : ℕ) :
     This is the key result demonstrating that two operationally distinct procedures
     have identical observational behavior (halting). The proof uses the arithmetic
     content from `omega_bit_cut_link`, not just extensionality. -/
-theorem LR_bit_win_halts_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
+theorem LR_bit_win_halts_equiv (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) :
     Halts (LR_bit Γ n a) ↔ Halts (LR_win Γ n a) := by
   simp only [Halts]
   constructor
@@ -393,7 +416,7 @@ theorem LR_bit_win_halts_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
     exact ⟨t, (LR_bit_win_equiv Γ n a t).mpr ht⟩
 
 /-- Rev equivalence for dual LR procedures (any kit). -/
-theorem LR_bit_win_rev_equiv (K : RHKit) (Γ : Set OmegaSentence) (n a : ℕ) :
+theorem LR_bit_win_rev_equiv (K : RHKit) (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) :
     Rev0_K K (LR_bit Γ n a) ↔ Rev0_K K (LR_win Γ n a) := by
   -- The traces are pointwise equivalent, hence propositionally equal
   have heq : LR_bit Γ n a = LR_win Γ n a := by
@@ -407,7 +430,7 @@ theorem LR_bit_win_rev_equiv (K : RHKit) (Γ : Set OmegaSentence) (n a : ℕ) :
     Rev0_K K tr ↔ Halts tr (via T1_traces), so if Halts(LR_bit) ↔ Halts(LR_win),
     then Rev(LR_bit) ↔ Rev(LR_win). -/
 theorem LR_bit_win_rev_equiv_T1
-    (K : RHKit) (hK : DetectsMonotone K) (Γ : Set OmegaSentence) (n a : ℕ) :
+    (K : RHKit) (hK : DetectsMonotone K) (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) :
     Rev0_K K (LR_bit Γ n a) ↔ Rev0_K K (LR_win Γ n a) := by
   have hh : Halts (LR_bit Γ n a) ↔ Halts (LR_win Γ n a) :=
     LR_bit_win_halts_equiv Γ n a
@@ -467,8 +490,8 @@ theorem DR1_omega
 -- ==============================================================================================
 
 /-- Each bit verification eventually halts (if the bit stabilizes). -/
-theorem omega_bit_halts (n : ℕ) (a : ℕ) :
-    (∃ T, ∀ t ≥ T, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a) →
+theorem omega_bit_halts (n : ℕ) (a : Fin 2) :
+    (∃ T, ∀ t ≥ T, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = (a : ℕ)) →
     Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) := by
   intro ⟨T, hT⟩
   use T
@@ -522,7 +545,7 @@ open Set
 This is a pure arithmetic theorem about dyadic windows and floor functions.
 The non-trivial content comes from `omega_bit_cut_link`.
 -/
-theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
+theorem omega_bit_win_sat_equiv (t : OmegaModel) (n : ℕ) (a : Fin 2) :
     OmegaSat t (OmegaSentence.BitIs n a) ↔ OmegaSat t (OmegaSentence.WinDyad n a) := by
   -- BitIs ↔ (∃k, Cut-window form) is omega_bit_cut_link (with x := ())
   have hBit :
@@ -530,7 +553,7 @@ theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
       ∃ k : ℤ,
         OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) ()) ∧
         ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) ()) ∧
-        k.toNat % 2 = a := by
+        k.toNat % 2 = (a : ℕ) := by
     simpa [OmegaBit] using (omega_bit_cut_link (t := t) (n := n) (a := a) (x := ()))
 
   -- WinDyad ↔ same Cut-window form is omega_win_spec (with x := ())
@@ -539,7 +562,7 @@ theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
       ∃ k : ℤ,
         OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) ()) ∧
         ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) ()) ∧
-        k.toNat % 2 = a := by
+        k.toNat % 2 = (a : ℕ) := by
     simpa [OmegaWin] using (omega_win_spec (t := t) (n := n) (a := a) (x := ()))
 
   exact hBit.trans hWin.symm
@@ -553,7 +576,7 @@ theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
 
 If φ and ψ are Sat-equivalent at every model, they have the same semantic consequences.
 -/
-theorem omega_bit_win_semConseq_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
+theorem omega_bit_win_semConseq_equiv (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) :
     SemConsequences_omega Γ (OmegaSentence.BitIs n a) ↔
     SemConsequences_omega Γ (OmegaSentence.WinDyad n a) := by
   simp only [SemConsequences_omega, CloE_omega, ThE_omega, ModE_omega, Set.mem_setOf_eq]
@@ -575,7 +598,7 @@ theorem omega_bit_win_semConseq_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
 Since `LR_omega Γ φ t = (∀ ψ ∈ Γ, OmegaSat t ψ) ∧ OmegaSat t φ`, and we proved
 `OmegaSat t (BitIs n a) ↔ OmegaSat t (WinDyad n a)`, the traces are equal.
 -/
-theorem omega_bit_win_trace_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
+theorem omega_bit_win_trace_equiv (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) :
     LR_omega Γ (OmegaSentence.BitIs n a) = LR_omega Γ (OmegaSentence.WinDyad n a) := by
   funext t
   simp only [LR_omega]
@@ -593,7 +616,7 @@ This follows immediately from trace equality — no kit validity or bridge hypot
 The result holds for **any** kit K.
 -/
 theorem omega_bit_win_same_rev_verdict (K : RHKit) :
-    ∀ Γ (n a : ℕ),
+    ∀ Γ (n : ℕ) (a : Fin 2),
       Rev0_K K (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
       Rev0_K K (LR_omega Γ (OmegaSentence.WinDyad n a)) := by
   intro Γ n a
@@ -603,7 +626,7 @@ theorem omega_bit_win_same_rev_verdict (K : RHKit) :
 **Kit-Uniformity**: The equivalence holds for all kits simultaneously (trivial corollary).
 -/
 theorem omega_bit_win_same_rev_verdict_uniform (K₁ K₂ : RHKit) :
-    ∀ Γ (n a : ℕ),
+    ∀ Γ (n : ℕ) (a : Fin 2),
       (Rev0_K K₁ (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
        Rev0_K K₁ (LR_omega Γ (OmegaSentence.WinDyad n a))) ∧
       (Rev0_K K₂ (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
@@ -696,8 +719,8 @@ theorem cut_semidecidable_bit_not (n : ℕ) :
     -- For Cuts: halting characterizes reachability (semi-decidable)
     (∀ q, Halts (LR_omega ∅ (OmegaSentence.CutGe q)) ↔ (∃ t, OmegaApprox t ≥ q)) ∧
     -- For Bits: halting only works if we guess the right bit
-    (∀ a, Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) →
-          ∃ t, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a) := by
+    (∀ a : Fin 2, Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) →
+          ∃ t, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = (a : ℕ)) := by
   constructor
   · exact omega_cut_halts_iff_reached
   · intro a hHalts

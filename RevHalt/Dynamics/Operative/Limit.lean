@@ -7,8 +7,8 @@
 
   | Analysis | RevHalt |
   |----------|---------|
-  | Increasing sequence (uₙ) | InfiniteChain (sequence of Moves) |
-  | uₙ₊₁ ≥ uₙ | Move.apply_le (monotonicity) |
+  | Increasing sequence (uₙ) | InfiniteNodeChain (sequence of TheoryNodes) |
+  | uₙ₊₁ ≥ uₙ | chain.mono (TheoryNode order) |
   | sup(uₙ) = L | ChainLimit = ⋃ theories |
   | ∀ε, ∃N, uₙ ∈ B(L,ε) | finite_coverage (ε-δ) |
 

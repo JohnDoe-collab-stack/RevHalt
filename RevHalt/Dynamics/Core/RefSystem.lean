@@ -34,7 +34,7 @@ and a compatibility law between them.
 structure RefSystem (Model : Type v) (Sentence : Type u) (Referent : Type*) where
   Sat : Model → Sentence → Prop
   Cut : ℚ → Referent → Sentence
-  Bit : ℕ → ℕ → Referent → Sentence
+  Bit : ℕ → Fin 2 → Referent → Sentence
 
   /-- Antimonotonicity of Cut: if q ≤ q', then Sat M (Cut q' x) → Sat M (Cut q x).
       Interpretation: Cut q means "value ≥ q", so larger q is harder to satisfy. -/
@@ -51,10 +51,10 @@ structure RefSystem (Model : Type v) (Sentence : Type u) (Referent : Type*) wher
       ∃ (k : ℤ),
         Sat M (Cut ((k : ℚ) / (2 ^ n)) x) ∧
         ¬ Sat M (Cut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
-        k.toNat % 2 = a
+        k.toNat % 2 = (a : ℕ)
 
   /-- Win: dyadic window sentence (equivalent to Bit). -/
-  Win : ℕ → ℕ → Referent → Sentence
+  Win : ℕ → Fin 2 → Referent → Sentence
 
   /-- Win specification: Win n a x ↔ same canonical dyadic RHS as bit_cut_link. -/
   win_spec :
@@ -63,7 +63,7 @@ structure RefSystem (Model : Type v) (Sentence : Type u) (Referent : Type*) wher
       ∃ (k : ℤ),
         Sat M (Cut ((k : ℚ) / (2 ^ n)) x) ∧
         ¬ Sat M (Cut (((k + 1) : ℚ) / (2 ^ n)) x) ∧
-        k.toNat % 2 = a
+        k.toNat % 2 = (a : ℕ)
 
 namespace RefSystem
 
@@ -159,7 +159,7 @@ These theorems don't require [Inhabited Referent].
 -/
 
 /-- Bit and Win have the same satisfaction (pointwise). -/
-theorem bit_win_sat_equiv {M : Model} {n a : ℕ} {x : Referent} :
+theorem bit_win_sat_equiv {M : Model} {n : ℕ} {a : Fin 2} {x : Referent} :
     E.Sat M (E.Bit n a x) ↔ E.Sat M (E.Win n a x) :=
   E.bit_cut_link.trans E.win_spec.symm
 
@@ -189,7 +189,7 @@ variable [Inhabited Referent]
 theorem bit_win_rev_equiv
     (K : RHKit) (hK : DetectsMonotone K)
     (hBridge : DynamicBridge_ref E) :
-    ∀ Γ (n a : ℕ) (x : Referent),
+    ∀ Γ (n : ℕ) (a : Fin 2) (x : Referent),
       Rev0_K K (LR_ref E Γ (E.Bit n a x)) ↔ Rev0_K K (LR_ref E Γ (E.Win n a x)) := by
   intro Γ n a x
   have hSem : SemConsequences_ref E Γ (E.Bit n a x) ↔ SemConsequences_ref E Γ (E.Win n a x) :=
@@ -202,11 +202,12 @@ theorem bit_win_rev_equiv
 theorem bit_win_kit_invariant
     (K₁ K₂ : RHKit) (h₁ : DetectsMonotone K₁) (h₂ : DetectsMonotone K₂)
     (hBridge : DynamicBridge_ref E) :
-    ∀ Γ (n a : ℕ) (x : Referent),
+    ∀ Γ (n : ℕ) (a : Fin 2) (x : Referent),
       (Rev0_K K₁ (LR_ref E Γ (E.Bit n a x)) ↔ Rev0_K K₁ (LR_ref E Γ (E.Win n a x))) ∧
       (Rev0_K K₂ (LR_ref E Γ (E.Bit n a x)) ↔ Rev0_K K₂ (LR_ref E Γ (E.Win n a x))) := by
   intro Γ n a x
   exact ⟨bit_win_rev_equiv E K₁ h₁ hBridge Γ n a x, bit_win_rev_equiv E K₂ h₂ hBridge Γ n a x⟩
+
 
 end InhabitedReferent2
 

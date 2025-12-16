@@ -67,6 +67,23 @@ Key theorems:
 | Move.apply preserves soundness | `OmegaApprox_mono` |
 | Gap = true but unprovable | Individual bits of Ω |
 
+## Kolmogorov Emergence
+
+`OmegaComplexity.lean` establishes that Kolmogorov complexity **emerges** from Dynamics:
+
+```lean
+theorem stable_bits_bounded_by_time (t : ℕ) : stableBits t ≤ t
+```
+
+**Key insight**: OmegaApprox t has resolution 2^{-t}. To determine n bits stably, we need t ≥ n.
+
+| Classical (Chaitin) | Dynamics |
+|---------------------|----------|
+| K(Ω_n) ≥ n - O(1) | stableBits(t) ≤ t |
+| Ω is incompressible | Each step gives ≤ 1 bit |
+
+The connection is **meta-theoretic**: both express that Ω is maximally complex.
+
 ## Architecture
 
 ```
@@ -85,7 +102,8 @@ Dynamics/
 │   ├── ChainEmbed.lean ← Chain → Move/Path bridge (advanceMove, layer_finite_coverability)
 │   └── Limit.lean      ← InfiniteNodeChain, ChainLimit = MasterClo (ε-δ convergence)
 ├── Instances/          ← Concrete instances
-│   └── OmegaChaitin.lean ← Chaitin's Ω as RefSystem instance (743 lines)
+│   ├── OmegaChaitin.lean    ← Chaitin's Ω as RefSystem instance (computable)
+│   └── OmegaComplexity.lean ← Precision/complexity analysis for Ω
 ├── Transport/          ← Inter-graph morphisms
 │   └── Morphism.lean   ← TheoryMorphism (functorial)
 └── System.lean         ← Unified bundle
@@ -115,4 +133,5 @@ lake build RevHalt.Dynamics.Core.Fork
 lake build RevHalt.Dynamics.Core.RefSystem
 lake build RevHalt.Dynamics.Operative.Limit
 lake build RevHalt.Dynamics.Instances.OmegaChaitin
+lake build RevHalt.Dynamics.Instances.OmegaComplexity
 ```
