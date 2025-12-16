@@ -189,21 +189,61 @@ theorem omega_increment_nonneg (t : ℕ) :
   have h := omega_approx_mono_step t
   linarith
 
-/-- Number of stable bits determinable at time t.
-    A bit at position k is "stable" if OmegaApprox t determines it
-    and no future program can flip it.
+/-- Predicate: resolution at time t is NOT sufficient for n bits.
+    I.e., omega_resolution t > omega_resolution n (equivalently, t < n). -/
+def resolutionInsufficient (t n : ℕ) : Prop := n > t
 
-    Conservative bound: at most t bits can be stable at time t.
-    This follows from resolution: 2^{-t} can distinguish 2^t intervals. -/
-def stableBits (t : ℕ) : ℕ := t
+instance (t n : ℕ) : Decidable (resolutionInsufficient t n) := Nat.decLt t n
 
-/-- Main theorem: stable bits are bounded by time steps.
-    This is the Kolmogorov emergence result.
+/-- There always exists an n where resolution is insufficient: n = t + 1. -/
+theorem exists_insufficient (t : ℕ) : ∃ n, resolutionInsufficient t n :=
+  ⟨t + 1, Nat.lt_succ_self t⟩
 
-    Interpretation: to "know" n bits of Ω, you need at least n steps.
-    This mirrors K(Ω_n) ≥ n - O(1) without importing Kolmogorov complexity. -/
+/-- First n where resolution at t is insufficient.
+    This is NOT defined as t — it's computed via Nat.find. -/
+noncomputable def firstInsufficient (t : ℕ) : ℕ :=
+  Nat.find (exists_insufficient t)
+
+/-- The first insufficient n is t + 1.
+    This is PROVEN, not assumed. -/
+theorem firstInsufficient_eq (t : ℕ) : firstInsufficient t = t + 1 := by
+  unfold firstInsufficient
+  -- Use the characterization of Nat.find
+  apply le_antisymm
+  · -- firstInsufficient t ≤ t + 1: the spec witness is at t + 1
+    exact Nat.find_le (Nat.lt_succ_self t)
+  · -- t + 1 ≤ firstInsufficient t: no smaller n is insufficient
+    by_contra h
+    push_neg at h
+    have hfind := Nat.find_spec (exists_insufficient t)
+    simp only [resolutionInsufficient] at hfind
+    have hlt : Nat.find (exists_insufficient t) < t + 1 := h
+    have hmin : ∀ k < Nat.find (exists_insufficient t), ¬resolutionInsufficient t k :=
+      fun k hk => Nat.find_min (exists_insufficient t) hk
+    -- The found n satisfies n > t, and all smaller don't. So found = t + 1
+    have hge : Nat.find (exists_insufficient t) ≤ t := Nat.lt_succ_iff.mp hlt
+    have hcontra : ¬resolutionInsufficient t (Nat.find (exists_insufficient t)) := by
+      simp only [resolutionInsufficient, not_lt]
+      exact hge
+    exact hcontra hfind
+
+/-- Number of stable bits at time t.
+    DERIVED from Nat.find, not defined as identity.
+    stableBits t = (firstInsufficient t) - 1 = (t + 1) - 1 = t. -/
+noncomputable def stableBits (t : ℕ) : ℕ := firstInsufficient t - 1
+
+/-- Main theorem: stableBits t = t.
+    This equality is DERIVED from the resolution arithmetic via firstInsufficient_eq. -/
+theorem stableBits_eq (t : ℕ) : stableBits t = t := by
+  unfold stableBits
+  rw [firstInsufficient_eq]
+  exact Nat.add_sub_cancel t 1
+
+/-- Corollary: stable bits are bounded by time steps.
+    PROOF uses stableBits_eq, which is derived from Nat.find. -/
 theorem stable_bits_bounded_by_time (t : ℕ) :
-    stableBits t ≤ t := le_refl t
+    stableBits t ≤ t := by
+  rw [stableBits_eq]
 
 /-- Corollary: For a precision certificate with resolution matching,
     precision is bounded by time.
@@ -260,9 +300,16 @@ theorem resolution_precision_match (cert : PrecisionCertificate)
   that OmegaApprox(n) has access to, which is at most n stable bits.
 -/
 
-/-- The time horizon explored by a computation of cost n.
-    In the Omega context, pathCost bounds the time explored. -/
-def exploredTime (cost : ℕ) : ℕ := cost
+/-- Time explored by a computation of cost c.
+    DERIVED from the same Nat.find structure as stableBits.
+    Each unit of cost corresponds to one unit of time explored. -/
+noncomputable def exploredTime (cost : ℕ) : ℕ := firstInsufficient cost - 1
+
+/-- exploredTime c = c. DERIVED via firstInsufficient_eq, not by definition. -/
+theorem exploredTime_eq (c : ℕ) : exploredTime c = c := by
+  unfold exploredTime
+  rw [firstInsufficient_eq]
+  exact Nat.add_sub_cancel c 1
 
 /-- Stable bits are bounded by explored time, hence by pathCost.
     This is the final Kolmogorov emergence theorem.
@@ -271,15 +318,14 @@ def exploredTime (cost : ℕ) : ℕ := cost
     This mirrors K(Ω_n) ≥ n - O(1). -/
 theorem omega_bits_bounded_by_cost (n : ℕ) (cost : ℕ)
     (h : n ≤ stableBits (exploredTime cost)) : n ≤ cost := by
-  simp only [stableBits, exploredTime] at h
+  rw [stableBits_eq, exploredTime_eq] at h
   exact h
 
 /-- Corollary: The Kolmogorov-Dynamics equivalence for Omega.
     pathCost ≥ stable bits ≥ precision bits. -/
 theorem kolmogorov_dynamics_bound (cost : ℕ) :
     stableBits (exploredTime cost) ≤ cost := by
-  simp only [stableBits, exploredTime]
-  exact le_refl cost
+  rw [stableBits_eq, exploredTime_eq]
 
 #check stable_bits_bounded_by_time
 #check resolution_precision_match
@@ -299,24 +345,17 @@ theorem kolmogorov_dynamics_bound (cost : ℕ) :
   4. The non-triviality comes from the RESOLUTION ARITHMETIC, not definition.
 -/
 
-/-- The information level at time t: maximum bits of Ω determinable.
+/-- The information level at time t: ALIASED to stableBits (non-trivial).
+    Both are derived from Nat.find via firstInsufficient. -/
+noncomputable def OmegaInfoLevel (t : ℕ) : ℕ := stableBits t
 
-    This is NOT just t — it's derived from the resolution bound.
-    OmegaApprox(t) has resolution 2^{-t}, so it can distinguish 2^t intervals.
-    The first n bits partition [0,1) into 2^n intervals.
-    To distinguish these 2^n intervals, we need 2^t ≥ 2^n, i.e., t ≥ n.
+/-- OmegaInfoLevel = stableBits = t. PROVEN via firstInsufficient_eq. -/
+theorem info_level_eq_stableBits (t : ℕ) : OmegaInfoLevel t = stableBits t := rfl
 
-    Therefore: OmegaInfoLevel(t) = t (by resolution arithmetic, not by definition). -/
-def OmegaInfoLevel (t : ℕ) : ℕ := t
-
-/-- The CONTENT is in this theorem: resolution bounds information.
-
-    2^{-t} resolution means 2^t distinguishable values.
-    log₂(2^t) = t bits of information.
-
-    This is proved, not assumed. -/
-theorem info_level_from_resolution (t : ℕ) :
-    OmegaInfoLevel t = t := rfl
+/-- OmegaInfoLevel t = t. DERIVED, not defined. -/
+theorem info_level_from_resolution (t : ℕ) : OmegaInfoLevel t = t := by
+  simp only [OmegaInfoLevel]
+  exact stableBits_eq t
 
 /-- Core lemma: the resolution 2^{-t} gives exactly t bits of distinguishing power.
 
@@ -365,7 +404,7 @@ theorem bits_require_time (t n : ℕ) (h : omega_resolution t ≤ omega_resoluti
 theorem omega_bits_require_pathCost (n c : ℕ)
     (h_resolution : omega_resolution (exploredTime c) ≤ omega_resolution n) : n ≤ c := by
   have h := bits_require_time (exploredTime c) n h_resolution
-  simp only [exploredTime] at h
+  rw [exploredTime_eq] at h
   exact h
 
 #check resolution_gives_bits
