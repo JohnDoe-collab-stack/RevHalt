@@ -85,7 +85,7 @@ theorem gap_lower_bound (t : ℕ) : gap t ≥ (1 : ℚ) / 2^t := by
     by_cases hH : haltsWithinDec t p 0 = true
     · simp [hH]
     · simp only [Bool.not_eq_true] at hH
-      simp only [hH, ↓reduceIte, omegaWeight]
+      simp only [hH, omegaWeight]
       apply div_nonneg <;> positivity
   -- ∑_{p<t} omegaWeight p = 1 - 2^{-t}
   have h_sum : (∑ p ∈ range t, omegaWeight p) = 1 - (1 : ℚ) / 2^t := sum_weight_range_eq t
@@ -238,6 +238,7 @@ For this to give the CORRECT bit, we need stability, which requires T ≥ n.
 
 /-- The halting time of a bit trace (if it halts). -/
 noncomputable def bitHaltTime (n a : ℕ) (h : Halts (LR_omega ∅ (OmegaSentence.BitIs n a))) : ℕ :=
+  have : DecidablePred (LR_omega ∅ (OmegaSentence.BitIs n a)) := Classical.decPred _
   Nat.find h
 
 /-- If a bit trace halts and the bit is stable, the halting time is ≥ n.
