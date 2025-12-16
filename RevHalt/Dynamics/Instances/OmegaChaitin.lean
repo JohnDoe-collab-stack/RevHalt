@@ -490,8 +490,8 @@ theorem DR1_omega
 -- ==============================================================================================
 
 /-- Each bit verification eventually halts (if the bit stabilizes). -/
-theorem omega_bit_halts (n : ℕ) (a : ℕ) :
-    (∃ T, ∀ t ≥ T, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a) →
+theorem omega_bit_halts (n : ℕ) (a : Fin 2) :
+    (∃ T, ∀ t ≥ T, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = (a : ℕ)) →
     Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) := by
   intro ⟨T, hT⟩
   use T
@@ -545,7 +545,7 @@ open Set
 This is a pure arithmetic theorem about dyadic windows and floor functions.
 The non-trivial content comes from `omega_bit_cut_link`.
 -/
-theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
+theorem omega_bit_win_sat_equiv (t : OmegaModel) (n : ℕ) (a : Fin 2) :
     OmegaSat t (OmegaSentence.BitIs n a) ↔ OmegaSat t (OmegaSentence.WinDyad n a) := by
   -- BitIs ↔ (∃k, Cut-window form) is omega_bit_cut_link (with x := ())
   have hBit :
@@ -553,7 +553,7 @@ theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
       ∃ k : ℤ,
         OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) ()) ∧
         ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) ()) ∧
-        k.toNat % 2 = a := by
+        k.toNat % 2 = (a : ℕ) := by
     simpa [OmegaBit] using (omega_bit_cut_link (t := t) (n := n) (a := a) (x := ()))
 
   -- WinDyad ↔ same Cut-window form is omega_win_spec (with x := ())
@@ -562,7 +562,7 @@ theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
       ∃ k : ℤ,
         OmegaSat t (OmegaCut ((k : ℚ) / (2 ^ n)) ()) ∧
         ¬ OmegaSat t (OmegaCut (((k + 1) : ℚ) / (2 ^ n)) ()) ∧
-        k.toNat % 2 = a := by
+        k.toNat % 2 = (a : ℕ) := by
     simpa [OmegaWin] using (omega_win_spec (t := t) (n := n) (a := a) (x := ()))
 
   exact hBit.trans hWin.symm
@@ -576,7 +576,7 @@ theorem omega_bit_win_sat_equiv (t : OmegaModel) (n a : ℕ) :
 
 If φ and ψ are Sat-equivalent at every model, they have the same semantic consequences.
 -/
-theorem omega_bit_win_semConseq_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
+theorem omega_bit_win_semConseq_equiv (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) :
     SemConsequences_omega Γ (OmegaSentence.BitIs n a) ↔
     SemConsequences_omega Γ (OmegaSentence.WinDyad n a) := by
   simp only [SemConsequences_omega, CloE_omega, ThE_omega, ModE_omega, Set.mem_setOf_eq]
@@ -598,7 +598,7 @@ theorem omega_bit_win_semConseq_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
 Since `LR_omega Γ φ t = (∀ ψ ∈ Γ, OmegaSat t ψ) ∧ OmegaSat t φ`, and we proved
 `OmegaSat t (BitIs n a) ↔ OmegaSat t (WinDyad n a)`, the traces are equal.
 -/
-theorem omega_bit_win_trace_equiv (Γ : Set OmegaSentence) (n a : ℕ) :
+theorem omega_bit_win_trace_equiv (Γ : Set OmegaSentence) (n : ℕ) (a : Fin 2) :
     LR_omega Γ (OmegaSentence.BitIs n a) = LR_omega Γ (OmegaSentence.WinDyad n a) := by
   funext t
   simp only [LR_omega]
@@ -616,7 +616,7 @@ This follows immediately from trace equality — no kit validity or bridge hypot
 The result holds for **any** kit K.
 -/
 theorem omega_bit_win_same_rev_verdict (K : RHKit) :
-    ∀ Γ (n a : ℕ),
+    ∀ Γ (n : ℕ) (a : Fin 2),
       Rev0_K K (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
       Rev0_K K (LR_omega Γ (OmegaSentence.WinDyad n a)) := by
   intro Γ n a
@@ -626,7 +626,7 @@ theorem omega_bit_win_same_rev_verdict (K : RHKit) :
 **Kit-Uniformity**: The equivalence holds for all kits simultaneously (trivial corollary).
 -/
 theorem omega_bit_win_same_rev_verdict_uniform (K₁ K₂ : RHKit) :
-    ∀ Γ (n a : ℕ),
+    ∀ Γ (n : ℕ) (a : Fin 2),
       (Rev0_K K₁ (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
        Rev0_K K₁ (LR_omega Γ (OmegaSentence.WinDyad n a))) ∧
       (Rev0_K K₂ (LR_omega Γ (OmegaSentence.BitIs n a)) ↔
@@ -719,8 +719,8 @@ theorem cut_semidecidable_bit_not (n : ℕ) :
     -- For Cuts: halting characterizes reachability (semi-decidable)
     (∀ q, Halts (LR_omega ∅ (OmegaSentence.CutGe q)) ↔ (∃ t, OmegaApprox t ≥ q)) ∧
     -- For Bits: halting only works if we guess the right bit
-    (∀ a, Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) →
-          ∃ t, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = a) := by
+    (∀ a : Fin 2, Halts (LR_omega ∅ (OmegaSentence.BitIs n a)) →
+          ∃ t, (⌊(2 ^ n : ℕ) * OmegaApprox t⌋.toNat) % 2 = (a : ℕ)) := by
   constructor
   · exact omega_cut_halts_iff_reached
   · intro a hHalts
