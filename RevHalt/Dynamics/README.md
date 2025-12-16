@@ -85,7 +85,8 @@ Dynamics/
 │   ├── ChainEmbed.lean ← Chain → Move/Path bridge (advanceMove, layer_finite_coverability)
 │   └── Limit.lean      ← InfiniteNodeChain, ChainLimit = MasterClo (ε-δ convergence)
 ├── Instances/          ← Concrete instances
-│   └── OmegaChaitin.lean ← Chaitin's Ω as RefSystem instance (743 lines)
+│   ├── OmegaChaitin.lean    ← Chaitin's Ω as RefSystem instance (computable)
+│   └── OmegaComplexity.lean ← Precision/complexity analysis for Ω
 ├── Transport/          ← Inter-graph morphisms
 │   └── Morphism.lean   ← TheoryMorphism (functorial)
 └── System.lean         ← Unified bundle
@@ -115,4 +116,5 @@ lake build RevHalt.Dynamics.Core.Fork
 lake build RevHalt.Dynamics.Core.RefSystem
 lake build RevHalt.Dynamics.Operative.Limit
 lake build RevHalt.Dynamics.Instances.OmegaChaitin
+lake build RevHalt.Dynamics.Instances.OmegaComplexity
 ```
