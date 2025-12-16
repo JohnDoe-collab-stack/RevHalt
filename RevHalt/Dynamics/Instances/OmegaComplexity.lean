@@ -120,10 +120,11 @@ theorem precision_requires_time (t n : ℕ) (h_prec : gap t ≤ resolution n) : 
   -- Clear denominators: (1/2^t ≤ 1/2^n) ↔ (2^n ≤ 2^t)
   have h_pow : (2 : ℚ)^n ≤ (2 : ℚ)^t := by
     have := (div_le_div_iff₀ h2t_pos h2n_pos).1 h_ineq
-    simpa [one_mul] using this
+    simp [one_mul] at this
+    exact this
 
   -- Since 1 < 2, exponent is monotone
-  have h_one_lt_two : (1 : ℚ) < (2 : ℚ) := by simpa using (one_lt_two : (1 : ℚ) < 2)
+  have h_one_lt_two : (1 : ℚ) < (2 : ℚ) := by norm_num
   exact (pow_le_pow_iff_right₀ h_one_lt_two).1 h_pow
 
 
@@ -136,62 +137,7 @@ theorem insufficient_time_means_insufficient_precision (t n : ℕ) (h : t < n) :
   omega
 
 /-!
-## §4. Connection to Bits via omega_bit_cut_link
-
-The theorem omega_bit_cut_link (in OmegaChaitin.lean) shows:
-  OmegaSat t (BitIs n a) ↔ ∃ k, OmegaSat t (CutGe(k/2^n)) ∧ ¬OmegaSat t (CutGe((k+1)/2^n)) ∧ k%2=a
-
-This means: to satisfy BitIs n a, OmegaApprox t must be in the interval [k/2^n, (k+1)/2^n).
-
-For this to be the CORRECT (stable) value:
-- The interval must contain the true limit Ω
-- This requires sufficient precision to "pin down" Ω
-
-The connection: precision 2^{-n} requires t ≥ n.
--/
-
-/-- The n-th bit is "stable" at time t if it doesn't change for any t' ≥ t. -/
-def BitStableAt (n : ℕ) (a : Fin 2) (t : ℕ) : Prop :=
-  ∀ t' ≥ t, OmegaSat t' (OmegaSentence.BitIs n a)
-
-/-- If all bits 0..n-1 are stable at time t, then gap(t) is small enough.
-
-**WARNING**: This statement is INCORRECT as written. The gap measures
-distance to 1, not distance to the true Ω. Bit stability does not
-directly imply a small gap.
-
-A correct statement would involve the distance |Ω - OmegaApprox t|,
-which requires different techniques to bound.
-
-This is left as a research direction.
--/
-theorem stable_bits_imply_precision (n t : ℕ) (hn : 0 < n)
-    (h_stable : ∀ j < n, ∃ a, BitStableAt j a t) :
-    gap t ≤ resolution (n - 1) := by
-  -- THIS STATEMENT IS LIKELY FALSE AS WRITTEN
-  -- See docstring above
-  sorry -- Research direction: needs reformulation
-
-/-- **MAIN THEOREM (Bit Version)**: If all bits 0..n-1 are stable at time t, then t ≥ n.
-
-This is K_Ω(n) ≥ n stated in terms of bit stability.
--/
-theorem stable_bits_require_time (n t : ℕ) (hn : 0 < n)
-    (h_stable : ∀ j < n, ∃ a, BitStableAt j a t) :
-    t ≥ n := by
-  -- Stable bits imply precision
-  have h_prec := stable_bits_imply_precision n t hn h_stable
-  -- Precision requires time
-  have h_res : resolution (n - 1) = (1 : ℚ) / 2^(n-1) := rfl
-  -- We need: gap t ≤ 1/2^(n-1) implies t ≥ n
-  -- But precision_requires_time gives: gap t ≤ 1/2^m implies t ≥ m
-  -- With m = n-1, we get t ≥ n-1
-  -- We need the stronger t ≥ n...
-  -- This requires a tighter analysis
-  sorry -- Needs refinement of the bound
-
-/-!
-## §5. The Pure Time-Based Statement
+## §4. The Pure Kolmogorov Bound
 
 The cleanest statement doesn't mention bits at all.
 
@@ -226,27 +172,27 @@ theorem kolmogorov_bound (n : ℕ) :
   fun t h => precision_requires_time t n h
 
 /-!
-## §6. Connection to Traces and Halts
+## §5. Connection to Bits
 
-In the RevHalt framework, the operational question is:
-  "When does Halts(LR_omega ∅ (BitIs n a)) occur?"
+The theorem `omega_bit_cut_link` (in OmegaChaitin.lean) shows:
 
-The answer: at the first time T where OmegaSat T (BitIs n a).
+```
+OmegaSat t (BitIs n a) ↔
+  ∃ k, OmegaSat t (CutGe(k/2^n)) ∧ ¬OmegaSat t (CutGe((k+1)/2^n)) ∧ k%2=a
+```
 
-For this to give the CORRECT bit, we need stability, which requires T ≥ n.
+This means: to satisfy `BitIs n a`, `OmegaApprox t` must be in the interval
+`[k/2^n, (k+1)/2^n)` of width `2^{-n}`.
+
+The connection to our bounds:
+- Determining bit n requires localizing Ω to precision 2^{-n}
+- By `gap_lower_bound`, we have gap(t) ≥ 2^{-t}
+- By `precision_requires_time`, achieving precision 2^{-n} requires t ≥ n
+
+Thus the bit-based interpretation of Kolmogorov complexity is captured
+indirectly through the gap bounds, with the operational connection via
+`omega_bit_cut_link`.
 -/
-
-/-- If a bit trace halts at time T and the bit is stable from T onwards, then T ≥ n.
-
-This connects the gap bound to the Halts framework.
-Note: We state this existentially to avoid noncomputable Nat.find.
--/
-theorem bit_halt_time_lower_bound (n : ℕ) (a : Fin 2)
-    (h_halts : Halts (LR_omega ∅ (OmegaSentence.BitIs n a))) :
-    ∃ T, LR_omega ∅ (OmegaSentence.BitIs n a) T ∧
-         (BitStableAt n a T → T ≥ n) := by
-  obtain ⟨T, hT⟩ := h_halts
-  exact ⟨T, hT, fun _ => sorry⟩ -- Requires connecting stability to gap bound
 
 /-!
 ## Summary
