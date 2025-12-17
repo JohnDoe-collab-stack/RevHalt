@@ -1,12 +1,13 @@
 /-
-  RevHalt.Dynamics.Operative.P_NP.SAT
+  RevHalt.Dynamics.Operative.P_NP.SAT_RH
 
   Canonical SAT + Cook–Levin signature (internal RevHalt).
+  This is separate from SAT.lean to avoid namespace collision.
 -/
 
 import RevHalt.Dynamics.Operative.P_NP.PNP
 
-namespace RevHalt.Dynamics.Operative.P_NP.SAT
+namespace RevHalt.Dynamics.Operative.P_NP.SAT_RH
 
 open RevHalt
 open RevHalt.Dynamics.Operative.P_NP.PNP
@@ -55,44 +56,35 @@ end CNF
 /-
   2) "SATP is really SAT" = one explicit semantics lemma tying Solves(SATP) to CNF.Satisfiable.
 -/
-structure SATSemantics (SATP : RHProblem CNF.CNF) : Prop :=
-  (solves_iff_satisfiable : ∀ F : CNF.CNF, Solves SATP F ↔ CNF.Satisfiable F)
+structure SATSemantics (SATP : RHProblem CNF.CNF) : Prop where
+  solves_iff_satisfiable : ∀ F : CNF.CNF, Solves SATP F ↔ CNF.Satisfiable F
 
 
 /-
   3) Cook–Levin builder: uniform, explicit reduction constructor.
   (Returns PolyManyOneReduction, not just existence.)
 -/
-structure CookLevinBuilder (SATP : RHProblem CNF.CNF) : Type 1 :=
-  (reduce :
+structure CookLevinBuilder (SATP : RHProblem CNF.CNF) : Type 1 where
+  reduce :
     ∀ {ι : Type} (P : RHProblem ι),
-      PolyVerifier P → PolyManyOneReduction P SATP)
+      PolyVerifier P → PolyManyOneReduction P SATP
 
 
 /-
-  4) NP-hardness / NP-completeness (internal, operative).
+  4) Internal NP-completeness predicate + the "builder ⇒ NP-complete" theorem signature.
 -/
-
-/-- NP-hardness (operative): every NP_RH problem reduces to `SATP`. -/
-def NPHard_RH (SATP : RHProblem CNF.CNF) : Prop :=
-  ∀ {ι : Type} (P : RHProblem ι), NP_RH P → P ≤ₚ SATP
-
-/-- A Cook–Levin builder yields NP-hardness. -/
-theorem nphard_of_builder (SATP : RHProblem CNF.CNF) (B : CookLevinBuilder SATP) :
-    NPHard_RH SATP := by
-  intro ι P hNP
-  rcases hNP with ⟨V, _⟩
-  exact ⟨B.reduce P V, trivial⟩
-
-/-- NP-completeness (operative): NP membership + NP-hardness. -/
 def SAT_NPComplete_RH (SATP : RHProblem CNF.CNF) : Prop :=
-  NP_RH SATP ∧ NPHard_RH SATP
+  NP_RH SATP ∧
+  ∀ {ι : Type} (P : RHProblem ι), NP_RH P → (P ≤ₚ SATP)
 
 theorem cookLevin_implies_SAT_NPComplete
     (SATP : RHProblem CNF.CNF)
     (hSAT_in_NP : NP_RH SATP)
     (CL : CookLevinBuilder SATP) :
-    SAT_NPComplete_RH SATP :=
-  ⟨hSAT_in_NP, nphard_of_builder SATP CL⟩
+    SAT_NPComplete_RH SATP := by
+  refine ⟨hSAT_in_NP, ?_⟩
+  intro ι P hNP
+  rcases hNP with ⟨V, _⟩
+  exact ⟨CL.reduce P V, trivial⟩
 
-end RevHalt.Dynamics.Operative.P_NP.SAT
+end RevHalt.Dynamics.Operative.P_NP.SAT_RH
