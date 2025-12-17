@@ -1,0 +1,72 @@
+ΓÜá [738/763] Replayed RevHalt.Dynamics.Operative.P_NP.SAT
+warning: RevHalt/Dynamics/Operative/P_NP/SAT.lean:27:7: The namespace 'CNF' is duplicated in the declaration 'RevHalt.Dynamics.Operative.P_NP.SAT.CNF.CNF'
+
+Note: This linter can be disabled with `set_option linter.dupNamespace false`
+warning: RevHalt/Dynamics/Operative/P_NP/SAT.lean:78:63: `structure ... :=` has been deprecated in favor of `structure ... where`.
+
+Note: This linter can be disabled with `set_option linter.deprecated false`
+ΓÜá [762/763] Replayed RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:280:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:289:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:310:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:331:8: declaration uses 'sorry'
+Γ£û [763/763] Building RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas (20s)
+trace: .> LEAN_PATH=C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Cli\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\batteries\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Qq\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\aesop\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\proofwidgets\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\importGraph\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\LeanSearchClient\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\plausible\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\mathlib\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean c:\Users\frederick.loubli.TKS\.elan\toolchains\leanprover--lean4---v4.26.0-rc2\bin\lean.exe C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.lean -o C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.olean -i C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.ilean -c C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.c --setup C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.setup.json --json
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:23:53: Application type mismatch: The argument
+  A
+has type
+  Assign
+but is expected to have type
+  PNP.Witness
+in the application
+  evalCNF A
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:30:20: Unknown constant `List.all_iff_forall`
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:28:44: unsolved goals
+A : Assign
+Fs : List CNF
+Γèó Fs.flatten.all (evalClause sorry) = true Γåö ΓêÇ F Γêê Fs, evalCNF sorry F = true
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:37:26: Application type mismatch: The argument
+  A
+has type
+  Assign
+but is expected to have type
+  PNP.Witness
+in the application
+  evalLit A
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:37:48: Application type mismatch: The argument
+  A
+has type
+  Assign
+but is expected to have type
+  PNP.Witness
+in the application
+  evalLit A
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:40:8: declaration uses 'sorry'
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:86:50: Application type mismatch: The argument
+  ht
+has type
+  ?m.55
+but is expected to have type
+  t < T
+in the application
+  bounds_step t ht
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:107:5: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:107:7: unused variable `S`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:107:15: unused variable `M`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:138:21: Function expected at
+  ValidRun
+but this term has type
+  ?m.1
+
+Note: Expected a function because this term is being applied to the argument
+  T
+error: Lean exited with code 1
+Some required targets logged failures:
+- RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
+error: build failed
