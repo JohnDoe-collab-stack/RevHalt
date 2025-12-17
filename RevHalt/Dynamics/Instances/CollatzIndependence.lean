@@ -1,151 +1,124 @@
 import RevHalt.Dynamics.Instances.CollatzTrace
 import RevHalt.Theory.Complementarity
-import RevHalt.Kinetic.MasterClosure
-import RevHalt.Kinetic.System
-import Mathlib.Data.Finite.Defs
+import RevHalt.Theory.ComplementarityMeasure
+import RevHalt.Theory.ComplementarityMeasureBridge
+
+import Mathlib.Data.Set.Basic
+import Mathlib.Order.Disjoint
 import Mathlib.Data.Nat.Lattice
-
-namespace RevHalt
-
-open Set
-open RevHalt.Dynamics.Instances.CollatzTrace
 
 /-!
 # RevHalt.Dynamics.Instances.CollatzIndependence
 
-**Proper (non-degenerate) connection of Collatz to InfiniteIndependentHalting.**
+Collatz "n kept all along":
 
-## Key Insight
-
-To connect Collatz to T3-strong without cheating on `Provable`:
-- Don't define `Provable := False` (that's degenerate)
-- Don't use bounded `CollatzBounded n n` (that's not Collatz)
-- Instead, require an **encoding** `ℕ → Code` with `RealHalts(code n) ↔ CollatzHolds' n`
-
-## Main Definitions
-
-- `CollatzEmbedding ctx`: An encoding of Collatz into the ambient Code type
-- `CollatzIndependent ctx E`: The resulting InfiniteIndependentHalting family
-
-## Usage
-
-Given a `ctx : TuringGodelContext' Code PropT` and an `E : CollatzEmbedding ctx`,
-you can build `CollatzIndependent ctx E` and use it with `T3_strong`, `PartFresh`, etc.
+- index = n : ℕ
+- code = collatzCode n : Code
+- truth/halts side = Halts (collatzTrace' n) = CollatzHolds' n
+- no (n,n) fuel-freezing; the fuel is the existential time inside `Halts`.
 -/
 
-/--
-**CollatzEmbedding**: A correct encoding of the Collatz problem into a TuringGodelContext'.
+namespace RevHalt.Dynamics.Instances.CollatzIndependence
 
-This is the bridge between:
-- The abstract `CollatzHolds' n` (defined via `collatzTrace'`)
-- The ambient `RealHalts` predicate of the context
+open Set
+open RevHalt
+open RevHalt.Dynamics.Instances.CollatzTrace
 
-To construct this, you need to:
-1. Define `code : ℕ → Code` (compile Collatz(n) into a code)
-2. Prove `inj` (codes are distinct)
-3. Prove `agree` (RealHalts matches CollatzHolds')
--/
-structure CollatzEmbedding {Code PropT : Type} (ctx : TuringGodelContext' Code PropT) where
-  code  : ℕ → Code
-  inj   : Function.Injective code
-  agree : ∀ n : ℕ, ctx.RealHalts (code n) ↔ CollatzHolds' n
+section
 
-/--
-**CollatzIndependent**: From a correct encoding, Collatz provides an infinite family.
+variable {Code PropT : Type}
+variable (ctx : TuringGodelContext' Code PropT)
 
-This is the proper way to instantiate `InfiniteIndependentHalting` for Collatz:
-- Index = ℕ
-- family = E.code
-- haltsTruth = CollatzHolds'
-- halts_agree = E.agree
--/
-def CollatzIndependent {Code PropT : Type}
-    (ctx : TuringGodelContext' Code PropT) (E : CollatzEmbedding ctx) :
+/-- Compilation package: "Collatz(n)" ↦ a code whose real-halting matches the Collatz trace. -/
+structure CollatzCompiler where
+  collatzCode : ℕ → Code
+  inj : Function.Injective collatzCode
+  halts_agree : ∀ n, ctx.RealHalts (collatzCode n) ↔ Halts (collatzTrace' n)
+
+namespace CollatzCompiler
+
+/-- The induced InfiniteIndependentHalting family (index = ℕ, family = collatzCode). -/
+def indep (comp : CollatzCompiler (ctx := ctx)) :
     InfiniteIndependentHalting Code PropT ctx where
   Index := ℕ
   InfiniteIndex := inferInstance
-  family := E.code
-  distinct := E.inj
-  haltsTruth := CollatzHolds'
-  halts_agree := E.agree
+  family := comp.collatzCode
+  distinct := comp.inj
+  haltsTruth := fun n => Halts (collatzTrace' n)
+  halts_agree := comp.halts_agree
 
-/-!
-## Connection to Kinetic Layer (VerifiableContext)
+end CollatzCompiler
 
-If you have a `VerifiableContext` with propositions `C : ℕ → PropT` such that
-`LR ∅ (C n) = collatzTrace' n`, then you can connect Truth to CollatzHolds'.
--/
-
-/--
-If `LR ∅ (C n)` is definitionally the Collatz trace, then
-`Truth(C n) ↔ CollatzHolds' n`.
--/
-theorem truth_collatz_iff
-    {Code PropT : Type} (V : VerifiableContext Code PropT)
-    (C : ℕ → PropT)
-    (hLR : ∀ n : ℕ, V.LR ∅ (C n) = collatzTrace' n) :
-    ∀ n : ℕ, V.Truth (C n) ↔ CollatzHolds' n := by
-  intro n
-  have hb := V.h_bridge (C n)
-  simpa [hLR n, CollatzHolds'_iff_halts] using hb
-
-/--
-If `Truth(C n)` holds but `C n` is not provable, then `C n ∈ Gap V`.
-
-This is the Gödelian content: true but unprovable Collatz instances are in the Gap.
--/
-theorem gap_of_collatz_true_not_provable
-    {Code PropT : Type} (V : VerifiableContext Code PropT)
-    (C : ℕ → PropT)
-    (n : ℕ)
-    (hTrue : V.Truth (C n))
-    (hNP : ¬ V.Provable (C n)) :
-    C n ∈ Gap V := by
-  have : C n ∈ GapTruth V := ⟨hTrue, hNP⟩
-  simpa [Gap_eq_GapTruth] using this
-
-/-!
-## Partition for T3-Strong
-
-A simple singleton partition for use with the machinery.
--/
-
-/-- Singleton partition: Part m = {m}. -/
-def CollatzSingletonPartition : Partition ℕ where
+/-- Singleton partition on ℕ: Parts m = {m}. -/
+def singletonPartition : Partition ℕ where
   Parts := fun m => {m}
   disjoint := by
     intro n m hnm
-    rw [disjoint_iff]
-    ext x
-    constructor
-    · intro ⟨hn, hm⟩
-      exact hnm (hn.symm.trans hm)
-    · intro h
-      exact h.elim
+    simpa [Set.disjoint_singleton] using hnm
 
-/-- Each part is nonempty. -/
-theorem collatzSingletonPartition_nonempty :
-    ∀ m : ℕ, ∃ i : ℕ, i ∈ CollatzSingletonPartition.Parts m :=
-  fun m => ⟨m, rfl⟩
+/--
+Main "gate" (n kept all along):
 
-/-!
-## Summary
-
-This file provides the **correct** (non-degenerate) interface:
-
-1. `CollatzEmbedding ctx`: The hard part - encoding Collatz into Code
-2. `CollatzIndependent ctx E`: The InfiniteIndependentHalting family
-3. `truth_collatz_iff`: Connection to VerifiableContext
-4. `gap_of_collatz_true_not_provable`: Collatz in Gap if true but unprovable
-
-**What this does NOT do**:
-- Prove Collatz
-- Construct `CollatzEmbedding` (that requires formalizing Collatz as a Partrec code)
-- Prove freshness (that requires showing Collatz is not provable in T0)
-
-**What this enables**:
-- If you provide `E : CollatzEmbedding ctx`, you get access to the full T3-strong machinery
-- The connection is semantically correct (uses real CollatzHolds', not bounded approximation)
+If every part contributes a *fresh* decided Collatz proposition (via strongEncode),
+then unbounded proposition-level width follows.
 -/
+theorem collatz_gate_unbounded_width
+    (Truth : PropT → Prop)
+    (encode_halt encode_not_halt : Code → PropT)
+    (h_encode_correct : ∀ e, ctx.RealHalts e → Truth (encode_halt e))
+    (h_encode_correct_neg : ∀ e, ¬ ctx.RealHalts e → Truth (encode_not_halt e))
+    (T0 : Set PropT)
+    (h_T0_sound : ∀ p ∈ T0, Truth p)
+    (comp : CollatzCompiler (ctx := ctx))
+    [DecidablePred (comp.indep (ctx := ctx)).haltsTruth]
+    (hFreshAll : ∀ m : ℕ,
+      PartFresh (ctx := ctx)
+        (indep := comp.indep (ctx := ctx))
+        (partition := singletonPartition)
+        (encode_halt := encode_halt) (encode_not_halt := encode_not_halt)
+        T0 m) :
+    ∀ k : ℕ, Width Truth T0 k := by
+  -- just instantiate the generic bridge theorem
+  exact strong_fresh_implies_unbounded_width
+    (ctx := ctx)
+    (indep := comp.indep (ctx := ctx))
+    (partition := singletonPartition)
+    Truth encode_halt encode_not_halt
+    h_encode_correct h_encode_correct_neg
+    T0 h_T0_sound
+    hFreshAll
 
-end RevHalt
+/--
+Convenient simplification (singleton partition):
+
+Freshness at part m reduces to:
+`strongEncode ... m ∉ T0` (because Parts m = {m}).
+-/
+theorem partFresh_singleton_iff
+    (_ : PropT → Prop)
+    (encode_halt encode_not_halt : Code → PropT)
+    (T0 : Set PropT)
+    (comp : CollatzCompiler (ctx := ctx))
+    [DecidablePred (comp.indep (ctx := ctx)).haltsTruth] :
+    (∀ m : ℕ,
+        PartFresh (ctx := ctx)
+          (indep := comp.indep (ctx := ctx))
+          (partition := singletonPartition)
+          (encode_halt := encode_halt) (encode_not_halt := encode_not_halt)
+          T0 m)
+    ↔
+    (∀ m : ℕ,
+        strongEncode (ctx := ctx) (indep := comp.indep (ctx := ctx))
+          (encode_halt := encode_halt) (encode_not_halt := encode_not_halt) m ∉ T0) := by
+  constructor
+  · intro h m
+    rcases h m with ⟨i, hi, hfresh⟩
+    -- hi : i ∈ {m} ⇒ i = m
+    have : i = m := by simpa [singletonPartition, Set.mem_singleton_iff] using hi
+    simpa [this] using hfresh
+  · intro h m
+    refine ⟨m, rfl, h m⟩
+
+end
+
+end RevHalt.Dynamics.Instances.CollatzIndependence
