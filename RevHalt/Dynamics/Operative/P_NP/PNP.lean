@@ -30,7 +30,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
 import Mathlib.Algebra.Order.Ring.Pow
 
-namespace RevHalt.Dynamics.Operative.PNP
+namespace RevHalt.Dynamics.Operative.P_NP.PNP
 
 open RevHalt
 
@@ -506,6 +506,60 @@ structure SATVerifierSig {Code PropT : Type} (ctx : VerifiableContext Code PropT
   poly_ctx_bound : IsPoly ctx_bound
   ctx_ok : ∀ F w, (VΓ F w).card ≤ ctx_bound (cnfSize F + witnessSize w)
 
+/--
+Package minimal pour présenter SAT comme un `NatProblem` (indexé par ℕ, taille = id).
+
+Idée : `n : ℕ` code une instance CNF via `decode n`.
+On ne fixe pas ici l'encodage concret : c'est juste la **signature**.
+-/
+structure SATNatData {Code PropT : Type} (ctx : VerifiableContext Code PropT) where
+  decode : ℕ → CNF
+  Γsat   : CNF → Finset PropT
+  φsat   : CNF → PropT
+  Γ_boundNat      : ℕ → ℕ
+  poly_Γ_boundNat : IsPoly Γ_boundNat
+  Γ_okNat : ∀ n, (Γsat (decode n)).card ≤ Γ_boundNat n
+
+/-- SAT vu comme `NatProblem` (size forcée à `id`). -/
+def SAT_NatProblem {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+    (D : SATNatData (ctx := ctx)) : NatProblem :=
+  ⟨{ Code := Code
+     PropT := PropT
+     ctx := ctx
+     size := id
+     Γ := fun n => D.Γsat (D.decode n)
+     φ := fun n => D.φsat (D.decode n)
+     Γ_bound := D.Γ_boundNat
+     poly_Γ_bound := D.poly_Γ_boundNat
+     Γ_ok := D.Γ_okNat
+   }, rfl⟩
+
+/-- "SAT ∈ NP_RH" (interne, au niveau NatProblem). -/
+def SAT_in_NP {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+    (D : SATNatData (ctx := ctx)) : Prop :=
+  NP_RH (SAT_NatProblem ctx D).val
+
+/-- "SAT ∈ P_RH" (interne, au niveau NatProblem). -/
+def SAT_in_P {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+    (D : SATNatData (ctx := ctx)) : Prop :=
+  P_RH (SAT_NatProblem ctx D).val
+
+/-- Réduction (NatProblem → SAT). -/
+def ReducesToSAT_Nat (P : NatProblem) {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+    (D : SATNatData (ctx := ctx)) : Prop :=
+  P.val ≤ₚ (SAT_NatProblem ctx D).val
+
+/--
+Énoncé "SAT est NP-complet" dans ton univers interne (version NatProblem).
+
+- membership : SAT ∈ NP_RH
+- complétude : tout NatProblem en NP_RH se réduit à SAT via `≤ₚ`
+-/
+def SAT_NPComplete {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+    (D : SATNatData (ctx := ctx)) : Prop :=
+  SAT_in_NP ctx D ∧
+  ∀ (P : NatProblem), NP_RH P.val → ReducesToSAT_Nat P ctx D
+
 end SAT
 
 /-! ### §13. Reduction Builders -/
@@ -540,4 +594,4 @@ Specialized type alias for reductions to SAT.
 def ReducesToSAT {ι : Type} (P : RHProblem ι) (SATP : RHProblem SAT.CNF) : Prop :=
   ∃ _ : PolyManyOneReduction P SATP, True
 
-end RevHalt.Dynamics.Operative.PNP
+end RevHalt.Dynamics.Operative.P_NP.PNP
