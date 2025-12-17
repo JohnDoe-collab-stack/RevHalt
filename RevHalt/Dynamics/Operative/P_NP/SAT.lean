@@ -53,10 +53,22 @@ end CNF
 
 
 /-
-  2) "SATP is really SAT" = one explicit semantics lemma tying Solves(SATP) to CNF.Satisfiable.
+  2) "SATP is really SAT" = semantics lemmas tying Solves(SATP) to CNF.Satisfiable.
 -/
-structure SATSemantics (SATP : RHProblem CNF.CNF) : Prop :=
-  (solves_iff_satisfiable : ∀ F : CNF.CNF, Solves SATP F ↔ CNF.Satisfiable F)
+
+/-- SATSemantics: Solves SATP ↔ ∃ w, evalCNF w F = true -/
+structure SATSemantics (SATP : RHProblem CNF.CNF) : Prop where
+  solves_iff_satisfiable : ∀ F : CNF.CNF, Solves SATP F ↔ CNF.Satisfiable F
+
+/-- SATSound is an alias for SATSemantics (common terminology). -/
+abbrev SATSound := SATSemantics
+
+/-- Given a PolyVerifier for SATP, we get SAT ∈ NP_RH. -/
+theorem SAT_in_NP_of_verifier
+    (SATP : RHProblem CNF.CNF)
+    (V : PolyVerifier SATP) :
+    NP_RH SATP :=
+  ⟨V, trivial⟩
 
 
 /-
