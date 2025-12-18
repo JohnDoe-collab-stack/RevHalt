@@ -47,8 +47,8 @@ section TheoryExports
   #check T2_impossibility
 
   -- T3 Complementarity
-  #check T3_weak_extension
-  #check InfiniteIndependentHalting
+  #check T3_weak_extension_explicit
+  #check InfiniteS1
   #check Partition
   #check T3_strong
 end TheoryExports
@@ -137,7 +137,7 @@ end CodedExports
 -- ============================================================================
 
 section ExtensionsExports
-  open Extensions.OmegaChaitin in
+  open RevHalt.Dynamics.Instances.OmegaChaitin in
   #check OmegaRefSystem
 
   #check RefSystem

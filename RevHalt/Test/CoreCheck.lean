@@ -10,7 +10,7 @@ open RevHalt
 #check @T1_uniqueness
 #check @T2_impossibility
 #check @T3_strong
-#check @T3_weak_extension
+#check @T3_weak_extension_explicit
 
 -- Key structures
 #check @RHKit

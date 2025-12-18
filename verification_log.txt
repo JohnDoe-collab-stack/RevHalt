@@ -689,3 +689,268 @@ Build completed successfully (812 jobs).
 Build completed successfully (803 jobs).
 Build completed successfully (360 jobs).
 Build completed successfully (802 jobs).
+Γä╣ [812/814] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Γä╣ [814/814] Replayed RevHalt.Instances.PA.Main
+info: RevHalt/Instances/PA/Main.lean:101:0: RevHalt.Instances.PA.PA_Master_Theorem :
+  have ctx := EnrichedContextCoded_from_RM PRModel PAKit pa_kit_correct PALogicEncodedCoded;
+  (ΓêÇ (e : PRModel.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+Build completed successfully (814 jobs).
+Build completed successfully (382 jobs).
+Build completed successfully (384 jobs).
+Build completed successfully (385 jobs).
+Build completed successfully (385 jobs).
+Γä╣ [989/995] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Γä╣ [991/995] Replayed RevHalt.Instances.PA.Main
+info: RevHalt/Instances/PA/Main.lean:101:0: RevHalt.Instances.PA.PA_Master_Theorem :
+  have ctx := EnrichedContextCoded_from_RM PRModel PAKit pa_kit_correct PALogicEncodedCoded;
+  (ΓêÇ (e : PRModel.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+Γ£û [995/995] Building RevHalt.Test.CoreCheck (10s)
+trace: .> LEAN_PATH=C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Cli\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\batteries\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Qq\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\aesop\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\proofwidgets\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\importGraph\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\LeanSearchClient\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\plausible\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\mathlib\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean c:\Users\frederick.loubli.TKS\.elan\toolchains\leanprover--lean4---v4.26.0-rc2\bin\lean.exe C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\RevHalt\Test\CoreCheck.lean -o C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Test\CoreCheck.olean -i C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Test\CoreCheck.ilean -c C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Test\CoreCheck.c --setup C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Test\CoreCheck.setup.json --json
+info: RevHalt/Test/CoreCheck.lean:9:0: T1_traces : ΓêÇ (K : RHKit), DetectsMonotone K ΓåÆ ΓêÇ (T : Trace), Rev0_K K T Γåö Halts T
+info: RevHalt/Test/CoreCheck.lean:10:0: T1_uniqueness : ΓêÇ (K1 K2 : RHKit), DetectsMonotone K1 ΓåÆ DetectsMonotone K2 ΓåÆ ΓêÇ (T : Trace), Rev0_K K1 T Γåö Rev0_K K2 T
+info: RevHalt/Test/CoreCheck.lean:11:0: @T2_impossibility : ΓêÇ {Code PropT : Type} (S : ImpossibleSystem Code PropT), ┬¼Γêâ x, True
+info: RevHalt/Test/CoreCheck.lean:12:0: @T3_strong : ΓêÇ {Code PropT : Type} (S : ImpossibleSystem Code PropT) (Truth : PropT ΓåÆ Prop)
+  (encode_halt : Code ΓåÆ PropT),
+  (ΓêÇ (e : Code), Rev0_K S.K (S.Machine e) ΓåÆ Truth (encode_halt e)) ΓåÆ
+    ΓêÇ (S2 : Set PropT),
+      (ΓêÇ p Γêê S2, Truth p) ΓåÆ
+        ΓêÇ (indep : InfiniteS1 Code PropT S encode_halt) (partition : Partition indep.Index),
+          Γêâ S3_family,
+            (ΓêÇ (n : Γäò), S2 Γèå S3_family n) Γêº
+              (ΓêÇ (n : Γäò), ΓêÇ p Γêê S3_family n, Truth p) Γêº
+                ΓêÇ (n m : Γäò), n Γëá m ΓåÆ ΓêÇ i Γêê partition.Parts n, ΓêÇ j Γêê partition.Parts m, i Γëá j
+error: RevHalt/Test/CoreCheck.lean:13:8: Unknown identifier `T3_weak_extension`
+info: RevHalt/Test/CoreCheck.lean:16:0: RHKit : Type
+info: RevHalt/Test/CoreCheck.lean:17:0: ImpossibleSystem : Type ΓåÆ Type ΓåÆ Type
+info: RevHalt/Test/CoreCheck.lean:18:0: RigorousModel : Type 1
+info: RevHalt/Test/CoreCheck.lean:19:0: EnrichedContext : Type ΓåÆ Type ΓåÆ Type
+info: RevHalt/Test/CoreCheck.lean:20:0: SoundLogicEncoded : RigorousModel ΓåÆ Type ΓåÆ Type
+info: RevHalt/Test/CoreCheck.lean:23:0: @RevHalt_Master_Complete : ΓêÇ {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicEncoded M PropT),
+  have ctx := EnrichedContext_from_Encoded M K hK L;
+  (ΓêÇ (e : M.Code), Rev0_K K (rmCompile M e) Γåö Halts (rmCompile M e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+info: RevHalt/Test/CoreCheck.lean:26:0: @Coded.RevHalt_Master_Complete_Coded : ΓêÇ {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (Lenc : Coded.SoundLogicEncodedCoded M PropT) (H_code : Lenc.FC.GCode),
+  (ΓêÇ (e : M.Code), Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e) ΓåÆ
+    have ctx := Coded.EnrichedContextCoded_from_RM M K hK Lenc;
+    (ΓêÇ (e : M.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+info: RevHalt/Test/CoreCheck.lean:27:0: @Coded.Master_Coded_Full : ΓêÇ {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (Lenc : Coded.SoundLogicEncodedCoded M PropT) (H_code : Lenc.FC.GCode),
+  (ΓêÇ (e : M.Code), Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e) ΓåÆ
+    (ΓêÇ (p : PropT), Lenc.Logic.Provable p ΓåÆ Lenc.Logic.Truth p) ΓåÆ
+      have ctx := Coded.EnrichedContextCoded_from_RM M K hK Lenc;
+      (ΓêÇ (e : M.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+        (Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))) Γêº
+          (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))
+info: RevHalt/Test/CoreCheck.lean:30:0: @CloK : {Sentence : Type} ΓåÆ LocalReading Sentence ΓåÆ Set Sentence ΓåÆ Set Sentence
+info: RevHalt/Test/CoreCheck.lean:31:0: VerifiableContext : Type ΓåÆ Type ΓåÆ Type
+info: RevHalt/Test/CoreCheck.lean:34:0: @TruthOracle : {Code PropT : Type} ΓåÆ EnrichedContext Code PropT ΓåÆ Type
+info: RevHalt/Test/CoreCheck.lean:35:0: @oracle_not_internalizable : ΓêÇ {Code PropT : Type} (ctx : EnrichedContext Code PropT) (oracle : TruthOracle ctx),
+  ┬¼InternalizesOracle ctx oracle.O
+info: RevHalt/Test/CoreCheck.lean:37:0: Γ£à Core exports verified
+error: Lean exited with code 1
+Some required targets logged failures:
+- RevHalt.Test.CoreCheck
+error: build failed
+Γä╣ [989/995] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Γä╣ [991/995] Replayed RevHalt.Instances.PA.Main
+info: RevHalt/Instances/PA/Main.lean:101:0: RevHalt.Instances.PA.PA_Master_Theorem :
+  have ctx := EnrichedContextCoded_from_RM PRModel PAKit pa_kit_correct PALogicEncodedCoded;
+  (ΓêÇ (e : PRModel.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+Γ£û [995/995] Building RevHalt.Test.ExportCheck (8.8s)
+trace: .> LEAN_PATH=C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Cli\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\batteries\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Qq\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\aesop\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\proofwidgets\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\importGraph\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\LeanSearchClient\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\plausible\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\mathlib\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean c:\Users\frederick.loubli.TKS\.elan\toolchains\leanprover--lean4---v4.26.0-rc2\bin\lean.exe C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\RevHalt\Test\ExportCheck.lean -o C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Test\ExportCheck.olean -i C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Test\ExportCheck.ilean -c C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Test\ExportCheck.c --setup C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Test\ExportCheck.setup.json --json
+info: RevHalt/Test/ExportCheck.lean:15:2: RevHalt.Trace : Type
+info: RevHalt/Test/ExportCheck.lean:16:2: RevHalt.Halts (T : Trace) : Prop
+info: RevHalt/Test/ExportCheck.lean:17:2: RevHalt.up (T : Trace) : Trace
+info: RevHalt/Test/ExportCheck.lean:18:2: RevHalt.up_mono (T : Trace) : Monotone (up T)
+info: RevHalt/Test/ExportCheck.lean:19:2: RevHalt.exists_up_iff (T : Trace) : (Γêâ n, up T n) Γåö Γêâ n, T n
+info: RevHalt/Test/ExportCheck.lean:20:2: RevHalt.RHKit : Type
+info: RevHalt/Test/ExportCheck.lean:21:2: RevHalt.DetectsMonotone (K : RHKit) : Prop
+info: RevHalt/Test/ExportCheck.lean:22:2: RevHalt.Rev_K (K : RHKit) (T : Trace) : Prop
+info: RevHalt/Test/ExportCheck.lean:23:2: RevHalt.Rev0_K (K : RHKit) (T : Trace) : Prop
+info: RevHalt/Test/ExportCheck.lean:32:2: RevHalt.T1_traces (K : RHKit) (hK : DetectsMonotone K) (T : Trace) : Rev0_K K T Γåö Halts T
+info: RevHalt/Test/ExportCheck.lean:33:2: RevHalt.T1_uniqueness (K1 K2 : RHKit) (hK1 : DetectsMonotone K1) (hK2 : DetectsMonotone K2) (T : Trace) :
+  Rev0_K K1 T Γåö Rev0_K K2 T
+info: RevHalt/Test/ExportCheck.lean:34:2: RevHalt.T1_semantics {Sentence Model : Type} (Sat : Model ΓåÆ Sentence ΓåÆ Prop) (LR : Set Sentence ΓåÆ Sentence ΓåÆ Trace)
+  (K : RHKit) (hK : DetectsMonotone K) (hBridge : DynamicBridge Sat LR) (╬ô : Set Sentence) (╧å : Sentence) :
+  SemConsequences Sat ╬ô ╧å Γåö verdict_K LR K ╬ô ╧å
+info: RevHalt/Test/ExportCheck.lean:37:2: RevHalt.ModE {Sentence Model : Type} (Sat : Model ΓåÆ Sentence ΓåÆ Prop) (╬ô : Set Sentence) : Set Model
+info: RevHalt/Test/ExportCheck.lean:38:2: RevHalt.ThE {Sentence Model : Type} (Sat : Model ΓåÆ Sentence ΓåÆ Prop) (K_models : Set Model) : Set Sentence
+info: RevHalt/Test/ExportCheck.lean:39:2: RevHalt.CloE {Sentence Model : Type} (Sat : Model ΓåÆ Sentence ΓåÆ Prop) (╬ô : Set Sentence) : Set Sentence
+info: RevHalt/Test/ExportCheck.lean:40:2: RevHalt.SemConsequences {Sentence Model : Type} (Sat : Model ΓåÆ Sentence ΓåÆ Prop) (╬ô : Set Sentence) (╧å : Sentence) : Prop
+info: RevHalt/Test/ExportCheck.lean:41:2: RevHalt.DynamicBridge {Sentence Model : Type} (Sat : Model ΓåÆ Sentence ΓåÆ Prop) (LR : Set Sentence ΓåÆ Sentence ΓåÆ Trace) :
+  Prop
+info: RevHalt/Test/ExportCheck.lean:42:2: RevHalt.verdict_K {Sentence : Type} (LR : Set Sentence ΓåÆ Sentence ΓåÆ Trace) (K : RHKit) (╬ô : Set Sentence)
+  (╧å : Sentence) : Prop
+info: RevHalt/Test/ExportCheck.lean:45:2: RevHalt.ImpossibleSystem (Code PropT : Type) : Type
+info: RevHalt/Test/ExportCheck.lean:46:2: RevHalt.InternalHaltingPredicate {Code PropT : Type} (S : ImpossibleSystem Code PropT) : Type
+info: RevHalt/Test/ExportCheck.lean:47:2: RevHalt.T2_impossibility {Code PropT : Type} (S : ImpossibleSystem Code PropT) : ┬¼Γêâ x, True
+error: RevHalt/Test/ExportCheck.lean:50:9: Unknown identifier `T3_weak_extension`
+error: RevHalt/Test/ExportCheck.lean:51:9: Unknown identifier `InfiniteIndependentHalting`
+info: RevHalt/Test/ExportCheck.lean:52:2: RevHalt.Partition (Index : Type) : Type
+info: RevHalt/Test/ExportCheck.lean:53:2: RevHalt.T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT) (Truth : PropT ΓåÆ Prop)
+  (encode_halt : Code ΓåÆ PropT) (h_encode_correct : ΓêÇ (e : Code), Rev0_K S.K (S.Machine e) ΓåÆ Truth (encode_halt e))
+  (S2 : Set PropT) (h_S2_sound : ΓêÇ p Γêê S2, Truth p) (indep : InfiniteS1 Code PropT S encode_halt)
+  (partition : Partition indep.Index) :
+  Γêâ S3_family,
+    (ΓêÇ (n : Γäò), S2 Γèå S3_family n) Γêº
+      (ΓêÇ (n : Γäò), ΓêÇ p Γêê S3_family n, Truth p) Γêº
+        ΓêÇ (n m : Γäò), n Γëá m ΓåÆ ΓêÇ i Γêê partition.Parts n, ΓêÇ j Γêê partition.Parts m, i Γëá j
+info: RevHalt/Test/ExportCheck.lean:61:2: RevHalt.CloK {Sentence : Type} (LR : LocalReading Sentence) (╬ô : Set Sentence) : Set Sentence
+info: RevHalt/Test/ExportCheck.lean:62:2: RevHalt.CloRev {Sentence : Type} (LR : LocalReading Sentence) (K : RHKit) (╬ô : Set Sentence) : Set Sentence
+info: RevHalt/Test/ExportCheck.lean:63:2: RevHalt.Stage {Sentence : Type} (LR : LocalReading Sentence) (╬ô : Set Sentence) (t : Γäò) : Set Sentence
+info: RevHalt/Test/ExportCheck.lean:64:2: RevHalt.mem_CloK_iff {Sentence : Type} (LR : LocalReading Sentence) (╬ô : Set Sentence) (╧å : Sentence) :
+  ╧å Γêê CloK LR ╬ô Γåö Halts (LR ╬ô ╧å)
+info: RevHalt/Test/ExportCheck.lean:65:2: RevHalt.CloRev_mem_iff_CloK_mem {Sentence : Type} (LR : LocalReading Sentence) (K : RHKit) (hK : DetectsMonotone K)
+  (╬ô : Set Sentence) (╧å : Sentence) : ╧å Γêê CloRev LR K ╬ô Γåö ╧å Γêê CloK LR ╬ô
+info: RevHalt/Test/ExportCheck.lean:67:2: RevHalt.VerifiableContext (Code PropT : Type) : Type
+info: RevHalt/Test/ExportCheck.lean:68:2: RevHalt.Master_Closure {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+  (h_sound : ΓêÇ (p : PropT), ctx.Provable p ΓåÆ ctx.Truth p) :
+  have CloK_empty := CloK ctx.LR Γêà;
+  ProvableSet ctx.toEnrichedContext Γèå CloK_empty Γêº Γêâ p Γêê CloK_empty, p Γêë ProvableSet ctx.toEnrichedContext
+info: RevHalt/Test/ExportCheck.lean:69:2: RevHalt.Truth_is_CloK {Code PropT : Type} (ctx : VerifiableContext Code PropT) (p : PropT) :
+  ctx.Truth p Γåö p Γêê CloK ctx.LR Γêà
+info: RevHalt/Test/ExportCheck.lean:70:2: RevHalt.TheGreatChain {Code PropT : Type} (ctx : VerifiableContext Code PropT) (K : RHKit) (hK : DetectsMonotone K)
+  (p : PropT) :
+  (ctx.Truth p Γåö p Γêê CloK ctx.LR Γêà) Γêº
+    (p Γêê CloK ctx.LR Γêà Γåö Halts (ctx.LR Γêà p)) Γêº (Halts (ctx.LR Γêà p) Γåö Rev0_K K (ctx.LR Γêà p))
+info: RevHalt/Test/ExportCheck.lean:72:2: RevHalt.Gap {Code PropT : Type} (ctx : VerifiableContext Code PropT) : Set PropT
+info: RevHalt/Test/ExportCheck.lean:73:2: RevHalt.GapTruth {Code PropT : Type} (ctx : VerifiableContext Code PropT) : Set PropT
+info: RevHalt/Test/ExportCheck.lean:74:2: RevHalt.GapSystem (Code PropT : Type) : Type
+info: RevHalt/Test/ExportCheck.lean:75:2: RevHalt.gap_nonempty {Code PropT : Type} (ctx : VerifiableContext Code PropT) : Γêâ p, p Γêê Gap ctx
+info: RevHalt/Test/ExportCheck.lean:76:2: RevHalt.independent_witness {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+  (h_sound : ΓêÇ (p : PropT), ctx.Provable p ΓåÆ ctx.Truth p) :
+  Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))
+info: RevHalt/Test/ExportCheck.lean:84:2: RevHalt.TruthOracle {Code PropT : Type} (ctx : EnrichedContext Code PropT) : Type
+info: RevHalt/Test/ExportCheck.lean:85:2: RevHalt.InternalizesOracle {Code PropT : Type} (ctx : EnrichedContext Code PropT) (O : PropT ΓåÆ Prop) : Prop
+info: RevHalt/Test/ExportCheck.lean:86:2: RevHalt.oracle_not_internalizable {Code PropT : Type} (ctx : EnrichedContext Code PropT) (oracle : TruthOracle ctx) :
+  ┬¼InternalizesOracle ctx oracle.O
+info: RevHalt/Test/ExportCheck.lean:87:2: RevHalt.bridge_is_oracular {Code PropT : Type} (ctx : VerifiableContext Code PropT) :
+  have oracle := { O := fun p Γåª Halts (ctx.LR Γêà p), O_correct := Γï» };
+  ┬¼InternalizesOracle ctx.toEnrichedContext oracle.O
+info: RevHalt/Test/ExportCheck.lean:88:2: RevHalt.oracle_authority_is_gap {Code PropT : Type} (ctx : VerifiableContext Code PropT)
+  (oracle : TruthOracle ctx.toEnrichedContext) (h_sound : ΓêÇ (p : PropT), ctx.Provable p ΓåÆ ctx.Truth p) :
+  (ΓêÇ (p : PropT), ctx.Provable p ΓåÆ oracle.O p) Γêº
+    (ΓêÇ (p : PropT), oracle.O p Γêº ┬¼ctx.Provable p Γåö p Γêê GapTruth ctx) Γêº Γêâ p, oracle.O p Γêº ┬¼ctx.Provable p
+info: RevHalt/Test/ExportCheck.lean:97:2: RevHalt.RigorousModel : Type 1
+info: RevHalt/Test/ExportCheck.lean:98:2: RevHalt.RMHalts (M : RigorousModel) (e : M.Code) : Prop
+info: RevHalt/Test/ExportCheck.lean:99:2: RevHalt.rmCompile (M : RigorousModel) (e : M.Code) : Trace
+info: RevHalt/Test/ExportCheck.lean:100:2: RevHalt.SoundLogicDef (PropT : Type) : Type
+info: RevHalt/Test/ExportCheck.lean:101:2: RevHalt.Arithmetization (M : RigorousModel) (PropT : Type) (L : SoundLogicDef PropT) : Prop
+info: RevHalt/Test/ExportCheck.lean:102:2: RevHalt.TGContext_from_RM {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicDef PropT) (A : Arithmetization M PropT L) : ImpossibleSystem M.Code PropT
+info: RevHalt/Test/ExportCheck.lean:103:2: RevHalt.RevHalt_Master_Rigorous {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicDef PropT) (A : Arithmetization M PropT L) (G : M.Code ΓåÆ PropT) :
+  Γêâ e, Rev0_K K (rmCompile M e) Γåö L.Provable (L.Not (G e))
+info: RevHalt/Test/ExportCheck.lean:106:2: RevHalt.EnrichedContext (Code PropT : Type) : Type
+info: RevHalt/Test/ExportCheck.lean:107:2: RevHalt.ProvableSet {Code PropT : Type} (ctx : EnrichedContext Code PropT) : Set PropT
+info: RevHalt/Test/ExportCheck.lean:108:2: RevHalt.true_but_unprovable_exists {Code PropT : Type} (ctx : EnrichedContext Code PropT) :
+  Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p
+info: RevHalt/Test/ExportCheck.lean:109:2: RevHalt.independent_code_exists {Code PropT : Type} (ctx : EnrichedContext Code PropT)
+  (h_sound : ΓêÇ (p : PropT), ctx.Provable p ΓåÆ ctx.Truth p) :
+  Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))
+info: RevHalt/Test/ExportCheck.lean:110:2: RevHalt.strict_extension {Code PropT : Type} (ctx : EnrichedContext Code PropT) :
+  Γêâ T1, ProvableSet ctx Γèé T1 Γêº Γêâ p Γêê T1, ctx.Truth p Γêº ┬¼ctx.Provable p
+info: RevHalt/Test/ExportCheck.lean:113:2: RevHalt.SoundLogicEncoded (M : RigorousModel) (PropT : Type) : Type
+info: RevHalt/Test/ExportCheck.lean:114:2: RevHalt.EnrichedContext_from_Encoded {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicEncoded M PropT) : EnrichedContext M.Code PropT
+info: RevHalt/Test/ExportCheck.lean:115:2: RevHalt.RevHalt_Master_Complete {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicEncoded M PropT) :
+  have ctx := EnrichedContext_from_Encoded M K hK L;
+  (ΓêÇ (e : M.Code), Rev0_K K (rmCompile M e) Γåö Halts (rmCompile M e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+info: RevHalt/Test/ExportCheck.lean:123:2: RevHalt.Coded.FamilyCoding (Code PropT : Type) : Type 1
+info: RevHalt/Test/ExportCheck.lean:124:2: RevHalt.Coded.ArithmetizationCoded (M : RigorousModel) (PropT : Type) (L : SoundLogicDef PropT)
+  (FC : Coded.FamilyCoding M.Code PropT) : Prop
+info: RevHalt/Test/ExportCheck.lean:125:2: RevHalt.Coded.HaltingEncoding (M : RigorousModel) (PropT : Type) (L : SoundLogicDef PropT) : Type
+info: RevHalt/Test/ExportCheck.lean:126:2: RevHalt.Coded.SoundLogicEncodedCoded (M : RigorousModel) (PropT : Type) : Type 1
+info: RevHalt/Test/ExportCheck.lean:127:2: RevHalt.Coded.TuringGodelContextCoded (Code PropT : Type) (FC : Coded.FamilyCoding Code PropT) : Type
+info: RevHalt/Test/ExportCheck.lean:128:2: RevHalt.Coded.EnrichedContextCoded (Code PropT : Type) (FC : Coded.FamilyCoding Code PropT) : Type
+info: RevHalt/Test/ExportCheck.lean:129:2: RevHalt.Coded.RevHalt_Master_Complete_Coded {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (Lenc : Coded.SoundLogicEncodedCoded M PropT) (H_code : Lenc.FC.GCode)
+  (hH_code : ΓêÇ (e : M.Code), Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e) :
+  have ctx := Coded.EnrichedContextCoded_from_RM M K hK Lenc;
+  (ΓêÇ (e : M.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+info: RevHalt/Test/ExportCheck.lean:130:2: RevHalt.Coded.Master_Coded_T2prime {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (Lenc : Coded.SoundLogicEncodedCoded M PropT) (H_code : Lenc.FC.GCode)
+  (hH_code : ΓêÇ (e : M.Code), Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e)
+  (h_sound : ΓêÇ (p : PropT), Lenc.Logic.Provable p ΓåÆ Lenc.Logic.Truth p) :
+  have ctx := Coded.EnrichedContextCoded_from_RM M K hK Lenc;
+  Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))
+info: RevHalt/Test/ExportCheck.lean:131:2: RevHalt.Coded.Master_Coded_T2 {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (Lenc : Coded.SoundLogicEncodedCoded M PropT) (H_code : Lenc.FC.GCode)
+  (hH_code : ΓêÇ (e : M.Code), Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e)
+  (h_sound : ΓêÇ (p : PropT), Lenc.Logic.Provable p ΓåÆ Lenc.Logic.Truth p) :
+  have ctx := Coded.EnrichedContextCoded_from_RM M K hK Lenc;
+  Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p
+info: RevHalt/Test/ExportCheck.lean:132:2: RevHalt.Coded.Master_Coded_Full {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (Lenc : Coded.SoundLogicEncodedCoded M PropT) (H_code : Lenc.FC.GCode)
+  (hH_code : ΓêÇ (e : M.Code), Lenc.FC.evalG H_code e = Lenc.HaltE.HaltEncode e)
+  (h_sound : ΓêÇ (p : PropT), Lenc.Logic.Provable p ΓåÆ Lenc.Logic.Truth p) :
+  have ctx := Coded.EnrichedContextCoded_from_RM M K hK Lenc;
+  (ΓêÇ (e : M.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    (Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))
+error: RevHalt/Test/ExportCheck.lean:140:7: unknown namespace `Extensions.OmegaChaitin`
+error: RevHalt/Test/ExportCheck.lean:141:9: Unknown identifier `OmegaRefSystem`
+info: RevHalt/Test/ExportCheck.lean:143:2: RevHalt.RefSystem.{u, v, u_1} (Model : Type v) (Sentence : Type u) (Referent : Type u_1) : Type (max (max u u_1) v)
+info: RevHalt/Test/ExportCheck.lean:144:2: RevHalt.RefSystem.LR_ref.{u, v, u_1} {Model : Type v} {Sentence : Type u} {Referent : Type u_1}
+  (E : RefSystem Model Sentence Referent) [Inhabited Referent] (╬ô : Set Sentence) (╧å : Sentence) : Trace
+info: RevHalt/Test/ExportCheck.lean:145:2: RevHalt.RefSystem.DynamicBridge_ref.{u, v, u_1} {Model : Type v} {Sentence : Type u} {Referent : Type u_1}
+  (E : RefSystem Model Sentence Referent) [Inhabited Referent] : Prop
+info: RevHalt/Test/ExportCheck.lean:146:2: RevHalt.RefSystem.DR0_ref.{u, v, u_1} {Model : Type v} {Sentence : Type u} {Referent : Type u_1}
+  (E : RefSystem Model Sentence Referent) [Inhabited Referent] (K : RHKit) (hK : DetectsMonotone K)
+  (hBridge : E.DynamicBridge_ref) (╬ô : Set Sentence) (╧å : Sentence) :
+  E.SemConsequences_ref ╬ô ╧å Γåö Rev0_K K (E.LR_ref ╬ô ╧å)
+info: RevHalt/Test/ExportCheck.lean:147:2: RevHalt.RefSystem.DR1_ref.{u, v, u_1} {Model : Type v} {Sentence : Type u} {Referent : Type u_1}
+  (E : RefSystem Model Sentence Referent) [Inhabited Referent] (KΓéü KΓéé : RHKit) (hΓéü : DetectsMonotone KΓéü)
+  (hΓéé : DetectsMonotone KΓéé) (╬ô : Set Sentence) (╧å : Sentence) : Rev0_K KΓéü (E.LR_ref ╬ô ╧å) Γåö Rev0_K KΓéé (E.LR_ref ╬ô ╧å)
+info: RevHalt/Test/ExportCheck.lean:156:2: RevHalt.Instances.Arithmetization.PRModel : RigorousModel
+info: RevHalt/Test/ExportCheck.lean:159:2: RevHalt.Instances.Arithmetization.PRModel_Master_Theorem :
+  have ctx := EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+  (ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+info: RevHalt/Test/ExportCheck.lean:162:2: RevHalt.Instances.PA.PA_Master_Theorem :
+  have ctx :=
+    Coded.EnrichedContextCoded_from_RM Instances.Arithmetization.PRModel PAKit pa_kit_correct PALogicEncodedCoded;
+  (ΓêÇ (e : Instances.Arithmetization.PRModel.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+info: RevHalt/Test/ExportCheck.lean:169:0: Γ£à ALL EXPORTS VERIFIED - No information lost!
+error: Lean exited with code 1
+Some required targets logged failures:
+- RevHalt.Test.ExportCheck
+error: build failed
+Build completed successfully (376 jobs).
+Build completed successfully (380 jobs).
+Build completed successfully (377 jobs).
