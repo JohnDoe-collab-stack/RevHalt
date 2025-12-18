@@ -15,7 +15,7 @@ namespace RevHalt
 
 /-- Reverse Halting Kit structure. Represents an abstract observation mechanism. -/
 structure RHKit where
-  Proj : (ℕ → Prop) → Prop
+  Proj : Trace → Prop
 
 /--
   The core axiom for a valid Kit: `DetectsMonotone`.
@@ -23,7 +23,7 @@ structure RHKit where
   This allows the Kit to have "exotic" behavior on non-monotone traces, but it must be standard on monotone ones.
 -/
 def DetectsMonotone (K : RHKit) : Prop :=
-  ∀ X : ℕ → Prop, Monotone X → (K.Proj X ↔ ∃ n, X n)
+  ∀ X : Trace, Monotone X → (K.Proj X ↔ ∃ n, X n)
 
 /--
   Rev_K: The Reverse Halting Operator.

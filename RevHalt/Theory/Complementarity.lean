@@ -34,7 +34,7 @@ namespace RevHalt
   Concept: Any sound theory T0 (representing a partial view of Truth) that is incomplete
   can be extended to a stronger sound theory T1 by adding a true underlying fact.
 -/
-theorem T3_weak_extension {Code PropT : Type} (ctx : TuringGodelContext' Code PropT)
+theorem T3_weak_extension {Code PropT : Type} (ctx : TGAssumptions Code PropT)
     (Truth : PropT → Prop) -- Meta-level truth predicate
     (_ : ∀ p, ctx.Provable p → Truth p) -- Base system is sound
     (T0 : Set PropT) -- Initial theory
@@ -71,7 +71,7 @@ theorem T3_weak_extension {Code PropT : Type} (ctx : TuringGodelContext' Code Pr
 
   This first definition captures an infinite family of independent (undecided) halting instances.
 -/
-structure InfiniteIndependentHalting (Code PropT : Type) (ctx : TuringGodelContext' Code PropT) where
+structure InfiniteIndependentHalting (Code PropT : Type) (ctx : TGAssumptions Code PropT) where
   -- An infinite index set (the undecided codes)
   Index : Type
   InfiniteIndex : Infinite Index
@@ -101,7 +101,7 @@ structure Partition (Index : Type) where
   We can construct a family of theories {Tₙ}, each extending T₀, each sound,
   with pairwise disjoint "new decidable domains".
 -/
-theorem T3_strong {Code PropT : Type} (ctx : TuringGodelContext' Code PropT)
+theorem T3_strong {Code PropT : Type} (ctx : TGAssumptions Code PropT)
     (Truth : PropT → Prop) -- Meta-level truth
     (encode_halt : Code → PropT) -- Encoding: e ↦ "Halts(e)" as a proposition
     (encode_not_halt : Code → PropT) -- Encoding: e ↦ "¬Halts(e)" as a proposition

@@ -7,23 +7,26 @@ import Mathlib.Data.Set.Basic
 T2: Impossibility of Internalizing Rev (Abstract Turing-Gödel synthesis).
 
 ## Main Results
-- `TuringGodelContext'`: Abstract context unifying Turing and Gödel
-- `InternalHaltingPredicate`: Total + Correct + Complete predicate
-- `T2_impossibility`: No such predicate can exist
+- `TGAssumptions`: Structural assumptions (interface) for the impossibility result.
+- `TG_of_Kit`: Explicit construction of these assumptions from a Kit.
+- `InternalHaltingPredicate`: Total + Correct + Complete predicate.
+- `T2_impossibility`: No such predicate can exist.
 -/
 
 namespace RevHalt
 
 /--
-  Context for the impossibility result.
+  Hypothèses structurelles pour l'argument diagonal (T2).
+  Ce n'est pas un axiome, mais une interface que le système doit satisfaire.
+
   Represents a computing system with:
   - `Code`: program codes
   - `PropT`: internal propositions / types
-  - `RealHalts`: the external, "real" truth (e.g., our Rev0_K)
+  - `RealHalts`: the external, "real" truth (provided by the Kit)
   - `Provable`: an internal provability predicate
   - `diagonal_program`: the ability to construct self-referential sentences
 -/
-structure TuringGodelContext' (Code : Type) (PropT : Type) where
+structure TGAssumptions (Code : Type) (PropT : Type) where
   RealHalts : Code → Prop
   Provable  : PropT → Prop
   FalseT    : PropT
@@ -32,17 +35,47 @@ structure TuringGodelContext' (Code : Type) (PropT : Type) where
   consistent : ¬ Provable FalseT
   -- Logic Axiom
   absurd     : ∀ p, Provable p → Provable (Not p) → Provable FalseT
-  -- Diagonal Fixpoint Axiom
+  -- Diagonal Fixpoint Axiom (The hardest part to satisfy)
   diagonal_program : ∀ H : Code → PropT, ∃ e, RealHalts e ↔ Provable (Not (H e))
 
+/-- Backward compatibility alias. -/
+abbrev TuringGodelContext' := TGAssumptions
+
 /--
-  Definition of an Internal Halting Predicate.
+  Construction canonique des hypothèses TG depuis la couche Kit.
+
+  Cette fonction rend explicite la dépendance : pour avoir un contexte T2 valide,
+  il faut un Kit (pour définir `RealHalts`) et un substrat logique (pour la diagonalisation).
+-/
+def TG_of_Kit {Code PropT : Type}
+  (K : RHKit)
+  (Machine : Code → Trace)
+  -- Logic backend
+  (Provable : PropT → Prop)
+  (FalseT : PropT)
+  (Not : PropT → PropT)
+  (consistent : ¬ Provable FalseT)
+  (absurd : ∀ p, Provable p → Provable (Not p) → Provable FalseT)
+  -- The diagonal lemma linked to the Kit's truth
+  (diagonal : ∀ H : Code → PropT, ∃ e, Rev0_K K (Machine e) ↔ Provable (Not (H e)))
+  : TGAssumptions Code PropT :=
+  { RealHalts := fun e => Rev0_K K (Machine e)
+  , Provable := Provable
+  , FalseT := FalseT
+  , Not := Not
+  , consistent := consistent
+  , absurd := absurd
+  , diagonal_program := diagonal
+  }
+
+/--
+  Definition of an Internal Halting Predicate within the assumptions.
   To be a candidate for "capturing" RealHalts, it must be:
   1. Total (always proves Yes or No).
   2. Correct (if leads to Yes, it really halts).
   3. Complete (if leads to No, it really doesn't halt).
 -/
-structure InternalHaltingPredicate {Code : Type} {PropT : Type} (ctx : TuringGodelContext' Code PropT) where
+structure InternalHaltingPredicate {Code : Type} {PropT : Type} (ctx : TGAssumptions Code PropT) where
   H : Code → PropT
   total    : ∀ e, ctx.Provable (H e) ∨ ctx.Provable (ctx.Not (H e))
   correct  : ∀ e, ctx.RealHalts e → ctx.Provable (H e)
@@ -51,9 +84,9 @@ structure InternalHaltingPredicate {Code : Type} {PropT : Type} (ctx : TuringGod
 /--
   **Theorem T2**:
   There is no internal predicate I that is simultaneously Total, Correct, and Complete
-  with respect to RealHalts.
+  with respect to RealHalts (as defined by the abstract assumptions).
 -/
-theorem T2_impossibility {Code : Type} {PropT : Type} (ctx : TuringGodelContext' Code PropT) :
+theorem T2_impossibility {Code : Type} {PropT : Type} (ctx : TGAssumptions Code PropT) :
     ¬ ∃ _ : InternalHaltingPredicate ctx, True := by
   intro h
   obtain ⟨I, _⟩ := h
