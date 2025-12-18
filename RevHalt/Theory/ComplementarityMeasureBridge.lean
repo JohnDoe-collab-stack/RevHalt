@@ -27,6 +27,19 @@ namespace RevHalt
 
 open Set
 
+/-- Partition from an injection `f : ℕ → Index`: Parts m = {f m}. -/
+def partitionOfNatInjection {Index : Type} (f : ℕ → Index) (inj : Function.Injective f) :
+    Partition Index where
+  Parts := fun m => {f m}
+  disjoint := by
+    intro n m hnm
+    rw [Set.disjoint_left]
+    intro x hx hx'
+    have hx1 : x = f n := by simpa [Set.mem_singleton_iff] using hx
+    have hx2 : x = f m := by simpa [Set.mem_singleton_iff] using hx'
+    have hfm : f n = f m := hx1.symm.trans hx2
+    exact hnm (inj hfm)
+
 section StrongToWidth
 
 variable {Code PropT : Type}
@@ -138,6 +151,54 @@ theorem strong_fresh_implies_unbounded_width (Truth : PropT → Prop)
     ∀ n : ℕ, Width Truth T0 n := fun n =>
   width_of_fresh_parts ctx indep partition Truth encode_halt encode_not_halt
     h_encode_correct h_encode_correct_neg T0 h_T0_sound n (fun m _ => hFreshAll m)
+
+
+
+/-- Freshness simplifies for `Parts m = {f m}`. -/
+theorem partFresh_partitionOfNatInjection_iff
+    (encode_halt encode_not_halt : Code → PropT)
+    (T0 : Set PropT)
+    (f : ℕ → indep.Index) (hf : Function.Injective f)
+    (m : ℕ) :
+    PartFresh (ctx := ctx) (indep := indep)
+      (partition := partitionOfNatInjection f hf)
+      (encode_halt := encode_halt) (encode_not_halt := encode_not_halt)
+      T0 m
+    ↔
+    strongEncode (ctx := ctx) (indep := indep)
+      (encode_halt := encode_halt) (encode_not_halt := encode_not_halt) (f m) ∉ T0 := by
+  constructor
+  · rintro ⟨i, hi, hfresh⟩
+    have : i = f m := by
+      simpa [partitionOfNatInjection, Set.mem_singleton_iff] using hi
+    simpa [this] using hfresh
+  · intro hfresh
+    refine ⟨f m, ?_, hfresh⟩
+    simp [partitionOfNatInjection]
+
+/--
+  Freshness via branch unprovability (Refined Reduction).
+  To show `strongEncode` is not in `T0` (assuming `T0 ⊆ Provable`), we only need to show
+  that the *true* branch is unprovable. We don't need to assume unprovability of the false branch.
+-/
+theorem freshness_via_branch_unprovable
+    (encode_halt encode_not_halt : Code → PropT)
+    (T0 : Set PropT)
+    (h_T0_sub_Provable : ∀ p ∈ T0, ctx.Provable p)
+    (h_not_provable_halt : ∀ i, indep.haltsTruth i →
+        ¬ ctx.Provable (encode_halt (indep.family i)))
+    (h_not_provable_not_halt : ∀ i, ¬ indep.haltsTruth i →
+        ¬ ctx.Provable (encode_not_halt (indep.family i)))
+    (i : indep.Index) :
+    strongEncode ctx indep encode_halt encode_not_halt i ∉ T0 := by
+  intro h_in_T0
+  have h_prov := h_T0_sub_Provable _ h_in_T0
+  dsimp [strongEncode] at h_prov
+  by_cases hht : indep.haltsTruth i
+  · simp [hht] at h_prov
+    exact (h_not_provable_halt i hht) h_prov
+  · simp [hht] at h_prov
+    exact (h_not_provable_not_halt i hht) h_prov
 
 end StrongToWidth
 

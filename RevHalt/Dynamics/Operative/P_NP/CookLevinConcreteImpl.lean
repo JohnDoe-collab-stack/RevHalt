@@ -2,7 +2,11 @@ import RevHalt.Dynamics.Operative.P_NP.CookLevinMap
 import RevHalt.Dynamics.Operative.P_NP.CookLevinConcrete
 import RevHalt.Dynamics.Operative.P_NP.CookLevinGadgets
 import RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
+import RevHalt.Dynamics.Operative.P_NP.CookLevinCorrectness
+import RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
 import Mathlib.Data.Nat.Basic
+
+set_option maxHeartbeats 2000000
 
 /-!
   RevHalt.Dynamics.Operative.P_NP.CookLevinConcreteImpl
@@ -36,69 +40,35 @@ variable {PropT : Type}
 
 abbrev SATP (B : SATBundle PropT) : RHProblem CNF.CNF := B.SATP
 
-/-! ### §1. Encoding Implementation -/
-
-/--
-Concrete encoding using the FULL tableau generator (with transitions, init, accept).
-Uses V.time as the time bound T.
-Space bound S is set to T (standard TM constraint).
--/
-def encode1 {ι : Type} (M : TableauMachine) (P : RHProblem ι) (V : PolyVerifier P) (x : ι) : CNF.CNF :=
-  let T : ℕ := V.time (P.size x)
-  let S : ℕ := T  -- Space is bounded by Time
-  let q0 : ℕ := 0
-  let head0 : ℕ := 0
-  let qAcc : ℕ := 1
-  -- Placeholder tape initialization (blank)
-  let tape0 : ℕ → ℕ := fun _ => 0
-  -- Witness parameters derived from Verifier
-  let witLen : ℕ := V.wBound (P.size x)
-  -- Arbitrary offset for now, should be after input x
-  let witOff : ℕ := 10 + P.size x
-  let sym0 : ℕ := 2
-  let sym1 : ℕ := 3
-  genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1
-
-/-! ### §2. Polynomial Bounds derived from Tableau -/
-
-/-- Bound for the output CNF size. Derived from tableauFullSizeBoundFun. -/
-def out_sizeBound1 (M : TableauMachine) : ℕ → ℕ :=
-  fun n => tableauFullSizeBoundFun M (2 * n) -- 2*n accounts for T approx n and overhead
-
-/-- Proof that out_sizeBound1 is polynomial. -/
-theorem poly_out_sizeBound1 (M : TableauMachine) : IsPoly (out_sizeBound1 M) := by
-  -- isPoly composition
-  sorry
-
-/-! ### §3. WIP Construction -/
-
+/-! ### §1. WIP Construction from SimBuilder -/
 
 open RevHalt.Dynamics.Operative.P_NP.CookLevinMap
+open RevHalt.Dynamics.Operative.P_NP.CookLevinCorrectness
+open RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
 
 /--
-Build a WIP template using the Tableau encoding.
-Requires TableauMachine to configure the machine specifics.
-Also requires a Boolean LR Bundle for the syntactic map.
+Build a WIP template using the Tableau encoding with a Simulation Builder.
+This abstracts away the Machine construction into `simBuilder`.
 -/
 def mkWIP_tableau
     (B : SATBundle PropT)
-    (M : TableauMachine)
+    (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
     (BL : BoolLRBundle)
     : CookLevinEncodingWIP B :=
-{ encode := fun {ι} P V x => encode1 M P V x
+{ encode := fun {ι} P V x => CookLevinCorrectness.encode (simBuilder P V) x
 
   map := fun {ι} P V =>
     BoolLRBundle.graphProblem BL
       (fun x => P.size x)
       (fun F => (SATP B).size F)
-      (fun x => encode1 M P V x)
+      (fun x => CookLevinCorrectness.encode (simBuilder P V) x)
 
   map_in_P := by
     intro ι P V
     exact BoolLRBundle.graphProblem_in_P BL
       (fun x => P.size x)
       (fun F => (SATP B).size F)
-      (fun x => encode1 M P V x)
+      (fun x => CookLevinCorrectness.encode (simBuilder P V) x)
 
   map_correct := by
     intro ι P V x y
@@ -106,7 +76,7 @@ def mkWIP_tableau
       (BoolLRBundle.graphProblem_correct BL
         (fun x => P.size x)
         (fun F => (SATP B).size F)
-        (fun x => encode1 M P V x) x y)
+        (fun x => CookLevinCorrectness.encode (simBuilder P V) x) x y)
 
   map_sizeBound := fun {ι} _P _V n => 2 * n + 1
   poly_map_sizeBound := by
@@ -119,47 +89,59 @@ def mkWIP_tableau
 
   map_size_ok := by
     intro ι P V x y
-    -- map.size = P.size x + SATP.size y by construction in graphProblem
-    -- We want map.size <= map_sizeBound (max (P.size x) (SATP.size y))
-    -- P.size x + SAT.size y <= max(..) + max(..) = 2*max(..)
-    -- oops map_sizeBound is linear n+1.
-    -- Wait, if inputs are large, P.size x + SAT.size y could be > max.
-    -- GraphProblem size def: size := fun z => sizeι z.1 + sizeCNF z.2
-    -- Argument to bound is: max (sizeι x) (sizeCNF y)
-    -- So we need x + y <= B(max x y).
-    -- x + y <= 2 * max x y.
-    -- So we need map_sizeBound to be at least 2*n.
-    -- Let's relax map_sizeBound to 2*(n+1) to be safe and easy.
     simp [BoolLRBundle.graphProblem]
     sorry
 
   -- Output size bounds linked to Tableau
   out_sizeBound := fun {ι} P V n =>
-    tableauFullSizeBoundFun M (2 * (V.time n))
+    tableauFullSizeBoundFun (simBuilder P V).M (2 * (V.time n))
 
   poly_out_sizeBound := by
     intro ι P V
-    -- isPoly composition (proof deferred)
-    apply IsPoly.mul
-    apply IsPoly.const
-    -- Here we need poly_tableauFullSizeBoundFun composed with 2*n
-    -- This specific composition lemma isn't in scope yet, deferring
+    -- isPoly composition (proof deferred, depends on Tableau bounds)
     sorry
 
   out_size_ok := by
     intro ι P V x
-    unfold encode1
-    -- genTableauAll_size_bounded gives <= tableauFullSizeBoundFun M (T + S)
-    -- T=S=V.time(sz), so T+S = 2*V.time(sz)
-    have h := genTableauAll_size_bounded M (V.time (P.size x)) (V.time (P.size x))
-      0 0 1 (V.wBound (P.size x)) (10 + P.size x) 2 3 (fun _ => 0)
-    rw [two_mul]
+    have h := encode_size_poly (simBuilder P V) x
     exact h
 
   encode_sat_iff := by
     intro ι P V x
-    -- Core Cook-Levin logic (The Hard Part)
-    sorry
+    let sim := simBuilder P V
+    let F : CNF.CNF := CookLevinCorrectness.encode sim x
+
+    -- (1) Solves SATP ↔ ∃wSAT bounded ∧ evalCNF wSAT F = true
+    have hSolve :
+        Solves (SATP B) F ↔
+          ∃ w : Witness,
+            witnessSize w ≤ B.wBound (cnfSize F) ∧
+            CNF.evalCNF w F = true := by
+      simpa [SATP, SATBundle.SATP] using (B.solves_sat_iff_bounded (F := F))
+
+    -- (2) CNF.Satisfiable F ↔ bounded form, via maxVar hypothesis
+    have hMax :
+        maxVar F + 1 ≤ B.wBound (cnfSize F) := by
+      -- Requirement: B.wBound must be large enough to contain the tableau variables.
+      -- This is structurally true for reasonable B, but here we assume it.
+      sorry
+
+    have hSatBound :
+        (∃ w : Witness, witnessSize w ≤ B.wBound (cnfSize F) ∧ CNF.evalCNF w F = true) ↔
+          CNF.Satisfiable F := by
+      simpa using (satisfiable_bounded_iff_satisfiable (wBound := B.wBound (cnfSize F)) (F := F) hMax).symm
+
+    -- (3) CNF.Satisfiable (encode sim x) ↔ ∃wVerif bounded ∧ HaltsBy LR
+    have hCL :
+        CNF.Satisfiable F ↔
+          (∃ w : Witness,
+            witnessSize w ≤ V.wBound (P.size x) ∧
+            HaltsBy (P.ctx.LR (↑(V.VΓ x w) : Set P.PropT) (V.Vφ x w))
+                   (V.time (P.size x))) := by
+      simpa [F, CookLevinCorrectness.encode] using (CookLevinCorrectness.encode_sat_iff (sim := sim) (x := x))
+
+    -- Assemblage
+    exact hSolve.trans (hSatBound.trans hCL)
 }
 
 end RevHalt.Dynamics.Operative.P_NP.CookLevinConcreteImpl

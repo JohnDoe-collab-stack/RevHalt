@@ -1,0 +1,74 @@
+ΓÜá [753/770] Replayed RevHalt.Dynamics.Operative.P_NP.SAT
+warning: RevHalt/Dynamics/Operative/P_NP/SAT.lean:27:7: The namespace 'CNF' is duplicated in the declaration 'RevHalt.Dynamics.Operative.P_NP.SAT.CNF.CNF'
+
+Note: This linter can be disabled with `set_option linter.dupNamespace false`
+warning: RevHalt/Dynamics/Operative/P_NP/SAT.lean:78:63: `structure ... :=` has been deprecated in favor of `structure ... where`.
+
+Note: This linter can be disabled with `set_option linter.deprecated false`
+ΓÜá [754/770] Replayed RevHalt.Dynamics.Operative.P_NP.CookLevinMap
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinMap.lean:55:4: declaration uses 'sorry'
+ΓÜá [766/770] Replayed RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:280:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:289:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:310:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:331:8: declaration uses 'sorry'
+ΓÜá [767/770] Replayed RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:45:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:49:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:54:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:58:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:96:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:101:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:106:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:112:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:121:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:125:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:129:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:135:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:154:40: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:159:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:168:39: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:173:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:182:39: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:182:41: unused variable `S`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:187:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:196:39: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:201:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:211:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:219:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:227:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:234:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:245:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:263:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:357:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:368:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:397:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:407:8: declaration uses 'sorry'
+ΓÜá [768/770] Replayed RevHalt.Dynamics.Operative.P_NP.CookLevinSemantics
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinSemantics.lean:58:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinSemantics.lean:73:18: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinSemantics.lean:86:8: declaration uses 'sorry'
+ΓÜá [769/770] Replayed RevHalt.Dynamics.Operative.P_NP.CookLevinCorrectness
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinCorrectness.lean:118:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinCorrectness.lean:123:8: declaration uses 'sorry'
+Γ£û [770/770] Building RevHalt.Dynamics.Operative.P_NP.CookLevinConcreteImpl (259s)
+trace: .> LEAN_PATH=C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Cli\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\batteries\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Qq\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\aesop\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\proofwidgets\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\importGraph\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\LeanSearchClient\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\plausible\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\mathlib\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean c:\Users\frederick.loubli.TKS\.elan\toolchains\leanprover--lean4---v4.26.0-rc2\bin\lean.exe C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\RevHalt\Dynamics\Operative\P_NP\CookLevinConcreteImpl.lean -o C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Dynamics\Operative\P_NP\CookLevinConcreteImpl.olean -i C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Dynamics\Operative\P_NP\CookLevinConcreteImpl.ilean -c C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Dynamics\Operative\P_NP\CookLevinConcreteImpl.c --setup C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Dynamics\Operative\P_NP\CookLevinConcreteImpl.setup.json --json
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinConcreteImpl.lean:104:17: (deterministic) timeout at `whnf`, maximum number of heartbeats (2000000) has been reached
+
+Note: Use `set_option maxHeartbeats <num>` to set the limit.
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+error: Lean exited with code 1
+Some required targets logged failures:
+- RevHalt.Dynamics.Operative.P_NP.CookLevinConcreteImpl
+error: build failed
