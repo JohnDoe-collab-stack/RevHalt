@@ -37,8 +37,9 @@ Rev0_K S.K : Trace → Prop
 - `S1Set_nonempty_of_witness`: S₁ ≠ ∅ given witness
 - `exists_unprovable_encode_halt`: ∃ unprovable encoding (weaker than S₁ ≠ ∅)
 - `T3_weak_extension_explicit`: S₃ = S₁ ∪ S₂ is sound
-- `InfiniteIndependentHalting`: |S₁| = ∞ (Kit-certified AND unprovable)
-- `T3_strong`: Multiple S₃ₙ from S₁ partitions
+- `InfiniteS1`: |S₁| = ∞ (indexed witnesses: kit + unprovable)
+- `InfiniteS1.memS1`: Derived S1Set membership
+- `T3_strong`: Multiple S₃ₙ from S₁ partitions (no added hypotheses)
 -/
 
 namespace RevHalt
@@ -201,28 +202,41 @@ theorem T3_weak_extension_explicit
     exact Set.mem_union_right S2 h_mem_S1
 
 -- ==============================================================================================
--- Infinite S₁ Elements (Kit-certified AND non-internalizable)
+-- Infinite S₁ Elements (indexed witnesses: kit + unprovable)
 -- ==============================================================================================
 
 /--
-  **Infinite S₁ elements** (full S₁, not just Kit-level).
+  **Infinite S₁ elements** (indexed witnesses, no injectivity required).
 
-  This captures infinitely many codes that are:
-  - Kit-certified: `Rev0_K S.K (Machine (family i))` ↔ `haltsTruth i`
-  - Non-internalizable: `¬ S.Provable (encode_halt (family i))`
+  Captures infinitely many codes with:
+  - Kit-certified: `kit i : Rev0_K S.K (Machine (family i))`
+  - Non-internalizable: `unprovable i : ¬ S.Provable (encode_halt (family i))`
 
-  Together, these conditions define membership in S₁.
+  The `memS1` property is derived, not primitive.
 -/
-structure InfiniteIndependentHalting (Code PropT : Type) (S : ImpossibleSystem Code PropT)
+structure InfiniteS1 (Code PropT : Type) (S : ImpossibleSystem Code PropT)
     (encode_halt : Code → PropT) where
   Index : Type
   InfiniteIndex : Infinite Index
   family : Index → Code
   distinct : Function.Injective family
-  haltsTruth : Index → Prop
-  halts_agree : ∀ i, Rev0_K S.K (S.Machine (family i)) ↔ haltsTruth i
-  -- S₁ condition: non-internalizable
+  kit : ∀ i, Rev0_K S.K (S.Machine (family i))
   unprovable : ∀ i, ¬ S.Provable (encode_halt (family i))
+
+/-- Derived: each index provides a member of `S1Set`. -/
+lemma InfiniteS1.memS1
+    {Code PropT : Type} {S : ImpossibleSystem Code PropT}
+    {encode_halt : Code → PropT}
+    (I : InfiniteS1 Code PropT S encode_halt) :
+    ∀ i, encode_halt (I.family i) ∈ S1Set S encode_halt := by
+  intro i
+  -- Use mem_S1Set_of_witness which needs Kit cast
+  have hKit : Rev0_K S.K (S.Machine (I.family i)) := I.kit i
+  have hUnprov : ¬ S.Provable (encode_halt (I.family i)) := I.unprovable i
+  -- Cast S.K to KitOf S for S1Set
+  have hKit' : Rev0_K (KitOf S) (S.Machine (I.family i)) := by
+    simpa [KitOf] using hKit
+  exact ⟨I.family i, rfl, hKit', hUnprov⟩
 
 /-- Partition of indices. -/
 structure Partition (Index : Type) where
@@ -236,48 +250,37 @@ structure Partition (Index : Type) where
 /--
 **T3.2 — Multiple complementary systems from S₁ partitions**
 
-Given infinite **S₁ elements** (Kit-certified AND unprovable),
-constructs {S₃ₙ} family. Each S₃ₙ = S₂ ∪ (encoded partition elements of S₁).
+Given infinite **S₁ elements** (indexed witnesses),
+constructs {S₃ₙ} family. Each S₃ₙ = S₂ ∪ { encode_halt(family i) | i ∈ Parts(n) }.
+
+No `Injective encode_halt` hypothesis required.
 -/
 theorem T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (Truth : PropT → Prop)
     (encode_halt : Code → PropT)
-    (encode_not_halt : Code → PropT)
     (h_encode_correct : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
-    (h_encode_correct_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → Truth (encode_not_halt e))
     (S2 : Set PropT)
     (h_S2_sound : ∀ p ∈ S2, Truth p)
-    (indep : InfiniteIndependentHalting Code PropT S encode_halt)  -- Now takes encode_halt
+    (indep : InfiniteS1 Code PropT S encode_halt)
     (partition : Partition indep.Index)
     : ∃ (S3_family : ℕ → Set PropT),
         (∀ n, S2 ⊆ S3_family n) ∧
         (∀ n, ∀ p ∈ S3_family n, Truth p) ∧
         (∀ n m, n ≠ m → ∀ i ∈ partition.Parts n, ∀ j ∈ partition.Parts m, i ≠ j) := by
   classical
-  let encode : indep.Index → PropT := fun i =>
-    if indep.haltsTruth i then encode_halt (indep.family i)
-    else encode_not_halt (indep.family i)
   let S3_family : ℕ → Set PropT := fun n =>
-    S2 ∪ { p | ∃ i ∈ partition.Parts n, p = encode i }
-  use S3_family
-  refine ⟨?_, ?_, ?_⟩
+    S2 ∪ { p | ∃ i ∈ partition.Parts n, p = encode_halt (indep.family i) }
+  refine ⟨S3_family, ?_, ?_, ?_⟩
   · -- S₂ ⊆ S₃ₙ
     intro n p hp
     exact Set.mem_union_left _ hp
   · -- S₃ₙ is sound
     intro n p hp
-    cases hp with
-    | inl h_S2 => exact h_S2_sound p h_S2
-    | inr h_new =>
-      obtain ⟨i, _, rfl⟩ := h_new
-      simp only [encode]
-      split_ifs with h_halts
-      · have h_real : Rev0_K S.K (S.Machine (indep.family i)) := (indep.halts_agree i).mpr h_halts
-        exact h_encode_correct (indep.family i) h_real
-      · have h_not_real : ¬ Rev0_K S.K (S.Machine (indep.family i)) := by
-          intro h_contra
-          exact h_halts ((indep.halts_agree i).mp h_contra)
-        exact h_encode_correct_neg (indep.family i) h_not_real
+    rcases hp with hp2 | hpNew
+    · exact h_S2_sound p hp2
+    · rcases hpNew with ⟨i, _hi, rfl⟩
+      -- Soundness from indexed witness: indep.kit i
+      exact h_encode_correct (indep.family i) (indep.kit i)
   · -- S₁-portions disjoint
     intro n m hnm i hi j hj h_eq
     have h_disj := partition.disjoint n m hnm
