@@ -24,7 +24,7 @@ namespace RevHalt
   to standard Halting for *all* traces (even non-monotone ones).
 -/
 theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
-    ∀ T, Rev0_K K T ↔ Halts T := by
+    ∀ T : Trace, Rev0_K K T ↔ Halts T := by
   intro T
   unfold Rev0_K Rev_K
   -- 1. Apply DetectsMonotone to the trace (up T), which is monotone.
@@ -36,7 +36,7 @@ theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
 
 /-- Corollary: Independence of the specific Kit. Any two valid Kits yield the same verdict. -/
 theorem T1_uniqueness (K1 K2 : RHKit) (hK1 : DetectsMonotone K1) (hK2 : DetectsMonotone K2) :
-    ∀ T, Rev0_K K1 T ↔ Rev0_K K2 T := by
+    ∀ T : Trace, Rev0_K K1 T ↔ Rev0_K K2 T := by
   intro T
   rw [T1_traces K1 hK1, T1_traces K2 hK2]
 

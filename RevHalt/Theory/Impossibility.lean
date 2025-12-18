@@ -1,114 +1,97 @@
 import RevHalt.Base
+import RevHalt.Theory.Canonicity
 import Mathlib.Data.Set.Basic
 
 /-!
 # RevHalt.Theory.Impossibility
 
-T2: Impossibility of Internalizing Rev (Abstract Turing-Gödel synthesis).
+T2: Impossibility of Internalizing Rev associated with a Canoncial Kit.
 
-## Main Results
-- `TGAssumptions`: Structural assumptions (interface) for the impossibility result.
-- `TG_of_Kit`: Explicit construction of these assumptions from a Kit.
-- `InternalHaltingPredicate`: Total + Correct + Complete predicate.
-- `T2_impossibility`: No such predicate can exist.
+This file demonstrates that the "Real Halting" defined by a Canonical Kit (certified by T1)
+cannot be fully captured by any internal logical predicate, provided the system supports
+basic diagonalization.
+
+## Explicit Dependencies
+- `Trace` (Signal)
+- `RHKit` (Observation Instrument)
+- `DetectsMonotone` (Canonicity Condition)
+- `Rev0_K` (The Truth being targeted)
+
 -/
 
 namespace RevHalt
 
 /--
-  Hypothèses structurelles pour l'argument diagonal (T2).
-  Ce n'est pas un axiome, mais une interface que le système doit satisfaire.
+  `ImpossibleSystem`: A structure representing a logical system coupled with a Canonical Observation Kit.
 
-  Represents a computing system with:
-  - `Code`: program codes
-  - `PropT`: internal propositions / types
-  - `RealHalts`: the external, "real" truth (provided by the Kit)
-  - `Provable`: an internal provability predicate
-  - `diagonal_program`: the ability to construct self-referential sentences
+  This structure explicitly bundles:
+  1. The Physical Layer: `Machine` (Code -> Trace) and `K` (Kit).
+  2. The Certification: `h_canon` proving the Kit is Monotone-Detecting (T1 applies).
+  3. The Logical Layer: `Provable`, `Not`, etc.
+  4. The Bridge: `diagonal_program` linking Logical Proof to Kit Truth (`Rev0_K`).
 -/
-structure TGAssumptions (Code : Type) (PropT : Type) where
-  RealHalts : Code → Prop
-  Provable  : PropT → Prop
-  FalseT    : PropT
-  Not       : PropT → PropT
-  -- Consistency Axiom
+structure ImpossibleSystem (Code : Type) (PropT : Type) where
+  -- [A] The Physical/Dynamic Base
+  Machine : Code → Trace
+  K       : RHKit
+
+  -- [B] The Canonicity Certificate
+  h_canon : DetectsMonotone K
+
+  -- [C] The Logical Layer
+  Provable : PropT → Prop
+  FalseT   : PropT
+  Not      : PropT → PropT
+
+  -- [D] Consistency Axioms
   consistent : ¬ Provable FalseT
-  -- Logic Axiom
   absurd     : ∀ p, Provable p → Provable (Not p) → Provable FalseT
-  -- Diagonal Fixpoint Axiom (The hardest part to satisfy)
-  diagonal_program : ∀ H : Code → PropT, ∃ e, RealHalts e ↔ Provable (Not (H e))
 
-/-- Backward compatibility alias. -/
-abbrev TuringGodelContext' := TGAssumptions
-
-/--
-  Construction canonique des hypothèses TG depuis la couche Kit.
-
-  Cette fonction rend explicite la dépendance : pour avoir un contexte T2 valide,
-  il faut un Kit (pour définir `RealHalts`) et un substrat logique (pour la diagonalisation).
--/
-def TG_of_Kit {Code PropT : Type}
-  (K : RHKit)
-  (Machine : Code → Trace)
-  -- Logic backend
-  (Provable : PropT → Prop)
-  (FalseT : PropT)
-  (Not : PropT → PropT)
-  (consistent : ¬ Provable FalseT)
-  (absurd : ∀ p, Provable p → Provable (Not p) → Provable FalseT)
-  -- The diagonal lemma linked to the Kit's truth
-  (diagonal : ∀ H : Code → PropT, ∃ e, Rev0_K K (Machine e) ↔ Provable (Not (H e)))
-  : TGAssumptions Code PropT :=
-  { RealHalts := fun e => Rev0_K K (Machine e)
-  , Provable := Provable
-  , FalseT := FalseT
-  , Not := Not
-  , consistent := consistent
-  , absurd := absurd
-  , diagonal_program := diagonal
-  }
+  -- [E] The Diagonal Fixpoint (Explicitly linking Rev0_K and Logic)
+  -- "There exists a program e whose Universal Halting (Rev0_K) is equivalent to Provable(Not(H e))"
+  diagonal_program : ∀ H : Code → PropT, ∃ e, Rev0_K K (Machine e) ↔ Provable (Not (H e))
 
 /--
-  Definition of an Internal Halting Predicate within the assumptions.
-  To be a candidate for "capturing" RealHalts, it must be:
-  1. Total (always proves Yes or No).
-  2. Correct (if leads to Yes, it really halts).
-  3. Complete (if leads to No, it really doesn't halt).
+  Definition of an Internal Halting Predicate for an ImpossibleSystem.
+  It tries to emulate the specific truth `Rev0_K S.K (S.Machine e)`.
 -/
-structure InternalHaltingPredicate {Code : Type} {PropT : Type} (ctx : TGAssumptions Code PropT) where
+structure InternalHaltingPredicate {Code : Type} {PropT : Type} (S : ImpossibleSystem Code PropT) where
   H : Code → PropT
-  total    : ∀ e, ctx.Provable (H e) ∨ ctx.Provable (ctx.Not (H e))
-  correct  : ∀ e, ctx.RealHalts e → ctx.Provable (H e)
-  complete : ∀ e, ¬ ctx.RealHalts e → ctx.Provable (ctx.Not (H e))
+  total    : ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
+  correct  : ∀ e, Rev0_K S.K (S.Machine e) → S.Provable (H e)
+  complete : ∀ e, ¬ Rev0_K S.K (S.Machine e) → S.Provable (S.Not (H e))
 
 /--
   **Theorem T2**:
-  There is no internal predicate I that is simultaneously Total, Correct, and Complete
-  with respect to RealHalts (as defined by the abstract assumptions).
+  No Internal Halting Predicate can exist for a Canonical ImpossibleSystem.
+
+  This theorem relies explicitly on the `ImpossibleSystem` structure, ensuring that
+  the impossibility is a direct consequence of the Kit's nature and the System's logic.
 -/
-theorem T2_impossibility {Code : Type} {PropT : Type} (ctx : TGAssumptions Code PropT) :
-    ¬ ∃ _ : InternalHaltingPredicate ctx, True := by
+theorem T2_impossibility {Code : Type} {PropT : Type} (S : ImpossibleSystem Code PropT) :
+    ¬ ∃ _ : InternalHaltingPredicate S, True := by
   intro h
   obtain ⟨I, _⟩ := h
-  -- 1. Construct the diagonal program e for the predicate I.H
-  --    Property: RealHalts(e) ↔ Provable(¬ I.H(e))
-  obtain ⟨e, he⟩ := ctx.diagonal_program I.H
 
-  -- 2. Analyze by cases on the *real* truth of Halts(e)
-  by_cases hReal : ctx.RealHalts e
-  · -- Case: e really halts
+  -- 1. Construct the diagonal program e for the predicate I.H
+  --    Using the explicit bridge in S: Rev0_K ... <-> Provable ...
+  obtain ⟨e, he⟩ := S.diagonal_program I.H
+
+  -- 2. Analyze by cases on the *real* truth of Rev0_K K (Machine e)
+  by_cases hReal : Rev0_K S.K (S.Machine e)
+  · -- Case: e really halts (Canonically)
     -- By Correctness, the system proves H(e)
-    have hProvH : ctx.Provable (I.H e) := I.correct e hReal
-    -- By Diagonal property, since RealHalts(e) is true, Provable(¬ H(e)) must be true
-    have hProvNotH : ctx.Provable (ctx.Not (I.H e)) := he.mp hReal
+    have hProvH : S.Provable (I.H e) := I.correct e hReal
+    -- By Diagonal property, Provable(¬ H(e)) must be true
+    have hProvNotH : S.Provable (S.Not (I.H e)) := he.mp hReal
     -- Contradiction in the system
-    exact ctx.consistent (ctx.absurd (I.H e) hProvH hProvNotH)
-  · -- Case: e does not halt
+    exact S.consistent (S.absurd (I.H e) hProvH hProvNotH)
+  · -- Case: e does not halt (Canonically)
     -- By Completeness, the system proves ¬ H(e)
-    have hProvNotH : ctx.Provable (ctx.Not (I.H e)) := I.complete e hReal
-    -- By Diagonal property: Provable(¬ H(e)) → RealHalts(e)
-    have hImpliesReal : ctx.Provable (ctx.Not (I.H e)) → ctx.RealHalts e := he.mpr
-    have hRealContradiction : ctx.RealHalts e := hImpliesReal hProvNotH
+    have hProvNotH : S.Provable (S.Not (I.H e)) := I.complete e hReal
+    -- By Diagonal property: Provable(¬ H(e)) -> Rev0_K ...
+    have hImpliesReal : S.Provable (S.Not (I.H e)) → Rev0_K S.K (S.Machine e) := he.mpr
+    have hRealContradiction : Rev0_K S.K (S.Machine e) := hImpliesReal hProvNotH
     -- Contradiction with hypothesis hReal
     exact hReal hRealContradiction
 

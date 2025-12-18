@@ -33,15 +33,17 @@ namespace RevHalt
   **T3.1: Weak Complementarity (Extension by Truth)**
   Concept: Any sound theory T0 (representing a partial view of Truth) that is incomplete
   can be extended to a stronger sound theory T1 by adding a true underlying fact.
+
+  Updated to use `ImpossibleSystem`, proving that the impossibility framework applies.
 -/
-theorem T3_weak_extension {Code PropT : Type} (ctx : TGAssumptions Code PropT)
+theorem T3_weak_extension {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (Truth : PropT → Prop) -- Meta-level truth predicate
-    (_ : ∀ p, ctx.Provable p → Truth p) -- Base system is sound
+    (_ : ∀ p, S.Provable p → Truth p) -- Base system is sound
     (T0 : Set PropT) -- Initial theory
     (h_T0_sound : ∀ p ∈ T0, Truth p) -- T0 consists only of truths
     (p_undef : PropT)
     (h_p_true : Truth p_undef) -- p is True
-    (_ : ¬ (ctx.Provable p_undef)) -- (Simplification: just needs to be consistent with T0)
+    (_ : ¬ (S.Provable p_undef)) -- (Simplification: just needs to be consistent with T0)
     : ∃ T1 : Set PropT, T0 ⊆ T1 ∧ (∀ p ∈ T1, Truth p) ∧ p_undef ∈ T1 := by
   -- Construct T1 = T0 ∪ {p_undef}
   let T1 := T0 ∪ {p_undef}
@@ -71,7 +73,7 @@ theorem T3_weak_extension {Code PropT : Type} (ctx : TGAssumptions Code PropT)
 
   This first definition captures an infinite family of independent (undecided) halting instances.
 -/
-structure InfiniteIndependentHalting (Code PropT : Type) (ctx : TGAssumptions Code PropT) where
+structure InfiniteIndependentHalting (Code PropT : Type) (S : ImpossibleSystem Code PropT) where
   -- An infinite index set (the undecided codes)
   Index : Type
   InfiniteIndex : Infinite Index
@@ -81,8 +83,8 @@ structure InfiniteIndependentHalting (Code PropT : Type) (ctx : TGAssumptions Co
   distinct : Function.Injective family
   -- Meta-level halting truth for each code
   haltsTruth : Index → Prop
-  -- Key property: RealHalts(family i) iff haltsTruth i
-  halts_agree : ∀ i, ctx.RealHalts (family i) ↔ haltsTruth i
+  -- Key property: Rev0_K K (Machine (family i)) iff haltsTruth i
+  halts_agree : ∀ i, Rev0_K S.K (S.Machine (family i)) ↔ haltsTruth i
 
 /-- A partition of an index set into disjoint parts. -/
 structure Partition (Index : Type) where
@@ -101,15 +103,15 @@ structure Partition (Index : Type) where
   We can construct a family of theories {Tₙ}, each extending T₀, each sound,
   with pairwise disjoint "new decidable domains".
 -/
-theorem T3_strong {Code PropT : Type} (ctx : TGAssumptions Code PropT)
+theorem T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (Truth : PropT → Prop) -- Meta-level truth
     (encode_halt : Code → PropT) -- Encoding: e ↦ "Halts(e)" as a proposition
     (encode_not_halt : Code → PropT) -- Encoding: e ↦ "¬Halts(e)" as a proposition
-    (h_encode_correct : ∀ e, ctx.RealHalts e → Truth (encode_halt e))
-    (h_encode_correct_neg : ∀ e, ¬ ctx.RealHalts e → Truth (encode_not_halt e))
+    (h_encode_correct : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
+    (h_encode_correct_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → Truth (encode_not_halt e))
     (T0 : Set PropT) -- Base theory
     (h_T0_sound : ∀ p ∈ T0, Truth p) -- T0 is sound
-    (indep : InfiniteIndependentHalting Code PropT ctx) -- Infinite independent family
+    (indep : InfiniteIndependentHalting Code PropT S) -- Infinite independent family
     (partition : Partition indep.Index) -- Partition of the independent set
     : ∃ (TheoryFamily : ℕ → Set PropT),
         -- Each theory extends T0
@@ -141,11 +143,11 @@ theorem T3_strong {Code PropT : Type} (ctx : TGAssumptions Code PropT)
       -- encode i is either encode_halt or encode_not_halt, both are truths
       simp only [encode]
       split_ifs with h_halts
-      · -- Case: haltsTruth i is true, so RealHalts (family i) is true
-        have h_real : ctx.RealHalts (indep.family i) := (indep.halts_agree i).mpr h_halts
+      · -- Case: haltsTruth i is true, so Rev0_K ... is true
+        have h_real : Rev0_K S.K (S.Machine (indep.family i)) := (indep.halts_agree i).mpr h_halts
         exact h_encode_correct (indep.family i) h_real
-      · -- Case: haltsTruth i is false, so ¬ RealHalts (family i)
-        have h_not_real : ¬ ctx.RealHalts (indep.family i) := by
+      · -- Case: haltsTruth i is false, so ¬ Rev0_K ...
+        have h_not_real : ¬ Rev0_K S.K (S.Machine (indep.family i)) := by
           intro h_contra
           exact h_halts ((indep.halts_agree i).mp h_contra)
         exact h_encode_correct_neg (indep.family i) h_not_real
