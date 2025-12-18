@@ -7,13 +7,20 @@ import Mathlib.Order.Disjoint
 /-!
 # RevHalt.Theory.Complementarity
 
-T3: Complementarity Theorem — S₁ ∪ S₂ = S₃
+T3: Complementarity (one-sided) — S₁ ∪ S₂ = S₃
 
 ## Core Decomposition (Typed Definitions)
 
-- **S₁** := `S1Set S encode_halt` (non-internalizable)
-- **S₂** := parameter `S2 : Set PropT` (internalizable base)
-- **S₃** := `S3Set S S2 encode_halt` = S₂ ∪ S₁
+- **S₁ (one-sided frontier)** := `S1Set S encode_halt` (kit-certified + not provable in `S`)
+- **S₂ (base corpus)** := parameter `S2 : Set PropT` with soundness witness `h_S2_sound`
+- **S₃ (one-sided extension)** := `S3Set S S2 encode_halt` = `S₂ ∪ S₁`
+
+### Variants
+
+- **Two-sided oracle (local step)**: for fixed `e`, an explicit witness `OraclePick` selects either
+  `encode_halt e` or `encode_not_halt e` and yields the one-step extension `S2 ∪ {pick.p}`.
+- **Two-sided oracle (global frontier)**: `S1TwoSet` / `S3TwoSet` collect all oracle-chosen sentences across all codes
+  (not used by the local oracle theorem in this file; intended for later globalization).
 
 ## Lean-Faithful Interpretation
 
@@ -27,37 +34,26 @@ T3: Complementarity Theorem — S₁ ∪ S₂ = S₃
   - the external certification `Rev0_K S.K (S.Machine e)`, and
   - internal non-derivability `¬ S.Provable (encode_halt e)`.
 
-The complementarity result is exactly the construction
+The one-sided complementarity result is exactly the construction
 `S3 := S2 ∪ S1` (implemented as `S3Set S S2 encode_halt`),
-showing that `S3` contains both layers, preserves semantic soundness under the stated hypotheses, and adds
-syntax-side statements from `S1` that are not internalized by `Provable`. Under the `InfiniteS1` hypothesis,
-one further obtains a whole family of such complementary extensions via partitions.
+showing that the extension contains both layers, preserves semantic soundness under the stated hypotheses,
+and adds kit-certified sentences from `S1` that are not internalized by `Provable`.
+
+Separately, a two-sided oracle variant is provided for clarity of the “choice of side”:
+for a fixed code `e`, an explicit witness `OraclePick` selects either `encode_halt e` or `encode_not_halt e`
+(without any decidability assumption), and yields a local one-step sound extension `S2 ∪ {pick.p}`.
+
 
 ## Explicit Kit Dependency (Types)
 
 ```
+
 S : ImpossibleSystem Code PropT
 S.K : RHKit
 S.h_canon : DetectsMonotone S.K
 Rev0_K S.K : Trace → Prop
+
 ```
-
-## S₁ Membership (Typed)
-
-`p ∈ S1Set S encode_halt` iff:
-- `∃ e, p = encode_halt e`
-- `Rev0_K S.K (S.Machine e)` (Kit certifies)
-- `¬ S.Provable (encode_halt e)` (non-internalizable)
-
-## Main Results
-- `S1Set`, `S3Set`: Explicit type definitions
-- `mem_S1Set_of_witness`: Membership lemma
-- `S1Set_nonempty_of_witness`: S₁ ≠ ∅ given witness
-- `exists_unprovable_encode_halt`: ∃ unprovable encoding (weaker than S₁ ≠ ∅)
-- `T3_weak_extension_explicit`: S₃ = S₁ ∪ S₂ is sound
-- `InfiniteS1`: |S₁| = ∞ (indexed witnesses: kit + unprovable)
-- `InfiniteS1.memS1`: Derived S1Set membership
-- `T3_strong`: Multiple S₃ₙ from S₁ partitions (no added hypotheses)
 -/
 
 namespace RevHalt
@@ -66,39 +62,19 @@ namespace RevHalt
 -- T3: Complementarity — Explicit Definitions
 -- ==============================================================================================
 
-/-
-  ## Typed Decomposition
-
-  **S₁** := `S1Set S encode_halt : Set PropT`
-         = { p | ∃ e, p = encode_halt e ∧ Rev0_K S.K (Machine e) ∧ ¬Provable (encode_halt e) }
-
-  **S₂** := parameter (internalizable base theory)
-
-  **S₃** := `S3Set S S2 encode_halt : Set PropT`
-         = S₂ ∪ S₁
-
-  Kit dependency:
-  - `S.K : RHKit`
-  - `S.h_canon : DetectsMonotone S.K`
-  - `Rev0_K S.K : Trace → Prop`
--/
-
--- ==============================================================================================
--- Explicit S₁ and S₃ Definitions
--- ==============================================================================================
-
 /-- Explicit Kit extraction with visible `RHKit` type. -/
-abbrev KitOf {Code PropT : Type} (S : ImpossibleSystem Code PropT) : RHKit := S.K
+def KitOf {Code PropT : Type} (S : ImpossibleSystem Code PropT) : RHKit := S.K
 
 /-- **S₁** := Non-internalizable set.
-    Uses `KitOf S : RHKit` explicitly.
-    `p ∈ S1Set` iff `p = encode_halt e` for some `e` with Kit-certified halting and unprovable. -/
+
+`p ∈ S1Set` iff `p = encode_halt e` for some `e` with Kit-certified halting and unprovable.
+The Kit is written explicitly as `KitOf S : RHKit`.
+-/
 def S1Set {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (encode_halt : Code → PropT) : Set PropT :=
-  let K : RHKit := KitOf S  -- Explicit Kit with RHKit type
   { p | ∃ e : Code,
       p = encode_halt e ∧
-      Rev0_K K (S.Machine e) ∧
+      Rev0_K (KitOf S) (S.Machine e) ∧
       ¬ S.Provable (encode_halt e) }
 
 /-- **S₃** := S₂ ∪ S₁ (complementary system). -/
@@ -106,19 +82,18 @@ def S3Set {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (S2 : Set PropT) (encode_halt : Code → PropT) : Set PropT :=
   S2 ∪ S1Set S encode_halt
 
-/-- Membership lemma: given witness (hKit, hUnprov), `encode_halt e ∈ S₁`.
-    Uses explicit cast from `S.K` to `KitOf S : RHKit`. -/
+/-- Membership lemma: given witness (hKit, hUnprov), `encode_halt e ∈ S₁`. -/
 lemma mem_S1Set_of_witness
     {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (encode_halt : Code → PropT) (e : Code)
     (hKit : Rev0_K S.K (S.Machine e))
     (hUnprov : ¬ S.Provable (encode_halt e)) :
     encode_halt e ∈ S1Set S encode_halt := by
-  -- Explicit cast: K = S.K = KitOf S
+  have hEq : KitOf S = S.K := rfl
   have hKit' : Rev0_K (KitOf S) (S.Machine e) := by
-    simpa [KitOf] using hKit
-  -- Now matches literal S1Set definition
-  exact ⟨e, rfl, hKit', hUnprov⟩
+    rw [hEq]
+    exact hKit
+  exact Exists.intro e (And.intro rfl (And.intro hKit' hUnprov))
 
 /-- **S₁ ≠ ∅** given a witness (e, hKit, hUnprov). -/
 theorem S1Set_nonempty_of_witness
@@ -128,7 +103,7 @@ theorem S1Set_nonempty_of_witness
     (hKit : Rev0_K S.K (S.Machine e))
     (hUnprov : ¬ S.Provable (encode_halt e)) :
     (S1Set S encode_halt).Nonempty := by
-  exact ⟨encode_halt e, mem_S1Set_of_witness S encode_halt e hKit hUnprov⟩
+  exact Exists.intro (encode_halt e) (mem_S1Set_of_witness S encode_halt e hKit hUnprov)
 
 -- ==============================================================================================
 -- Unprovable Encoding Existence (weaker than S₁ ≠ ∅)
@@ -146,10 +121,10 @@ theorem exists_unprovable_encode_halt
     (h_truth_to_real : ∀ e, Truth (encode_halt e) → Rev0_K S.K (S.Machine e)) :
     ∃ e, ¬ S.Provable (encode_halt e) := by
   obtain ⟨e, he⟩ := S.diagonal_program encode_halt
-  refine ⟨e, ?_⟩
+  refine Exists.intro e ?_
   intro hProv
   have hReal : Rev0_K S.K (S.Machine e) :=
-    h_truth_to_real e (h_sound _ hProv)
+    h_truth_to_real e (h_sound (encode_halt e) hProv)
   have hProvNot : S.Provable (S.Not (encode_halt e)) :=
     he.mp hReal
   exact S.consistent (S.absurd (encode_halt e) hProv hProvNot)
@@ -159,14 +134,11 @@ theorem exists_unprovable_encode_halt
 -- ==============================================================================================
 
 /--
-**T3.1 — S₃ = S₁ ∪ S₂ is Sound** ("linear reading" version, without `simp`)
-
-Same statement, same hypotheses, same conclusions; proof made entirely explicit.
+**T3.1 — S₃ = S₁ ∪ S₂ is Sound** (explicit, no `simp`, no `simpa`, no `classical`).
 -/
 theorem T3_weak_extension_explicit
     {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (Truth : PropT → Prop)
-    (_ : ∀ p, S.Provable p → Truth p)
     (S2 : Set PropT)
     (h_S2_sound : ∀ p ∈ S2, Truth p)
     (encode_halt : Code → PropT)
@@ -175,49 +147,52 @@ theorem T3_weak_extension_explicit
     (hKit : Rev0_K S.K (S.Machine e))
     (hUnprov : ¬ S.Provable (encode_halt e)) :
     ∃ S3 : Set PropT,
-      S3 = S3Set S S2 encode_halt ∧           -- S₃ = S₂ ∪ S₁ (literal)
+      S3 = S3Set S S2 encode_halt ∧
       S2 ⊆ S3 ∧
       (∀ p ∈ S3, Truth p) ∧
-      encode_halt e ∈ S1Set S encode_halt ∧   -- Typed S₁ membership
+      encode_halt e ∈ S1Set S encode_halt ∧
       encode_halt e ∈ S3 ∧
       Halts (S.Machine e) ∧
       ¬ S.Provable (encode_halt e) := by
-  -- Explicit definition of S₃
   let S3 : Set PropT := S3Set S S2 encode_halt
 
-  -- KIT → HALTS via T1 + embedded canonical certificate
   have hHalt : Halts (S.Machine e) :=
     (T1_traces S.K S.h_canon (S.Machine e)).1 hKit
 
-  -- Explicit membership in S₁
   have h_mem_S1 : encode_halt e ∈ S1Set S encode_halt :=
     mem_S1Set_of_witness S encode_halt e hKit hUnprov
 
-  refine ⟨S3, rfl, ?_, ?_, h_mem_S1, ?_, hHalt, hUnprov⟩
+  refine Exists.intro S3 ?_
+  refine And.intro rfl ?_
+  refine And.intro ?_ ?_
 
-  · -- S₂ ⊆ S₃
+  · -- S2 ⊆ S3
     intro p hp
-    -- S3 = S2 ∪ S1Set ...
-    exact Set.mem_union_left (S1Set S encode_halt) hp
+    -- S3 = S3Set ... = S2 ∪ S1Set ...
+    exact Or.inl hp
 
-  · -- Soundness of S₃ = sound(S₂) + sound(S₁)
-    intro p hp
-    -- hp : p ∈ S2 ∪ S1Set ...
-    rcases hp with hp2 | hp1
-    · -- case p ∈ S₂
-      exact h_S2_sound p hp2
-    · -- case p ∈ S₁
-      -- unfold the definition of S1Set: ∃ e', p = encode_halt e' ∧ ...
-      rcases hp1 with ⟨e', hpEq, hKit', _hUnprov'⟩
-      -- Explicit cast: KitOf S = S.K
-      have hKit'' : Rev0_K S.K (S.Machine e') := by
-        simpa [KitOf] using hKit'
-      have hTrue : Truth (encode_halt e') := h_encode_correct e' hKit''
-      -- rewrite p via hpEq
-      simpa [hpEq] using hTrue
+  · refine And.intro ?_ ?_
+    · -- soundness of S3
+      intro p hp
+      cases hp with
+      | inl hp2 =>
+          exact h_S2_sound p hp2
+      | inr hp1 =>
+          -- hp1 : p ∈ S1Set ...
+          rcases hp1 with ⟨e', hpEq, hKit', _hUnprov'⟩
+          have hEqK : S.K = KitOf S := Eq.symm rfl
+          have hKit'' : Rev0_K S.K (S.Machine e') := by
+            rw [hEqK]
+            exact hKit'
+          have hTrue : Truth (encode_halt e') := h_encode_correct e' hKit''
+          rw [hpEq]
+          exact hTrue
 
-  · -- encode_halt e ∈ S₃ (since ∈ S₁ ⊆ S₃)
-    exact Set.mem_union_right S2 h_mem_S1
+    · refine And.intro h_mem_S1 ?_
+      · refine And.intro ?_ ?_
+        · -- encode_halt e ∈ S3
+          exact Or.inr h_mem_S1
+        · refine And.intro hHalt hUnprov
 
 -- ==============================================================================================
 -- Infinite S₁ Elements (indexed witnesses: kit + unprovable)
@@ -229,8 +204,6 @@ theorem T3_weak_extension_explicit
   Captures infinitely many codes with:
   - Kit-certified: `kit i : Rev0_K S.K (Machine (family i))`
   - Non-internalizable: `unprovable i : ¬ S.Provable (encode_halt (family i))`
-
-  The `memS1` property is derived, not primitive.
 -/
 structure InfiniteS1 (Code PropT : Type) (S : ImpossibleSystem Code PropT)
     (encode_halt : Code → PropT) where
@@ -248,13 +221,12 @@ lemma InfiniteS1.memS1
     (I : InfiniteS1 Code PropT S encode_halt) :
     ∀ i, encode_halt (I.family i) ∈ S1Set S encode_halt := by
   intro i
-  -- Use mem_S1Set_of_witness which needs Kit cast
-  have hKit : Rev0_K S.K (S.Machine (I.family i)) := I.kit i
-  have hUnprov : ¬ S.Provable (encode_halt (I.family i)) := I.unprovable i
-  -- Cast S.K to KitOf S for S1Set
+  have hEq : KitOf S = S.K := rfl
   have hKit' : Rev0_K (KitOf S) (S.Machine (I.family i)) := by
-    simpa [KitOf] using hKit
-  exact ⟨I.family i, rfl, hKit', hUnprov⟩
+    rw [hEq]
+    exact I.kit i
+  exact Exists.intro (I.family i)
+    (And.intro rfl (And.intro hKit' (I.unprovable i)))
 
 /-- Partition of indices. -/
 structure Partition (Index : Type) where
@@ -271,7 +243,7 @@ structure Partition (Index : Type) where
 Given infinite **S₁ elements** (indexed witnesses),
 constructs {S₃ₙ} family. Each S₃ₙ = S₂ ∪ { encode_halt(family i) | i ∈ Parts(n) }.
 
-No `Injective encode_halt` hypothesis required.
+No `simp`, no `simpa`, no `classical`, no `noncomputable`.
 -/
 theorem T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     (Truth : PropT → Prop)
@@ -285,26 +257,193 @@ theorem T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT)
         (∀ n, S2 ⊆ S3_family n) ∧
         (∀ n, ∀ p ∈ S3_family n, Truth p) ∧
         (∀ n m, n ≠ m → ∀ i ∈ partition.Parts n, ∀ j ∈ partition.Parts m, i ≠ j) := by
-  classical
   let S3_family : ℕ → Set PropT := fun n =>
     S2 ∪ { p | ∃ i ∈ partition.Parts n, p = encode_halt (indep.family i) }
-  refine ⟨S3_family, ?_, ?_, ?_⟩
-  · -- S₂ ⊆ S₃ₙ
+
+  refine Exists.intro S3_family ?_
+  refine And.intro ?_ (And.intro ?_ ?_)
+
+  · -- S2 ⊆ S3_family n
     intro n p hp
-    exact Set.mem_union_left _ hp
-  · -- S₃ₙ is sound
+    exact Or.inl hp
+
+  · -- soundness
     intro n p hp
-    rcases hp with hp2 | hpNew
-    · exact h_S2_sound p hp2
-    · rcases hpNew with ⟨i, _hi, rfl⟩
-      -- Soundness from indexed witness: indep.kit i
-      exact h_encode_correct (indep.family i) (indep.kit i)
-  · -- S₁-portions disjoint
-    intro n m hnm i hi j hj h_eq
-    have h_disj := partition.disjoint n m hnm
-    rw [h_eq] at hi
-    have h_inter : j ∈ partition.Parts n ⊓ partition.Parts m := ⟨hi, hj⟩
-    rw [disjoint_iff.mp h_disj] at h_inter
+    cases hp with
+    | inl hp2 =>
+        exact h_S2_sound p hp2
+    | inr hpNew =>
+        rcases hpNew with ⟨i, _hi, hpEq⟩
+        rw [hpEq]
+        exact h_encode_correct (indep.family i) (indep.kit i)
+
+  · -- disjointness of new parts (index-level)
+    intro n m hnm i hi j hj hEq
+    have h_disj : Disjoint (partition.Parts n) (partition.Parts m) :=
+      partition.disjoint n m hnm
+    -- from i = j, move membership across
+    have hi' : j ∈ partition.Parts n := by
+      rw [hEq] at hi
+      exact hi
+    have h_inter : j ∈ partition.Parts n ⊓ partition.Parts m := And.intro hi' hj
+    -- Disjoint means intersection is empty
+    have h_empty : partition.Parts n ⊓ partition.Parts m = ⊥ := (disjoint_iff.mp h_disj)
+    rw [h_empty] at h_inter
     exact h_inter
+
+-- ==============================================================================================
+-- Two-sided oracle variant (local one-step extension)
+-- No `simp`, no `simpa`, no `classical`, no `noncomputable`.
+-- ==============================================================================================
+
+/--
+An explicit two-sided oracle *witness* for a given code `e`.
+
+It packages a chosen sentence `p : PropT` together with a certificate that `p` matches
+the Kit verdict:
+- either `Rev0_K ...` and `p = encode_halt e`,
+- or `¬ Rev0_K ...` and `p = encode_not_halt e`.
+
+No decidability of `Rev0_K` is assumed or used.
+-/
+structure OraclePick {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    (encode_halt encode_not_halt : Code → PropT) (e : Code) where
+  p : PropT
+  cert :
+    (Rev0_K S.K (S.Machine e) ∧ p = encode_halt e) ∨
+    (¬ Rev0_K S.K (S.Machine e) ∧ p = encode_not_halt e)
+
+/-- Local S₁ for a fixed oracle pick: a single frontier sentence. -/
+def S1OneSet {PropT : Type} (pick_p : PropT) : Set PropT :=
+  {pick_p}
+
+/-- Local S₃ = S₂ ∪ S₁ (with S₁ being the singleton chosen by the oracle). -/
+def S3OneSet {PropT : Type} (S2 : Set PropT) (pick_p : PropT) : Set PropT :=
+  S2 ∪ S1OneSet pick_p
+
+/--
+Oracle variant (two-sided) — explicit and constructive.
+
+- `S2 : Set PropT` is the semantics-side corpus, with explicit soundness witness.
+- The oracle provides a `pick` choosing *one* sentence based on the Kit verdict (by certificate).
+- We extend by adding exactly that sentence, and prove the extension is sound.
+- This establishes the soundness of a single oracle step `S2 ∪ {pick.p}`.
+
+This theorem assumes a witness `pick`; it does not define or compute such a pick.
+
+No branching on `Rev0_K` is computed; the branch is carried by `pick.cert`.
+-/
+theorem T3_oracle_extension_explicit
+    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    (Truth : PropT → Prop)
+    (S2 : Set PropT)
+    (h_S2_sound : ∀ p ∈ S2, Truth p)
+    (encode_halt encode_not_halt : Code → PropT)
+    (h_pos : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
+    (h_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → Truth (encode_not_halt e))
+    (e : Code)
+    (pick : OraclePick S encode_halt encode_not_halt e)
+    (hUnprov : ¬ S.Provable pick.p) :
+    ∃ S3 : Set PropT,
+      S3 = S3OneSet S2 pick.p ∧
+      S2 ⊆ S3 ∧
+      (∀ p ∈ S3, Truth p) ∧
+      pick.p ∈ S3 ∧
+      ¬ S.Provable pick.p ∧
+      ((Halts (S.Machine e) ∧ pick.p = encode_halt e) ∨
+       (¬ Halts (S.Machine e) ∧ pick.p = encode_not_halt e)) := by
+  let S3 : Set PropT := S3OneSet S2 pick.p
+
+  have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) :=
+    T1_traces S.K S.h_canon (S.Machine e)
+
+  have hTruthPick : Truth pick.p := by
+    cases pick.cert with
+    | inl h =>
+        have hKit : Rev0_K S.K (S.Machine e) := h.1
+        have hpEq : pick.p = encode_halt e := h.2
+        have hTrue : Truth (encode_halt e) := h_pos e hKit
+        rw [hpEq]
+        exact hTrue
+    | inr h =>
+        have hNotKit : ¬ Rev0_K S.K (S.Machine e) := h.1
+        have hpEq : pick.p = encode_not_halt e := h.2
+        have hTrue : Truth (encode_not_halt e) := h_neg e hNotKit
+        rw [hpEq]
+        exact hTrue
+
+  have hBranchHalt :
+      (Halts (S.Machine e) ∧ pick.p = encode_halt e) ∨
+      (¬ Halts (S.Machine e) ∧ pick.p = encode_not_halt e) := by
+    cases pick.cert with
+    | inl h =>
+        have hKit : Rev0_K S.K (S.Machine e) := h.1
+        have hpEq : pick.p = encode_halt e := h.2
+        have hHalt : Halts (S.Machine e) := (hIff).1 hKit
+        exact Or.inl (And.intro hHalt hpEq)
+    | inr h =>
+        have hNotKit : ¬ Rev0_K S.K (S.Machine e) := h.1
+        have hpEq : pick.p = encode_not_halt e := h.2
+        have hNotHalt : ¬ Halts (S.Machine e) := by
+          intro hHalt
+          have hKit : Rev0_K S.K (S.Machine e) := (hIff).2 hHalt
+          exact hNotKit hKit
+        exact Or.inr (And.intro hNotHalt hpEq)
+
+  refine Exists.intro S3 ?_
+  refine And.intro rfl ?_
+  refine And.intro ?_ ?_
+
+  · -- S2 ⊆ S3
+    intro p hp
+    -- S3 = S3OneSet ... = S2 ∪ {pick.p}
+    exact Or.inl hp
+
+  · refine And.intro ?_ ?_
+    · -- Soundness
+      intro p hp
+      cases hp with
+      | inl hp2 =>
+          exact h_S2_sound p hp2
+      | inr hp1 =>
+          -- hp1 : p ∈ {pick.p}
+          have hpEq : p = pick.p := hp1
+          rw [hpEq]
+          exact hTruthPick
+
+    · refine And.intro ?_ ?_
+      · -- pick.p ∈ S3
+        have hMemSingleton : pick.p ∈ ({pick.p} : Set PropT) := rfl
+        exact Or.inr hMemSingleton
+      · refine And.intro hUnprov hBranchHalt
+
+/-
+  Two-sided oracle (global frontier) — definitions for later globalization (families/partitions).
+
+  These are not used by `T3_oracle_extension_explicit` (which is a local one-step theorem).
+-/
+
+/-- S₁(two-sided global): union of oracle-chosen frontier sentences across all codes `e`. -/
+def S1TwoSet {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    (encode_halt encode_not_halt : Code → PropT) : Set PropT :=
+  { p | ∃ e : Code, ∃ pick : OraclePick S encode_halt encode_not_halt e,
+      p = pick.p ∧ ¬ S.Provable p }
+
+/-- S₃(two-sided global): S₂ ∪ S₁(two-sided). -/
+def S3TwoSet {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    (S2 : Set PropT) (encode_halt encode_not_halt : Code → PropT) : Set PropT :=
+  S2 ∪ S1TwoSet S encode_halt encode_not_halt
+
+/-- Membership lemma: the oracle-chosen sentence is in S₁(two-sided) given unprovability. -/
+lemma mem_S1TwoSet_of_pick
+    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    (encode_halt encode_not_halt : Code → PropT)
+    (e : Code) (pick : OraclePick S encode_halt encode_not_halt e)
+    (hUnprov : ¬ S.Provable pick.p) :
+    pick.p ∈ S1TwoSet S encode_halt encode_not_halt := by
+  refine Exists.intro e ?_
+  refine Exists.intro pick ?_
+  refine And.intro rfl ?_
+  exact hUnprov
 
 end RevHalt
