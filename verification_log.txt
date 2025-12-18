@@ -1,0 +1,691 @@
+Build completed successfully (359 jobs).
+Build completed successfully (389 jobs).
+Γä╣ [813/817] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Γä╣ [815/817] Replayed RevHalt.Instances.PA.Main
+info: RevHalt/Instances/PA/Main.lean:101:0: RevHalt.Instances.PA.PA_Master_Theorem :
+  have ctx := EnrichedContextCoded_from_RM PRModel PAKit pa_kit_correct PALogicEncodedCoded;
+  (ΓêÇ (e : PRModel.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+Build completed successfully (817 jobs).
+Build completed successfully (387 jobs).
+Γä╣ [989/994] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Γä╣ [991/994] Replayed RevHalt.Instances.PA.Main
+info: RevHalt/Instances/PA/Main.lean:101:0: RevHalt.Instances.PA.PA_Master_Theorem :
+  have ctx := EnrichedContextCoded_from_RM PRModel PAKit pa_kit_correct PALogicEncodedCoded;
+  (ΓêÇ (e : PRModel.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+Build completed successfully (994 jobs).
+Build completed successfully (386 jobs).
+Build completed successfully (381 jobs).
+Build completed successfully (358 jobs).
+Build completed successfully (357 jobs).
+Build completed successfully (386 jobs).
+Build completed successfully (445 jobs).
+Build completed successfully (382 jobs).
+Γ£ö [445/445] Built RevHalt.Bridge.LocalAPI (6.5s)
+Build completed successfully (445 jobs).
+Build completed successfully (384 jobs).
+Build completed successfully (382 jobs).
+Build completed successfully (384 jobs).
+Build completed successfully (383 jobs).
+Build completed successfully (385 jobs).
+Γä╣ [390/396] Replayed RevHalt.Demo.ModelA
+info: RevHalt/Demo/ModelA.lean:153:0: theorem RevHalt_Demo_A.Toy_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+Γä╣ [392/396] Replayed RevHalt.Demo.ModelC
+info: RevHalt/Demo/ModelC.lean:192:0: theorem RevHalt_Demo_C.Toy_C_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+ΓÜá [394/396] Replayed RevHalt.Demo.SimpDemo
+warning: RevHalt/Demo/SimpDemo.lean:30:8: This simp argument is unused:
+  ctx
+
+Hint: Omit it from the simp argument list.
+  simp [c╠╡t╠╡x╠╡,╠╡ ╠╡RealHalts_encoded_simp M K hK]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+Γä╣ [395/396] Built RevHalt.Demo.All (21s)
+info: RevHalt/Demo/All.lean:36:0: RevHalt.RigorousModel : Type 1
+info: RevHalt/Demo/All.lean:37:0: RevHalt.SoundLogicDef (PropT : Type) : Type
+info: RevHalt/Demo/All.lean:38:0: RevHalt.Arithmetization (M : RigorousModel) (PropT : Type) (L : SoundLogicDef PropT) : Prop
+info: RevHalt/Demo/All.lean:39:0: RevHalt.SoundLogicEncoded (M : RigorousModel) (PropT : Type) : Type
+info: RevHalt/Demo/All.lean:40:0: RevHalt.EnrichedContext (Code PropT : Type) : Type
+info: RevHalt/Demo/All.lean:43:0: RevHalt.TGContext_from_RM {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicDef PropT) (A : Arithmetization M PropT L) : ImpossibleSystem M.Code PropT
+info: RevHalt/Demo/All.lean:44:0: RevHalt.EnrichedContext_from_Encoded {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicEncoded M PropT) : EnrichedContext M.Code PropT
+info: RevHalt/Demo/All.lean:47:0: RevHalt.RevHalt_Master_Complete {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicEncoded M PropT) :
+  have ctx := EnrichedContext_from_Encoded M K hK L;
+  (ΓêÇ (e : M.Code), Rev0_K K (rmCompile M e) Γåö Halts (rmCompile M e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+info: RevHalt/Demo/All.lean:50:0: RevHalt_Demo_A.Toy_Master_Theorem :
+  have ctx :=
+    EnrichedContext_from_Encoded RevHalt_Demo_A.ToyModel RevHalt_Demo_A.ToyKit RevHalt_Demo_A.toy_kit_correct
+      RevHalt_Demo_A.ToyLogic;
+  (ΓêÇ (e : RevHalt_Demo_A.ToyModel.Code),
+      Rev0_K RevHalt_Demo_A.ToyKit (rmCompile RevHalt_Demo_A.ToyModel e) Γåö
+        Halts (rmCompile RevHalt_Demo_A.ToyModel e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+info: RevHalt/Demo/All.lean:51:0: RevHalt_Demo_C.Toy_C_Master_Theorem :
+  have ctx :=
+    EnrichedContext_from_Encoded RevHalt_Demo_C.ToyModel RevHalt_Demo_C.ToyKit RevHalt_Demo_C.toy_kit_correct
+      RevHalt_Demo_C.ToyLogic;
+  (ΓêÇ (e : RevHalt_Demo_C.ToyModel.Code),
+      Rev0_K RevHalt_Demo_C.ToyKit (rmCompile RevHalt_Demo_C.ToyModel e) Γåö
+        Halts (rmCompile RevHalt_Demo_C.ToyModel e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+Γ£ö [396/396] Built RevHalt.Checks.Lint (14s)
+Build completed successfully (396 jobs).
+Γä╣ [390/395] Replayed RevHalt.Demo.ModelA
+info: RevHalt/Demo/ModelA.lean:153:0: theorem RevHalt_Demo_A.Toy_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+Γä╣ [392/395] Replayed RevHalt.Demo.ModelC
+info: RevHalt/Demo/ModelC.lean:192:0: theorem RevHalt_Demo_C.Toy_C_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+ΓÜá [394/395] Replayed RevHalt.Demo.SimpDemo
+warning: RevHalt/Demo/SimpDemo.lean:30:8: This simp argument is unused:
+  ctx
+
+Hint: Omit it from the simp argument list.
+  simp [c╠╡t╠╡x╠╡,╠╡ ╠╡RealHalts_encoded_simp M K hK]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+Γä╣ [395/395] Replayed RevHalt.Demo.All
+info: RevHalt/Demo/All.lean:36:0: RevHalt.RigorousModel : Type 1
+info: RevHalt/Demo/All.lean:37:0: RevHalt.SoundLogicDef (PropT : Type) : Type
+info: RevHalt/Demo/All.lean:38:0: RevHalt.Arithmetization (M : RigorousModel) (PropT : Type) (L : SoundLogicDef PropT) : Prop
+info: RevHalt/Demo/All.lean:39:0: RevHalt.SoundLogicEncoded (M : RigorousModel) (PropT : Type) : Type
+info: RevHalt/Demo/All.lean:40:0: RevHalt.EnrichedContext (Code PropT : Type) : Type
+info: RevHalt/Demo/All.lean:43:0: RevHalt.TGContext_from_RM {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicDef PropT) (A : Arithmetization M PropT L) : ImpossibleSystem M.Code PropT
+info: RevHalt/Demo/All.lean:44:0: RevHalt.EnrichedContext_from_Encoded {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicEncoded M PropT) : EnrichedContext M.Code PropT
+info: RevHalt/Demo/All.lean:47:0: RevHalt.RevHalt_Master_Complete {PropT : Type} (M : RigorousModel) (K : RHKit) (hK : DetectsMonotone K)
+  (L : SoundLogicEncoded M PropT) :
+  have ctx := EnrichedContext_from_Encoded M K hK L;
+  (ΓêÇ (e : M.Code), Rev0_K K (rmCompile M e) Γåö Halts (rmCompile M e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+info: RevHalt/Demo/All.lean:50:0: RevHalt_Demo_A.Toy_Master_Theorem :
+  have ctx :=
+    EnrichedContext_from_Encoded RevHalt_Demo_A.ToyModel RevHalt_Demo_A.ToyKit RevHalt_Demo_A.toy_kit_correct
+      RevHalt_Demo_A.ToyLogic;
+  (ΓêÇ (e : RevHalt_Demo_A.ToyModel.Code),
+      Rev0_K RevHalt_Demo_A.ToyKit (rmCompile RevHalt_Demo_A.ToyModel e) Γåö
+        Halts (rmCompile RevHalt_Demo_A.ToyModel e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+info: RevHalt/Demo/All.lean:51:0: RevHalt_Demo_C.Toy_C_Master_Theorem :
+  have ctx :=
+    EnrichedContext_from_Encoded RevHalt_Demo_C.ToyModel RevHalt_Demo_C.ToyKit RevHalt_Demo_C.toy_kit_correct
+      RevHalt_Demo_C.ToyLogic;
+  (ΓêÇ (e : RevHalt_Demo_C.ToyModel.Code),
+      Rev0_K RevHalt_Demo_C.ToyKit (rmCompile RevHalt_Demo_C.ToyModel e) Γåö
+        Halts (rmCompile RevHalt_Demo_C.ToyModel e)) Γêº
+    (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+      (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+        Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p
+Build completed successfully (395 jobs).
+Γä╣ [390/391] Replayed RevHalt.Demo.ModelA
+info: RevHalt/Demo/ModelA.lean:153:0: theorem RevHalt_Demo_A.Toy_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+Build completed successfully (391 jobs).
+Γä╣ [390/391] Replayed RevHalt.Demo.ModelC
+info: RevHalt/Demo/ModelC.lean:192:0: theorem RevHalt_Demo_C.Toy_C_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+Build completed successfully (391 jobs).
+Γä╣ [390/390] Replayed RevHalt.Demo.ModelA
+info: RevHalt/Demo/ModelA.lean:153:0: theorem RevHalt_Demo_A.Toy_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+Build completed successfully (390 jobs).
+Γä╣ [390/390] Replayed RevHalt.Demo.ModelC
+info: RevHalt/Demo/ModelC.lean:192:0: theorem RevHalt_Demo_C.Toy_C_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+Build completed successfully (390 jobs).
+Γä╣ [390/392] Replayed RevHalt.Demo.ModelC
+info: RevHalt/Demo/ModelC.lean:192:0: theorem RevHalt_Demo_C.Toy_C_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic;
+(ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+Eq.mpr
+  (id
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))))))
+  (Eq.mp
+    (congrArg (And (ΓêÇ (e : ToyModel.Code), Rev0_K ToyKit (rmCompile ToyModel e) Γåö Halts (rmCompile ToyModel e)))
+      (congr
+        (congrArg (fun x Γåª And (Exists x))
+          (funext fun p Γåª
+            congr (congrArg And (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))
+              (congrArg Not (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p))))
+        (congr
+          (congrArg (fun x Γåª And (Exists x))
+            (funext fun e Γåª
+              congr
+                (congrArg (fun x Γåª And ┬¼x)
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic (ToyLogic.HaltEncode e)))
+                (congrArg Not
+                  (Provable_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic
+                    (ToyLogic.Logic.Not (ToyLogic.HaltEncode e))))))
+          (congrArg Exists
+            (funext fun T1 Γåª
+              congrArg (And (ProvableSet (EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic) Γèé T1))
+                (forall_congr fun p Γåª
+                  implies_congr (Eq.refl (p Γêê T1))
+                    (Truth_encoded_simp._simp_1 ToyModel ToyKit toy_kit_correct ToyLogic p)))))))
+    (RevHalt_Master_Complete ToyModel ToyKit toy_kit_correct ToyLogic))
+ΓÜá [392/392] Replayed RevHalt.Demo.SimpDemo
+warning: RevHalt/Demo/SimpDemo.lean:30:8: This simp argument is unused:
+  ctx
+
+Hint: Omit it from the simp argument list.
+  simp [c╠╡t╠╡x╠╡,╠╡ ╠╡RealHalts_encoded_simp M K hK]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+Build completed successfully (392 jobs).
+Γ£ö [390/390] Built RevHalt.Demo.Template (11s)
+Build completed successfully (390 jobs).
+Γ£ö [748/748] Built RevHalt.Dynamics.System (9.9s)
+Build completed successfully (748 jobs).
+Γ£ö [740/740] Built RevHalt.Dynamics.Core.Complexity (13s)
+Build completed successfully (740 jobs).
+Build completed successfully (740 jobs).
+Build completed successfully (449 jobs).
+Build completed successfully (448 jobs).
+Build completed successfully (448 jobs).
+Build completed successfully (447 jobs).
+Build completed successfully (446 jobs).
+Build completed successfully (739 jobs).
+Build completed successfully (839 jobs).
+Build completed successfully (971 jobs).
+Γ£ö [974/976] Built Mathlib.Tactic.Positivity.Finset (13s)
+Γ£ö [975/976] Built Mathlib.Tactic.Positivity (9.1s)
+Γ£ö [976/976] Built RevHalt.Dynamics.Instances.OmegaComplexity (10s)
+Build completed successfully (976 jobs).
+Build completed successfully (789 jobs).
+Build completed successfully (386 jobs).
+Γ£ö [790/790] Built RevHalt.Dynamics.Operative.Limit (9.7s)
+Build completed successfully (790 jobs).
+Γ£ö [737/737] Built RevHalt.Dynamics.Operative.PNP (8.2s)
+Build completed successfully (737 jobs).
+Build completed successfully (740 jobs).
+Γä╣ [810/810] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Build completed successfully (810 jobs).
+Γä╣ [813/816] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Γä╣ [815/816] Replayed RevHalt.Instances.PA.Main
+info: RevHalt/Instances/PA/Main.lean:101:0: RevHalt.Instances.PA.PA_Master_Theorem :
+  have ctx := EnrichedContextCoded_from_RM PRModel PAKit pa_kit_correct PALogicEncodedCoded;
+  (ΓêÇ (e : PRModel.Code), ctx.RealHalts e Γåö ctx.Truth (ctx.H e)) Γêº
+    Γêâ e, ctx.RealHalts e Γåö ctx.Provable (ctx.Not (ctx.H e))
+Build completed successfully (816 jobs).
+Γ£ö [448/448] Built RevHalt.Instances.StratifiedInstance (6.2s)
+Build completed successfully (448 jobs).
+Γä╣ [811/812] Replayed RevHalt.Instances.Arithmetization
+info: RevHalt/Instances/Arithmetization.lean:426:0: theorem RevHalt.Instances.Arithmetization.PRModel_Master_Theorem : have ctx :=
+  EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded;
+(ΓêÇ (e : PRModel.Code), Rev0_K ctx.K (ctx.Machine e) Γåö Halts (rmCompile PRModel e)) Γêº
+  (Γêâ p, ctx.Truth p Γêº ┬¼ctx.Provable p) Γêº
+    (Γêâ e, ┬¼ctx.Provable (ctx.H e) Γêº ┬¼ctx.Provable (ctx.Not (ctx.H e))) Γêº
+      Γêâ T1, ProvableSet ctx Γèé T1 Γêº ΓêÇ p Γêê T1, ctx.Truth p :=
+RevHalt_Master_Complete PRModel PRKit pr_kit_correct PRLogicEncoded
+Build completed successfully (812 jobs).
+Build completed successfully (803 jobs).
+Build completed successfully (360 jobs).
+Build completed successfully (802 jobs).

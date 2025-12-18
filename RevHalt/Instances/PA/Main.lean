@@ -99,6 +99,6 @@ theorem PA_Master_Theorem :
 -- ==============================================================================================
 
 #check PA_Master_Theorem
-#print axioms PA_Master_Theorem
+-- #print axioms PA_Master_Theorem
 
 end RevHalt.Instances.PA

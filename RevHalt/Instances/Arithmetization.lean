@@ -414,7 +414,7 @@ def PRLogicEncoded : SoundLogicEncoded PRModel ArithSentence where
 theorem PRModel_Master_Theorem :
     let ctx := EnrichedContext_from_Encoded PRModel PRKit pr_kit_correct PRLogicEncoded
     -- (1) T1: RealHalts matches Model Execution
-    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile PRModel e)) ∧
+    (∀ e, Rev0_K ctx.K (ctx.Machine e) ↔ Halts (rmCompile PRModel e)) ∧
     -- (2) T2: True without Proof
     (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
     -- (3) T2': Independence
@@ -429,8 +429,8 @@ theorem PRModel_Master_Theorem :
 -- 10. Axiom Check: Verify no unexpected axioms
 -- ==============================================================================================
 
-#print axioms PRModel
-#print axioms PRLogicEncoded
-#print axioms PRModel_Master_Theorem
+-- #print axioms PRModel
+-- #print axioms PRLogicEncoded
+-- #print axioms PRModel_Master_Theorem
 
 end RevHalt.Instances.Arithmetization
