@@ -182,7 +182,7 @@ def ToyLogic : SoundLogicEncoded ToyModel ToyPropT :=
 -- 7. FINAL DEMONSTRATION
 theorem Toy_C_Master_Theorem :
     let ctx := EnrichedContext_from_Encoded ToyModel ToyKit toy_kit_correct ToyLogic
-    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile ToyModel e)) ∧
+    (∀ e, RevHalt.Rev0_K ToyKit (rmCompile ToyModel e) ↔ Halts (rmCompile ToyModel e)) ∧
     (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
     (∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e))) ∧
     (∃ T1 : Set ToyPropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) := by

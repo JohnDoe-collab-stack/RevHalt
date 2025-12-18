@@ -1,7 +1,7 @@
 -- RevHalt/Demo/DemoA.lean
 -- Re-exports RevHalt_Demo_A for the Demo test suite
 
-import RevHalt_Demo_A
+import RevHalt.Demo.ModelA
 
 /-!
 # Demo A: Degenerate Model

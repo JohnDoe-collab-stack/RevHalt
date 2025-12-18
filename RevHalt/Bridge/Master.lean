@@ -61,7 +61,7 @@ def EnrichedContext_from_Encoded
     EnrichedContext M.Code PropT :=
   let ctxTG := TGContext_from_RM M K hK L.Logic L.Arith
   {
-    toTuringGodelContext' := ctxTG
+    toImpossibleSystem := ctxTG
     Truth := L.Logic.Truth
     H := L.HaltEncode
     h_truth_H := by
@@ -77,13 +77,11 @@ def EnrichedContext_from_Encoded
 **Utility**: Direct link between RealHalts and concrete execution.
 -/
 theorem RealHalts_eq_Halts
-    {PropT : Type}
+
     (M : RigorousModel)
-    (K : RHKit) (hK : DetectsMonotone K)
-    (L : SoundLogicEncoded M PropT) :
-    let ctx := EnrichedContext_from_Encoded M K hK L
-    ∀ e, ctx.RealHalts e ↔ Halts (rmCompile M e) := by
-  intro _ e
+    (K : RHKit) (hK : DetectsMonotone K) :
+    ∀ e, RevHalt.Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e) := by
+  intro e
   show Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e)
   exact T1_traces K hK (rmCompile M e)
 
@@ -93,12 +91,10 @@ theorem RealHalts_eq_Halts
 
 /-- Simp lemma: RealHalts in the constructed context is just standard Halts. -/
 @[simp] theorem RealHalts_encoded_simp
-    {PropT : Type}
     (M : RigorousModel)
     (K : RHKit) (hK : DetectsMonotone K)
-    (L : SoundLogicEncoded M PropT)
     (e : M.Code) :
-    (EnrichedContext_from_Encoded M K hK L).RealHalts e ↔ Halts (rmCompile M e) := by
+    Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e) := by
   show Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e)
   exact T1_traces K hK (rmCompile M e)
 
@@ -147,7 +143,7 @@ theorem RevHalt_Master_Complete
     (L : SoundLogicEncoded M PropT) :
     let ctx := EnrichedContext_from_Encoded M K hK L
     -- (1) T1 equivalent: RealHalts matches Model Execution
-    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile M e)) ∧
+    (∀ e, Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e)) ∧
     -- (2) T2: True w/o Proof
     (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
     -- (3) T2': Independence
@@ -159,7 +155,7 @@ theorem RevHalt_Master_Complete
   · -- (1) T1: use stable simp lemma, targeted via ctx
     intro e
     set_option linter.unnecessarySimpa false in
-    simpa [ctx] using RealHalts_encoded_simp (M := M) (K := K) (hK := hK) (L := L) e
+    simpa [ctx] using RealHalts_encoded_simp (M := M) (K := K) (hK := hK) e
   · -- (2) T2
     exact true_but_unprovable_exists ctx
   · -- (3) T2'

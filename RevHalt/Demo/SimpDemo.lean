@@ -26,8 +26,8 @@ abbrev L := RevHalt_Demo_C.ToyLogic
 def ctx := EnrichedContext_from_Encoded M K hK L
 
 -- Contract 1: RealHalts reduces to Halts (via RealHalts_encoded_simp)
-example (e : M.Code) : ctx.RealHalts e ↔ Halts (rmCompile M e) := by
-  simp [ctx]
+example (e : M.Code) : Rev0_K K (rmCompile M e) ↔ Halts (rmCompile M e) := by
+  simp [ctx, RealHalts_encoded_simp M K hK]
 
 -- Contract 2: H reduces correctly
 example (e : M.Code) : ctx.H e = L.HaltEncode e := by

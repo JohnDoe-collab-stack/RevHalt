@@ -90,7 +90,8 @@ theorem gap_witness_halts {Code PropT : Type} (ctx : VerifiableContext Code Prop
 -/
 
 /-- A compact "system" bundle for robust gap reasoning (LR + Provable + kits). -/
-structure GapSystem (Code PropT : Type) extends VerifiableContext Code PropT where
+structure GapSystem (Code PropT : Type) where
+  ctx : VerifiableContext Code PropT
   K : RHKit
   hK : DetectsMonotone K
 
@@ -98,22 +99,22 @@ namespace GapSystem
 
 /-- Robust verifiable set (empty context) via the chosen kit. -/
 def VerRev {Code PropT : Type} (S : GapSystem Code PropT) : Set PropT :=
-  CloRev (LR := S.LR) S.K (∅ : Set PropT)
+  CloRev (LR := S.ctx.LR) S.K (∅ : Set PropT)
 
 /-- Robust gap: kit-verifiable but not provable. -/
 def GapK {Code PropT : Type} (S : GapSystem Code PropT) : Set PropT :=
-  (VerRev S) \ (ProvableSet S.toEnrichedContext)
+  (VerRev S) \ (ProvableSet S.ctx.toEnrichedContext)
 
 @[simp] theorem mem_VerRev_iff {Code PropT : Type} (S : GapSystem Code PropT) (p : PropT) :
-    p ∈ VerRev S ↔ Rev0_K S.K (S.LR ∅ p) := by
+    p ∈ VerRev S ↔ Rev0_K S.K (S.ctx.LR ∅ p) := by
   rfl
 
 /-- VerRev equals CloK extensionally (T1 on traces). -/
 theorem VerRev_eq_CloK {Code PropT : Type} (S : GapSystem Code PropT) :
-    VerRev S = CloK (LR := S.LR) (∅ : Set PropT) := by
+    VerRev S = CloK (LR := S.ctx.LR) (∅ : Set PropT) := by
   ext p
   -- membership: Rev0_K ↔ Halts, then unfold CloK/CloRev
-  have h : Rev0_K S.K (S.LR ∅ p) ↔ Halts (S.LR ∅ p) := T1_traces S.K S.hK (S.LR ∅ p)
+  have h : Rev0_K S.K (S.ctx.LR ∅ p) ↔ Halts (S.ctx.LR ∅ p) := T1_traces S.K S.hK (S.ctx.LR ∅ p)
   simpa [VerRev, CloRev, CloK] using h
 
 /-- Robust gap is nonempty (same witness as the CloK gap). -/
@@ -121,37 +122,37 @@ theorem gapK_nonempty {Code PropT : Type}
     (S : GapSystem Code PropT) :
     ∃ p, p ∈ GapK S := by
   -- use gap_nonempty on the underlying VerifiableContext + transport via VerRev_eq_CloK
-  obtain ⟨p, hp⟩ := gap_nonempty (ctx := S.toVerifiableContext)
+  obtain ⟨p, hp⟩ := gap_nonempty (ctx := S.ctx)
   refine ⟨p, ?_⟩
   rcases hp with ⟨hCloK, hNotProv⟩
   have hVerRev : p ∈ VerRev S := by
     -- rewrite VerRev to CloK
-    have : VerRev S = CloK (LR := S.LR) (∅ : Set PropT) := VerRev_eq_CloK S
+    have : VerRev S = CloK (LR := S.ctx.LR) (∅ : Set PropT) := VerRev_eq_CloK S
     simpa [this] using hCloK
   exact ⟨hVerRev, hNotProv⟩
 
 /-- Kit-invariance (replace K by any other valid kit): membership in VerRev is invariant. -/
 theorem VerRev_invariant {Code PropT : Type}
     (S : GapSystem Code PropT) (K₂ : RHKit) (h₂ : DetectsMonotone K₂) :
-    ∀ p, (p ∈ CloRev (LR := S.LR) S.K (∅ : Set PropT)) ↔ (p ∈ CloRev (LR := S.LR) K₂ (∅ : Set PropT)) := by
+    ∀ p, (p ∈ CloRev (LR := S.ctx.LR) S.K (∅ : Set PropT)) ↔ (p ∈ CloRev (LR := S.ctx.LR) K₂ (∅ : Set PropT)) := by
   intro p
-  exact CloRev_mem_invariant (LR := S.LR) S.K K₂ S.hK h₂ (∅ : Set PropT) p
+  exact CloRev_mem_invariant (LR := S.ctx.LR) S.K K₂ S.hK h₂ (∅ : Set PropT) p
 
 /-- GapK itself is kit-invariant: the verifiable-but-unprovable gap doesn't depend on kit choice. -/
 theorem GapK_invariant {Code PropT : Type}
     (S : GapSystem Code PropT) (K₂ : RHKit) (h₂ : DetectsMonotone K₂) :
     ∀ p, (p ∈ GapK S) ↔
-         (p ∈ ((CloRev (LR := S.LR) K₂ (∅ : Set PropT)) \ ProvableSet S.toEnrichedContext)) := by
+         (p ∈ ((CloRev (LR := S.ctx.LR) K₂ (∅ : Set PropT)) \ ProvableSet S.ctx.toEnrichedContext)) := by
   intro p
   constructor
   · intro hp
     rcases hp with ⟨hV, hNP⟩
-    have hV' : p ∈ CloRev (LR := S.LR) K₂ (∅ : Set PropT) :=
+    have hV' : p ∈ CloRev (LR := S.ctx.LR) K₂ (∅ : Set PropT) :=
       (S.VerRev_invariant K₂ h₂ p).1 (by simpa [VerRev] using hV)
     exact ⟨hV', hNP⟩
   · intro hp
     rcases hp with ⟨hV, hNP⟩
-    have hV' : p ∈ CloRev (LR := S.LR) S.K (∅ : Set PropT) :=
+    have hV' : p ∈ CloRev (LR := S.ctx.LR) S.K (∅ : Set PropT) :=
       (S.VerRev_invariant K₂ h₂ p).2 hV
     exact ⟨by simpa [VerRev] using hV', hNP⟩
 

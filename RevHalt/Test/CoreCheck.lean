@@ -14,7 +14,7 @@ open RevHalt
 
 -- Key structures
 #check @RHKit
-#check @TuringGodelContext'
+#check @ImpossibleSystem
 #check @RigorousModel
 #check @EnrichedContext
 #check @SoundLogicEncoded

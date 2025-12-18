@@ -127,7 +127,7 @@ noncomputable def MyLogicEncoded : SoundLogicEncoded MyRigorousModel MyPropT whe
 
 theorem My_Master_Theorem :
     let ctx := EnrichedContext_from_Encoded MyRigorousModel MyKit my_kit_correct MyLogicEncoded
-    (∀ e, ctx.RealHalts e ↔ Halts (rmCompile MyRigorousModel e)) ∧
+    (∀ e, RevHalt.Rev0_K MyKit (rmCompile MyRigorousModel e) ↔ Halts (rmCompile MyRigorousModel e)) ∧
     (∃ p, ctx.Truth p ∧ ¬ctx.Provable p) ∧
     (∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e))) ∧
     (∃ T1 : Set MyPropT, ProvableSet ctx ⊂ T1 ∧ (∀ p ∈ T1, ctx.Truth p)) :=

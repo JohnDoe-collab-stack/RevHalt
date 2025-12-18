@@ -133,8 +133,10 @@ def TGContext_from_RM
     (K : RHKit) (hK : DetectsMonotone K)
     (L : SoundLogicDef PropT)
     (A : Arithmetization M PropT L) :
-    TuringGodelContext' M.Code PropT where
-  RealHalts := fun e => Rev0_K K (rmCompile M e)
+    ImpossibleSystem M.Code PropT where
+  Machine := rmCompile M
+  K := K
+  h_canon := hK
   Provable := L.Provable
   FalseT := L.FalseP
   Not := L.Not

@@ -42,7 +42,7 @@ section TheoryExports
   #check verdict_K
 
   -- T2 Impossibility
-  #check TuringGodelContext'
+  #check ImpossibleSystem
   #check InternalHaltingPredicate
   #check T2_impossibility
 

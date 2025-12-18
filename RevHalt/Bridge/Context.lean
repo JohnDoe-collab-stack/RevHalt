@@ -17,9 +17,6 @@ namespace RevHalt
 
 variable {Code : Type}
 
-/-- RealHalts defined via Rev0_K. T1 connection is via T1_traces. -/
-abbrev RealHalts_via_Rev (K : RHKit) (compile : Code → Trace) (e : Code) : Prop :=
-  Rev0_K K (compile e)
 
 -- ==============================================================================================
 -- Part B: Use T2 to show incompleteness
@@ -30,11 +27,11 @@ abbrev RealHalts_via_Rev (K : RHKit) (compile : Code → Trace) (e : Code) : Pro
 -/
 theorem encoding_cannot_be_complete
     {PropT : Type}
-    (ctx : TuringGodelContext' Code PropT)
+    (ctx : ImpossibleSystem Code PropT)
     (H : Code → PropT)
     (h_total : ∀ e, ctx.Provable (H e) ∨ ctx.Provable (ctx.Not (H e)))
-    (h_correct : ∀ e, ctx.RealHalts e → ctx.Provable (H e))
-    (h_complete : ∀ e, ¬ctx.RealHalts e → ctx.Provable (ctx.Not (H e))) :
+    (h_correct : ∀ e, Rev0_K ctx.K (ctx.Machine e) → ctx.Provable (H e))
+    (h_complete : ∀ e, ¬Rev0_K ctx.K (ctx.Machine e) → ctx.Provable (ctx.Not (H e))) :
     False := by
   have h : ∃ _ : InternalHaltingPredicate ctx, True := ⟨⟨H, h_total, h_correct, h_complete⟩, trivial⟩
   exact T2_impossibility ctx h
@@ -44,15 +41,15 @@ theorem encoding_cannot_be_complete
 -/
 theorem undecidable_code_exists
     {PropT : Type}
-    (ctx : TuringGodelContext' Code PropT)
+    (ctx : ImpossibleSystem Code PropT)
     (H : Code → PropT) :
-    ∃ e, (ctx.RealHalts e ∧ ¬ctx.Provable (H e)) ∨
-         (¬ctx.RealHalts e ∧ ¬ctx.Provable (ctx.Not (H e))) := by
+    ∃ e, (Rev0_K ctx.K (ctx.Machine e) ∧ ¬ctx.Provable (H e)) ∨
+         (¬Rev0_K ctx.K (ctx.Machine e) ∧ ¬ctx.Provable (ctx.Not (H e))) := by
   by_contra h_contra
   push_neg at h_contra
   apply encoding_cannot_be_complete ctx H
   · intro e
-    by_cases h : ctx.RealHalts e
+    by_cases h : Rev0_K ctx.K (ctx.Machine e)
     · left; exact (h_contra e).1 h
     · right; exact (h_contra e).2 h
   · intro e hReal; exact (h_contra e).1 hReal
@@ -65,10 +62,10 @@ theorem undecidable_code_exists
 /--
 Enriched context with classical truth.
 -/
-structure EnrichedContext (Code PropT : Type) extends TuringGodelContext' Code PropT where
+structure EnrichedContext (Code PropT : Type) extends ImpossibleSystem Code PropT where
   Truth : PropT → Prop
   H : Code → PropT  -- halting predicate
-  h_truth_H : ∀ e, RealHalts e ↔ Truth (H e)
+  h_truth_H : ∀ e, Rev0_K K (Machine e) ↔ Truth (H e)
   truth_not_iff : ∀ p, Truth (Not p) ↔ ¬Truth p
 
 attribute [simp] EnrichedContext.truth_not_iff
@@ -80,7 +77,7 @@ attribute [simp] EnrichedContext.truth_not_iff
 
 /-- Derive h_truth_not from truth_not_iff. -/
 theorem EnrichedContext.h_truth_not (ctx : EnrichedContext Code PropT) :
-    ∀ e, ¬ctx.RealHalts e → ctx.Truth (ctx.Not (ctx.H e)) := by
+    ∀ e, ¬Rev0_K ctx.K (ctx.Machine e) → ctx.Truth (ctx.Not (ctx.H e)) := by
   intro e hNotReal
   rw [ctx.truth_not_iff]
   intro h
@@ -91,7 +88,7 @@ Extract true-but-unprovable from the gap.
 -/
 theorem true_but_unprovable_exists (ctx : EnrichedContext Code PropT) :
     ∃ p : PropT, ctx.Truth p ∧ ¬ctx.Provable p := by
-  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toTuringGodelContext' ctx.H
+  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toImpossibleSystem ctx.H
   rcases h_gap with ⟨hReal, hNotProv⟩ | ⟨hNotReal, hNotProvNeg⟩
   · exact ⟨ctx.H e, ctx.h_truth_H e |>.mp hReal, hNotProv⟩
   · exact ⟨ctx.Not (ctx.H e), ctx.h_truth_not e hNotReal, hNotProvNeg⟩
@@ -136,7 +133,7 @@ theorem independent_code_exists
     (ctx : EnrichedContext Code PropT)
     (h_sound : ∀ p, ctx.Provable p → ctx.Truth p) :
     ∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e)) := by
-  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toTuringGodelContext' ctx.H
+  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toImpossibleSystem ctx.H
   use e
   rcases h_gap with ⟨hReal, hNotProv⟩ | ⟨hNotReal, hNotProvNeg⟩
   · -- Case: RealHalts e ∧ ¬Provable(H e)
@@ -146,14 +143,14 @@ theorem independent_code_exists
       -- Provable(Not(H e)) → Truth(Not(H e)) → ¬Truth(H e) → ¬RealHalts e
       have h1 : ctx.Truth (ctx.Not (ctx.H e)) := h_sound _ hProv
       have h2 : ¬ctx.Truth (ctx.H e) := ctx.truth_not_iff (ctx.H e) |>.mp h1
-      have h3 : ¬ctx.RealHalts e := fun h => h2 (ctx.h_truth_H e |>.mp h)
+      have h3 : ¬Rev0_K ctx.K (ctx.Machine e) := fun h => h2 (ctx.h_truth_H e |>.mp h)
       exact h3 hReal
   · -- Case: ¬RealHalts e ∧ ¬Provable(Not(H e))
     constructor
     · intro hProv
       -- Provable(H e) → Truth(H e) → RealHalts e
       have h1 : ctx.Truth (ctx.H e) := h_sound _ hProv
-      have h2 : ctx.RealHalts e := ctx.h_truth_H e |>.mpr h1
+      have h2 : Rev0_K ctx.K (ctx.Machine e) := ctx.h_truth_H e |>.mpr h1
       exact hNotReal h2
     · exact hNotProvNeg
 

@@ -1,7 +1,7 @@
 -- RevHalt/Demo/DemoC.lean
 -- Re-exports RevHalt_Demo_C for the Demo test suite
 
-import RevHalt_Demo_C
+import RevHalt.Demo.ModelC
 
 /-!
 # Demo C: Robustness Model
