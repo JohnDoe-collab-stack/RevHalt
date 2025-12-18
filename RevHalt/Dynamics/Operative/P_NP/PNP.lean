@@ -63,6 +63,9 @@ theorem IsPoly.id : IsPoly (fun n => n) := by
   simp
   omega
 
+
+
+
 /-! ### §1b. Monotone Hull for Polynomial Bounds -/
 
 /-- Monotone hull of a bound function (primitive recursion).

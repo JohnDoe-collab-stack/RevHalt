@@ -16,6 +16,7 @@
 -/
 
 import RevHalt.Dynamics.Operative.P_NP.SAT
+import RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
 
 namespace RevHalt.Dynamics.Operative.P_NP.SATCanonical
 
@@ -41,6 +42,9 @@ structure SATBundle (PropT : Type) where
   wBound : ℕ → ℕ
   poly_time   : IsPoly time
   poly_wBound : IsPoly wBound
+
+  /-- Bounds consistency: wBound dominates max variable index. -/
+  wBound_ge_maxVar : ∀ F, CookLevinLemmas.maxVar F + 1 ≤ wBound (cnfSize F)
 
   /-- Problem bridge: halting LR of satProp ↔ ∃ bounded witness that satisfies. -/
   sat_correct_bounded :

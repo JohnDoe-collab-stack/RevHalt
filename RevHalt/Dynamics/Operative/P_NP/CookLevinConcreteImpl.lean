@@ -4,6 +4,7 @@ import RevHalt.Dynamics.Operative.P_NP.CookLevinGadgets
 import RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
 import RevHalt.Dynamics.Operative.P_NP.CookLevinCorrectness
 import RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
+import RevHalt.Dynamics.Operative.P_NP.CookLevin
 import Mathlib.Data.Nat.Basic
 
 set_option maxHeartbeats 2000000
@@ -33,6 +34,7 @@ open RevHalt.Dynamics.Operative.P_NP.CookLevin
 open RevHalt.Dynamics.Operative.P_NP.CookLevinConcrete
 open RevHalt.Dynamics.Operative.P_NP.SATCanonical
 open RevHalt.Dynamics.Operative.P_NP.SAT
+open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
 open RevHalt.Dynamics.Operative.P_NP.CookLevinGadgets
 open RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
 
@@ -89,10 +91,17 @@ def mkWIP_tableau
 
   map_size_ok := by
     intro ι P V x y
-    simp [BoolLRBundle.graphProblem]
-    sorry
+    unfold BoolLRBundle.graphProblem
+    dsimp
+    -- size(x) + size(y) ≤ 2 * (size(x) + size(y)) + 1
+    -- Proof strategy:
+    -- 1. N ≤ 2*N (via le_mul_of_pos_left)
+    -- 2. 2*N ≤ 2*N + 1 (via le_add_right)
+    apply Nat.le_trans (m := 2 * (P.size x + (SATP B).size y))
+    · rw [two_mul]
+      exact Nat.le_add_left _ _
+    · exact Nat.le_add_right _ _
 
-  -- Output size bounds linked to Tableau
   out_sizeBound := fun {ι} P V n =>
     tableauFullSizeBoundFun (simBuilder P V).M (2 * (V.time n))
 
@@ -104,7 +113,7 @@ def mkWIP_tableau
   out_size_ok := by
     intro ι P V x
     have h := encode_size_poly (simBuilder P V) x
-    exact h
+    simpa [CookLevinCorrectness.encode, two_mul, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using h
 
   encode_sat_iff := by
     intro ι P V x
@@ -122,9 +131,7 @@ def mkWIP_tableau
     -- (2) CNF.Satisfiable F ↔ bounded form, via maxVar hypothesis
     have hMax :
         maxVar F + 1 ≤ B.wBound (cnfSize F) := by
-      -- Requirement: B.wBound must be large enough to contain the tableau variables.
-      -- This is structurally true for reasonable B, but here we assume it.
-      sorry
+      exact B.wBound_ge_maxVar F
 
     have hSatBound :
         (∃ w : Witness, witnessSize w ≤ B.wBound (cnfSize F) ∧ CNF.evalCNF w F = true) ↔
@@ -143,5 +150,44 @@ def mkWIP_tableau
     -- Assemblage
     exact hSolve.trans (hSatBound.trans hCL)
 }
+
+/-! ### §2. Final Connector: CookLevinKernel -/
+
+/--
+Canonical construction of the Cook-Levin Kernel.
+Inputs:
+- B: a SATBundle (target problem + logic bridges)
+- simBuilder: a way to build TableauMachines for any Verifier
+- BL: a BoolLRBundle for the syntactic check map
+-/
+def kernelOfSimBuilder
+    (B : SATBundle PropT)
+    (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
+    (BL : BoolLRBundle)
+    : CookLevinKernel (SATP B) :=
+  kernel_of_wip B (mkWIP_tableau B simBuilder BL)
+
+/--
+NP-Hardness corollary.
+IF we have a Simulator and a Bool Bundle, THEN SATP is NP-Hard.
+-/
+theorem NPHard_of_simBuilder
+    (B : SATBundle PropT)
+    (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
+    (BL : BoolLRBundle)
+    : NPHard_RH (SATP B) :=
+  nphard_of_kernel (SATP B) (kernelOfSimBuilder B simBuilder BL)
+
+/--
+NP-Completeness corollary.
+IF we have a Simulator and a Bool Bundle, THEN SATP is NP-Complete.
+-/
+theorem NPComplete_of_simBuilder
+    (B : SATBundle PropT)
+    (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
+    (BL : BoolLRBundle)
+    (hNP : NP_RH (SATP B)) -- Extra assumption needed for completeness
+    : SAT_NPComplete_RH (SATP B) :=
+  npcomplete_of_kernel (SATP B) hNP (kernelOfSimBuilder B simBuilder BL)
 
 end RevHalt.Dynamics.Operative.P_NP.CookLevinConcreteImpl
