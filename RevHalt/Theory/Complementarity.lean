@@ -25,9 +25,9 @@ T3: Complementarity (one-sided) — S₁ ∪ S₂ = S₃
 ## Lean-Faithful Interpretation
 
 - We work over a fixed syntactic universe `PropT` (so `Set PropT` is a predicate `PropT → Prop`).
-- Semantics is represented externally by a truth predicate `Truth : PropT → Prop` (or, upstream, by `Sat`/`SemConsequences`).
+- Semantics is represented externally by a truth set `Sem : Set PropT`.
 - `S2` is an arbitrary internalizable base corpus `S2 : Set PropT` equipped with an explicit soundness witness
-  `h_S2_sound : ∀ p ∈ S2, Truth p`
+  `h_S2_sound : S2 ⊆ Sem`
   (i.e. membership implies external truth).
 - `S1` is the non-internalizable syntactic frontier `S1Set S encode_halt : Set PropT`, whose elements are sentences
   of type `PropT` (typically `encode_halt e`) singled out by the interaction of:
@@ -115,16 +115,16 @@ theorem S1Set_nonempty_of_witness
 -/
 theorem exists_unprovable_encode_halt
     {Code PropT : Type} (S : ImpossibleSystem Code PropT)
-    (Truth : PropT → Prop)
-    (h_sound : ∀ p, S.Provable p → Truth p)
+    (Sem : Set PropT)
+    (h_sound : ∀ p, S.Provable p → p ∈ Sem)
     (encode_halt : Code → PropT)
-    (h_truth_to_real : ∀ e, Truth (encode_halt e) → Rev0_K S.K (S.Machine e)) :
+    (h_sem_to_real : ∀ e, encode_halt e ∈ Sem → Rev0_K S.K (S.Machine e)) :
     ∃ e, ¬ S.Provable (encode_halt e) := by
   obtain ⟨e, he⟩ := S.diagonal_program encode_halt
   refine Exists.intro e ?_
   intro hProv
   have hReal : Rev0_K S.K (S.Machine e) :=
-    h_truth_to_real e (h_sound (encode_halt e) hProv)
+    h_sem_to_real e (h_sound (encode_halt e) hProv)
   have hProvNot : S.Provable (S.Not (encode_halt e)) :=
     he.mp hReal
   exact S.consistent (S.absurd (encode_halt e) hProv hProvNot)
@@ -138,18 +138,18 @@ theorem exists_unprovable_encode_halt
 -/
 theorem T3_weak_extension_explicit
     {Code PropT : Type} (S : ImpossibleSystem Code PropT)
-    (Truth : PropT → Prop)
+    (Sem : Set PropT)
     (S2 : Set PropT)
-    (h_S2_sound : ∀ p ∈ S2, Truth p)
+    (h_S2_sem : S2 ⊆ Sem)
     (encode_halt : Code → PropT)
-    (h_encode_correct : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
+    (h_S1_sem : ∀ e, Rev0_K S.K (S.Machine e) → encode_halt e ∈ Sem)
     (e : Code)
     (hKit : Rev0_K S.K (S.Machine e))
     (hUnprov : ¬ S.Provable (encode_halt e)) :
     ∃ S3 : Set PropT,
       S3 = S3Set S S2 encode_halt ∧
       S2 ⊆ S3 ∧
-      (∀ p ∈ S3, Truth p) ∧
+      (∀ p ∈ S3, p ∈ Sem) ∧
       encode_halt e ∈ S1Set S encode_halt ∧
       encode_halt e ∈ S3 ∧
       Halts (S.Machine e) ∧
@@ -176,7 +176,7 @@ theorem T3_weak_extension_explicit
       intro p hp
       cases hp with
       | inl hp2 =>
-          exact h_S2_sound p hp2
+          exact h_S2_sem hp2
       | inr hp1 =>
           -- hp1 : p ∈ S1Set ...
           rcases hp1 with ⟨e', hpEq, hKit', _hUnprov'⟩
@@ -184,7 +184,7 @@ theorem T3_weak_extension_explicit
           have hKit'' : Rev0_K S.K (S.Machine e') := by
             rw [hEqK]
             exact hKit'
-          have hTrue : Truth (encode_halt e') := h_encode_correct e' hKit''
+          have hTrue : encode_halt e' ∈ Sem := h_S1_sem e' hKit''
           rw [hpEq]
           exact hTrue
 
@@ -246,16 +246,16 @@ constructs {S₃ₙ} family. Each S₃ₙ = S₂ ∪ { encode_halt(family i) | i
 No `simp`, no `simpa`, no `classical`, no `noncomputable`.
 -/
 theorem T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT)
-    (Truth : PropT → Prop)
+    (Sem : Set PropT)
     (encode_halt : Code → PropT)
-    (h_encode_correct : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
+    (h_S1_sem : ∀ e, Rev0_K S.K (S.Machine e) → encode_halt e ∈ Sem)
     (S2 : Set PropT)
-    (h_S2_sound : ∀ p ∈ S2, Truth p)
+    (h_S2_sem : S2 ⊆ Sem)
     (indep : InfiniteS1 Code PropT S encode_halt)
     (partition : Partition indep.Index)
     : ∃ (S3_family : ℕ → Set PropT),
         (∀ n, S2 ⊆ S3_family n) ∧
-        (∀ n, ∀ p ∈ S3_family n, Truth p) ∧
+        (∀ n, ∀ p ∈ S3_family n, p ∈ Sem) ∧
         (∀ n m, n ≠ m → ∀ i ∈ partition.Parts n, ∀ j ∈ partition.Parts m, i ≠ j) := by
   let S3_family : ℕ → Set PropT := fun n =>
     S2 ∪ { p | ∃ i ∈ partition.Parts n, p = encode_halt (indep.family i) }
@@ -271,11 +271,11 @@ theorem T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT)
     intro n p hp
     cases hp with
     | inl hp2 =>
-        exact h_S2_sound p hp2
+        exact h_S2_sem hp2
     | inr hpNew =>
         rcases hpNew with ⟨i, _hi, hpEq⟩
         rw [hpEq]
-        exact h_encode_correct (indep.family i) (indep.kit i)
+        exact h_S1_sem (indep.family i) (indep.kit i)
 
   · -- disjointness of new parts (index-level)
     intro n m hnm i hi j hj hEq
@@ -335,19 +335,19 @@ No branching on `Rev0_K` is computed; the branch is carried by `pick.cert`.
 -/
 theorem T3_oracle_extension_explicit
     {Code PropT : Type} (S : ImpossibleSystem Code PropT)
-    (Truth : PropT → Prop)
+    (Sem : Set PropT)
     (S2 : Set PropT)
-    (h_S2_sound : ∀ p ∈ S2, Truth p)
+    (h_S2_sem : S2 ⊆ Sem)
     (encode_halt encode_not_halt : Code → PropT)
-    (h_pos : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
-    (h_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → Truth (encode_not_halt e))
+    (h_pos : ∀ e, Rev0_K S.K (S.Machine e) → encode_halt e ∈ Sem)
+    (h_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → encode_not_halt e ∈ Sem)
     (e : Code)
     (pick : OraclePick S encode_halt encode_not_halt e)
     (hUnprov : ¬ S.Provable pick.p) :
     ∃ S3 : Set PropT,
       S3 = S3OneSet S2 pick.p ∧
       S2 ⊆ S3 ∧
-      (∀ p ∈ S3, Truth p) ∧
+      (∀ p ∈ S3, p ∈ Sem) ∧
       pick.p ∈ S3 ∧
       ¬ S.Provable pick.p ∧
       ((Halts (S.Machine e) ∧ pick.p = encode_halt e) ∨
@@ -357,18 +357,18 @@ theorem T3_oracle_extension_explicit
   have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) :=
     T1_traces S.K S.h_canon (S.Machine e)
 
-  have hTruthPick : Truth pick.p := by
+  have hTruthPick : pick.p ∈ Sem := by
     cases pick.cert with
     | inl h =>
         have hKit : Rev0_K S.K (S.Machine e) := h.1
         have hpEq : pick.p = encode_halt e := h.2
-        have hTrue : Truth (encode_halt e) := h_pos e hKit
+        have hTrue : encode_halt e ∈ Sem := h_pos e hKit
         rw [hpEq]
         exact hTrue
     | inr h =>
         have hNotKit : ¬ Rev0_K S.K (S.Machine e) := h.1
         have hpEq : pick.p = encode_not_halt e := h.2
-        have hTrue : Truth (encode_not_halt e) := h_neg e hNotKit
+        have hTrue : encode_not_halt e ∈ Sem := h_neg e hNotKit
         rw [hpEq]
         exact hTrue
 
@@ -404,7 +404,7 @@ theorem T3_oracle_extension_explicit
       intro p hp
       cases hp with
       | inl hp2 =>
-          exact h_S2_sound p hp2
+          exact h_S2_sem hp2
       | inr hp1 =>
           -- hp1 : p ∈ {pick.p}
           have hpEq : p = pick.p := hp1
