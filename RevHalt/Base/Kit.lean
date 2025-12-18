@@ -18,7 +18,7 @@ structure RHKit where
   Proj : Trace → Prop
 
 /--
-  The core axiom for a valid Kit: `DetectsMonotone`.
+  The structural condition for a valid Kit: `DetectsMonotone`.
   It states that for any *monotone* process, the Kit's projection agrees with standard existence.
   This allows the Kit to have "exotic" behavior on non-monotone traces, but it must be standard on monotone ones.
 -/

@@ -43,7 +43,7 @@ structure ImpossibleSystem (Code : Type) (PropT : Type) where
   FalseT   : PropT
   Not      : PropT → PropT
 
-  -- [D] Consistency Axioms
+  -- [D] Consistency Data
   consistent : ¬ Provable FalseT
   absurd     : ∀ p, Provable p → Provable (Not p) → Provable FalseT
 

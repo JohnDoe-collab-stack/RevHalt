@@ -64,7 +64,7 @@ theorem T3_weak_extension {Code PropT : Type} (S : ImpossibleSystem Code PropT)
 /--
   **T3.2: Strong Complementarity (Disjoint Families of Sound Theories)**
 
-  **Axiom**: There exists an infinite set of halting statements that are independent
+  **Core Assumption**: There exists an infinite set of halting statements that are independent
   (undecided) in the base theory T₀.
 
   **Construction**: Given a partition of this infinite set into disjoint subsets,
