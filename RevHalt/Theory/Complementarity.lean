@@ -15,6 +15,24 @@ T3: Complementarity Theorem — S₁ ∪ S₂ = S₃
 - **S₂** := parameter `S2 : Set PropT` (internalizable base)
 - **S₃** := `S3Set S S2 encode_halt` = S₂ ∪ S₁
 
+## Lean-Faithful Interpretation
+
+- We work over a fixed syntactic universe `PropT` (so `Set PropT` is a predicate `PropT → Prop`).
+- Semantics is represented externally by a truth predicate `Truth : PropT → Prop` (or, upstream, by `Sat`/`SemConsequences`).
+- `S2` is an arbitrary internalizable base corpus `S2 : Set PropT` equipped with an explicit soundness witness
+  `h_S2_sound : ∀ p ∈ S2, Truth p`
+  (i.e. membership implies external truth).
+- `S1` is the non-internalizable syntactic frontier `S1Set S encode_halt : Set PropT`, whose elements are sentences
+  of type `PropT` (typically `encode_halt e`) singled out by the interaction of:
+  - the external certification `Rev0_K S.K (S.Machine e)`, and
+  - internal non-derivability `¬ S.Provable (encode_halt e)`.
+
+The complementarity result is exactly the construction
+`S3 := S2 ∪ S1` (implemented as `S3Set S S2 encode_halt`),
+showing that `S3` contains both layers, preserves semantic soundness under the stated hypotheses, and adds
+syntax-side statements from `S1` that are not internalized by `Provable`. Under the `InfiniteS1` hypothesis,
+one further obtains a whole family of such complementary extensions via partitions.
+
 ## Explicit Kit Dependency (Types)
 
 ```
