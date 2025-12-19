@@ -1,49 +1,32 @@
-# Quick Start Guide
+# Ω-Proof Quickstart
 
-## Installation
+Follow these steps to replicate the **T3 Architecture Results**.
 
+## 1. Verify the Architecture
+Run the "Anti-Cheat" and "Hardening" suites to confirm S1/S2 separation and soundness.
 ```bash
-pip install -r requirements.txt
+cd src
+python test_anti_cheat.py
+python test_hardening.py
+```
+*Expected: "PASS"*
+
+## 2. Train the Witness Proposer
+Train the ML model to find witnesses for S2.
+```bash
+python train_witness.py --bound 10 --epochs 10
 ```
 
-## Run Experiment (3 commands)
-
-### 1. Train Model (2-3 hours)
+## 3. Measure Internalization Gain
+See how much the ML helps S2 without compromising soundness.
 ```bash
-python src/train.py --epochs 100
+python eval_heuristic.py
 ```
+*Expected: S2 Coverage jumps from ~1% to >70%.*
 
-### 2. Evaluate Gold Standard (10 minutes)
+## 4. See a Proof Certificate
+Run the demo to see a specific non-monotone trace being decided with a certificate.
 ```bash
-python src/stress_eval.py outputs/gold_standard_baseline/final.pt
+python demo_proof_object.py
 ```
-
-### 3. Check Results
-```bash
-# Results saved in outputs/gold_standard_baseline/stress_results.json
-# Expected:
-# - Baseline (lex/sorted): ~78% acc
-# - Shuffle time: ~41% acc (26pp drop)
-# - Shuffle space: ~79% acc
-```
-
-## Understanding the Results
-
-**The 26pp Gap** proves:
-- ✅ Model learned oracle structure (T2)
-- ✅ But cannot fully internalize it (T3)
-- ✅ Empirical validation of impossibility theorems
-
-## Files You Need to Know
-
-- **`src/proof_kernel.py`**: Oracle Ω
-- **`src/dataset.py`**: Data generation
-- **`src/train.py`**: Training
-- **`src/stress_eval.py`**: Gold Standard test
-- **`docs/PROTOCOL.md`**: Full methodology
-
-Everything else is optional/tests.
-
-## Questions?
-
-See `MANIFEST.md` for complete file guide.
+*Expected output includes `Cert: {'logic': 'Witness', 'index': ...}`*
