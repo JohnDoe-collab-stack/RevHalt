@@ -232,6 +232,116 @@ def monotone_failure_cases(K, bound: int):
     return failures
 
 
+def exact_confusion(K, bound: int):
+    from itertools import product
+    tp = tn = fp = fn = 0
+    for bits in product([False, True], repeat=bound):
+        T = _trace_from_bits(list(bits))
+        y = bool(Halts(T))
+        p = bool(K.Proj(T))
+        if y and p: tp += 1
+        elif (not y) and (not p): tn += 1
+        elif (not y) and p: fp += 1
+        else: fn += 1
+    return {"tp": tp, "tn": tn, "fp": fp, "fn": fn}
+
+
+    return {"tp": tp, "tn": tn, "fp": fp, "fn": fn}
+
+
+def exact_false_negatives(K, bound: int):
+    """
+    Returns list of FN cases:
+      [{"bits": [...], "weight": int}]
+    """
+    fns = []
+    for bits in product([False, True], repeat=bound):
+        T = _trace_from_bits(list(bits))
+        y = bool(Halts(T))      # True except all-zeros
+        p = bool(K.Proj(T))
+        if y and (not p):
+            w = sum(1 for b in bits if b)
+            fns.append({"bits": list(bits), "weight": w})
+    return fns
+
+
+def fn_weight_histogram(K, bound: int):
+    fns = exact_false_negatives(K, bound)
+    hist = {}
+    for item in fns:
+        hist[item["weight"]] = hist.get(item["weight"], 0) + 1
+    return dict(sorted(hist.items()))
+
+
+    return dict(sorted(hist.items()))
+
+
+def selective_decision(K, T: FiniteTrace, *, epsilon: float = 0.05):
+    """
+    Returns: (decision, p)
+      decision in {"HALTS", "NOHALT", "ABSTAIN"}
+    Decide only when confident:
+      - p <= epsilon      -> NOHALT
+      - p >= 1-epsilon    -> HALTS
+      - else              -> ABSTAIN
+    Requires K._model attached (build_kit_with_model).
+    """
+    if torch is None:
+        raise RuntimeError("PyTorch not available")
+    model = getattr(K, "_model", None)
+    if model is None:
+        raise ValueError("Kit must have _model (use build_kit_with_model)")
+
+    bits = [1.0 if T.check(i) else 0.0 for i in range(T.bound)]
+    x = torch.tensor(bits, dtype=torch.float32).reshape(1, -1)
+
+    with torch.no_grad():
+        out = model(x).reshape(-1)[0]
+        p = float(out.item())
+        if p < 0.0 or p > 1.0:
+            p = float(torch.sigmoid(out).item())
+
+    if p <= epsilon:
+        return "NOHALT", p
+    if p >= 1.0 - epsilon:
+        return "HALTS", p
+    return "ABSTAIN", p
+
+
+def exact_selective_metrics(K, bound: int, epsilon: float):
+    """
+    Exact coverage + accuracy-on-covered over all traces.
+    Also reports FN/FP among covered decisions only.
+    """
+    covered = 0
+    correct = 0
+    fp = fn = 0
+    total = 0
+
+    for bits in product([False, True], repeat=bound):
+        T = _trace_from_bits(list(bits))
+        y = bool(Halts(T))
+        decision, _p = selective_decision(K, T, epsilon=epsilon)
+
+        total += 1
+        if decision == "ABSTAIN":
+            continue
+
+        covered += 1
+        pred = (decision == "HALTS")
+        if pred == y:
+            correct += 1
+        else:
+            if pred and (not y):
+                fp += 1
+            if (not pred) and y:
+                fn += 1
+
+    coverage = covered / total
+    acc_cov = correct / covered if covered else 0.0
+    return {"coverage": coverage, "acc_on_covered": acc_cov, "fp": fp, "fn": fn}
+
+
 def build_kit_with_model(model: Any, threshold: float = 0.5):
     """
     Returns an RHKit from model and attaches _model for abstention metrics.
