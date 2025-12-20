@@ -1262,11 +1262,37 @@ theorem sat_genTableauAll_implies_validRun
     (T S : ℕ) (M : TableauMachine)
     (q0 head0 qAcc : ℕ) (tape0 : ℕ → ℕ)
     (witLen witOff sym0 sym1 : ℕ)
+    -- Additional hypotheses for positivity and rule validity
+    (hS   : S > 0) (hNst : M.numStates > 0) (hNsy : M.numSymbols > 0) (hR : M.rules.length > 0)
+    (hRulesValid : ∀ i : Fin M.rules.length,
+        (M.rules.get i).q < M.numStates ∧
+        (M.rules.get i).s < M.numSymbols ∧
+        (M.rules.get i).q' < M.numStates ∧
+        (M.rules.get i).s' < M.numSymbols)
     {A : Assign}
     (hA : Sat A (genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1)) :
     ValidRun T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1
       (runOfAssign' T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 A hA) := by
-  sorry
+  -- Extract all 9 components from genTableauAll
+  rw [genTableauAll, sat_andCNFs_iff] at hA
+  simp only [List.mem_cons, forall_eq_or_imp] at hA
+  obtain ⟨hUst, hUhd, hUtp, hUsp, hTr, hIn, hInitC, hInitW, hAccept, _⟩ := hA
+  -- Build ValidRun manually
+  have hRules : M.numRules = M.rules.length := M.rules_len.symm
+  have hR' : M.numRules > 0 := hRules ▸ hR
+  exact {
+    bounds_st   := fun t ht => (stateOf_spec hUst ht hNst).1
+    bounds_hd   := fun t ht => (headOf_spec hUhd ht hS).1
+    bounds_tape := fun t ht k hk => (tapeOf_spec hUtp ht hk hNsy).1
+    bounds_step := fun t ht => hRules ▸ (stepOf_spec hUsp ht hR').1
+    init_st     := sorry  -- Use sat_genInitConst_iff
+    init_hd     := sorry  -- Use sat_genInitConst_iff
+    init_tape   := sorry  -- Use sat_genInitConst_iff and sat_genInitWitness_iff
+    step_valid  := sorry  -- Use sat_genTransition_implies_step_valid
+    inertia     := fun t ht k hk hkNe =>
+      sat_genInertia_implies_inertia T S M.numSymbols hS hNsy hUhd hUtp hIn t ht k hk hkNe
+    accept      := sorry  -- Use sat_genAccept_iff
+  }
 
 /-- Direction ←: ValidRun R → Sat (assignOfRun R) genTableauAll. -/
 theorem validRun_implies_sat_genTableauAll
