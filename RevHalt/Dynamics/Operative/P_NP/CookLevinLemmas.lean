@@ -549,8 +549,8 @@ theorem tableau_satisfiable_iff_exists_run
     (tape0 : ℕ → ℕ)
     (witLen witOff sym0 sym1 : ℕ) :
     CNF.Satisfiable (genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1) ↔
-    (∃ R : TableauRun, ValidRun T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 R) := by
-  sorry
+    (∃ R : TableauRun, ValidRun T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 R) :=
+  (satisfiable_iff_exists_sat_assign _).trans (tableau_sat_assign_iff_exists_run T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1)
 
 /-- Polynomial bound on maxVar for genTableauAll (for SATBundle wBound compatibility). -/
 theorem maxVar_genTableauAll_le_poly
