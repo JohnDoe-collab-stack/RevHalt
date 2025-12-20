@@ -18,7 +18,7 @@ This justifies the "S2 + ML" architecture:
 
 namespace RevHalt.Theory.WitnessLogic
 
--- We use the global `Trace` (ℕ → Bool) from RevHalt.Base
+-- We use the global `Trace` (ℕ → Prop) from RevHalt.Base
 
 
 /--
