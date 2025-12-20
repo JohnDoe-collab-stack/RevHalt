@@ -953,17 +953,51 @@ theorem sat_genTransition_implies_step_valid
     (hUhd : Sat A (uniqueHead  T S))
     (hUtp : Sat A (uniqueTape  T S M.numSymbols))
     (hUsp : Sat A (uniqueStep  T M.rules.length))
+    (hR   : M.rules.length > 0)
     (hTr  : Sat A (genTransition T S M)) :
     ∀ t, (ht : t < T) →
       let rId := stepOf A T M.rules.length t
       let k   := headOf A T S t
-      let r   := M.rules.get ⟨rId, (stepOf_spec hUsp ht (sorry)).1⟩
+      let r   := M.rules.get ⟨rId, (stepOf_spec hUsp ht hR).1⟩
       (stateOf A T M.numStates t = r.q) ∧
       (tapeOf A T S M.numSymbols t k = r.s) ∧
       (stateOf A T M.numStates (t+1) = r.q') ∧
       (tapeOf A T S M.numSymbols (t+1) k = r.s') ∧
       (headOf A T S (t+1) = movePos r.mv k) := by
-  sorry
+  intro t ht
+  -- Get the rule index and head position
+  let rId := stepOf A T M.rules.length t
+  let k   := headOf A T S t
+  let r   := M.rules.get ⟨rId, (stepOf_spec hUsp ht hR).1⟩
+  -- The key is: genTransition contains stepCNF S t k rId r
+  -- So if we can show A (varStep t rId) = true and A (varHead t k) = true,
+  -- then sat_stepCNF_implies gives us the result
+  have hStepTrue : A (varStep t rId) = true := (stepOf_spec hUsp ht hR).2.1
+  have hHeadTrue : A (varHead t k) = true := by
+    -- headOf is defined to return the head position where the variable is true
+    -- We need headOf_spec for this
+    sorry
+  -- Now we need to extract the CNF for this specific (t, k, rId)
+  have hSatStep : Sat A (stepCNF S t k rId r) := by
+    -- Extract from genTransition using flatMap membership
+    sorry
+  -- Apply sat_stepCNF_implies
+  have hImpl := sat_stepCNF_implies S t k rId r hSatStep ⟨hStepTrue, hHeadTrue⟩
+  -- Now convert to stateOf, tapeOf, headOf equalities
+  constructor
+  · -- stateOf A T M.numStates t = r.q
+    sorry
+  constructor
+  · -- tapeOf A T S M.numSymbols t k = r.s
+    sorry
+  constructor
+  · -- stateOf A T M.numStates (t+1) = r.q'
+    sorry
+  constructor
+  · -- tapeOf A T S M.numSymbols (t+1) k = r.s'
+    sorry
+  · -- headOf A T S (t+1) = movePos r.mv k
+    sorry
 
 theorem sat_genInertia_implies_inertia
     {A : Assign} (T S numSymbols : ℕ)
