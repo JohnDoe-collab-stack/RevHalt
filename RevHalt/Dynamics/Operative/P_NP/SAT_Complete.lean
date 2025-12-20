@@ -20,6 +20,7 @@ namespace RevHalt.Dynamics.Operative.P_NP.SAT_Complete
 open RevHalt
 open RevHalt.Dynamics.Operative.P_NP.PNP
 open RevHalt.Dynamics.Operative.P_NP.SAT
+open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
 open RevHalt.Dynamics.Operative.P_NP.SAT_NP
 
 /-! ### §1. Generic internal NP-completeness -/
@@ -36,7 +37,7 @@ def NPComplete_RH {κ : Type} (Q : RHProblem κ) : Prop :=
 
 /-- The SAT problem induced by an `SATNPBundle` (same as in SAT_NP.lean). -/
 abbrev SATProblem {Code PropT : Type} {ctx : VerifiableContext Code PropT}
-    (B : SATNPBundle ctx) : RHProblem CNF :=
+    (B : SATNPBundle ctx) : RHProblem CNF.CNF :=
   SATP B
 
 /-- SAT is in NP_RH as soon as you give an LR-encoding + LR-verifier bundle. -/

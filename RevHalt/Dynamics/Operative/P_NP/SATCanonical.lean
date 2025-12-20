@@ -25,11 +25,11 @@ open RevHalt.Dynamics.Operative.P_NP.PNP
 open RevHalt.Dynamics.Operative.P_NP.SAT
 open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
 
-variable {PropT : Type}
+variable {Code PropT : Type}
 
 /-- SATBundle "NP-ready" : provides all bounded bridges for NP_RH. -/
-structure SATBundle (PropT : Type) where
-  ctx : VerifiableContext CNF.CNF PropT
+structure SATBundle (Code PropT : Type) where
+  ctx : VerifiableContext Code PropT
 
   /-- Proposition "F is satisfiable" (problem level). -/
   satProp : CNF.CNF → PropT
@@ -61,11 +61,11 @@ structure SATBundle (PropT : Type) where
         evalCNF w F = true
 
 namespace SATBundle
-variable (B : SATBundle PropT)
+variable (B : SATBundle Code PropT)
 
 /-- Canonical SATP (problem). -/
 def SATP : RHProblem CNF.CNF where
-  Code := CNF.CNF
+  Code := Code
   PropT := PropT
   ctx := B.ctx
   size := cnfSize
@@ -127,6 +127,6 @@ the target problem for the CookLevinKernel.
 -/
 
 /-- SATP is a valid target for NP-completeness. -/
-theorem SATP_valid (B : SATBundle PropT) : NP_RH (B.SATP) := B.SAT_in_NP
+theorem SATP_valid (B : SATBundle Code PropT) : NP_RH (B.SATP) := B.SAT_in_NP
 
 end RevHalt.Dynamics.Operative.P_NP.SATCanonical

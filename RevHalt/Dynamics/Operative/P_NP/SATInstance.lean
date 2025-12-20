@@ -15,21 +15,18 @@ open RevHalt
 open RevHalt.Dynamics.Operative.P_NP.SAT
 open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
 open RevHalt.Dynamics.Operative.P_NP.SATCanonical
+open RevHalt.Dynamics.Operative.P_NP.PNP
 
 variable {Code PropT : Type}
-variable (ctx : VerifiableContext CNF.CNF PropT)
+variable (ctx : VerifiableContext Code PropT)
 
-/--
-Assumption 1: Existence of a SAT Solver program `solver F` in `Code`.
-Its halting corresponds exactly to `F` being satisfiable.
--/
+-- Assumption 1: Existence of a SAT Solver program `solver F` in `Code`.
+-- Its halting corresponds exactly to `F` being satisfiable.
 variable (solver : CNF.CNF → Code)
 
-/--
-Assumption 2: Existence of a Witness Verifier program `verifier F w` in `Code`.
-Its halting corresponds exactly to `w` satisfying `F`.
-Also requires polynomial time efficiency in relation to `maxVar F`.
--/
+-- Assumption 2: Existence of a Witness Verifier program `verifier F w` in `Code`.
+-- Its halting corresponds exactly to `w` satisfying `F`.
+-- Also requires polynomial time efficiency in relation to `maxVar F`.
 variable (verifier : CNF.CNF → PNP.Witness → Code)
 variable (time : ℕ → ℕ)
 variable (wBound : ℕ → ℕ)
@@ -39,7 +36,7 @@ variable (poly_wBound : IsPoly wBound)
 -- Verification correctness: Halts in limited steps iff valid witness.
 -- We state this directly on the bridged proposition to match SATBundle requirements.
 variable (h_verifier : ∀ F w,
-  ctx.HaltsBy (ctx.LR ∅ (ctx.H (verifier F w))) (time (cnfSize F)) ↔
+  HaltsBy (ctx.LR ∅ (ctx.H (verifier F w))) (time (cnfSize F)) ↔
   CNF.evalCNF w F = true)
 
 -- Bounds consistency
@@ -54,7 +51,7 @@ variable (h_bridge : ∀ F,
 /--
 Construct a SATBundle from the assumptions.
 -/
-def makeSATBundle : SATBundle PropT :=
+def makeSATBundle : SATBundle Code PropT :=
   { ctx := ctx
     satProp := fun F => ctx.H (solver F)
     satCheck := fun F w => ctx.H (verifier F w)
@@ -66,7 +63,8 @@ def makeSATBundle : SATBundle PropT :=
     sat_correct_bounded := by
       intro F
       -- ctx.LR ∅ (ctx.H p) <-> RealHalts p
-      rw [ctx.h_bridge]
+      rw [← ctx.h_bridge]
+      rw [← ctx.h_truth_H]
       -- RealHalts (solver F) <-> Exists bounded witness ...
       exact h_bridge F
     satCheck_correct := by
@@ -75,10 +73,56 @@ def makeSATBundle : SATBundle PropT :=
   }
 
 /--
-Theorem: SAT is in NP_RH for this context.
+The concrete SAT problem instance defined by the solver and context.
 -/
-theorem SAT_in_NP_Instance : NP_RH ctx (fun F => ctx.H (solver F)) :=
-  let bundle := makeSATBundle ctx solver verifier time wBound poly_time poly_wBound h_verifier wBound_ge_maxVar h_bridge
-  SAT_in_NP bundle
+def SATInstanceProblem : RHProblem CNF.CNF where
+  Code := Code
+  PropT := PropT
+  ctx := ctx
+  size := cnfSize
+  Γ := fun _ => ∅
+  φ := fun F => ctx.H (solver F)
+  Γ_bound := fun _ => 0
+  poly_Γ_bound := IsPoly.const 0
+  Γ_ok := fun _ => by simp
+
+/--
+Theorem: SAT is in NP_RH for this context, given the existence of a verifier and validity of bounds.
+-/
+theorem SAT_in_NP_Instance
+    (verifier : CNF.CNF → PNP.Witness → Code)
+    (time : ℕ → ℕ)
+    (wBound : ℕ → ℕ)
+    (poly_time : IsPoly time)
+    (poly_wBound : IsPoly wBound)
+    (h_verifier : ∀ F w,
+      HaltsBy (ctx.LR ∅ (ctx.H (verifier F w))) (time (cnfSize F)) ↔
+      CNF.evalCNF w F = true)
+    (wBound_ge_maxVar : ∀ F, CookLevinLemmas.maxVar F + 1 ≤ wBound (cnfSize F))
+    (h_bridge : ∀ F,
+      ctx.RealHalts (solver F) ↔
+        ∃ w : PNP.Witness, PNP.witnessSize w ≤ wBound (cnfSize F) ∧ CNF.evalCNF w F = true) :
+    NP_RH (SATInstanceProblem ctx solver) := by
+  let bundle : SATBundle Code PropT :=
+    { ctx := ctx
+      satProp := fun F => ctx.H (solver F)
+      satCheck := fun F w => ctx.H (verifier F w)
+      time := time
+      wBound := wBound
+      poly_time := poly_time
+      poly_wBound := poly_wBound
+      wBound_ge_maxVar := wBound_ge_maxVar
+      sat_correct_bounded := by
+        intro F
+        rw [← ctx.h_bridge]
+        rw [← ctx.h_truth_H]
+        exact h_bridge F
+      satCheck_correct := by
+        intro F w
+        exact h_verifier F w
+    }
+  have h_eq : (SATInstanceProblem ctx solver) = bundle.SATP := rfl
+  rw [h_eq]
+  exact bundle.SAT_in_NP
 
 end RevHalt.Dynamics.Operative.P_NP.SATInstance

@@ -28,7 +28,7 @@ open RevHalt.Dynamics.Operative.P_NP.CookLevin
 open RevHalt.Dynamics.Operative.P_NP.SATCanonical
 open RevHalt.Dynamics.Operative.P_NP.SAT
 
-variable {PropT : Type} (B : SATBundle PropT)
+variable {Code PropT : Type} (B : SATBundle Code PropT)
 
 abbrev SATP : RHProblem CNF.CNF := B.SATP
 

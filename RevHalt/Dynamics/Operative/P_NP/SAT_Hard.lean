@@ -22,22 +22,23 @@ namespace RevHalt.Dynamics.Operative.P_NP.SAT_Hard
 open RevHalt
 open RevHalt.Dynamics.Operative.P_NP.PNP
 open RevHalt.Dynamics.Operative.P_NP.SAT
+open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
 open RevHalt.Dynamics.Operative.P_NP.ReductionLibrary
 
 /-! ### §1. NP-hardness kernel for SAT -/
 
 /-- "Cook–Levin kernel" (as a single internal property): every NP problem reduces to SAT. -/
-def SAT_HardKernel (SATP : RHProblem CNF) : Prop :=
+def SAT_HardKernel (SATP : RHProblem CNF.CNF) : Prop :=
   ∀ {ι : Type} (P : RHProblem ι), NP_RH P → (P ≤ₚ SATP)
 
 /-- Kernel implies internal NP-hardness (by definition). -/
-theorem SAT_NPHard_ofKernel (SATP : RHProblem CNF) :
-    SAT_HardKernel SATP → NPHard_RH SATP := by
+theorem SAT_NPHard_ofKernel (SATP : RHProblem CNF.CNF) :
+    SAT_HardKernel SATP → RevHalt.Dynamics.Operative.P_NP.SAT.NPHard_RH SATP := by
   intro h
   exact h
 
 /-- If you have (SAT ∈ NP) and the kernel, you get NP-completeness. -/
-theorem SAT_NPComplete_ofKernel (SATP : RHProblem CNF) :
+theorem SAT_NPComplete_ofKernel (SATP : RHProblem CNF.CNF) :
     NP_RH SATP → SAT_HardKernel SATP → NPComplete_RH SATP := by
   intro hNP hK
   exact ⟨hNP, hK⟩

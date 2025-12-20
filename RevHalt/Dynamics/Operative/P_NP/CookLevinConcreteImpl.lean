@@ -38,9 +38,9 @@ open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
 open RevHalt.Dynamics.Operative.P_NP.CookLevinGadgets
 open RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
 
-variable {PropT : Type}
+variable {Code PropT : Type}
 
-abbrev SATP (B : SATBundle PropT) : RHProblem CNF.CNF := B.SATP
+abbrev SATP (B : SATBundle Code PropT) : RHProblem CNF.CNF := B.SATP
 
 /-! ### §1. WIP Construction from SimBuilder -/
 
@@ -53,7 +53,7 @@ Build a WIP template using the Tableau encoding with a Simulation Builder.
 This abstracts away the Machine construction into `simBuilder`.
 -/
 def mkWIP_tableau
-    (B : SATBundle PropT)
+    (B : SATBundle Code PropT)
     (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
     (BL : BoolLRBundle)
     : CookLevinEncodingWIP B :=
@@ -161,7 +161,7 @@ Inputs:
 - BL: a BoolLRBundle for the syntactic check map
 -/
 def kernelOfSimBuilder
-    (B : SATBundle PropT)
+    (B : SATBundle Code PropT)
     (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
     (BL : BoolLRBundle)
     : CookLevinKernel (SATP B) :=
@@ -172,7 +172,7 @@ NP-Hardness corollary.
 IF we have a Simulator and a Bool Bundle, THEN SATP is NP-Hard.
 -/
 theorem NPHard_of_simBuilder
-    (B : SATBundle PropT)
+    (B : SATBundle Code PropT)
     (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
     (BL : BoolLRBundle)
     : NPHard_RH (SATP B) :=
@@ -183,7 +183,7 @@ NP-Completeness corollary.
 IF we have a Simulator and a Bool Bundle, THEN SATP is NP-Complete.
 -/
 theorem NPComplete_of_simBuilder
-    (B : SATBundle PropT)
+    (B : SATBundle Code PropT)
     (simBuilder : ∀ {ι : Type} (P : RHProblem ι) (V : PolyVerifier P), VerifierTableauSim P V)
     (BL : BoolLRBundle)
     (hNP : NP_RH (SATP B)) -- Extra assumption needed for completeness

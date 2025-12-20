@@ -15,6 +15,27 @@ namespace RevHalt.Dynamics.Operative.P_NP.SAT_NP
 open RevHalt
 open RevHalt.Dynamics.Operative.P_NP.PNP
 open RevHalt.Dynamics.Operative.P_NP.SAT
+open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
+
+/-- Local version of SAT_RHProblem using SAT.CNF types to avoid collision with PNP.SAT.CNF -/
+def SAT_NP_RHProblem
+    {Code PropT : Type}
+    (ctx : VerifiableContext Code PropT)
+    (Γsat : CNF → Finset PropT)
+    (φsat : CNF → PropT)
+    (Γ_bound : ℕ → ℕ)
+    (poly_Γ_bound : IsPoly Γ_bound)
+    (Γ_ok : ∀ F, (Γsat F).card ≤ Γ_bound (cnfSize F))
+    : RHProblem CNF :=
+{ Code := Code
+  PropT := PropT
+  ctx := ctx
+  size := cnfSize
+  Γ := Γsat
+  φ := φsat
+  Γ_bound := Γ_bound
+  poly_Γ_bound := poly_Γ_bound
+  Γ_ok := Γ_ok }
 
 /-- Data needed to exhibit `SAT_RHProblem ... ∈ NP_RH`. -/
 structure SATNPBundle {Code PropT : Type} (ctx : VerifiableContext Code PropT) where
@@ -46,7 +67,7 @@ structure SATNPBundle {Code PropT : Type} (ctx : VerifiableContext Code PropT) w
 /-- The SAT RHProblem induced by a bundle. -/
 def SATP {Code PropT : Type} {ctx : VerifiableContext Code PropT}
     (B : SATNPBundle ctx) : RHProblem CNF :=
-  SAT_RHProblem ctx B.Γsat B.φsat B.Γ_bound B.poly_Γ_bound B.Γ_ok
+  SAT_NP_RHProblem ctx B.Γsat B.φsat B.Γ_bound B.poly_Γ_bound B.Γ_ok
 
 /-- The PolyVerifier induced by a bundle. -/
 def satPolyVerifier {Code PropT : Type} {ctx : VerifiableContext Code PropT}
@@ -63,7 +84,7 @@ def satPolyVerifier {Code PropT : Type} {ctx : VerifiableContext Code PropT}
   correct := by
     intro F
     -- unfold Solves, RHProblem.tr, SATP, SAT_RHProblem; reduce to B.correct
-    simp only [Solves, RHProblem.tr, SATP, SAT_RHProblem]
+    simp only [Solves, RHProblem.tr, SATP, SAT_NP_RHProblem]
     exact B.correct F
 
 /-- Final packaging: any bundle gives `NP_RH` for its SAT problem. -/
