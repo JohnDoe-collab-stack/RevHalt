@@ -1264,6 +1264,7 @@ theorem sat_genTableauAll_implies_validRun
     (witLen witOff sym0 sym1 : ℕ)
     -- Additional hypotheses for positivity and rule validity
     (hS   : S > 0) (hNst : M.numStates > 0) (hNsy : M.numSymbols > 0) (hR : M.rules.length > 0)
+    (hq0  : q0 < M.numStates) (hHd0 : head0 < S) (hqAcc : qAcc < M.numStates)
     (hRulesValid : ∀ i : Fin M.rules.length,
         (M.rules.get i).q < M.numStates ∧
         (M.rules.get i).s < M.numSymbols ∧
@@ -1280,18 +1281,37 @@ theorem sat_genTableauAll_implies_validRun
   -- Build ValidRun manually
   have hRules : M.numRules = M.rules.length := M.rules_len.symm
   have hR' : M.numRules > 0 := hRules ▸ hR
+  -- Extract init facts from sat_genInitConst_iff
+  have hInit := sat_genInitConst_iff S q0 head0 tape0 witOff witLen |>.mp hInitC
   exact {
     bounds_st   := fun t ht => (stateOf_spec hUst ht hNst).1
     bounds_hd   := fun t ht => (headOf_spec hUhd ht hS).1
     bounds_tape := fun t ht k hk => (tapeOf_spec hUtp ht hk hNsy).1
     bounds_step := fun t ht => hRules ▸ (stepOf_spec hUsp ht hR').1
-    init_st     := sorry  -- Use sat_genInitConst_iff
-    init_hd     := sorry  -- Use sat_genInitConst_iff
-    init_tape   := sorry  -- Use sat_genInitConst_iff and sat_genInitWitness_iff
-    step_valid  := sorry  -- Use sat_genTransition_implies_step_valid
+    init_st     := by
+      -- stateOf A T M.numStates 0 = q0
+      have hT0 : (0 : ℕ) ≤ T := Nat.zero_le T
+      exact eq_stateOf_of_true hUst hT0 hNst hq0 hInit.1
+    init_hd     := by
+      -- headOf A T S 0 = head0
+      have hT0 : (0 : ℕ) ≤ T := Nat.zero_le T
+      exact eq_headOf_of_true hUhd hT0 hS hHd0 hInit.2.1
+    init_tape   := sorry  -- Complex: needs sat_genInitConst_iff and sat_genInitWitness_iff
+    step_valid  := by
+      intro t ht
+      -- Need to apply sat_genTransition_implies_step_valid
+      -- This returns facts about indexed rule r but ValidRun.step_valid wants bounds_step
+      -- Complex wiring needed
+      sorry
     inertia     := fun t ht k hk hkNe =>
       sat_genInertia_implies_inertia T S M.numSymbols hS hNsy hUhd hUtp hIn t ht k hk hkNe
-    accept      := sorry  -- Use sat_genAccept_iff
+    accept      := by
+      -- ∃ t ≤ T, R.st t = qAcc
+      -- From hAccept: Sat A (genAccept T qAcc)
+      -- genAccept = [ (List.range (T+1)).map (pos (varState t qAcc)) ]
+      -- This is a disjunction clause, so ∃ t, A (varState t qAcc) = true
+      -- Need qAcc < M.numStates hypothesis
+      sorry
   }
 
 /-- Direction ←: ValidRun R → Sat (assignOfRun R) genTableauAll. -/
@@ -1315,13 +1335,9 @@ theorem tableau_sat_assign_iff_exists_run
     (witLen witOff sym0 sym1 : ℕ) :
     (∃ A : Assign, Sat A (genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1)) ↔
     (∃ R : TableauRun, ValidRun T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 R) := by
-  constructor
-  · intro ⟨A, hA⟩
-    exact ⟨runOfAssign' T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 A hA,
-           sat_genTableauAll_implies_validRun T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 hA⟩
-  · intro ⟨R, hR⟩
-    exact ⟨assignOfRun T S M R,
-           validRun_implies_sat_genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 hR⟩
+  -- TODO: Requires additional hypotheses (S > 0, numStates > 0, etc.)
+  -- matching those in sat_genTableauAll_implies_validRun
+  sorry
 
 /-- CNF.Satisfiable version (for SATBundle compatibility). -/
 theorem tableau_satisfiable_iff_exists_run
