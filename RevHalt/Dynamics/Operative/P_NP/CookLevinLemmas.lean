@@ -736,7 +736,44 @@ theorem tapeOf_spec
     constructor
     · exact hFind.1
     · rfl
-  · intro hEq; apply hsNe; exact varTape_inj t k hEq/-- Extract the unique step/rule index at time t from a satisfying assignment. -/
+  · intro hEq; apply hsNe; exact varTape_inj t k hEq
+
+/-! ### Helper lemmas: if a specific variable is true, then xOf equals that value -/
+
+private theorem eq_stateOf_of_true
+    {A : Assign} {T numStates t q : ℕ}
+    (hU : Sat A (uniqueState T numStates)) (ht : t ≤ T) (hPos : numStates > 0)
+    (hq : q < numStates)
+    (hqTrue : A (varState t q) = true) :
+    stateOf A T numStates t = q := by
+  have hs := stateOf_spec hU ht hPos
+  by_contra hne
+  have hfalse := hs.2.2 q hq (Ne.symm hne)
+  simp_all
+
+private theorem eq_headOf_of_true
+    {A : Assign} {T S t k : ℕ}
+    (hU : Sat A (uniqueHead T S)) (ht : t ≤ T) (hPos : S > 0)
+    (hk : k < S)
+    (hkTrue : A (varHead t k) = true) :
+    headOf A T S t = k := by
+  have hh := headOf_spec hU ht hPos
+  by_contra hne
+  have hfalse := hh.2.2 k hk (Ne.symm hne)
+  simp_all
+
+private theorem eq_tapeOf_of_true
+    {A : Assign} {T S numSymbols t k s : ℕ}
+    (hU : Sat A (uniqueTape T S numSymbols)) (ht : t ≤ T) (hk : k < S) (hPos : numSymbols > 0)
+    (hs : s < numSymbols)
+    (hsTrue : A (varTape t k s) = true) :
+    tapeOf A T S numSymbols t k = s := by
+  have htape := tapeOf_spec hU ht hk hPos
+  by_contra hne
+  have hfalse := htape.2.2 s hs (Ne.symm hne)
+  simp_all
+
+/-- Extract the unique step/rule index at time t from a satisfying assignment. -/
 def stepOf (A : Assign) (_T numRules : ℕ) (t : ℕ) : ℕ :=
   ((List.range numRules).find? (fun r => A (varStep t r))).getD 0
 
@@ -954,6 +991,15 @@ theorem sat_genTransition_implies_step_valid
     (hUtp : Sat A (uniqueTape  T S M.numSymbols))
     (hUsp : Sat A (uniqueStep  T M.rules.length))
     (hR   : M.rules.length > 0)
+    (hS   : S > 0)
+    (hNst : M.numStates > 0)
+    (hNsy : M.numSymbols > 0)
+    -- Validity of transition rules (all q, s, q', s' are in bounds)
+    (hRulesValid : ∀ i : Fin M.rules.length,
+        (M.rules.get i).q < M.numStates ∧
+        (M.rules.get i).s < M.numSymbols ∧
+        (M.rules.get i).q' < M.numStates ∧
+        (M.rules.get i).s' < M.numSymbols)
     (hTr  : Sat A (genTransition T S M)) :
     ∀ t, (ht : t < T) →
       let rId := stepOf A T M.rules.length t
@@ -968,36 +1014,68 @@ theorem sat_genTransition_implies_step_valid
   -- Get the rule index and head position
   let rId := stepOf A T M.rules.length t
   let k   := headOf A T S t
-  let r   := M.rules.get ⟨rId, (stepOf_spec hUsp ht hR).1⟩
-  -- The key is: genTransition contains stepCNF S t k rId r
-  -- So if we can show A (varStep t rId) = true and A (varHead t k) = true,
-  -- then sat_stepCNF_implies gives us the result
+  let rIdx : Fin M.rules.length := ⟨rId, (stepOf_spec hUsp ht hR).1⟩
+  let r   := M.rules.get rIdx
+  -- Key facts from spec lemmas
   have hStepTrue : A (varStep t rId) = true := (stepOf_spec hUsp ht hR).2.1
-  have hHeadTrue : A (varHead t k) = true := by
-    -- headOf is defined to return the head position where the variable is true
-    -- We need headOf_spec for this
-    sorry
-  -- Now we need to extract the CNF for this specific (t, k, rId)
+  have hHeadSpec := headOf_spec hUhd (le_of_lt ht) hS
+  have hHeadTrue : A (varHead t k) = true := hHeadSpec.2.1
+  have hkLtS : k < S := hHeadSpec.1
+  -- Rule validity
+  have hRV := hRulesValid rIdx
+  -- Extract the stepCNF from genTransition
   have hSatStep : Sat A (stepCNF S t k rId r) := by
-    -- Extract from genTransition using flatMap membership
-    sorry
-  -- Apply sat_stepCNF_implies
+    -- genTransition is a flatMap over t, k, (rId, rule) pairs
+    rw [Sat, evalCNF', List.all_eq_true]
+    intro clause hMem
+    -- Need to show clause ∈ genTransition T S M
+    have hMemTr : clause ∈ genTransition T S M := by
+      unfold genTransition
+      simp only [List.mem_flatMap, List.mem_range]
+      refine ⟨t, ht, k, hkLtS, ?_⟩
+      -- Need to show: ∃ a ∈ (List.range M.rules.length).zip M.rules, clause ∈ stepCNF S t k a.1 a.2
+      refine ⟨(rId, r), ?_, hMem⟩
+      -- (rId, r) ∈ (List.range M.rules.length).zip M.rules
+      have : rId < M.rules.length := (stepOf_spec hUsp ht hR).1
+      simp only [List.mem_iff_getElem]
+      refine ⟨rId, ?_, ?_⟩
+      · simp only [List.length_zip, List.length_range, min_self]; exact this
+      · simp only [List.getElem_zip, List.getElem_range]
+        rfl
+    rw [Sat, evalCNF', List.all_eq_true] at hTr
+    exact hTr clause hMemTr
+  -- Apply sat_stepCNF_implies to get variable assignment facts
   have hImpl := sat_stepCNF_implies S t k rId r hSatStep ⟨hStepTrue, hHeadTrue⟩
-  -- Now convert to stateOf, tapeOf, headOf equalities
+  -- Extract all 5 components
+  obtain ⟨hStateT, hTapeT, hStateT1, hTapeT1, hHeadT1⟩ := hImpl
+  -- Convert to equalities using helper lemmas
   constructor
   · -- stateOf A T M.numStates t = r.q
-    sorry
+    exact eq_stateOf_of_true hUst (le_of_lt ht) hNst hRV.1 hStateT
   constructor
   · -- tapeOf A T S M.numSymbols t k = r.s
-    sorry
+    exact eq_tapeOf_of_true hUtp (le_of_lt ht) hkLtS hNsy hRV.2.1 hTapeT
   constructor
   · -- stateOf A T M.numStates (t+1) = r.q'
-    sorry
+    exact eq_stateOf_of_true hUst (Nat.succ_le_of_lt ht) hNst hRV.2.2.1 hStateT1
   constructor
   · -- tapeOf A T S M.numSymbols (t+1) k = r.s'
-    sorry
+    exact eq_tapeOf_of_true hUtp (Nat.succ_le_of_lt ht) hkLtS hNsy hRV.2.2.2 hTapeT1
   · -- headOf A T S (t+1) = movePos r.mv k
-    sorry
+    have hMoveK : movePos r.mv k < S := by
+      unfold movePos
+      cases r.mv
+      · -- Move.L: Nat.pred k < S  (since k < S implies pred k < S)
+        exact Nat.lt_of_le_of_lt (Nat.pred_le k) hkLtS
+      · -- Move.R: k + 1 < S  -- actually this needs S > k + 1, but we only have k < S
+        -- This is only true if k + 1 < S, i.e., k < S - 1 or k ≤ S - 1
+        -- But k < S doesn't imply k + 1 < S in general
+        -- We need stepBoundary to have prevented this case
+        -- For now, use sorry
+        sorry
+      · -- Move.S: k < S (already have hkLtS)
+        exact hkLtS
+    exact eq_headOf_of_true hUhd (Nat.succ_le_of_lt ht) hS hMoveK hHeadT1
 
 theorem sat_genInertia_implies_inertia
     {A : Assign} (T S numSymbols : ℕ)
