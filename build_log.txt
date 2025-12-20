@@ -1,0 +1,85 @@
+⚠ [738/763] Replayed RevHalt.Dynamics.Operative.P_NP.SAT
+warning: RevHalt/Dynamics/Operative/P_NP/SAT.lean:27:7: The namespace 'CNF' is duplicated in the declaration 'RevHalt.Dynamics.Operative.P_NP.SAT.CNF.CNF'
+
+Note: This linter can be disabled with `set_option linter.dupNamespace false`
+warning: RevHalt/Dynamics/Operative/P_NP/SAT.lean:78:63: `structure ... :=` has been deprecated in favor of `structure ... where`.
+
+Note: This linter can be disabled with `set_option linter.deprecated false`
+⚠ [762/763] Replayed RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:280:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:289:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:310:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinTableau.lean:331:8: declaration uses 'sorry'
+✖ [763/763] Building RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas (8.7s)
+trace: .> LEAN_PATH=C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Cli\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\batteries\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\Qq\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\aesop\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\proofwidgets\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\importGraph\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\LeanSearchClient\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\plausible\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\packages\mathlib\.lake\build\lib\lean;C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean c:\Users\frederick.loubli.TKS\.elan\toolchains\leanprover--lean4---v4.26.0-rc2\bin\lean.exe C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.lean -o C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.olean -i C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\lib\lean\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.ilean -c C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.c --setup C:\Users\frederick.loubli.TKS\OneDrive - t-kartor.com\Pictures\WORKSPACELEAN\RevHalt\.lake\build\ir\RevHalt\Dynamics\Operative\P_NP\CookLevinLemmas.setup.json --json
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:45:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:49:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:54:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:58:8: declaration uses 'sorry'
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:105:52: No goals to be solved
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:129:56: No goals to be solved
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:132:12: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  (?l ++ [?x]).getD ?k ?d
+in the target expression
+  (List.map A (List.range n) ++ List.map A [n]).getD i false = A i
+
+L : ℕ
+A : Assign
+v : ℕ
+hv : v < L
+range_append : ∀ (n : ℕ), List.range (n + 1) = List.range n ++ [n]
+n : ℕ
+ih : ∀ i < n, (List.map A (List.range n)).getD i false = A i
+i : ℕ
+h_lt : i < n + 1
+getD_append_lt : ∀ (l : List Bool) (x : Bool) (k : ℕ) (d : Bool), k < l.length → (l ++ [x]).getD k d = l.getD k d
+getD_append_eq : ∀ (l : List Bool) (x d : Bool), (l ++ [x]).getD l.length d = x
+h : i < n
+⊢ (List.map A (List.range n) ++ List.map A [n]).getD i false = A i
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:137:20: Unknown constant `Nat.eq_of_ge_of_lt`
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:138:10: No goals to be solved
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:143:45: Unknown identifier `n`
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:143:58: Unknown identifier `n`
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:187:18: Unknown identifier `h_lit_false`
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:187:12: `simp` made no progress
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:188:10: No goals to be solved
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:192:4: unexpected token '·'; expected command
+error: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:210:4: `simp` made no progress
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:241:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:250:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:254:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:258:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:264:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:283:40: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:288:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:297:39: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:302:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:311:39: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:311:41: unused variable `S`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:316:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:325:39: unused variable `T`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:330:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:340:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:348:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:356:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:363:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:374:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:392:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:486:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:497:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:526:8: declaration uses 'sorry'
+warning: RevHalt/Dynamics/Operative/P_NP/CookLevinLemmas.lean:536:8: declaration uses 'sorry'
+error: Lean exited with code 1
+Some required targets logged failures:
+- RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
+error: build failed

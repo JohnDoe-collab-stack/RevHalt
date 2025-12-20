@@ -95,7 +95,7 @@ def mkWIP_tableau
     dsimp
     -- size(x) + size(y) ≤ 2 * (size(x) + size(y)) + 1
     -- Proof strategy:
-    -- 1. N ≤ 2*N (via le_mul_of_pos_left)
+    -- 1. N ≤ 2*N (via two_mul and le_add_left)
     -- 2. 2*N ≤ 2*N + 1 (via le_add_right)
     apply Nat.le_trans (m := 2 * (P.size x + (SATP B).size y))
     · rw [two_mul]

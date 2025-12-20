@@ -51,7 +51,7 @@ theorem sat_impClause {A : Assign} {ante : List CNF.Lit} {cons : CNF.Lit} :
       ((∀ l ∈ ante, evalLit' A l = true) → evalLit' A cons = true) := by
   sorry
 
-theorem sat_atLeastOne {A : Assign} {lits : List CookLevinGadgets.Var} :
+theorem sat_atLeastOne {A : Assign} {lits : List CookLevinGadgets.Var} (h : lits ≠ []) :
     Sat A (atLeastOne lits) ↔ ∃ v ∈ lits, A v = true := by
   sorry
 
@@ -60,11 +60,11 @@ theorem sat_atMostOne {A : Assign} {lits : List CookLevinGadgets.Var} :
       ∀ v ∈ lits, ∀ v' ∈ lits, v ≠ v' → ¬(A v = true ∧ A v' = true) := by
   sorry
 
-theorem sat_exactlyOne {A : Assign} {lits : List CookLevinGadgets.Var} :
+theorem sat_exactlyOne {A : Assign} {lits : List CookLevinGadgets.Var} (h : lits ≠ []) :
     Sat A (exactlyOne lits) ↔
       (∃ v ∈ lits, A v = true) ∧
       (∀ v ∈ lits, ∀ v' ∈ lits, v ≠ v' → ¬(A v = true ∧ A v' = true)) := by
-  rw [exactlyOne, sat_andCNF, sat_atLeastOne, sat_atMostOne]
+  rw [exactlyOne, sat_andCNF, sat_atLeastOne h, sat_atMostOne]
 /-! ### Assign ↔ Witness Bridge API -/
 
 /-- Max variable index used by a literal. -/
@@ -95,18 +95,157 @@ theorem witnessOfAssign_size (L : ℕ) (A : Assign) :
 /-- assignOfWitness ∘ witnessOfAssign recovers A for indices < L. -/
 theorem assignOfWitness_witnessOfAssign (L : ℕ) (A : Assign) (v : ℕ) (hv : v < L) :
     assignOfWitness (witnessOfAssign L A) v = A v := by
-  sorry
+  dsimp [assignOfWitness, witnessOfAssign]
+  -- Robust range append lemma
+  have range_append : ∀ n, List.range (n + 1) = List.range n ++ [n] := by
+    intro n
+    induction n with
+    | zero => rfl
+    | succ n ih => rw [List.range_succ, ih]
+
+  -- Main property using getD to avoid dependent type issues
+  have map_range_getD : ∀ (n : ℕ) (i : ℕ), i < n → (List.map A (List.range n)).getD i false = A i := by
+    intro n
+    induction n with
+    | zero => intro i h; contradiction
+    | succ n ih =>
+      intro i h_lt
+      rw [range_append, List.map_append]
+      simp only [List.map_cons, List.map_nil]
+
+      have getD_append_lt : ∀ (l : List Bool) (x : Bool) (k : ℕ) (d : Bool), k < l.length → (l ++ [x]).getD k d = l.getD k d := by
+        intro l x k d h
+        induction l generalizing k with
+        | nil => contradiction
+        | cons h t ih =>
+          cases k with
+          | zero => rfl
+          | succ k' => simp [List.getD]; apply ih; simp [List.length] at h; exact h
+
+      have getD_append_eq : ∀ (l : List Bool) (x : Bool) (d : Bool), (l ++ [x]).getD l.length d = x := by
+        intro l x d
+        induction l with
+        | nil => rfl
+        | cons h t ih => simp [List.getD, List.length];
+
+      if h : i < n then
+        rw [getD_append_lt]
+        · exact ih i h
+        · simp [List.length_map, List.length_range]; exact h
+      else
+        have h_eq : i = n := by
+          apply Nat.le_antisymm
+          · apply Nat.le_of_lt_succ h_lt
+          · apply Nat.le_of_not_lt h
+        rw [h_eq]
+        -- Goal: (map ... ++ [A n]).getD n false = A n
+        have h_len : (List.map A (List.range n)).length = n := by simp [List.length_range]
+        convert getD_append_eq (List.map A (List.range n)) (A n) false
+        exact h_len.symm
+
+  apply map_range_getD L v hv
+
+/-- Monotonicity of foldl max. -/
+theorem foldl_max_mono (l : List α) (f : α → ℕ) (init : ℕ) :
+    init ≤ l.foldl (fun acc y => max acc (f y)) init := by
+  induction l generalizing init with
+  | nil => simp only [List.foldl_nil, Nat.le_refl]
+  | cons h t ih =>
+    simp only [List.foldl_cons]
+    apply Nat.le_trans (Nat.le_max_left _ _) (ih _)
+
+/-- Helper for maxVar bound found in folds. -/
+theorem foldl_max_le {l : List α} {f : α → ℕ} {init : ℕ} (x : α) (hx : x ∈ l) :
+    f x ≤ l.foldl (fun acc y => max acc (f y)) init := by
+  induction l generalizing init with
+  | nil => contradiction
+  | cons head tail ih =>
+    simp only [List.foldl_cons, List.mem_cons] at hx ⊢
+    cases hx with
+    | inl h_eq =>
+      subst h_eq
+      apply Nat.le_trans (m := max init (f x))
+      · apply Nat.le_max_right
+      · apply foldl_max_mono
+    | inr h_in =>
+      apply ih (init := max init (f head))
+      exact h_in
+
+theorem maxVar_bound (F : CNF.CNF) :
+    ∀ C ∈ F, ∀ ℓ ∈ C, ℓ.v ≤ maxVar F := by
+  intro C hC ℓ hℓ
+  unfold maxVar
+  have hC_le := foldl_max_le (f := maxVarClause) C hC (init := 0)
+  apply Nat.le_trans _ hC_le
+  unfold maxVarClause
+  exact foldl_max_le (f := maxVarLit) ℓ hℓ (init := 0)
 
 /-- If all vars in F are < maxVar F + 1, then Sat via assignment ↔ evalCNF via padded witness. -/
 theorem sat_iff_evalCNF_witness (A : Assign) (F : CNF.CNF) :
     Sat A F ↔ CNF.evalCNF (witnessOfAssign (maxVar F + 1) A) F = true := by
-  sorry
+  have sat_iff_eval_of_bound : ∀ L, maxVar F < L → (Sat A F ↔ CNF.evalCNF (witnessOfAssign L A) F = true) := by
+    intro L hL
+    rw [Sat, evalCNF', CNF.evalCNF]
+    simp only [List.all_eq_true, List.any_eq_true, evalClause', CNF.evalClause, evalLit', CNF.evalLit, CNF.evalVar]
+    apply forall_congr'
+    intro C
+    apply imp_congr_right
+    intro hC
+    apply exists_congr
+    intro ℓ
+    apply and_congr_right
+    intro hℓ
+    -- Goal: A ℓ.v ... ↔ witness ... ℓ.v ...
+    have hv : ℓ.v < L := Nat.lt_of_le_of_lt (maxVar_bound F C hC ℓ hℓ) hL
+    have h_rw : (witnessOfAssign L A).getD ℓ.v false = A ℓ.v := assignOfWitness_witnessOfAssign L A ℓ.v hv
+    rw [h_rw]
+    rfl
+
+  exact sat_iff_eval_of_bound (maxVar F + 1) (Nat.lt_succ_self _)
 
 /-- Bridge: satisfiable via assignment ↔ satisfiable via bounded PNP.Witness. -/
 theorem sat_assign_iff_sat_witness (F : CNF.CNF) :
     (∃ A : Assign, Sat A F) ↔
     (∃ w : PNP.Witness, PNP.witnessSize w ≤ (maxVar F + 1) ∧ CNF.evalCNF w F = true) := by
-  sorry
+  constructor
+  · rintro ⟨A, hA⟩
+    use witnessOfAssign (maxVar F + 1) A
+    constructor
+    · rw [witnessOfAssign_size]
+    · rw [← sat_iff_evalCNF_witness]
+      exact hA
+  · rintro ⟨w, _, hw⟩
+    use assignOfWitness w
+    unfold Sat evalCNF'
+    unfold CNF.evalCNF at hw
+    simp only [List.all_eq_true]
+    intro C hC
+    simp only [List.all_eq_true] at hw
+    specialize hw C hC
+    simp only [evalClause', List.any_eq_true]
+    simp only [CNF.evalClause, List.any_eq_true] at hw
+    obtain ⟨ℓ, hℓ, hl_true⟩ := hw
+    use ℓ, hℓ
+    simp only [evalLit']
+    exact hl_true
+
+/-- Equivalence between witness-based and assignment-based satisfiability. -/
+theorem satisfiable_iff_exists_sat_assign (F : CNF.CNF) :
+    CNF.Satisfiable F ↔ ∃ A : Assign, Sat A F := by
+  constructor
+  · rintro ⟨w, hw⟩
+    use assignOfWitness w
+    -- They are definitionally equal check?
+    -- Sat (assignOfWitness w) F := evalCNF' (assignOfWitness w) F = true
+    -- evalCNF w F = true
+    -- Let's check definitions logic.
+    -- evalVar' (assignOfWitness w) v = (assignOfWitness w) v = w.getD v false
+    -- CNF.evalVar w v = w.getD v false
+    -- So they are equal.
+    convert hw
+  · rintro ⟨A, hA⟩
+    rw [sat_iff_evalCNF_witness] at hA
+    exact ⟨_, hA⟩
 
 /-- Bridge to SATBundle: if maxVar + 1 fits in wBound, we get the right form. -/
 theorem satisfiable_bounded_iff_satisfiable
