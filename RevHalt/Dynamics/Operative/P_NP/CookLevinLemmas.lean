@@ -996,7 +996,7 @@ private theorem sat_boundary_clause_forbids
   have hor : (!A (varStep t rId) || !A (varHead t k)) = true := by
     simpa [evalClause', evalLit', evalVar'] using hcl
   have : false = true := by
-    simpa [hk.1, hk.2] using hor
+    simp [hk.1, hk.2] at hor
   cases this
 
 private theorem sat_stepCNF_implies_movePos_lt
@@ -1044,7 +1044,7 @@ private theorem sat_stepCNF_implies_movePos_lt
         Nat.pred_lt (Nat.ne_of_gt hSpos)
       have hk1_lt : k + 1 < S :=
         Nat.lt_of_le_of_lt hk1_le_pred hpred_lt
-      simp only [movePos, hmv]
+      simp only [movePos]
       exact hk1_lt
 
 theorem sat_genTransition_implies_step_valid
