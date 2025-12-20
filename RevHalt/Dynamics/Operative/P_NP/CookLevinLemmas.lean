@@ -1006,6 +1006,12 @@ theorem sat_genInertia_implies_inertia
     (hIn  : Sat A (genInertia T S numSymbols)) :
     ∀ t < T, ∀ k < S, k ≠ headOf A T S t →
       tapeOf A T S numSymbols (t+1) k = tapeOf A T S numSymbols t k := by
+  -- TODO: Proof outline:
+  -- 1. Show A (varHead t k) = false using headOf_spec (since k ≠ headOf)
+  -- 2. Extract inertiaSymbol t k s from genInertia where s = tapeOf A T S numSymbols t k
+  -- 3. From inertia clause 1: ¬head(t,k) ∧ tape(t,k,s) → tape(t+1,k,s)
+  -- 4. Use tapeOf_spec to conclude tapeOf ... (t+1) k = s
+  -- Requires: numSymbols > 0, S > 0 hypotheses
   sorry
 
 /-! ### Tableau Semantics "Run" -/
