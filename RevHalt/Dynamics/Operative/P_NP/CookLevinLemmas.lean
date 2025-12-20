@@ -1270,6 +1270,8 @@ theorem sat_genTableauAll_implies_validRun
         (M.rules.get i).s < M.numSymbols ∧
         (M.rules.get i).q' < M.numStates ∧
         (M.rules.get i).s' < M.numSymbols)
+    (hsym0 : sym0 < M.numSymbols) (hsym1 : sym1 < M.numSymbols)
+    (htape0 : ∀ k < S, tape0 k < M.numSymbols)
     {A : Assign}
     (hA : Sat A (genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1)) :
     ValidRun T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1
@@ -1296,21 +1298,71 @@ theorem sat_genTableauAll_implies_validRun
       -- headOf A T S 0 = head0
       have hT0 : (0 : ℕ) ≤ T := Nat.zero_le T
       exact eq_headOf_of_true hUhd hT0 hS hHd0 hInit.2.1
-    init_tape   := sorry  -- Complex: needs sat_genInitConst_iff and sat_genInitWitness_iff
+    init_tape   := by
+      intro k hkS
+      simp only [runOfAssign']
+      -- Split on whether k is in the witness window [witOff, witOff + witLen)
+      by_cases hWin : k >= witOff ∧ k < witOff + witLen
+      · -- Case: k in witness window
+        simp only [hWin, ]
+        -- Use sat_genInitWitness_iff
+        have hWit := sat_genInitWitness_iff witLen witOff sym0 sym1 |>.mp hInitW
+        have hIdx : k - witOff < witLen := by omega
+        have hkEq : witOff + (k - witOff) = k := by omega
+        specialize hWit (k - witOff) hIdx
+        -- Split on varWit value
+        by_cases hW : A (varWit (k - witOff)) = true
+        · -- wit (k - witOff) = true → tapeOf = sym1
+          simp only [hW, ite_true]
+          have h1 : A (varTape 0 k sym1) = true := by rw [← hkEq]; exact hWit.1 hW
+          have hT0 : (0 : ℕ) ≤ T := Nat.zero_le T
+          exact eq_tapeOf_of_true hUtp hT0 hkS hNsy hsym1 h1
+        · -- wit (k - witOff) = false → tapeOf = sym0
+          have hWf : A (varWit (k - witOff)) = false := by simp_all
+          simp only [hWf]
+          have h0 : A (varTape 0 k sym0) = true := by rw [← hkEq]; exact hWit.2 hWf
+          exact eq_tapeOf_of_true hUtp (Nat.zero_le T) hkS hNsy hsym0 h0
+      · -- Case: k outside witness window
+        have hOutside : k < witOff ∨ k >= witOff + witLen := by omega
+        simp only [show ¬(k >= witOff ∧ k < witOff + witLen) by omega, ite_false]
+        -- Use sat_genInitConst_iff
+        have hConst : A (varTape 0 k (tape0 k)) = true := hInit.2.2 k hkS hOutside
+        exact eq_tapeOf_of_true hUtp (Nat.zero_le T) hkS hNsy (htape0 k hkS) hConst
     step_valid  := by
       intro t ht
-      -- Need to apply sat_genTransition_implies_step_valid
-      -- This returns facts about indexed rule r but ValidRun.step_valid wants bounds_step
-      -- Complex wiring needed
-      sorry
+      -- Convert hUsp from M.numRules to M.rules.length using hRules
+      have hUsp' : Sat A (uniqueStep T M.rules.length) := hRules.symm ▸ hUsp
+      -- Apply sat_genTransition_implies_step_valid with correct argument order
+      have hTrans := sat_genTransition_implies_step_valid T S M hUst hUhd hUtp hUsp'
+                       hR hS hNst hNsy hRulesValid hTr t ht
+      simp only [runOfAssign']
+      -- Prove stepOf equality via hRules
+      have hStepEq : stepOf A T M.numRules t = stepOf A T M.rules.length t := by
+        rw [hRules]
+      -- The rule access via List.get is the same because indices are equal
+      have hIdxEq : (⟨stepOf A T M.numRules t, hRules ▸ (stepOf_spec hUsp' ht hR).1⟩ : Fin M.rules.length) =
+                    ⟨stepOf A T M.rules.length t, (stepOf_spec hUsp' ht hR).1⟩ := by
+        simp only [hStepEq]
+      simp only [hStepEq] at hTrans ⊢
+      exact hTrans
     inertia     := fun t ht k hk hkNe =>
       sat_genInertia_implies_inertia T S M.numSymbols hS hNsy hUhd hUtp hIn t ht k hk hkNe
     accept      := by
-      -- TODO: Extract witness from genAccept disjunction clause
-      -- hAccept : Sat A (genAccept T qAcc) where genAccept = [ pos list ]
-      -- Need to find t where A (varState t qAcc) = true
-      -- Then use eq_stateOf_of_true to conclude stateOf ... t = qAcc
-      sorry
+      -- Extract from hAccept : Sat A (genAccept T qAcc)
+      -- genAccept T qAcc = [ (List.range (T+1)).map (fun t => pos (varState t qAcc)) ]
+      rw [genAccept, Sat, evalCNF', List.all_cons, List.all_nil, Bool.and_true] at hAccept
+      simp only [evalClause', List.any_eq_true, List.mem_map, List.mem_range] at hAccept
+      -- hAccept : ∃ x, (∃ a < T+1, pos (varState a qAcc) = x) ∧ evalLit' A x = true
+      obtain ⟨lit, ⟨t, htRange, hLitEq⟩, hEval⟩ := hAccept
+      have htLe : t ≤ T := Nat.lt_succ_iff.mp htRange
+      -- Simplify hEval using the fact that lit = pos (varState t qAcc)
+      simp only [pos] at hLitEq
+      subst hLitEq
+      simp only [evalLit', evalVar'] at hEval
+      -- hEval : A (varState t qAcc) = true
+      refine ⟨t, htLe, ?_⟩
+      simp only [runOfAssign']
+      exact eq_stateOf_of_true hUst htLe hNst hqAcc hEval
   }
 
 /-- Direction ←: ValidRun R → Sat (assignOfRun R) genTableauAll. -/
@@ -1322,6 +1374,15 @@ theorem validRun_implies_sat_genTableauAll
     (hR : ValidRun T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1 R) :
     Sat (assignOfRun T S M R)
       (genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1) := by
+  -- Expand genTableauAll as ite_trueconjunction of 9 formulas
+  rw [genTableauAll, sat_andCNFs_iff]
+  simp only [List.mem_cons, forall_eq_or_imp, List.mem_nil_iff, false_implies, implies_true,
+             and_true]
+  -- Must prove each of the 9 components
+  -- TODO: This requires lemmas for each component showing that assignOfRun
+  -- satisfies uniqueState, uniqueHead, uniqueTape, uniqueStep, genTransition,
+  -- genInertia, genInitConst, genInitWitness, genAccept respectively.
+  -- Each would need its own helper lemma.
   sorry
 
 /-! ### Main Theorems Stage A -/
