@@ -901,7 +901,51 @@ theorem sat_stepCNF_implies
       A (varState (t+1) R.q') = true ∧
       A (varTape  (t+1) k R.s') = true ∧
       A (varHead  (t+1) (movePos R.mv k)) = true := by
-  sorry
+  intro hSat ⟨hStep, hHead⟩
+  -- stepCNF = stepBoundary ++ stepGuard ++ stepEffect
+  rw [stepCNF, Sat, evalCNF', List.all_append, List.all_append, Bool.and_eq_true, Bool.and_eq_true] at hSat
+  obtain ⟨⟨_, hGuard⟩, hEffect⟩ := hSat
+  -- Extract from stepGuard: two implication clauses
+  simp only [stepGuard, List.all_cons, List.all_nil, Bool.and_true, Bool.and_eq_true] at hGuard
+  obtain ⟨hStateGuard, hTapeGuard⟩ := hGuard
+  -- Extract from stepEffect: three implication clauses
+  simp only [stepEffect, List.all_cons, List.all_nil, Bool.and_true, Bool.and_eq_true] at hEffect
+  obtain ⟨hStateEff, hTapeEff, hHeadEff⟩ := hEffect
+  -- Simplify all clauses
+  simp only [impClause, evalClause', List.any_eq_true, List.mem_append, List.mem_map,
+             notLit, pos, evalLit', evalVar', List.mem_cons, List.mem_nil_iff,
+             or_false] at hStateGuard hTapeGuard hStateEff hTapeEff hHeadEff
+  -- Goal 1: A (varState t R.q) = true
+  have h1 : A (varState t R.q) = true := by
+    obtain ⟨x, hMem, hEval⟩ := hStateGuard
+    rcases hMem with (⟨a, ha, rfl⟩ | rfl)
+    · rcases ha with rfl | rfl <;> simp_all
+    · simp only [] at hEval; exact hEval
+  -- Goal 2: A (varTape t k R.s) = true
+  have h2 : A (varTape t k R.s) = true := by
+    obtain ⟨x, hMem, hEval⟩ := hTapeGuard
+    rcases hMem with (⟨a, ha, rfl⟩ | rfl)
+    · rcases ha with rfl | rfl <;> simp_all
+    · simp only [] at hEval; exact hEval
+  -- Goal 3: A (varState (t+1) R.q') = true
+  have h3 : A (varState (t+1) R.q') = true := by
+    obtain ⟨x, hMem, hEval⟩ := hStateEff
+    rcases hMem with (⟨a, ha, rfl⟩ | rfl)
+    · rcases ha with rfl | rfl | rfl | rfl <;> simp_all
+    · simp only [] at hEval; exact hEval
+  -- Goal 4: A (varTape (t+1) k R.s') = true
+  have h4 : A (varTape (t+1) k R.s') = true := by
+    obtain ⟨x, hMem, hEval⟩ := hTapeEff
+    rcases hMem with (⟨a, ha, rfl⟩ | rfl)
+    · rcases ha with rfl | rfl | rfl | rfl <;> simp_all
+    · simp only [] at hEval; exact hEval
+  -- Goal 5: A (varHead (t+1) (movePos R.mv k)) = true
+  have h5 : A (varHead (t+1) (movePos R.mv k)) = true := by
+    obtain ⟨x, hMem, hEval⟩ := hHeadEff
+    rcases hMem with (⟨a, ha, rfl⟩ | rfl)
+    · rcases ha with rfl | rfl | rfl | rfl <;> simp_all
+    · simp only [] at hEval; exact hEval
+  exact ⟨h1, h2, h3, h4, h5⟩
 
 theorem sat_genTransition_implies_step_valid
     {A : Assign} (T S : ℕ) (M : TableauMachine)
