@@ -10,7 +10,9 @@
   - `P_ne_NP_internal`: The separation theorem
 -/
 
+import RevHalt.Base
 import RevHalt.Kinetic.System
+import RevHalt.Theory.Impossibility
 import RevHalt.Dynamics.Operative.P_NP.PNP
 
 namespace RevHalt.Dynamics.Operative.P_NP.OmegaProblem
@@ -58,14 +60,14 @@ def haltingRHProblem : RHProblem ℕ where
 
 /-- Solves haltingRHProblem n ↔ RealHalts n -/
 theorem solves_iff_realHalts (n : ℕ) :
-    Solves (haltingRHProblem B) n ↔ B.ctx.RealHalts n := by
+    Solves (haltingRHProblem B) n ↔ Rev0_K B.ctx.toEnrichedContext.toImpossibleSystem.K (B.ctx.toEnrichedContext.toImpossibleSystem.Machine n) := by
   unfold Solves RHProblem.tr haltingRHProblem
   simp only [Finset.coe_empty]
   -- Halts (LR ∅ (H n)) ↔ Truth (H n) (by h_bridge)
   -- Truth (H n) ↔ RealHalts n (by h_truth_H)
   have h1 : Halts (B.ctx.LR ∅ (B.ctx.H n)) ↔ B.ctx.Truth (B.ctx.H n) :=
     (B.ctx.h_bridge (B.ctx.H n)).symm
-  have h2 : B.ctx.Truth (B.ctx.H n) ↔ B.ctx.RealHalts n :=
+  have h2 : B.ctx.Truth (B.ctx.H n) ↔ Rev0_K B.ctx.toEnrichedContext.toImpossibleSystem.K (B.ctx.toEnrichedContext.toImpossibleSystem.Machine n) :=
     (B.ctx.h_truth_H n).symm
   exact h1.trans h2
 
@@ -140,7 +142,7 @@ theorem Halting_not_in_P (B : HaltingBundle PropT) :
     ¬ P_RH (B.haltingRHProblem) := by
   intro ⟨D, _⟩
   -- From PolyDecider D, derive contradiction via encoding_cannot_be_complete
-  apply encoding_cannot_be_complete B.ctx.toTuringGodelContext' B.ctx.H
+  apply encoding_cannot_be_complete B.ctx.toEnrichedContext.toImpossibleSystem B.ctx.H
 
   · -- TOTAL: ∀ e, Provable (H e) ∨ Provable (Not (H e))
     intro e

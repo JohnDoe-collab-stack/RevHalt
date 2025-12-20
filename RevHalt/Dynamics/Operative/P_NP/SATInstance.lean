@@ -8,6 +8,8 @@
 import RevHalt.Dynamics.Operative.P_NP.SATCanonical
 import RevHalt.Dynamics.Operative.P_NP.SAT_RH
 import RevHalt.Bridge.Context
+import RevHalt.Base
+import RevHalt.Theory.Impossibility
 
 namespace RevHalt.Dynamics.Operative.P_NP.SATInstance
 
@@ -19,6 +21,10 @@ open RevHalt.Dynamics.Operative.P_NP.PNP
 
 variable {Code PropT : Type}
 variable (ctx : VerifiableContext Code PropT)
+
+/-- Local alias for the operative halting semantics (formerly RealHalts) -/
+abbrev RealHalts (c : Code) : Prop :=
+  Rev0_K ctx.toEnrichedContext.toImpossibleSystem.K (ctx.toEnrichedContext.toImpossibleSystem.Machine c)
 
 -- Assumption 1: Existence of a SAT Solver program `solver F` in `Code`.
 -- Its halting corresponds exactly to `F` being satisfiable.
@@ -45,7 +51,7 @@ variable (wBound_ge_maxVar : ∀ F, CookLevinLemmas.maxVar F + 1 ≤ wBound (cnf
 -- Consistency between Solver and Verifier via Bounds.
 -- The solver halts iff there exists a bounded witness that separates the verifier.
 variable (h_bridge : ∀ F,
-  ctx.RealHalts (solver F) ↔
+  RealHalts ctx (solver F) ↔
     ∃ w : PNP.Witness, PNP.witnessSize w ≤ wBound (cnfSize F) ∧ CNF.evalCNF w F = true)
 
 /--
@@ -100,7 +106,7 @@ theorem SAT_in_NP_Instance
       CNF.evalCNF w F = true)
     (wBound_ge_maxVar : ∀ F, CookLevinLemmas.maxVar F + 1 ≤ wBound (cnfSize F))
     (h_bridge : ∀ F,
-      ctx.RealHalts (solver F) ↔
+      RealHalts ctx (solver F) ↔
         ∃ w : PNP.Witness, PNP.witnessSize w ≤ wBound (cnfSize F) ∧ CNF.evalCNF w F = true) :
     NP_RH (SATInstanceProblem ctx solver) := by
   let bundle : SATBundle Code PropT :=
