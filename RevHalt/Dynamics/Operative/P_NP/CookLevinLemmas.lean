@@ -8,6 +8,7 @@
 import RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
 import RevHalt.Dynamics.Operative.P_NP.CookLevinGadgets
 import RevHalt.Dynamics.Operative.P_NP.SAT
+import RevHalt.Dynamics.Operative.P_NP.PNP
 
 namespace RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
 
@@ -16,6 +17,7 @@ open RevHalt.Dynamics.Operative.P_NP.SAT
 open RevHalt.Dynamics.Operative.P_NP.SAT.CNF
 open RevHalt.Dynamics.Operative.P_NP.CookLevinGadgets
 open RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
+open RevHalt.Dynamics.Operative.P_NP.PNP
 
 abbrev Assign := CookLevinGadgets.Var → Bool
 
@@ -253,7 +255,15 @@ theorem satisfiable_bounded_iff_satisfiable
     (h : maxVar F + 1 ≤ wBound) :
     CNF.Satisfiable F ↔
       (∃ w : PNP.Witness, PNP.witnessSize w ≤ wBound ∧ CNF.evalCNF w F = true) := by
-  sorry
+  constructor
+  · intro hSat
+    -- Satisfiable -> ∃ A, Sat A F
+    rcases (satisfiable_iff_exists_sat_assign (F := F)).1 hSat with ⟨A, hA⟩
+    -- ∃ A, Sat A F -> bounded witness (≤ maxVar+1)
+    rcases (sat_assign_iff_sat_witness (F := F)).1 ⟨A, hA⟩ with ⟨w, hwSize, hwEval⟩
+    refine ⟨w, Nat.le_trans hwSize h, hwEval⟩
+  · rintro ⟨w, _, hwEval⟩
+    exact ⟨w, hwEval⟩
 
 /-! ## A0. Lemmes de base sur les clauses unitaires et disjonctions -/
 
@@ -550,5 +560,6 @@ theorem maxVar_genTableauAll_le_poly
     maxVar (genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1) + 1 ≤
       tableauFullSizeBoundFun M (T + S) := by
   sorry
+
 
 end RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas

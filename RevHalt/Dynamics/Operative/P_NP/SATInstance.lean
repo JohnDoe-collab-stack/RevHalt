@@ -109,24 +109,7 @@ theorem SAT_in_NP_Instance
       RealHalts ctx (solver F) ↔
         ∃ w : PNP.Witness, PNP.witnessSize w ≤ wBound (cnfSize F) ∧ CNF.evalCNF w F = true) :
     NP_RH (SATInstanceProblem ctx solver) := by
-  let bundle : SATBundle Code PropT :=
-    { ctx := ctx
-      satProp := fun F => ctx.H (solver F)
-      satCheck := fun F w => ctx.H (verifier F w)
-      time := time
-      wBound := wBound
-      poly_time := poly_time
-      poly_wBound := poly_wBound
-      wBound_ge_maxVar := wBound_ge_maxVar
-      sat_correct_bounded := by
-        intro F
-        rw [← ctx.h_bridge]
-        rw [← ctx.h_truth_H]
-        exact h_bridge F
-      satCheck_correct := by
-        intro F w
-        exact h_verifier F w
-    }
+  let bundle := makeSATBundle ctx solver verifier time wBound poly_time poly_wBound h_verifier wBound_ge_maxVar h_bridge
   have h_eq : (SATInstanceProblem ctx solver) = bundle.SATP := rfl
   rw [h_eq]
   exact bundle.SAT_in_NP
