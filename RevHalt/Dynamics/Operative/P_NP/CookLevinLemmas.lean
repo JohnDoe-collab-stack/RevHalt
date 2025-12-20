@@ -814,7 +814,14 @@ theorem sat_genInitConst_iff
       A (varState 0 q0) = true ∧
       A (varHead  0 head0) = true ∧
       (∀ k < S, (k < witOff ∨ k ≥ witOff + witLen) → A (varTape 0 k (tape0 k)) = true) := by
-  sorry
+  unfold genInitConst
+  dsimp only [CookLevinGadgets.pos, CNF.Lit.neg]
+  simp [Sat, evalCNF', evalClause', evalLit', evalVar', List.all_eq_true]
+  intros
+  apply forall_congr'; intro k
+  apply forall_congr'; intro hkS
+  rw [imp_iff_not_or]
+  simp [not_or, not_lt, not_le]
 
 theorem sat_genInitWitness_iff
     {A : Assign} (witLen witOff sym0 sym1 : ℕ) :
@@ -822,12 +829,66 @@ theorem sat_genInitWitness_iff
       ∀ i < witLen,
         (A (varWit i) = true  → A (varTape 0 (witOff + i) sym1) = true) ∧
         (A (varWit i) = false → A (varTape 0 (witOff + i) sym0) = true) := by
-  sorry
+
+  unfold genInitWitness
+  simp only [Sat, evalCNF', List.all_eq_true]
+  simp only [List.mem_flatMap, forall_exists_index, and_imp, List.mem_range]
+  rw [forall_comm]
+  apply forall_congr'; intro i
+  constructor
+  · -- Forward direction: Sat → semantic property
+    intro h hi
+    constructor
+    · -- A (varWit i) = true → A (varTape 0 (witOff + i) sym1) = true
+      intro hw
+      have mem : impClause [pos (varWit i)] (pos (varTape 0 (witOff + i) sym1)) ∈
+        [impClause [pos (varWit i)] (pos (varTape 0 (witOff + i) sym1)),
+         impClause [neg (varWit i)] (pos (varTape 0 (witOff + i) sym0))] := by simp
+      specialize h _ hi mem
+      simp only [impClause, evalClause', List.any_eq_true, List.mem_append, List.mem_map,
+                 List.mem_singleton, notLit, pos, evalLit', evalVar'] at h
+      rcases h with ⟨lit, hMem, hEval⟩
+      rcases hMem with ⟨orig, rfl, rfl⟩ | rfl
+      · simp_all
+      · simp_all
+    · -- A (varWit i) = false → A (varTape 0 (witOff + i) sym0) = true
+      intro hw
+      have mem : impClause [neg (varWit i)] (pos (varTape 0 (witOff + i) sym0)) ∈
+        [impClause [pos (varWit i)] (pos (varTape 0 (witOff + i) sym1)),
+         impClause [neg (varWit i)] (pos (varTape 0 (witOff + i) sym0))] := by simp
+      specialize h _ hi mem
+      simp only [impClause, evalClause', List.any_eq_true, List.mem_append, List.mem_map,
+                 List.mem_singleton, notLit, neg, evalLit', evalVar'] at h
+      rcases h with ⟨lit, hMem, hEval⟩
+      rcases hMem with ⟨orig, rfl, rfl⟩ | rfl
+      · simp_all
+      · simp only [pos] at hEval; simp_all
+  · -- Backward direction
+    intro h x hi hx
+    specialize h hi
+    rcases h with ⟨h1, h2⟩
+    simp at hx
+    rcases hx with rfl | rfl
+    · dsimp [impClause, evalClause', evalLit', evalVar', CNF.Lit.neg, CookLevinGadgets.pos]
+      rw [imp_iff_not_or] at h1
+      simpa [Bool.or_eq_true] using h1
+    · dsimp [impClause, evalClause', evalLit', evalVar', CNF.Lit.neg, CookLevinGadgets.pos, CookLevinGadgets.neg]
+      rw [imp_iff_not_or] at h2
+      simpa [Bool.or_eq_true] using h2
 
 theorem sat_genAccept_iff
     {A : Assign} (T qAcc : ℕ) :
     Sat A (genAccept T qAcc) ↔ ∃ t ≤ T, A (varState t qAcc) = true := by
-  sorry
+  unfold genAccept
+  simp only [Sat, evalCNF', List.all_cons, List.all_nil, Bool.and_true, evalClause']
+  rw [List.any_map]
+  simp only [List.any_eq_true, List.mem_range, Function.comp_apply]
+  dsimp only [evalLit', evalVar', CookLevinGadgets.pos]
+  constructor
+  · intro ⟨t, ht, hVal⟩
+    exact ⟨t, Nat.le_of_lt_succ ht, hVal⟩
+  · intro ⟨t, ht, hVal⟩
+    exact ⟨t, Nat.lt_succ_of_le ht, hVal⟩
 
 /-! ## A4. Transition & inertie : lemmes locaux "stepCNF" puis globaux -/
 
