@@ -111,16 +111,128 @@ theorem sat_atLeastOne {A : Assign} {lits : List CookLevinGadgets.Var} (h : lits
       simp only [evalLit', pos, evalVar']
       exact hv_true
 
-theorem sat_atMostOne {A : Assign} {lits : List CookLevinGadgets.Var} :
+/-! ## A0. Lemmes de base sur les clauses unitaires et disjonctions -/
+
+theorem sat_unit_pos {A : Assign} {v : CookLevinGadgets.Var} :
+    Sat A [[pos v]] ↔ A v = true := by
+  simp only [Sat, evalCNF', List.all_cons, List.all_nil, Bool.and_true, evalClause', List.any_cons, List.any_nil, Bool.or_false, evalLit', pos, evalVar']
+  cases A v <;> decide
+
+theorem sat_unit_neg {A : Assign} {v : CookLevinGadgets.Var} :
+    Sat A [[neg v]] ↔ A v = false := by
+  simp only [Sat, evalCNF', List.all_cons, List.all_nil, Bool.and_true, evalClause', List.any_cons, List.any_nil, Bool.or_false, evalLit', neg, evalVar']
+  cases A v <;> decide
+
+theorem sat_bigOr_pos {A : Assign} {vs : List CookLevinGadgets.Var} :
+    Sat A [vs.map pos] ↔ ∃ v ∈ vs, A v = true := by
+  simp only [Sat, evalCNF', List.all_cons, List.all_nil, Bool.and_true, evalClause']
+  rw [List.any_map]
+  simp only [evalLit', pos, evalVar', Function.comp_apply, List.any_eq_true]
+  rfl
+
+theorem sat_andCNFs_iff {A : Assign} {Fs : List CNF.CNF} :
+    Sat A (andCNFs Fs) ↔ ∀ F ∈ Fs, Sat A F := by
+  unfold andCNFs Sat evalCNF'
+  rw [List.all_flatten, List.all_eq_true]
+
+theorem mem_pairwise_subset {α} (l : List α) (x y : α) :
+    (x, y) ∈ pairwise l → x ∈ l ∧ y ∈ l := by
+  induction l with
+  | nil => simp [pairwise]
+  | cons h t ih =>
+    intro H
+    simp only [pairwise, List.mem_append, List.mem_map] at H
+    cases H with
+    | inl hmap =>
+      rcases hmap with ⟨z, hz, heq⟩
+      injection heq with hx hy
+      subst hx; subst hy
+      simp [hz]
+    | inr hpair =>
+      cases ih hpair with | intro ix iy =>
+      simp [ix, iy]
+
+theorem distinct_of_mem_pairwise {α} [DecidableEq α] (l : List α) (hl : l.Nodup) (x y : α) :
+    (x, y) ∈ pairwise l → x ≠ y := by
+  induction l with
+  | nil => simp [pairwise]
+  | cons h t ih =>
+    rw [List.nodup_cons] at hl
+    rcases hl with ⟨hnotin, htail⟩
+    intro H
+    simp only [pairwise, List.mem_append, List.mem_map] at H
+    cases H with
+    | inl hmap =>
+      rcases hmap with ⟨z, hz, heq⟩
+      injection heq with hx hy
+      subst hx
+      subst hy
+      intro heq
+      subst heq
+      exact hnotin hz
+    | inr hpair =>
+      exact ih htail hpair
+
+theorem exists_pair_of_mem_distinct {α} [DecidableEq α] (l : List α) (x y : α) :
+    x ∈ l → y ∈ l → x ≠ y → (x, y) ∈ pairwise l ∨ (y, x) ∈ pairwise l := by
+  induction l with
+  | nil => simp
+  | cons h t ih =>
+    intro hx hy hne
+    simp only [List.mem_cons] at hx hy
+    simp only [pairwise, List.mem_append, List.mem_map]
+    rcases hx with rfl | hxt
+    · rcases hy with rfl | hyt
+      · contradiction
+      · left; left; use y;
+    · rcases hy with rfl | hyt
+      · right; left; use x;
+      · rcases ih hxt hyt hne with h1 | h2
+        · left; right; exact h1
+        · right; right; exact h2
+
+theorem sat_atMostOne {A : Assign} {lits : List CookLevinGadgets.Var} (hNd : lits.Nodup) :
     Sat A (atMostOne lits) ↔
       ∀ v ∈ lits, ∀ v' ∈ lits, v ≠ v' → ¬(A v = true ∧ A v' = true) := by
-  sorry
+  simp only [Sat, evalCNF', atMostOne]
+  rw [List.all_map, List.all_eq_true]
+  simp only [Function.comp_apply]
+  constructor
+  · intro h v hv v' hv' hne
+    cases exists_pair_of_mem_distinct lits v v' hv hv' hne with
+    | inl hpair =>
+      specialize h (v, v') hpair
+      simp [evalClause', evalLit', neg, evalVar'] at h
+      intro hAnd
+      rw [hAnd.1, hAnd.2] at h
+      simp at h
+    | inr hpair =>
+      specialize h (v', v) hpair
+      simp [evalClause', evalLit', neg, evalVar'] at h
+      intro hAnd
+      rw [hAnd.1, hAnd.2] at h
+      simp at h
+  · intro H p hp
+    have : p.1 ∈ lits ∧ p.2 ∈ lits := mem_pairwise_subset lits p.1 p.2 hp
+    specialize H p.1 this.1 p.2 this.2 (distinct_of_mem_pairwise lits hNd p.1 p.2 hp)
+    simp [evalClause', evalLit', neg, evalVar']
+    cases h1 : A p.1 <;> cases h2 : A p.2 <;> simp [h1, h2] at H ⊢
 
-theorem sat_exactlyOne {A : Assign} {lits : List CookLevinGadgets.Var} (h : lits ≠ []) :
+theorem sat_andCNF_pair {A : Assign} {F G : CNF.CNF} : Sat A (andCNF F G) ↔ Sat A F ∧ Sat A G := by
+  unfold andCNF Sat evalCNF'
+  simp only [List.all_append, Bool.and_eq_true]
+
+theorem sat_exactlyOne {A : Assign} {lits : List CookLevinGadgets.Var} (h : lits ≠ []) (hNd : lits.Nodup) :
     Sat A (exactlyOne lits) ↔
       (∃ v ∈ lits, A v = true) ∧
       (∀ v ∈ lits, ∀ v' ∈ lits, v ≠ v' → ¬(A v = true ∧ A v' = true)) := by
-  rw [exactlyOne, sat_andCNF, sat_atLeastOne h, sat_atMostOne]
+  unfold exactlyOne
+  rw [sat_andCNF_pair]
+  unfold atLeastOne
+  split
+  · contradiction
+  · rw [sat_bigOr_pos, sat_atMostOne hNd]
+
 /-! ### Assign ↔ Witness Bridge API -/
 
 /-- Max variable index used by a literal. -/
@@ -319,19 +431,7 @@ theorem satisfiable_bounded_iff_satisfiable
   · rintro ⟨w, _, hwEval⟩
     exact ⟨w, hwEval⟩
 
-/-! ## A0. Lemmes de base sur les clauses unitaires et disjonctions -/
 
-theorem sat_unit_pos {A : Assign} {v : CookLevinGadgets.Var} :
-    Sat A [[pos v]] ↔ A v = true := by
-  sorry
-
-theorem sat_unit_neg {A : Assign} {v : CookLevinGadgets.Var} :
-    Sat A [[neg v]] ↔ A v = false := by
-  sorry
-
-theorem sat_bigOr_pos {A : Assign} {vs : List CookLevinGadgets.Var} :
-    Sat A [vs.map pos] ↔ ∃ v ∈ vs, A v = true := by
-  sorry
 
 /-! ## A1. Décomposition de genTableauAll en conjonction de composants -/
 
@@ -349,7 +449,27 @@ theorem sat_genTableauAll_iff
       Sat A (genInitConst S q0 head0 tape0 witOff witLen) ∧
       Sat A (genInitWitness witLen witOff sym0 sym1) ∧
       Sat A (genAccept T qAcc) := by
-  sorry
+  unfold genTableauAll
+  rw [sat_andCNFs_iff]
+  constructor
+  · intro h
+    simp only [List.mem_cons] at h
+    repeat' constructor
+    all_goals apply h; simp
+  · intro h F hF
+    simp only [List.mem_cons] at hF
+    rcases h with ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩
+    rcases hF with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | hFalse
+    · exact h1
+    · exact h2
+    · exact h3
+    · exact h4
+    · exact h5
+    · exact h6
+    · exact h7
+    · exact h8
+    · exact h9
+    · cases hFalse
 
 /-! ## A2. Extraction "uniqueState/head/tape/step" depuis Sat -/
 
