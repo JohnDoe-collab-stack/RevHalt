@@ -1131,18 +1131,47 @@ theorem sat_genTransition_implies_step_valid
 
 theorem sat_genInertia_implies_inertia
     {A : Assign} (T S numSymbols : ℕ)
+    (hS : S > 0) (hNsy : numSymbols > 0)
     (hUhd : Sat A (uniqueHead T S))
     (hUtp : Sat A (uniqueTape T S numSymbols))
     (hIn  : Sat A (genInertia T S numSymbols)) :
     ∀ t < T, ∀ k < S, k ≠ headOf A T S t →
       tapeOf A T S numSymbols (t+1) k = tapeOf A T S numSymbols t k := by
-  -- TODO: Proof outline:
-  -- 1. Show A (varHead t k) = false using headOf_spec (since k ≠ headOf)
-  -- 2. Extract inertiaSymbol t k s from genInertia where s = tapeOf A T S numSymbols t k
-  -- 3. From inertia clause 1: ¬head(t,k) ∧ tape(t,k,s) → tape(t+1,k,s)
-  -- 4. Use tapeOf_spec to conclude tapeOf ... (t+1) k = s
-  -- Requires: numSymbols > 0, S > 0 hypotheses
-  sorry
+  intro t ht k hkS hkNe
+  -- 1. Show A (varHead t k) = false since k ≠ headOf
+  have hHeadSpec := headOf_spec hUhd (le_of_lt ht) hS
+  have hHeadFalse : A (varHead t k) = false := hHeadSpec.2.2 k hkS hkNe
+  -- 2. Get the tape symbol at (t, k)
+  have hTapeSpec := tapeOf_spec hUtp (le_of_lt ht) hkS hNsy
+  let s := tapeOf A T S numSymbols t k
+  have hsLt : s < numSymbols := hTapeSpec.1
+  have hTapeTrue : A (varTape t k s) = true := hTapeSpec.2.1
+  -- 3. Extract the inertia clause for (t, k, s) from genInertia
+  have hSatInertia : Sat A (inertiaSymbol t k s) := by
+    rw [Sat, evalCNF', List.all_eq_true]
+    intro clause hMem
+    have hMemIn : clause ∈ genInertia T S numSymbols := by
+      unfold genInertia
+      simp only [List.mem_flatMap, List.mem_range]
+      exact ⟨t, ht, k, hkS, s, hsLt, hMem⟩
+    rw [Sat, evalCNF', List.all_eq_true] at hIn
+    exact hIn clause hMemIn
+  -- 4. From inertia clause: ¬head(t,k) ∧ tape(t,k,s) → tape(t+1,k,s)
+  -- inertiaSymbol gives us 2 clauses, we use the first one
+  have hTape1True : A (varTape (t+1) k s) = true := by
+    rw [inertiaSymbol, Sat, evalCNF', List.all_cons, List.all_cons, List.all_nil,
+        Bool.and_true, Bool.and_eq_true] at hSatInertia
+    obtain ⟨hC1, _⟩ := hSatInertia
+    -- hC1: evalClause' A (impClause [neg (varHead t k), pos (varTape t k s)] (pos (varTape (t+1) k s))) = true
+    simp only [impClause, evalClause', List.any_eq_true, List.mem_append, List.mem_map,
+               notLit, neg, pos, evalLit', evalVar', List.mem_cons,
+               List.mem_nil_iff, or_false] at hC1
+    obtain ⟨lit, hMem, hEval⟩ := hC1
+    rcases hMem with (⟨a, ha, rfl⟩ | rfl)
+    · rcases ha with rfl | rfl <;> simp_all
+    · simp only [] at hEval; exact hEval
+  -- 5. Conclude tapeOf ... (t+1) k = s via eq_tapeOf_of_true
+  exact eq_tapeOf_of_true hUtp (Nat.succ_le_of_lt ht) hkS hNsy hsLt hTape1True
 
 /-! ### Tableau Semantics "Run" -/
 
