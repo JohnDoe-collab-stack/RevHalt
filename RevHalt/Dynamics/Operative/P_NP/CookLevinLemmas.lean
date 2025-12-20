@@ -1306,11 +1306,10 @@ theorem sat_genTableauAll_implies_validRun
     inertia     := fun t ht k hk hkNe =>
       sat_genInertia_implies_inertia T S M.numSymbols hS hNsy hUhd hUtp hIn t ht k hk hkNe
     accept      := by
-      -- ∃ t ≤ T, R.st t = qAcc
-      -- From hAccept: Sat A (genAccept T qAcc)
-      -- genAccept = [ (List.range (T+1)).map (pos (varState t qAcc)) ]
-      -- This is a disjunction clause, so ∃ t, A (varState t qAcc) = true
-      -- Need qAcc < M.numStates hypothesis
+      -- TODO: Extract witness from genAccept disjunction clause
+      -- hAccept : Sat A (genAccept T qAcc) where genAccept = [ pos list ]
+      -- Need to find t where A (varState t qAcc) = true
+      -- Then use eq_stateOf_of_true to conclude stateOf ... t = qAcc
       sorry
   }
 
