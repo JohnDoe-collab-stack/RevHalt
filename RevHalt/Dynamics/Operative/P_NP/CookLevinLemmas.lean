@@ -46,7 +46,14 @@ theorem sat_andCNF {A : Assign} {F G : CNF.CNF} :
 
 theorem sat_andCNFs {A : Assign} {Fs : List CNF.CNF} :
     Sat A (andCNFs Fs) ↔ ∀ F ∈ Fs, Sat A F := by
-  sorry
+  unfold Sat andCNFs evalCNF'
+  induction Fs with
+  | nil =>
+    simp only [List.flatten_nil, List.all_nil, List.not_mem_nil, false_implies, implies_true]
+  | cons F Fs ih =>
+    simp only [List.flatten_cons, List.all_append, Bool.and_eq_true, List.mem_cons,
+               forall_eq_or_imp]
+    exact and_congr Iff.rfl ih
 
 theorem sat_impClause {A : Assign} {ante : List CNF.Lit} {cons : CNF.Lit} :
     Sat A [impClause ante cons] ↔
