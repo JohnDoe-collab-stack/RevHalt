@@ -70,6 +70,6 @@ def reduction_of_kernel
 
 /-- Alternative builder using reduction_of_kernel. -/
 def cookLevinBuilder' : SAT.CookLevinBuilder SATP where
-  reduce := fun {ι} P V => reduction_of_kernel K P V
+  reduce := fun {_} P V => reduction_of_kernel K P V
 
 end RevHalt.Dynamics.Operative.P_NP.CookLevinHelpers

@@ -9,6 +9,8 @@ import RevHalt.Dynamics.Operative.P_NP.CookLevinTableau
 import RevHalt.Dynamics.Operative.P_NP.CookLevinGadgets
 import RevHalt.Dynamics.Operative.P_NP.SAT
 import RevHalt.Dynamics.Operative.P_NP.PNP
+import Mathlib.Data.List.Range
+import Mathlib.Tactic.Linarith
 
 namespace RevHalt.Dynamics.Operative.P_NP.CookLevinLemmas
 
@@ -477,51 +479,334 @@ theorem sat_genTableauAll_iff
 def stateOf (A : Assign) (_T numStates : ℕ) (t : ℕ) : ℕ :=
   ((List.range numStates).find? (fun q => A (varState t q))).getD 0
 
+
+private
+theorem find?_one_mem_pred {α : Type} {p : α → Bool} {l : List α} {d : α}
+    (h : ∃ x ∈ l, p x = true) :
+    let res := (l.find? p).getD d
+    res ∈ l ∧ p res = true := by
+  induction l with
+  | nil =>
+    rcases h with ⟨_, hfalse, _⟩
+    contradiction
+  | cons a l ih =>
+    dsimp [List.find?]
+    split
+    next hpa =>
+      simp only [Option.getD_some]
+      constructor
+      · apply List.mem_cons_self
+      · exact hpa
+    next hpa_false =>
+    next hpa_false =>
+      rcases h with ⟨x, hx_mem, hx_p⟩
+      simp only [List.mem_cons] at hx_mem
+      have h_tail : ∃ x ∈ l, p x = true := by
+        rcases hx_mem with rfl | hx_mem_tail
+        · rw [hx_p] at hpa_false; contradiction
+        · exact ⟨x, hx_mem_tail, hx_p⟩
+      specialize ih h_tail
+      constructor
+      · exact List.mem_cons_of_mem _ ih.1
+      · exact ih.2
+
+private theorem var_inj_helper (t tag : ℕ) :
+    Function.Injective (fun x => mkVar tag t x 0) := by
+  intro x y h
+  simp only [mkVar, Nat.pair_eq_pair] at h
+  rcases h with ⟨_, h2⟩
+  rcases h2 with ⟨_, h3⟩
+  rcases h3 with ⟨res, _⟩
+  exact res
+
+private theorem varState_inj (t : ℕ) : Function.Injective (fun q => varState t q) :=
+  var_inj_helper t tagState
+
+private def stateVars (t numStates : ℕ) : List CookLevinGadgets.Var :=
+  (List.range numStates).map (fun q => varState t q)
+
+private theorem stateVars_nodup (t numStates : ℕ) :
+    (stateVars t numStates).Nodup :=
+  List.Nodup.map (varState_inj t) List.nodup_range
+
 theorem stateOf_spec
     {A : Assign} {T numStates t : ℕ}
-    (hU : Sat A (uniqueState T numStates)) (ht : t ≤ T) :
+    (hU : Sat A (uniqueState T numStates)) (ht : t ≤ T)
+    (hNum : numStates > 0) :
     stateOf A T numStates t < numStates ∧
     A (varState t (stateOf A T numStates t)) = true ∧
     (∀ q < numStates, q ≠ stateOf A T numStates t → A (varState t q) = false) := by
-  sorry
+  change Sat A (andCNFs ((List.range (T + 1)).map (fun t => exactlyOne (stateVars t numStates)))) at hU
+  rw [sat_andCNFs_iff] at hU
+  have hEx1 : Sat A (exactlyOne (stateVars t numStates)) := by
+    apply hU
+    simp only [List.mem_map, List.mem_range]
+    exact ⟨t, Nat.lt_succ_of_le ht, rfl⟩
 
+  let vars := stateVars t numStates
+  have hNe : vars ≠ [] := by
+    intro hEmpty
+    dsimp [vars] at hEmpty
+    rw [stateVars] at hEmpty
+    simp at hEmpty
+    linarith
+
+  have hNd : vars.Nodup := stateVars_nodup t numStates
+  have hSat := (sat_exactlyOne hNe hNd).mp hEx1
+  obtain ⟨hAtLeastOne, hAtMostOne⟩ := hSat
+
+  have hExists : ∃ q, q ∈ List.range numStates ∧ A (varState t q) = true := by
+    rcases hAtLeastOne with ⟨v, hvMem, hvTrue⟩
+    change v ∈ (List.range numStates).map (varState t) at hvMem
+    rw [List.mem_map] at hvMem
+    rcases hvMem with ⟨q, hqMem, rfl⟩
+    exact ⟨q, hqMem, hvTrue⟩
+
+  let q0 := stateOf A T numStates t
+  have hFind : q0 ∈ List.range numStates ∧ A (varState t q0) = true := by
+    dsimp [stateOf]
+    apply find?_one_mem_pred hExists
+
+  refine ⟨List.mem_range.mp hFind.1, hFind.2, ?_⟩
+  intro q hqLt hqNe
+  by_contra hContra
+  simp only [Bool.not_eq_false] at hContra
+  apply hAtMostOne (varState t q) _ (varState t q0) _ _ ⟨hContra, hFind.2⟩
+  · change varState t q ∈ (List.range numStates).map (varState t)
+    rw [List.mem_map]
+    use q
+    constructor
+    · rw [List.mem_range]; exact hqLt
+    · rfl
+  · change varState t q0 ∈ (List.range numStates).map (varState t)
+    rw [List.mem_map]
+    use q0
+    constructor
+    · exact hFind.1
+    · rfl
+  · intro hEq; apply hqNe; exact varState_inj t hEq
 /-- Extract the unique head position at time t from a satisfying assignment. -/
 def headOf (A : Assign) (_T S : ℕ) (t : ℕ) : ℕ :=
   ((List.range S).find? (fun k => A (varHead t k))).getD 0
 
+
+private theorem varHead_inj (t : ℕ) : Function.Injective (fun k => varHead t k) :=
+  var_inj_helper t tagHead
+
+private def headVars (t S : ℕ) : List CookLevinGadgets.Var :=
+  (List.range S).map (fun k => varHead t k)
+
+private theorem headVars_nodup (t S : ℕ) : (headVars t S).Nodup :=
+  List.Nodup.map (varHead_inj t) List.nodup_range
+
 theorem headOf_spec
     {A : Assign} {T S t : ℕ}
-    (hU : Sat A (uniqueHead T S)) (ht : t ≤ T) :
+    (hU : Sat A (uniqueHead T S)) (ht : t ≤ T) (hS : S > 0) :
     headOf A T S t < S ∧
     A (varHead t (headOf A T S t)) = true ∧
     (∀ k < S, k ≠ headOf A T S t → A (varHead t k) = false) := by
-  sorry
+  change Sat A (andCNFs ((List.range (T + 1)).map (fun t => exactlyOne (headVars t S)))) at hU
+  rw [sat_andCNFs_iff] at hU
+  have hEx1 : Sat A (exactlyOne (headVars t S)) := by
+    apply hU
+    simp only [List.mem_map, List.mem_range]
+    exact ⟨t, Nat.lt_succ_of_le ht, rfl⟩
 
-/-- Extract the unique tape symbol at (t, k) from a satisfying assignment. -/
+  let vars := headVars t S
+  have hNe : vars ≠ [] := by
+    intro hEmpty
+    dsimp [vars] at hEmpty
+    rw [headVars] at hEmpty
+    simp at hEmpty
+    linarith
+
+  have hNd : vars.Nodup := headVars_nodup t S
+  have hSat := (sat_exactlyOne hNe hNd).mp hEx1
+  obtain ⟨hAtLeastOne, hAtMostOne⟩ := hSat
+
+  have hExists : ∃ k, k ∈ List.range S ∧ A (varHead t k) = true := by
+    rcases hAtLeastOne with ⟨v, hvMem, hvTrue⟩
+    change v ∈ (List.range S).map (varHead t) at hvMem
+    rw [List.mem_map] at hvMem
+    rcases hvMem with ⟨k, hkMem, rfl⟩
+    exact ⟨k, hkMem, hvTrue⟩
+
+  let k0 := headOf A T S t
+  have hFind : k0 ∈ List.range S ∧ A (varHead t k0) = true := by
+    dsimp [headOf]
+    apply find?_one_mem_pred hExists
+
+  refine ⟨List.mem_range.mp hFind.1, hFind.2, ?_⟩
+  intro k hkLt hkNe
+  by_contra hContra
+  simp only [Bool.not_eq_false] at hContra
+  apply hAtMostOne (varHead t k) _ (varHead t k0) _ _ ⟨hContra, hFind.2⟩
+  · change varHead t k ∈ (List.range S).map (varHead t)
+    rw [List.mem_map]
+    use k
+    constructor
+    · rw [List.mem_range]; exact hkLt
+    · rfl
+  · change varHead t k0 ∈ (List.range S).map (varHead t)
+    rw [List.mem_map]
+    use k0
+    constructor
+    · exact hFind.1
+    · rfl
+  · intro hEq; apply hkNe; exact varHead_inj t hEq/-- Extract the unique tape symbol at (t, k) from a satisfying assignment. -/
 def tapeOf (A : Assign) (_T _S numSymbols : ℕ) (t k : ℕ) : ℕ :=
   ((List.range numSymbols).find? (fun s => A (varTape t k s))).getD 0
 
+
+private theorem varTape_inj (t k : ℕ) : Function.Injective (fun s => varTape t k s) := by
+  intro s s' h
+  simp only [varTape, mkVar, Nat.pair_eq_pair] at h
+  rcases h with ⟨_, h2⟩
+  rcases h2 with ⟨_, h3⟩
+  rcases h3 with ⟨_, h4⟩
+  exact h4
+
+private def tapeVars (t k numSymbols : ℕ) : List CookLevinGadgets.Var :=
+  (List.range numSymbols).map (fun s => varTape t k s)
+
+private theorem tapeVars_nodup (t k numSymbols : ℕ) : (tapeVars t k numSymbols).Nodup :=
+  List.Nodup.map (varTape_inj t k) List.nodup_range
+
 theorem tapeOf_spec
     {A : Assign} {T S numSymbols t k : ℕ}
-    (hU : Sat A (uniqueTape T S numSymbols)) (ht : t ≤ T) (hk : k < S) :
+    (hU : Sat A (uniqueTape T S numSymbols)) (ht : t ≤ T) (hk : k < S)
+    (hSym : numSymbols > 0) :
     tapeOf A T S numSymbols t k < numSymbols ∧
     A (varTape t k (tapeOf A T S numSymbols t k)) = true ∧
     (∀ s < numSymbols, s ≠ tapeOf A T S numSymbols t k → A (varTape t k s) = false) := by
-  sorry
+  change Sat A (andCNFs ((List.range (T + 1)).map (fun t => (List.range S).flatMap (fun k => exactlyOne (tapeVars t k numSymbols))))) at hU
+  rw [sat_andCNFs_iff] at hU
+  have hSatBig : Sat A ((List.range S).flatMap (fun k => exactlyOne (tapeVars t k numSymbols))) := by
+    apply hU
+    simp only [List.mem_map, List.mem_range]
+    use t
+    constructor
+    · apply Nat.lt_succ_of_le ht
+    · rfl
+  change Sat A (andCNFs ((List.range S).map (fun k => exactlyOne (tapeVars t k numSymbols)))) at hSatBig
+  rw [sat_andCNFs_iff] at hSatBig
+  have hEx1 : Sat A (exactlyOne (tapeVars t k numSymbols)) := by
+    apply hSatBig
+    simp only [List.mem_map, List.mem_range]
+    use k
 
-/-- Extract the unique step/rule index at time t from a satisfying assignment. -/
+  let vars := tapeVars t k numSymbols
+  have hNe : vars ≠ [] := by
+    intro hEmpty
+    dsimp [vars] at hEmpty
+    rw [tapeVars] at hEmpty
+    simp at hEmpty
+    linarith
+
+  have hNd : vars.Nodup := tapeVars_nodup t k numSymbols
+  have hSat := (sat_exactlyOne hNe hNd).mp hEx1
+  obtain ⟨hAtLeastOne, hAtMostOne⟩ := hSat
+
+  have hExists : ∃ s, s ∈ List.range numSymbols ∧ A (varTape t k s) = true := by
+    rcases hAtLeastOne with ⟨v, hvMem, hvTrue⟩
+    change v ∈ (List.range numSymbols).map (varTape t k) at hvMem
+    rw [List.mem_map] at hvMem
+    rcases hvMem with ⟨s, hsMem, rfl⟩
+    exact ⟨s, hsMem, hvTrue⟩
+
+  let s0 := tapeOf A T S numSymbols t k
+  have hFind : s0 ∈ List.range numSymbols ∧ A (varTape t k s0) = true := by
+    dsimp [tapeOf]
+    apply find?_one_mem_pred hExists
+
+  refine ⟨List.mem_range.mp hFind.1, hFind.2, ?_⟩
+  intro s hsLt hsNe
+  by_contra hContra
+  simp only [Bool.not_eq_false] at hContra
+  apply hAtMostOne (varTape t k s) _ (varTape t k s0) _ _ ⟨hContra, hFind.2⟩
+  · change varTape t k s ∈ (List.range numSymbols).map (varTape t k)
+    rw [List.mem_map]
+    use s
+    constructor
+    · rw [List.mem_range]; exact hsLt
+    · rfl
+  · change varTape t k s0 ∈ (List.range numSymbols).map (varTape t k)
+    rw [List.mem_map]
+    use s0
+    constructor
+    · exact hFind.1
+    · rfl
+  · intro hEq; apply hsNe; exact varTape_inj t k hEq/-- Extract the unique step/rule index at time t from a satisfying assignment. -/
 def stepOf (A : Assign) (_T numRules : ℕ) (t : ℕ) : ℕ :=
   ((List.range numRules).find? (fun r => A (varStep t r))).getD 0
 
+
+private theorem varStep_inj (t : ℕ) : Function.Injective (fun r => varStep t r) :=
+  var_inj_helper t tagStep
+
+private def stepVars (t numRules : ℕ) : List CookLevinGadgets.Var :=
+  (List.range numRules).map (fun r => varStep t r)
+
+private theorem stepVars_nodup (t numRules : ℕ) : (stepVars t numRules).Nodup :=
+  List.Nodup.map (varStep_inj t) List.nodup_range
+
 theorem stepOf_spec
     {A : Assign} {T numRules t : ℕ}
-    (hU : Sat A (uniqueStep T numRules)) (ht : t < T) :
+    (hU : Sat A (uniqueStep T numRules)) (ht : t < T)
+    (hRules : numRules > 0) :
     stepOf A T numRules t < numRules ∧
     A (varStep t (stepOf A T numRules t)) = true ∧
     (∀ r < numRules, r ≠ stepOf A T numRules t → A (varStep t r) = false) := by
-  sorry
+  change Sat A (andCNFs ((List.range T).map (fun t => exactlyOne (stepVars t numRules)))) at hU
+  rw [sat_andCNFs_iff] at hU
+  have hEx1 : Sat A (exactlyOne (stepVars t numRules)) := by
+    apply hU
+    simp only [List.mem_map, List.mem_range]
+    exact ⟨t, ht, rfl⟩
 
-/-! ## A3. Init / Witness / Accept sous forme "logique" -/
+  let vars := stepVars t numRules
+  have hNe : vars ≠ [] := by
+    intro hEmpty
+    dsimp [vars] at hEmpty
+    simp only [stepVars] at hEmpty
+    simp at hEmpty
+    linarith
+
+  have hNd : vars.Nodup := stepVars_nodup t numRules
+  have hSat := (sat_exactlyOne hNe hNd).mp hEx1
+  obtain ⟨hAtLeastOne, hAtMostOne⟩ := hSat
+
+  have hExists : ∃ r, r ∈ List.range numRules ∧ A (varStep t r) = true := by
+    rcases hAtLeastOne with ⟨v, hvMem, hvTrue⟩
+    simp [vars] at hvMem
+    simp only [stepVars] at hvMem
+    rw [List.mem_map (f := fun r => varStep t r)] at hvMem
+    rcases hvMem with ⟨r, hrMem, rfl⟩
+    exact ⟨r, hrMem, hvTrue⟩
+
+  let r0 := stepOf A T numRules t
+  have hFind : r0 ∈ List.range numRules ∧ A (varStep t r0) = true := by
+    dsimp [stepOf]
+    apply find?_one_mem_pred hExists
+
+  refine ⟨List.mem_range.mp hFind.1, hFind.2, ?_⟩
+  intro r hrLt hrNe
+  by_contra hContra
+  simp only [Bool.not_eq_false] at hContra
+  apply hAtMostOne (varStep t r) _ (varStep t r0) _ _ ⟨hContra, hFind.2⟩
+  · change varStep t r ∈ (List.range numRules).map (varStep t)
+    rw [List.mem_map]
+    use r
+    constructor
+    · rw [List.mem_range]; exact hrLt
+    · rfl
+  · change varStep t r0 ∈ (List.range numRules).map (varStep t)
+    rw [List.mem_map]
+    use r0
+    constructor
+    · exact hFind.1
+    · rfl
+  · intro hEq; apply hrNe; exact varStep_inj t hEq/-! ## A3. Init / Witness / Accept sous forme "logique" -/
 
 theorem sat_genInitConst_iff
     {A : Assign} (S q0 head0 : ℕ) (tape0 : ℕ → ℕ) (witOff witLen : ℕ) :
@@ -567,7 +852,7 @@ theorem sat_genTransition_implies_step_valid
     ∀ t, (ht : t < T) →
       let rId := stepOf A T M.rules.length t
       let k   := headOf A T S t
-      let r   := M.rules.get ⟨rId, (stepOf_spec hUsp ht).1⟩
+      let r   := M.rules.get ⟨rId, (stepOf_spec hUsp ht (sorry)).1⟩
       (stateOf A T M.numStates t = r.q) ∧
       (tapeOf A T S M.numSymbols t k = r.s) ∧
       (stateOf A T M.numStates (t+1) = r.q') ∧
