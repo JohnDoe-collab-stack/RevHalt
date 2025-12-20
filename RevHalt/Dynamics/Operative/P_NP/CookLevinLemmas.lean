@@ -58,11 +58,58 @@ theorem sat_andCNFs {A : Assign} {Fs : List CNF.CNF} :
 theorem sat_impClause {A : Assign} {ante : List CNF.Lit} {cons : CNF.Lit} :
     Sat A [impClause ante cons] ↔
       ((∀ l ∈ ante, evalLit' A l = true) → evalLit' A cons = true) := by
-  sorry
+  unfold Sat evalCNF' impClause
+  simp only [List.all_cons, List.all_nil, Bool.and_true, evalClause', List.any_append,
+             List.any_map, Bool.or_eq_true]
+  -- Key lemma: evalLit' A (notLit l) = !evalLit' A l
+  have evalNotLit : ∀ l, evalLit' A (notLit l) = !evalLit' A l := by
+    intro l
+    simp only [evalLit', notLit, evalVar']
+    cases hl : l.neg <;> simp
+  constructor
+  · intro hOr hAnte
+    rcases hOr with hNeg | hCons
+    · -- Some negated literal is true → contradiction
+      simp only [List.any_eq_true, Function.comp_apply] at hNeg
+      rcases hNeg with ⟨l, hl_mem, hl_eval⟩
+      rw [evalNotLit] at hl_eval
+      have hAnte_l := hAnte l hl_mem
+      simp only [Bool.not_eq_true'] at hl_eval
+      simp_all
+    · -- Consequent is true directly
+      simp only [List.any_cons, List.any_nil, Bool.or_false] at hCons
+      exact hCons
+  · intro hImp
+    by_cases hAll : ∀ l ∈ ante, evalLit' A l = true
+    · right
+      simp only [List.any_cons, List.any_nil, Bool.or_false]
+      exact hImp hAll
+    · left
+      push_neg at hAll
+      rcases hAll with ⟨l, hl_mem, hl_false⟩
+      simp only [List.any_eq_true, Function.comp_apply]
+      use l, hl_mem
+      rw [evalNotLit]
+      simp only [Bool.not_eq_true', Bool.eq_false_iff] at hl_false ⊢
+      exact hl_false
 
 theorem sat_atLeastOne {A : Assign} {lits : List CookLevinGadgets.Var} (h : lits ≠ []) :
     Sat A (atLeastOne lits) ↔ ∃ v ∈ lits, A v = true := by
-  sorry
+  unfold Sat evalCNF' atLeastOne
+  cases lits with
+  | nil => contradiction
+  | cons x xs =>
+    simp only [List.all_cons, List.all_nil, Bool.and_true, evalClause',
+               List.any_map, List.any_eq_true, Function.comp_apply]
+    constructor
+    · intro ⟨v, hv_mem, hv_eval⟩
+      use v, hv_mem
+      simp only [evalLit', pos, evalVar'] at hv_eval
+      exact hv_eval
+    · intro ⟨v, hv_mem, hv_true⟩
+      use v, hv_mem
+      simp only [evalLit', pos, evalVar']
+      exact hv_true
 
 theorem sat_atMostOne {A : Assign} {lits : List CookLevinGadgets.Var} :
     Sat A (atMostOne lits) ↔
