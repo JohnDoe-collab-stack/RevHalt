@@ -1416,6 +1416,20 @@ theorem maxVar_genTableauAll_le_poly
     (witLen witOff sym0 sym1 : ℕ) :
     maxVar (genTableauAll T S M q0 head0 qAcc tape0 witLen witOff sym0 sym1) + 1 ≤
       tableauFullSizeBoundFun M (T + S) := by
+  -- The proof strategy:
+  -- 1. Unfold genTableauAll into its 9 components
+  -- 2. Show maxVar is bounded by max of individual maxVars
+  -- 3. Bound each component's maxVar:
+  --    - varState t q : Nat.pair tagState (Nat.pair t (Nat.pair q 0)) ≤ poly(T, numStates)
+  --    - varHead t k  : Nat.pair tagHead (Nat.pair t (Nat.pair k 0)) ≤ poly(T, S)
+  --    - varTape t k s: Nat.pair tagTape (Nat.pair t (Nat.pair k s)) ≤ poly(T, S, numSymbols)
+  --    - varStep t r  : Nat.pair tagStep (Nat.pair t (Nat.pair r 0)) ≤ poly(T, numRules)
+  --    - varWit i     : Nat.pair tagWit (Nat.pair i (Nat.pair 0 0)) ≤ poly(witLen)
+  -- 4. Show all bounds are dominated by tableauFullSizeBoundFun M (T + S)
+  --    which is O((T+S+1)^3 * C^2) for C = numStates + numSymbols + numRules + 10
+  -- Each Nat.pair gives roughly quadratic growth, so triple nesting gives O(n^6)
+  -- But tableauFullSizeBoundFun is O(n^3 * C^2) which may not be sufficient.
+  -- This may require adjusting the bound definition.
   sorry
 
 
