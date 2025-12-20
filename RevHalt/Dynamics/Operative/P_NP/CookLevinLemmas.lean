@@ -300,10 +300,8 @@ theorem sat_genTableauAll_iff
 /-! ## A2. Extraction "uniqueState/head/tape/step" depuis Sat -/
 
 /-- Extract the unique state at time t from a satisfying assignment. -/
-noncomputable def stateOf (A : Assign) (T numStates : ℕ) (t : ℕ) : ℕ :=
-  if h : ∃ q < numStates, A (varState t q) = true then
-    Classical.choose h
-  else 0
+def stateOf (A : Assign) (_T numStates : ℕ) (t : ℕ) : ℕ :=
+  ((List.range numStates).find? (fun q => A (varState t q))).getD 0
 
 theorem stateOf_spec
     {A : Assign} {T numStates t : ℕ}
@@ -314,10 +312,8 @@ theorem stateOf_spec
   sorry
 
 /-- Extract the unique head position at time t from a satisfying assignment. -/
-noncomputable def headOf (A : Assign) (T S : ℕ) (t : ℕ) : ℕ :=
-  if h : ∃ k < S, A (varHead t k) = true then
-    Classical.choose h
-  else 0
+def headOf (A : Assign) (_T S : ℕ) (t : ℕ) : ℕ :=
+  ((List.range S).find? (fun k => A (varHead t k))).getD 0
 
 theorem headOf_spec
     {A : Assign} {T S t : ℕ}
@@ -328,10 +324,8 @@ theorem headOf_spec
   sorry
 
 /-- Extract the unique tape symbol at (t, k) from a satisfying assignment. -/
-noncomputable def tapeOf (A : Assign) (T S numSymbols : ℕ) (t k : ℕ) : ℕ :=
-  if h : ∃ s < numSymbols, A (varTape t k s) = true then
-    Classical.choose h
-  else 0
+def tapeOf (A : Assign) (_T _S numSymbols : ℕ) (t k : ℕ) : ℕ :=
+  ((List.range numSymbols).find? (fun s => A (varTape t k s))).getD 0
 
 theorem tapeOf_spec
     {A : Assign} {T S numSymbols t k : ℕ}
@@ -342,10 +336,8 @@ theorem tapeOf_spec
   sorry
 
 /-- Extract the unique step/rule index at time t from a satisfying assignment. -/
-noncomputable def stepOf (A : Assign) (T numRules : ℕ) (t : ℕ) : ℕ :=
-  if h : ∃ r < numRules, A (varStep t r) = true then
-    Classical.choose h
-  else 0
+def stepOf (A : Assign) (_T numRules : ℕ) (t : ℕ) : ℕ :=
+  ((List.range numRules).find? (fun r => A (varStep t r))).getD 0
 
 theorem stepOf_spec
     {A : Assign} {T numRules t : ℕ}
@@ -489,7 +481,7 @@ def assignOfRun
 /-! ## A5. runOfAssign "propre" + théorèmes principaux Stage A -/
 
 /-- Decode a run from a satisfying assignment using extracted values. -/
-noncomputable def runOfAssign'
+def runOfAssign'
     (T S : ℕ) (M : TableauMachine)
     (q0 head0 qAcc : ℕ) (tape0 : ℕ → ℕ)
     (witLen witOff sym0 sym1 : ℕ)
