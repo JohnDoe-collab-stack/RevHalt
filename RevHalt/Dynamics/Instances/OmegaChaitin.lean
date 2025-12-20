@@ -47,7 +47,6 @@ namespace RevHalt.Dynamics.Instances.OmegaChaitin
 
 open RevHalt
 open Nat.Partrec
-open Classical
 
 -- ==============================================================================================
 -- 1. "Vrai" Ω Approximation (no axioms - fully constructive)

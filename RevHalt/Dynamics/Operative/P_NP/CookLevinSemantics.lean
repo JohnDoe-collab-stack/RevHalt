@@ -70,7 +70,7 @@ def cfgOfRun (R : TableauRun) : ℕ → Cfg :=
   fun t => { q := R.st t, hd := R.hd t, tape := R.tape t }
 
 /-- ValidRun induces an ExecUpTo (as a definition since ExecUpTo is a structure). -/
-noncomputable def validRun_to_exec
+def validRun_to_exec
     (T S : ℕ) (M : TableauMachine)
     (q0 head0 qAcc : ℕ) (tape0 : ℕ → ℕ)
     (witLen witOff sym0 sym1 : ℕ)
