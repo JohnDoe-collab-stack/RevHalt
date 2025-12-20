@@ -108,7 +108,7 @@ def haltingVerifier (B : HaltingBundle PropT) : PolyVerifier (B.haltingRHProblem
       -- Use dummy witness of appropriate size
       use List.replicate n false
       constructor
-      · simp [witnessSize]
+      · simp only [witnessSize, id, List.length_replicate]; exact Nat.le_refl _
       · unfold HaltsBy
         use t
         constructor
@@ -120,7 +120,7 @@ def haltingVerifier (B : HaltingBundle PropT) : PolyVerifier (B.haltingRHProblem
       unfold HaltsBy at hHaltsBy
       obtain ⟨t, _, ht⟩ := hHaltsBy
       unfold Solves RHProblem.tr HaltingBundle.haltingRHProblem Halts
-      simp only [Finset.coe_empty]
+      simp only [Finset.coe_empty] at ht ⊢
       exact ⟨t, ht⟩
 
 theorem Halting_in_NP (B : HaltingBundle PropT) : NP_RH (B.haltingRHProblem) :=
