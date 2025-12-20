@@ -984,6 +984,69 @@ theorem sat_stepCNF_implies
     · simp only [] at hEval; exact hEval
   exact ⟨h1, h2, h3, h4, h5⟩
 
+/-! ### Helper lemmas for Move.R bound via stepBoundary -/
+
+private theorem sat_boundary_clause_forbids
+    {A : Assign} {t k rId : ℕ} :
+    Sat A [[neg (varStep t rId), neg (varHead t k)]] →
+    (A (varStep t rId) = true ∧ A (varHead t k) = true) → False := by
+  intro hSat hk
+  have hcl : evalClause' A [neg (varStep t rId), neg (varHead t k)] = true := by
+    simpa [Sat, evalCNF', evalClause'] using hSat
+  have hor : (!A (varStep t rId) || !A (varHead t k)) = true := by
+    simpa [evalClause', evalLit', evalVar'] using hcl
+  have : false = true := by
+    simpa [hk.1, hk.2] using hor
+  cases this
+
+private theorem sat_stepCNF_implies_movePos_lt
+    {A : Assign} (S t k rId : ℕ) (R : TransitionRule)
+    (hSpos : S > 0) (hkLtS : k < S) :
+    Sat A (stepCNF S t k rId R) →
+    (A (varStep t rId) = true ∧ A (varHead t k) = true) →
+    movePos R.mv k < S := by
+  intro hSat hk
+  cases hmv : R.mv with
+  | L =>
+      have : Nat.pred k < S := Nat.lt_of_le_of_lt (Nat.pred_le k) hkLtS
+      simpa [movePos, hmv] using this
+  | S =>
+      simpa [movePos, hmv] using hkLtS
+  | R =>
+      have hSat' := hSat
+      rw [stepCNF, Sat, evalCNF', List.all_append, List.all_append,
+          Bool.and_eq_true, Bool.and_eq_true] at hSat'
+      obtain ⟨⟨hBdry, _hGuard⟩, _hEff⟩ := hSat'
+      have hBdrySat : Sat A (stepBoundary S t k rId R) := by
+        rw [Sat, evalCNF']
+        exact hBdry
+      have hk_ne : k ≠ Nat.pred S := by
+        intro hkEq
+        have hSB :
+            stepBoundary S t k rId R =
+              [[neg (varStep t rId), neg (varHead t k)]] := by
+          simp [stepBoundary, hmv, hkEq]
+        have hClause : Sat A [[neg (varStep t rId), neg (varHead t k)]] := by
+          rw [← hSB]; exact hBdrySat
+        exact sat_boundary_clause_forbids (A := A) (t := t) (k := k) (rId := rId) hClause hk
+      have hSpos' : 0 < S := hSpos
+      have hSuccPred : Nat.succ (Nat.pred S) = S :=
+        Nat.succ_pred_eq_of_pos hSpos'
+      have hk_le_pred : k ≤ Nat.pred S := by
+        have hLt : k < Nat.succ (Nat.pred S) := by
+          rw [hSuccPred]; exact hkLtS
+        exact Nat.lt_succ_iff.mp hLt
+      have hk_lt_pred : k < Nat.pred S :=
+        lt_of_le_of_ne hk_le_pred hk_ne
+      have hk1_le_pred : k + 1 ≤ Nat.pred S :=
+        Nat.succ_le_of_lt hk_lt_pred
+      have hpred_lt : Nat.pred S < S :=
+        Nat.pred_lt (Nat.ne_of_gt hSpos)
+      have hk1_lt : k + 1 < S :=
+        Nat.lt_of_le_of_lt hk1_le_pred hpred_lt
+      simp only [movePos, hmv]
+      exact hk1_lt
+
 theorem sat_genTransition_implies_step_valid
     {A : Assign} (T S : ℕ) (M : TableauMachine)
     (hUst : Sat A (uniqueState T M.numStates))
