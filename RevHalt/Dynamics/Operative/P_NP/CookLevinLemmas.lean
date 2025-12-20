@@ -1125,19 +1125,8 @@ theorem sat_genTransition_implies_step_valid
   · -- tapeOf A T S M.numSymbols (t+1) k = r.s'
     exact eq_tapeOf_of_true hUtp (Nat.succ_le_of_lt ht) hkLtS hNsy hRV.2.2.2 hTapeT1
   · -- headOf A T S (t+1) = movePos r.mv k
-    have hMoveK : movePos r.mv k < S := by
-      unfold movePos
-      cases r.mv
-      · -- Move.L: Nat.pred k < S  (since k < S implies pred k < S)
-        exact Nat.lt_of_le_of_lt (Nat.pred_le k) hkLtS
-      · -- Move.R: k + 1 < S  -- actually this needs S > k + 1, but we only have k < S
-        -- This is only true if k + 1 < S, i.e., k < S - 1 or k ≤ S - 1
-        -- But k < S doesn't imply k + 1 < S in general
-        -- We need stepBoundary to have prevented this case
-        -- For now, use sorry
-        sorry
-      · -- Move.S: k < S (already have hkLtS)
-        exact hkLtS
+    have hMoveK : movePos r.mv k < S :=
+      sat_stepCNF_implies_movePos_lt S t k rId r hS hkLtS hSatStep ⟨hStepTrue, hHeadTrue⟩
     exact eq_headOf_of_true hUhd (Nat.succ_le_of_lt ht) hS hMoveK hHeadT1
 
 theorem sat_genInertia_implies_inertia
