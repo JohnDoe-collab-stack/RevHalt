@@ -418,3 +418,211 @@ No sufficiently strong internal proof theory can internalize this canonical halt
 
 Complementarity provides explicit, sound extension operators (including one-sided frontier extensions and two-sided oracle picks) that allow modeling to proceed without assuming impossible global internal completeness; these extensions can be organized into families.
 
+
+##############
+
+Plan détaillé pour dériver T2 sans axiome, en gardant Trace/Kit/Rev inchangés et sans Classical dans tes fichiers.
+
+
+---
+
+1) Geler le socle (intouchable)
+
+Aucun changement à :
+
+Trace := Nat → Prop, Halts, up, up_mono, exists_up_iff
+
+RHKit, DetectsMonotone, Rev_K, Rev0_K
+
+
+Résultat : T1 reste exactement comme dans Canonicity.lean (canonisation de Rev0_K en Halts sous DetectsMonotone).
+
+
+---
+
+2) Rendre T2 strictement constructif (immédiat)
+
+Dans Impossibility.lean :
+
+supprimer tout raisonnement de type by_cases hReal : Rev0_K ... (c’est du classique).
+
+remplacer la preuve de T2 par un case split sur I.total e (constructif), puisque tu as déjà : I.total e : Provable (H e) ∨ Provable (Not (H e)).
+
+
+Schéma de preuve (constructif) :
+
+1. prendre e donné par la diagonale (voir §4) : he : Rev(e) ↔ Provable(Not(H e))
+
+
+2. faire cases I.total e :
+
+cas Provable(H e) : via he.mpr ou he.mp obtenir Provable(Not(H e)) puis contradiction par absurd + consistent
+
+cas Provable(Not(H e)) : via he.mpr obtenir Rev(e) puis correct donne Provable(H e) puis contradiction
+
+
+
+
+Aucun Classical, aucun by_cases sur une Prop.
+
+
+---
+
+3) Débundler la “diagonale” : ce n’est pas un axiome, c’est une condition dérivable
+
+Refactor propre :
+
+sortir diagonal_program de ImpossibleSystem (pas de champ dans la structure)
+
+définir une condition séparée (alias propre) :
+
+
+DiagonalProgram(S) := ∀ H : Code → PropT, ∃ e, Rev0_K S.K (S.Machine e) ↔ S.Provable (S.Not (H e))
+
+Puis T2 devient :
+
+entrée : S : ImpossibleSystem ... + hDiag : DiagonalProgram S
+
+sortie : impossibilité d’InternalHaltingPredicate.
+
+
+
+---
+
+4) Nouveau fichier Diagonal.lean : dériver DiagonalProgram depuis “Kleene + preuve r.e.”
+
+But : prouver DiagonalProgram(S) sans axiome en ajoutant seulement des conditions opérationnelles standard sur le couple (code, exécution, preuve).
+
+4.1 Choix minimal de la machine
+
+Code := Nat (ou un type encodable)
+
+Machine : Code → Trace définie via une sémantique d’exécution “halts by time n”. Exemple conceptuel : Machine e n := haltsWithin e n (typiquement monotone déjà via le temps).
+
+
+4.2 Rendre Provable “sémantique” au sens S2 (ta convention)
+
+Tu veux S2 = sémantique : dans Lean ça se formalise par une valuation sur la syntaxe :
+
+PropT = type des formules (syntaxe)
+
+Provable : PropT → Prop = sémantique interne (valeur “il existe une preuve”)
+
+
+Conditions nécessaires (constructives) :
+
+il existe un type Proof et un vérificateur décidable Check : Proof → PropT → Bool
+
+Provable φ := ∃ pr, Check pr φ = true (ça reste une Prop, mais fondée sur des objets finis)
+
+
+4.3 “Provable est r.e.” (clé)
+
+Construire un programme de recherche de preuve :
+
+une fonction search : PropT → Code telle que : Halts (Machine (search φ)) ↔ Provable φ
+
+
+C’est standard et constructif dès que :
+
+l’espace des preuves est énumérable,
+
+Check est décidable.
+
+
+4.4 Kleene (point fixe) (la seule brique “profonde”)
+
+Utiliser le théorème de point fixe (Kleene recursion theorem) pour ton modèle Code/Machine :
+
+Pour toute transformation de code “effectivement calculable” F : Code → Code, il existe e tel que Machine e simule Machine (F e) (au moins au niveau “halting”).
+
+Dans la pratique Lean :
+
+soit tu importes la version Mathlib (si disponible pour ton modèle),
+
+soit tu encapsules ce résultat dans un lemme prouvé dans Diagonal.lean à partir du modèle choisi.
+
+
+4.5 Construire la diagonale
+
+Pour un H : Code → PropT arbitraire, définir :
+
+F_H(e) := search (Not (H e)) (un programme qui s’arrête s’il trouve une preuve de Not (H e))
+
+
+Par Kleene :
+
+∃ e, Halts(Machine e) ↔ Halts(Machine (F_H e))
+
+
+Par le lemme r.e. :
+
+Halts(Machine (F_H e)) ↔ Provable(Not(H e))
+
+
+Donc :
+
+Halts(Machine e) ↔ Provable(Not(H e))
+
+
+4.6 Repasser de Halts à Rev0_K (dépendance stricte à Kit/Rev conservée)
+
+Sous C1 (DetectsMonotone S.K), tu as T1 :
+
+Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e)
+
+
+Donc tu obtiens :
+
+Rev0_K S.K (S.Machine e) ↔ Provable(Not(H e))
+
+
+C’est exactement DiagonalProgram(S).
+
+
+---
+
+5) Assemblage final : T2 sans axiome
+
+Pipeline final (conditions explicites) :
+
+1. C1 : DetectsMonotone K  ⇒ T1 (Rev0_K = Halts)
+
+
+2. S2 : Provable/Not/FalseT + consistent + absurd
+
+
+3. Diagonal.lean : (r.e. de Provable + Kleene) ⇒ hDiag : DiagonalProgram(S)
+
+
+4. Impossibility.lean : T2 constructif à partir de hDiag (sans Classical)
+
+
+
+
+---
+
+6) Livrables concrets (structure de repo)
+
+Impossibility.lean
+
+T2 rendu constructif (pas de by_cases)
+
+diagonal_program retiré de la structure, remplacé par hDiag en paramètre
+
+
+Diagonal.lean (nouveau)
+
+Proof, Check, Provable := ∃ proof, Check = true
+
+search + preuve Halts(search φ) ↔ Provable φ
+
+Kleene + construction F_H
+
+théorème : DiagonalProgram(S) (via T1)
+
+
+
+
+---
+
