@@ -2,6 +2,8 @@
 
 ## Guiding Principle
 
+RevHalt clearly factorizes oracles (truth, compilation, procedure, negative r.e., two-sided decision) and proves a **rigidity principle**: once normalized by `up`, all procedures satisfying a minimal contract coincide on the verdict. Incompleteness is not bypassed; it is reconfigured into a complementarity of **internal proof + stable external certification**.
+
 The RevHalt framework introduces a **stable operational reference frame** to link:
 
 1. **Semantic Truth** (models/satisfaction),
@@ -73,6 +75,8 @@ Under `DetectsMonotone K`, for any trace:
 
 * `Rev0_K K T ↔ Halts T`
 
+The canonicity is obtained by (i) a **minimal contract on monotones** (`DetectsMonotone`) and (ii) a **monotone normalization** (`up`) that forces every input into this domain.
+
 ### Corollary (Uniqueness)
 
 Two valid Kits always yield the same verdict:
@@ -114,7 +118,7 @@ We introduce a local compilation:
 
 ### T1 (Semantics)
 
-If the Kit is valid and the bridge holds:
+For any semantics that admits an `LR` satisfying `DynamicBridge`:
 
 * `SemConsequences Sat Γ φ ↔ verdict_K LR K Γ φ`
 
@@ -131,11 +135,13 @@ We take `Nat.Partrec.Code` and a "Machine" trace:
 * `Machine c : Trace := fun _ => ∃ x, x ∈ c.eval 0`
 * Thus `Halts (Machine c) ↔ c converges on 0`
 
-### Diagonal Bridge (SRT + T1)
+### Diagonal Bridge
 
 We fabricate a code `e` such that:
 
 * `Rev0_K K (Machine e) ↔ target e`
+
+The fixed point (SRT) serves as an ingredient, but the diagonal statement applies to `Rev0_K` (the canonical verdict), not directly to `eval`.
 
 ### Minimal Internal System
 
@@ -166,6 +172,8 @@ We fix:
 
 * `S1Set := { encode_halt e | Rev0_K K (Machine e) ∧ ¬ Provable(encode_halt e) }`
 
+The frontier is not "independence in the model-theoretic sense", it is "certified (external) but unprovable (internal)".
+
 ### Complementary Extension
 
 * `S3Set := S2 ∪ S1Set`
@@ -184,6 +192,8 @@ With infinitely many S₁ witnesses + index partition, we construct a family `{S
 ### Two-Sided Oracle Variant
 
 `OraclePick` explicitly encapsulates the "halt / not halt" choice without internal decidability, enabling a local sound extension `S2 ∪ {pick.p}`.
+
+> **Note**: Locally, we assume `pick`. Globalizing this into a function `e ↦ pick(e)` would require a form of decision (classical/Decidable) or an external oracle.
 
 **Sense:** Instead of suffering incompleteness as a loss of operativity, we organize it into **complementarity**: internal proof (`S2`) + certifiable frontier (`S1`) + sound extensions (`S3`).
 
