@@ -306,18 +306,18 @@ theorem T3_strong {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     : ∃ (S3_family : ℕ → Set PropT),
         (∀ n, S2 ⊆ S3_family n) ∧
         (∀ n, ∀ p ∈ S3_family n, Truth p) ∧
-        (∀ n m, n ≠ m → ∀ i ∈ partition.Parts n, ∀ j ∈ partition.Parts m, i ≠ j) := by
+        (∀ n m, n ≠ m → ∀ i ∈ partition.Parts n, ∀ j ∈ partition.Parts m, i ≠ j) ∧
+        (∀ n, ∀ i ∈ partition.Parts n, encode_halt (indep.family i) ∈ S3_family n) := by
   let S3_family : ℕ → Set PropT := fun n =>
     S2 ∪ { p | ∃ i ∈ partition.Parts n, p = encode_halt (indep.family i) }
 
-  refine Exists.intro S3_family ?_
-  refine And.intro ?_ (And.intro ?_ ?_)
+  refine Exists.intro S3_family ⟨?_, ?_, ?_, ?_⟩
 
-  · -- S2 ⊆ S3_family n
+  · -- 1. S2 ⊆ S3_family n
     intro n p hp
     exact Or.inl hp
 
-  · -- soundness
+  · -- 2. Soundness
     intro n p hp
     cases hp with
     | inl hp2 =>
@@ -327,19 +327,22 @@ theorem T3_strong {Code PropT : Type} (S : ComplementaritySystem Code PropT)
         rw [hpEq]
         exact h_encode_correct (indep.family i) (indep.kit i)
 
-  · -- disjointness of new parts (index-level)
+  · -- 3. Disjointness
     intro n m hnm i hi j hj hEq
     have h_disj : Disjoint (partition.Parts n) (partition.Parts m) :=
       partition.disjoint n m hnm
-    -- from i = j, move membership across
     have hi' : j ∈ partition.Parts n := by
       rw [hEq] at hi
       exact hi
     have h_inter : j ∈ partition.Parts n ⊓ partition.Parts m := And.intro hi' hj
-    -- Disjoint means intersection is empty
     have h_empty : partition.Parts n ⊓ partition.Parts m = ⊥ := (disjoint_iff.mp h_disj)
     rw [h_empty] at h_inter
-    exact h_inter
+    exact (Set.notMem_empty j h_inter)
+
+  · -- 4. Membership
+    intro n i hi
+    apply Or.inr
+    use i
 
 -- ==============================================================================================
 -- Two-sided oracle variant (local one-step extension)
