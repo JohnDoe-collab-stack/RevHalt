@@ -1,5 +1,7 @@
 # RevHalt
 
+> **[Read the Conceptual Theory (THEORY.md)](RevHalt/THEORY.md)** for a definitive overview of the framework's philosophy, the "3 Layers", and the stability principle.
+
 A Lean 4 framework that **inverts** the usual presentation of incompleteness by separating:
 
 - a **syntactic layer** (sentences and provability), and
