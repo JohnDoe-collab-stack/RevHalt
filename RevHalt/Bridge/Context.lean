@@ -23,37 +23,55 @@ variable {Code : Type}
 -- ==============================================================================================
 
 /--
-**Key Theorem**: T2_impossibility prevents any total+correct+complete encoding.
+**Key Theorem**: No total+correct+complete encoding exists (T2 consequence).
+Uses diagonal_bridge_of_realization.
 -/
 theorem encoding_cannot_be_complete
-    {PropT : Type}
-    (ctx : ImpossibleSystem Code PropT)
+    {Code PropT : Type}
+    (ctx : ComplementaritySystem Code PropT)
     (H : Code → PropT)
     (h_total : ∀ e, ctx.Provable (H e) ∨ ctx.Provable (ctx.Not (H e)))
     (h_correct : ∀ e, Rev0_K ctx.K (ctx.Machine e) → ctx.Provable (H e))
-    (h_complete : ∀ e, ¬Rev0_K ctx.K (ctx.Machine e) → ctx.Provable (ctx.Not (H e))) :
+    (h_complete : ∀ e, ¬Rev0_K ctx.K (ctx.Machine e) → ctx.Provable (ctx.Not (H e)))
+    (f : Code → (Nat →. Nat))
+    (hf : Partrec₂ (fun c : RevHalt.Code => f (ctx.dec c)))
+    (h_semidec : ∀ e, ctx.Provable (ctx.Not (H e)) ↔ (∃ x : Nat, x ∈ (f e) 0)) :
     False := by
-  have h : ∃ _ : InternalHaltingPredicate ctx, True := ⟨⟨H, h_total, h_correct, h_complete⟩, trivial⟩
-  exact T2_impossibility ctx h
+  let target : Code → Prop := fun e => ctx.Provable (ctx.Not (H e))
+  obtain ⟨e0, he0⟩ := diagonal_bridge_of_realization ctx f hf target h_semidec
+  cases h_total e0 with
+  | inl hProvH =>
+      have hNotProvNotH : ¬ctx.Provable (ctx.Not (H e0)) :=
+        fun hNot => ctx.consistent (ctx.absurd (H e0) hProvH hNot)
+      have hNotReal : ¬Rev0_K ctx.K (ctx.Machine e0) := fun hReal =>
+        hNotProvNotH (he0.mp hReal)
+      exact hNotProvNotH (h_complete e0 hNotReal)
+  | inr hProvNotH =>
+      have hReal : Rev0_K ctx.K (ctx.Machine e0) := he0.mpr hProvNotH
+      exact ctx.consistent (ctx.absurd (H e0) (h_correct e0 hReal) hProvNotH)
 
 /--
 **Corollary**: For any halting predicate H, there exists an undecided code.
 -/
 theorem undecidable_code_exists
-    {PropT : Type}
-    (ctx : ImpossibleSystem Code PropT)
-    (H : Code → PropT) :
+    {Code PropT : Type}
+    (ctx : ComplementaritySystem Code PropT)
+    (H : Code → PropT)
+    (f : Code → (Nat →. Nat))
+    (hf : Partrec₂ (fun c : RevHalt.Code => f (ctx.dec c)))
+    (h_semidec : ∀ e, ctx.Provable (ctx.Not (H e)) ↔ (∃ x : Nat, x ∈ (f e) 0)) :
     ∃ e, (Rev0_K ctx.K (ctx.Machine e) ∧ ¬ctx.Provable (H e)) ∨
          (¬Rev0_K ctx.K (ctx.Machine e) ∧ ¬ctx.Provable (ctx.Not (H e))) := by
   by_contra h_contra
   push_neg at h_contra
-  apply encoding_cannot_be_complete ctx H
-  · intro e
-    by_cases h : Rev0_K ctx.K (ctx.Machine e)
-    · left; exact (h_contra e).1 h
-    · right; exact (h_contra e).2 h
-  · intro e hReal; exact (h_contra e).1 hReal
-  · intro e hNotReal; exact (h_contra e).2 hNotReal
+  have h_total : ∀ e, ctx.Provable (H e) ∨ ctx.Provable (ctx.Not (H e)) := fun e =>
+    by_cases (fun h : Rev0_K ctx.K (ctx.Machine e) => Or.inl ((h_contra e).1 h))
+             (fun h : ¬Rev0_K ctx.K (ctx.Machine e) => Or.inr ((h_contra e).2 h))
+  have h_correct : ∀ e, Rev0_K ctx.K (ctx.Machine e) → ctx.Provable (H e) :=
+    fun e hReal => (h_contra e).1 hReal
+  have h_complete : ∀ e, ¬Rev0_K ctx.K (ctx.Machine e) → ctx.Provable (ctx.Not (H e)) :=
+    fun e hNotReal => (h_contra e).2 hNotReal
+  exact encoding_cannot_be_complete ctx H h_total h_correct h_complete f hf h_semidec
 
 -- ==============================================================================================
 -- Part C: Enriched Context with classical Truth
@@ -61,22 +79,27 @@ theorem undecidable_code_exists
 
 /--
 Enriched context with classical truth.
+Includes r.e. witness for the semi-decidability of Provable(Not(H e)).
 -/
-structure EnrichedContext (Code PropT : Type) extends ImpossibleSystem Code PropT where
+structure EnrichedContext (Code PropT : Type) extends ComplementaritySystem Code PropT where
   Truth : PropT → Prop
   H : Code → PropT  -- halting predicate
   h_truth_H : ∀ e, Rev0_K K (Machine e) ↔ Truth (H e)
   truth_not_iff : ∀ p, Truth (Not p) ↔ ¬Truth p
+  -- r.e. witness for semi-decidability
+  f_semidec : Code → (Nat →. Nat)
+  hf_partrec : Partrec₂ (fun c : RevHalt.Code => f_semidec (dec c))
+  h_semidec : ∀ e, Provable (Not (H e)) ↔ (∃ x : Nat, x ∈ (f_semidec e) 0)
 
 attribute [simp] EnrichedContext.truth_not_iff
 
 /-- Simp lemma wrapper for truth_not_iff to ensure it triggers easily on the context. -/
-@[simp] theorem truth_not_simp (ctx : EnrichedContext Code PropT) (p : PropT) :
+@[simp] theorem truth_not_simp {Code PropT : Type} (ctx : EnrichedContext Code PropT) (p : PropT) :
     ctx.Truth (ctx.Not p) ↔ ¬ctx.Truth p :=
   ctx.truth_not_iff p
 
 /-- Derive h_truth_not from truth_not_iff. -/
-theorem EnrichedContext.h_truth_not (ctx : EnrichedContext Code PropT) :
+theorem EnrichedContext.h_truth_not {Code PropT : Type} (ctx : EnrichedContext Code PropT) :
     ∀ e, ¬Rev0_K ctx.K (ctx.Machine e) → ctx.Truth (ctx.Not (ctx.H e)) := by
   intro e hNotReal
   rw [ctx.truth_not_iff]
@@ -86,9 +109,10 @@ theorem EnrichedContext.h_truth_not (ctx : EnrichedContext Code PropT) :
 /--
 Extract true-but-unprovable from the gap.
 -/
-theorem true_but_unprovable_exists (ctx : EnrichedContext Code PropT) :
+theorem true_but_unprovable_exists {Code PropT : Type} (ctx : EnrichedContext Code PropT) :
     ∃ p : PropT, ctx.Truth p ∧ ¬ctx.Provable p := by
-  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toImpossibleSystem ctx.H
+  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toComplementaritySystem ctx.H
+    ctx.f_semidec ctx.hf_partrec ctx.h_semidec
   rcases h_gap with ⟨hReal, hNotProv⟩ | ⟨hNotReal, hNotProvNeg⟩
   · exact ⟨ctx.H e, ctx.h_truth_H e |>.mp hReal, hNotProv⟩
   · exact ⟨ctx.Not (ctx.H e), ctx.h_truth_not e hNotReal, hNotProvNeg⟩
@@ -130,10 +154,12 @@ If Provable is sound (Provable p → Truth p), then the gap becomes:
 - ¬Provable(H e) ∧ ¬Provable(Not(H e))
 -/
 theorem independent_code_exists
+    {Code PropT : Type}
     (ctx : EnrichedContext Code PropT)
     (h_sound : ∀ p, ctx.Provable p → ctx.Truth p) :
     ∃ e, ¬ctx.Provable (ctx.H e) ∧ ¬ctx.Provable (ctx.Not (ctx.H e)) := by
-  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toImpossibleSystem ctx.H
+  obtain ⟨e, h_gap⟩ := undecidable_code_exists ctx.toComplementaritySystem ctx.H
+    ctx.f_semidec ctx.hf_partrec ctx.h_semidec
   use e
   rcases h_gap with ⟨hReal, hNotProv⟩ | ⟨hNotReal, hNotProvNeg⟩
   · -- Case: RealHalts e ∧ ¬Provable(H e)

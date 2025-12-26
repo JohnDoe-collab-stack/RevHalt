@@ -36,7 +36,7 @@ theorem strict_extension_sound {Code PropT : Type} (ctx : EnrichedContext Code P
 
 /--
 **Sound Logic with Halting Encoding** (Full Package)
-Bundles: Logic (L) + Arithmetization (A) + HaltEncode (E).
+Bundles: Logic (L) + Arithmetization (A) + HaltEncode (E) + enc/dec realization.
 This is the final requirement for T2 and T3.
 -/
 structure SoundLogicEncoded (M : RigorousModel) (PropT : Type) where
@@ -44,10 +44,19 @@ structure SoundLogicEncoded (M : RigorousModel) (PropT : Type) where
   Logic : SoundLogicDef PropT
   /-- Arithmetization (links M and Logic) -/
   Arith : Arithmetization M PropT Logic
-  /-- Halting Encoding: The logic can express "e halts" -/
+  /-- Halting Encoding: The logic can express \"e halts\" -/
   HaltEncode : M.Code → PropT
   /-- Semantic correctness of HaltEncode -/
   encode_correct : ∀ e, RMHalts M e ↔ Logic.Truth (HaltEncode e)
+  /-- Realization interface for enc/dec -/
+  enc : M.Code → RevHalt.Code
+  dec : RevHalt.Code → M.Code
+  enc_dec : ∀ c : RevHalt.Code, enc (dec c) = c
+  machine_eq : ∀ e : M.Code, rmCompile M e = RevHalt.Machine (enc e)
+  /-- R.e. witness for semi-decidability of Provable(Not(H e)) -/
+  f_semidec : M.Code → (Nat →. Nat)
+  hf_partrec : Partrec₂ (fun c : RevHalt.Code => f_semidec (dec c))
+  h_semidec : ∀ e, Logic.Provable (Logic.Not (HaltEncode e)) ↔ (∃ x : Nat, x ∈ (f_semidec e) 0)
 
 /--
 **Bridge to EnrichedContext**
@@ -59,9 +68,9 @@ def EnrichedContext_from_Encoded
     (K : RHKit) (hK : DetectsMonotone K)
     (L : SoundLogicEncoded M PropT) :
     EnrichedContext M.Code PropT :=
-  let ctxTG := TGContext_from_RM M K hK L.Logic L.Arith
+  let ctxTG := TGContext_from_RM M K hK L.Logic L.Arith L.enc L.dec L.enc_dec L.machine_eq
   {
-    toImpossibleSystem := ctxTG
+    toComplementaritySystem := ctxTG
     Truth := L.Logic.Truth
     H := L.HaltEncode
     h_truth_H := by
@@ -71,6 +80,9 @@ def EnrichedContext_from_Encoded
       rw [rm_compile_halts_equiv M e]
       exact L.encode_correct e
     truth_not_iff := L.Logic.truth_not_iff
+    f_semidec := L.f_semidec
+    hf_partrec := L.hf_partrec
+    h_semidec := L.h_semidec
   }
 
 /--

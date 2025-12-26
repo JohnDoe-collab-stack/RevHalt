@@ -48,7 +48,7 @@ for a fixed code `e`, an explicit witness `OraclePick` selects either `encode_ha
 
 ```
 
-S : ImpossibleSystem Code PropT
+S : ComplementaritySystem Code PropT
 S.K : RHKit
 S.h_canon : DetectsMonotone S.K
 Rev0_K S.K : Trace → Prop
@@ -58,46 +58,91 @@ Rev0_K S.K : Trace → Prop
 
 namespace RevHalt
 
+open Nat.Partrec
+
 -- ==============================================================================================
 -- T3: Complementarity — Explicit Definitions
 -- ==============================================================================================
 
-/-- Explicit Kit extraction with visible `RHKit` type. -/
-def KitOf {Code PropT : Type} (S : ImpossibleSystem Code PropT) : RHKit := S.K
+/-- System for T3 theorems: general Code + general Machine, but realizable in Partrec.Code. -/
+structure ComplementaritySystem (Code PropT : Type) extends ImpossibleSystem PropT where
+  K : RHKit
+  h_canon : DetectsMonotone K
 
-/-- **S₁** := Non-internalizable set.
+  Machine : Code → Trace
 
-`p ∈ S1Set` iff `p = encode_halt e` for some `e` with Kit-certified halting and unprovable.
-The Kit is written explicitly as `KitOf S : RHKit`.
--/
-def S1Set {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+  /- Realization into the canonical code model `RevHalt.Code = Nat.Partrec.Code` -/
+  enc : Code → RevHalt.Code
+  dec : RevHalt.Code → Code
+  enc_dec : ∀ c : RevHalt.Code, enc (dec c) = c
+
+  /- Machine is exactly the canonical Machine after encoding -/
+  machine_eq : ∀ e : Code, Machine e = RevHalt.Machine (enc e)
+
+/-- Explicit Kit extraction. -/
+def KitOf {Code PropT : Type} (S : ComplementaritySystem Code PropT) : RHKit := S.K
+
+/-- Derived (axiom-free) diagonal bridge for any realizable (Code,Machine). -/
+theorem diagonal_bridge_of_realization
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
+    (f : Code → (Nat →. Nat))
+    (hf : Partrec₂ (fun c : RevHalt.Code => f (S.dec c)))
+    (target : Code → Prop)
+    (htarget : ∀ e, target e ↔ (∃ x : Nat, x ∈ (f e) 0)) :
+    ∃ e : Code, Rev0_K S.K (S.Machine e) ↔ target e := by
+  -- Lift f, target to the canonical code model
+  let fP : RevHalt.Code → (Nat →. Nat) := fun c => f (S.dec c)
+  let targetP : RevHalt.Code → Prop := fun c => target (S.dec c)
+
+  have htargetP : ∀ c : RevHalt.Code, targetP c ↔ (∃ x : Nat, x ∈ (fP c) 0) := by
+    intro c
+    change target (S.dec c) ↔ (∃ x : Nat, x ∈ (f (S.dec c)) 0)
+    exact htarget (S.dec c)
+
+  -- Apply the canonical diagonal bridge on `RevHalt.Code`
+  obtain ⟨c0, hc0⟩ :=
+    RevHalt.diagonal_bridge S.K S.h_canon fP hf targetP htargetP
+
+  -- Pull back to your Code using dec
+  refine ⟨S.dec c0, ?_⟩
+
+  -- Rewrite S.Machine (dec c0) as canonical Machine c0
+  have hMeq : S.Machine (S.dec c0) = RevHalt.Machine c0 := by
+    have h0 : S.Machine (S.dec c0) = RevHalt.Machine (S.enc (S.dec c0)) := S.machine_eq (S.dec c0)
+    have h1 : S.enc (S.dec c0) = c0 := S.enc_dec c0
+    rw [h1] at h0
+    exact h0
+
+  -- Finish: rewrite goal by hMeq, then use hc0
+  rw [hMeq]
+  exact hc0
+
+/-- S₁ := { encode_halt e | kit says halt on S.Machine e, and unprovable } -/
+def S1Set {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt : Code → PropT) : Set PropT :=
   { p | ∃ e : Code,
       p = encode_halt e ∧
       Rev0_K (KitOf S) (S.Machine e) ∧
       ¬ S.Provable (encode_halt e) }
 
-/-- **S₃** := S₂ ∪ S₁ (complementary system). -/
-def S3Set {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+/-- S₃ := S₂ ∪ S₁ -/
+def S3Set {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (S2 : Set PropT) (encode_halt : Code → PropT) : Set PropT :=
   S2 ∪ S1Set S encode_halt
 
-/-- Membership lemma: given witness (hKit, hUnprov), `encode_halt e ∈ S₁`. -/
 lemma mem_S1Set_of_witness
-    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt : Code → PropT) (e : Code)
     (hKit : Rev0_K S.K (S.Machine e))
     (hUnprov : ¬ S.Provable (encode_halt e)) :
     encode_halt e ∈ S1Set S encode_halt := by
   have hEq : KitOf S = S.K := rfl
   have hKit' : Rev0_K (KitOf S) (S.Machine e) := by
-    rw [hEq]
-    exact hKit
+    rw [hEq]; exact hKit
   exact Exists.intro e (And.intro rfl (And.intro hKit' hUnprov))
 
-/-- **S₁ ≠ ∅** given a witness (e, hKit, hUnprov). -/
 theorem S1Set_nonempty_of_witness
-    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt : Code → PropT)
     (e : Code)
     (hKit : Rev0_K S.K (S.Machine e))
@@ -106,21 +151,26 @@ theorem S1Set_nonempty_of_witness
   exact Exists.intro (encode_halt e) (mem_S1Set_of_witness S encode_halt e hKit hUnprov)
 
 -- ==============================================================================================
--- Unprovable Encoding Existence (weaker than S₁ ≠ ∅)
+-- Unprovable Encoding Existence (uses diagonal_bridge_of_realization, no axioms)
 -- ==============================================================================================
 
 /--
   **∃ unprovable encoding** (not the same as S₁ ≠ ∅).
-  This proves only `∃ e, ¬Provable(encode_halt e)`, without Kit-certification.
+  Uses derived diagonal_bridge_of_realization, with lifted Partrec₂ hypothesis.
 -/
 theorem exists_unprovable_encode_halt
-    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (Truth : PropT → Prop)
     (h_sound : ∀ p, S.Provable p → Truth p)
     (encode_halt : Code → PropT)
-    (h_truth_to_real : ∀ e, Truth (encode_halt e) → Rev0_K S.K (S.Machine e)) :
+    (h_truth_to_real : ∀ e, Truth (encode_halt e) → Rev0_K S.K (S.Machine e))
+    (f : Code → (Nat →. Nat))
+    (hf : Partrec₂ (fun c : RevHalt.Code => f (S.dec c)))
+    (h_semidec : ∀ e, S.Provable (S.Not (encode_halt e)) ↔ (∃ x : Nat, x ∈ (f e) 0)) :
     ∃ e, ¬ S.Provable (encode_halt e) := by
-  obtain ⟨e, he⟩ := S.diagonal_program encode_halt
+  -- diagonal: Rev(e) ↔ Provable(Not(encode_halt e))
+  let target : Code → Prop := fun e => S.Provable (S.Not (encode_halt e))
+  obtain ⟨e, he⟩ := diagonal_bridge_of_realization S f hf target h_semidec
   refine Exists.intro e ?_
   intro hProv
   have hReal : Rev0_K S.K (S.Machine e) :=
@@ -137,7 +187,7 @@ theorem exists_unprovable_encode_halt
 **T3.1 — S₃ = S₁ ∪ S₂ is Sound** (explicit, no `simp`, no `simpa`, no `classical`).
 -/
 theorem T3_weak_extension_explicit
-    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (Truth : PropT → Prop)
     (S2 : Set PropT)
     (h_S2_sound : ∀ p ∈ S2, Truth p)
@@ -202,10 +252,10 @@ theorem T3_weak_extension_explicit
   **Infinite S₁ elements** (indexed witnesses, no injectivity required).
 
   Captures infinitely many codes with:
-  - Kit-certified: `kit i : Rev0_K S.K (Machine (family i))`
+  - Kit-certified: `kit i : Rev0_K S.K (S.Machine (family i))`
   - Non-internalizable: `unprovable i : ¬ S.Provable (encode_halt (family i))`
 -/
-structure InfiniteS1 (Code PropT : Type) (S : ImpossibleSystem Code PropT)
+structure InfiniteS1 {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt : Code → PropT) where
   Index : Type
   InfiniteIndex : Infinite Index
@@ -216,9 +266,9 @@ structure InfiniteS1 (Code PropT : Type) (S : ImpossibleSystem Code PropT)
 
 /-- Derived: each index provides a member of `S1Set`. -/
 lemma InfiniteS1.memS1
-    {Code PropT : Type} {S : ImpossibleSystem Code PropT}
+    {Code PropT : Type} {S : ComplementaritySystem Code PropT}
     {encode_halt : Code → PropT}
-    (I : InfiniteS1 Code PropT S encode_halt) :
+    (I : InfiniteS1 S encode_halt) :
     ∀ i, encode_halt (I.family i) ∈ S1Set S encode_halt := by
   intro i
   have hEq : KitOf S = S.K := rfl
@@ -245,13 +295,13 @@ constructs {S₃ₙ} family. Each S₃ₙ = S₂ ∪ { encode_halt(family i) | i
 
 No `simp`, no `simpa`, no `classical`, no `noncomputable`.
 -/
-theorem T3_strong {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+theorem T3_strong {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (Truth : PropT → Prop)
     (encode_halt : Code → PropT)
     (h_encode_correct : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
     (S2 : Set PropT)
     (h_S2_sound : ∀ p ∈ S2, Truth p)
-    (indep : InfiniteS1 Code PropT S encode_halt)
+    (indep : InfiniteS1 S encode_halt)
     (partition : Partition indep.Index)
     : ∃ (S3_family : ℕ → Set PropT),
         (∀ n, S2 ⊆ S3_family n) ∧
@@ -306,7 +356,7 @@ the Kit verdict:
 
 No decidability of `Rev0_K` is assumed or used.
 -/
-structure OraclePick {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+structure OraclePick {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt encode_not_halt : Code → PropT) (e : Code) where
   p : PropT
   cert :
@@ -334,7 +384,7 @@ This theorem assumes a witness `pick`; it does not define or compute such a pick
 No branching on `Rev0_K` is computed; the branch is carried by `pick.cert`.
 -/
 theorem T3_oracle_extension_explicit
-    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (Truth : PropT → Prop)
     (S2 : Set PropT)
     (h_S2_sound : ∀ p ∈ S2, Truth p)
@@ -424,19 +474,19 @@ theorem T3_oracle_extension_explicit
 -/
 
 /-- S₁(two-sided global): union of oracle-chosen frontier sentences across all codes `e`. -/
-def S1TwoSet {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+def S1TwoSet {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt encode_not_halt : Code → PropT) : Set PropT :=
   { p | ∃ e : Code, ∃ pick : OraclePick S encode_halt encode_not_halt e,
       p = pick.p ∧ ¬ S.Provable p }
 
 /-- S₃(two-sided global): S₂ ∪ S₁(two-sided). -/
-def S3TwoSet {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+def S3TwoSet {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (S2 : Set PropT) (encode_halt encode_not_halt : Code → PropT) : Set PropT :=
   S2 ∪ S1TwoSet S encode_halt encode_not_halt
 
 /-- Membership lemma: the oracle-chosen sentence is in S₁(two-sided) given unprovability. -/
 lemma mem_S1TwoSet_of_pick
-    {Code PropT : Type} (S : ImpossibleSystem Code PropT)
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt encode_not_halt : Code → PropT)
     (e : Code) (pick : OraclePick S encode_halt encode_not_halt e)
     (hUnprov : ¬ S.Provable pick.p) :

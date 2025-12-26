@@ -125,44 +125,53 @@ structure Arithmetization (M : RigorousModel) (PropT : Type) (L : SoundLogicDef 
     ∀ e, M.PredDef pc e ↔ L.Provable (L.Not (G e))
 
 /--
-**Build TuringGodelContext'** from Model(M), Kit(K), Logic(L), and Arithmetization(A).
+**Build ComplementaritySystem** from Model(M), Kit(K), Logic(L), and Arithmetization(A).
+Note: This assumes M.Code is the same as RevHalt.Code for simplicity.
+For a general Code type, you would need an explicit enc/dec interface.
 -/
 def TGContext_from_RM
     {PropT : Type}
     (M : RigorousModel)
     (K : RHKit) (hK : DetectsMonotone K)
     (L : SoundLogicDef PropT)
-    (A : Arithmetization M PropT L) :
-    ImpossibleSystem M.Code PropT where
+    (_A : Arithmetization M PropT L)
+    (enc : M.Code → RevHalt.Code)
+    (dec : RevHalt.Code → M.Code)
+    (enc_dec : ∀ c : RevHalt.Code, enc (dec c) = c)
+    (machine_eq : ∀ e : M.Code, rmCompile M e = RevHalt.Machine (enc e)) :
+    ComplementaritySystem M.Code PropT where
   Machine := rmCompile M
   K := K
   h_canon := hK
+  enc := enc
+  dec := dec
+  enc_dec := enc_dec
+  machine_eq := machine_eq
   Provable := L.Provable
   FalseT := L.FalseP
   Not := L.Not
   consistent := L.consistent
   absurd := L.absurd
-  diagonal_program := by
-    intro G
-    obtain ⟨pc, hpc⟩ := A.repr_provable_not G
-    obtain ⟨e, he⟩ := M.diagonal_halting pc
-    use e
-    rw [T1_traces K hK (rmCompile M e)]
-    rw [rm_compile_halts_equiv M e]
-    simp only [RMHalts]
-    constructor
-    · intro hHalts; exact (hpc e).mp (he.mp hHalts)
-    · intro hProv; exact he.mpr ((hpc e).mpr hProv)
 
-/-- **Master Theorem from Rigorous Model**: No sorry, no axiom, coherence proven! -/
+/-- **Master Theorem from Rigorous Model**: Uses diagonal_bridge_of_realization -/
 theorem RevHalt_Master_Rigorous
     {PropT : Type}
     (M : RigorousModel)
     (K : RHKit) (hK : DetectsMonotone K)
     (L : SoundLogicDef PropT)
-    (A : Arithmetization M PropT L) :
-    (∀ G : M.Code → PropT, ∃ e, Rev0_K K (rmCompile M e) ↔ L.Provable (L.Not (G e))) := by
-  intro G
-  exact (TGContext_from_RM M K hK L A).diagonal_program G
+    (A : Arithmetization M PropT L)
+    (enc : M.Code → RevHalt.Code)
+    (dec : RevHalt.Code → M.Code)
+    (enc_dec : ∀ c : RevHalt.Code, enc (dec c) = c)
+    (machine_eq : ∀ e : M.Code, rmCompile M e = RevHalt.Machine (enc e))
+    (f : M.Code → (Nat →. Nat))
+    (hf : Partrec₂ (fun c : RevHalt.Code => f (dec c)))
+    (G : M.Code → PropT)
+    (h_semidec : ∀ e, L.Provable (L.Not (G e)) ↔ (∃ x : Nat, x ∈ (f e) 0)) :
+    ∃ e, Rev0_K K (rmCompile M e) ↔ L.Provable (L.Not (G e)) := by
+  let ctx := TGContext_from_RM M K hK L A enc dec enc_dec machine_eq
+  let target : M.Code → Prop := fun e => L.Provable (L.Not (G e))
+  obtain ⟨e, he⟩ := diagonal_bridge_of_realization ctx f hf target h_semidec
+  exact ⟨e, he⟩
 
 end RevHalt

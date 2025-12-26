@@ -47,7 +47,7 @@ theorem extend_sound_of_gapWitness
 
 /-- Disjunction of singletons {p} and {Not p}. -/
 theorem singleton_disjoint_singleton_not
-    (ctx : ImpossibleSystem Code PropT)
+    (ctx : ComplementaritySystem Code PropT)
     (p : PropT)
     (hneq : p ≠ ctx.Not p) :
     Disjoint ({p} : Set PropT) ({ctx.Not p} : Set PropT) := by
@@ -89,7 +89,7 @@ Minimal purely set-theoretic hypotheses:
 - w.1 ≠ Not w.1
 -/
 theorem disjoint_newParts_of_gapWitness
-    (ctx : ImpossibleSystem Code PropT)
+    (ctx : ComplementaritySystem Code PropT)
     (T0 : Set PropT)
     (w_p : PropT)
     (h_notin : w_p ∉ T0)

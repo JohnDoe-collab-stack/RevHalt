@@ -203,13 +203,13 @@ This is the formal bridge between:
 -/
 theorem InfiniteS1_generates_chain
     (ctx : EnrichedContext Code PropT)
-    (S : ImpossibleSystem Code PropT)
-    (_hCtx : ctx.toImpossibleSystem = S)
+    (S : ComplementaritySystem Code PropT)
+    (_hCtx : ctx.toComplementaritySystem = S)
     (S2 : Set PropT)
     (h_S2_sound : ∀ p ∈ S2, ctx.Truth p)
     (encode_halt : Code → PropT)
     (h_encode_correct : ∀ e, Rev0_K S.K (S.Machine e) → ctx.Truth (encode_halt e))
-    (indep : InfiniteS1 Code PropT S encode_halt)
+    (indep : InfiniteS1 S encode_halt)
     (enum : ℕ → indep.Index) -- enumeration of the index
     (_h_surj : Function.Surjective enum) :
     ∃ chain : InfiniteNodeChain ctx,

@@ -393,12 +393,35 @@ def PRArith : Arithmetization PRModel ArithSentence PRLogic where
 -- ==============================================================================================
 
 /-- Complete SoundLogicEncoded instance for PRModel.
-    Packages: Logic (L) + Arithmetization (A) + HaltEncode (E). -/
+    Packages: Logic (L) + Arithmetization (A) + HaltEncode (E) + enc/dec + r.e. witness. -/
 def PRLogicEncoded : SoundLogicEncoded PRModel ArithSentence where
   Logic := PRLogic
   Arith := PRArith
   HaltEncode := PRHaltEncode
   encode_correct := pr_encode_correct
+  -- enc/dec: PRModel.Code = PRCode = Code, so identity
+  enc := id
+  dec := id
+  enc_dec := fun _ => rfl
+  -- machine_eq: rmCompile PRModel e = RevHalt.Machine (id e)
+  -- TODO: This requires proving equivalence of trace semantics
+  machine_eq := by
+    intro e
+    sorry
+  -- r.e. witness for Provable(Not(HaltEncode e))
+  -- Since PRProvable = False, we need f such that (∃ x, x ∈ f e 0) ↔ False
+  f_semidec := fun _ => Code.eval loopCode
+  hf_partrec := by
+    -- TODO: Need proper Partrec₂ proof
+    sorry
+  h_semidec := by
+    intro e
+    simp only [PRLogic, PRProvable, PRHaltEncode, ArithNot]
+    constructor
+    · intro hFalse; exact hFalse.elim
+    · intro ⟨x, hx⟩
+      have hHalt : PRHalts loopCode 0 := Part.dom_iff_mem.mpr ⟨x, hx⟩
+      exact pr_loop_non_halting 0 hHalt
 
 -- ==============================================================================================
 -- 9. MASTER THEOREM: T1 + T2 + T2' + T3
