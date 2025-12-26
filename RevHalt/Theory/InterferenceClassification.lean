@@ -25,6 +25,7 @@ deriving DecidableEq, Repr
 structure NonIdemWitness (S : Type) (op : S → S → S) : Type where
   x : S
   hx : op x x ≠ x
+deriving Repr
 
 /-- Sequential tag: idempotent vs non-idempotent (with witness). -/
 inductive SeqKind (S : Type) (op : S → S → S)
@@ -123,37 +124,45 @@ classification is automatic.
 -/
 theorem classification (A : InterferenceAlgebra) :
     satisfies A (choosePair A) := by
+  -- We split on the 3 tags.
   cases hpar : A.parKind <;> cases hpol : A.pol <;> cases hseq : A.seqKind
-  · -- idem/max/idem
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_idem_of_kind rfl, ?_⟩
+  · -- par=idem, pol=max, seq=idem  => maxPlus
+    simp only [choosePair, satisfies, *]
+    refine ⟨A.par_idem_of_kind hpar, ?_⟩
     intro x y; exact A.seq_comm x y
-  · -- idem/max/nonidem
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_idem_of_kind rfl, ?_⟩
+  · -- par=idem, pol=max, seq=nonidem => maxPlus
+    simp only [choosePair, satisfies, *]
+    refine ⟨A.par_idem_of_kind hpar, ?_⟩
     intro x y; exact A.seq_comm x y
-  · -- idem/min/idem
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_idem_of_kind rfl, ?_⟩
+  · -- par=idem, pol=min, seq=idem  => minPlus
+    simp only [choosePair, satisfies, *]
+    refine ⟨A.par_idem_of_kind hpar, ?_⟩
     intro x y; exact A.seq_comm x y
-  · -- idem/min/nonidem
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_idem_of_kind rfl, ?_⟩
+  · -- par=idem, pol=min, seq=nonidem => minPlus
+    simp only [choosePair, satisfies, *]
+    refine ⟨A.par_idem_of_kind hpar, ?_⟩
     intro x y; exact A.seq_comm x y
-  · -- cancel/max/idem -> plusMax
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_cancel_of_kind rfl, A.seq_idem_of_kind rfl⟩
-  · -- cancel/max/nonidem -> plusPlus
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_cancel_of_kind rfl, ?_⟩
-    refine ⟨hseq.w.x, hseq.w.hx⟩
-  · -- cancel/min/idem -> plusMax
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_cancel_of_kind rfl, A.seq_idem_of_kind rfl⟩
-  · -- cancel/min/nonidem -> plusPlus
-    dsimp [choosePair, satisfies]
-    refine ⟨A.par_cancel_of_kind rfl, ?_⟩
-    refine ⟨hseq.w.x, hseq.w.hx⟩
+  · -- par=cancel, pol=max, seq=idem => plusMax
+    simp only [choosePair, satisfies, *]
+    exact ⟨A.par_cancel_of_kind hpar, A.seq_idem_of_kind hseq⟩
+  -- par=cancel, pol=max, seq=nonidem w => plusPlus
+  · -- We need to capture the witness `w` from the case split.
+    -- The previous `cases` syntax was implicitly introducing it but we didn't name it.
+    -- We can just step through or use `rename_i`.
+    rename_i w
+    simp only [choosePair, satisfies, *]
+    constructor
+    · exact A.par_cancel_of_kind hpar
+    · use w.x; exact w.hx
+  · -- par=cancel, pol=min, seq=idem => plusMax
+    simp only [choosePair, satisfies, *]
+    exact ⟨A.par_cancel_of_kind hpar, A.seq_idem_of_kind hseq⟩
+  · -- par=cancel, pol=min, seq=nonidem w => plusPlus
+    rename_i w
+    simp only [choosePair, satisfies, *]
+    constructor
+    · exact A.par_cancel_of_kind hpar
+    · use w.x; exact w.hx
 
 /-- Existence form (sometimes what you want downstream). -/
 theorem classification_exists (A : InterferenceAlgebra) :
