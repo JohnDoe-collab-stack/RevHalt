@@ -25,7 +25,7 @@ Machine trace: constant-in-time predicate “program terminates on input 0”.
 def Machine (c : Code) : Trace := fun _ => ∃ x : Nat, x ∈ c.eval 0
 
 /-- `Halts (Machine c)` iff `c` converges on input `0`. -/
-lemma Halts_Machine_iff (c : Code) : Halts (Machine c) ↔ (∃ x : Nat, x ∈ c.eval 0) := by
+@[simp] lemma Halts_Machine_iff (c : Code) : Halts (Machine c) ↔ (∃ x : Nat, x ∈ c.eval 0) := by
   constructor
   · intro h
     rcases h with ⟨n, hn⟩

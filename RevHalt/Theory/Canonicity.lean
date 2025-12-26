@@ -53,6 +53,22 @@ def ThE (K_models : Set Model) : Set Sentence := { φ | ∀ M ∈ K_models, Sat 
 def CloE (Γ : Set Sentence) : Set Sentence := ThE Sat (ModE Sat Γ)
 def SemConsequences (Γ : Set Sentence) (φ : Sentence) : Prop := φ ∈ CloE Sat Γ
 
+/-- Simp lemma: membership in ModE. -/
+@[simp] lemma mem_ModE (Γ : Set Sentence) (M : Model) :
+    M ∈ ModE Sat Γ ↔ ∀ φ ∈ Γ, Sat M φ := Iff.rfl
+
+/-- Simp lemma: membership in ThE. -/
+@[simp] lemma mem_ThE (K_models : Set Model) (φ : Sentence) :
+    φ ∈ ThE Sat K_models ↔ ∀ M ∈ K_models, Sat M φ := Iff.rfl
+
+/-- Simp lemma: SemConsequences unfolding. -/
+@[simp] lemma SemConsequences_iff (Γ : Set Sentence) (φ : Sentence) :
+    SemConsequences Sat Γ φ ↔ φ ∈ CloE Sat Γ := Iff.rfl
+
+/-- Simp lemma: CloE definition. -/
+lemma CloE_eq (Γ : Set Sentence) :
+    CloE Sat Γ = ThE Sat (ModE Sat Γ) := rfl
+
 variable (LR : Set Sentence → Sentence → Trace)
 
 /-- The verdict of the Kit on a semantic pair (Γ, φ) via local reading. -/

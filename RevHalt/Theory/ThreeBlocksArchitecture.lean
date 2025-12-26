@@ -1,390 +1,276 @@
 import RevHalt.Base
 import RevHalt.Theory.Canonicity
-import RevHalt.Theory.Categorical
 import RevHalt.Theory.Impossibility
-import RevHalt.Theory.Complementarity
 import Mathlib.Data.Set.Basic
 
 /-!
-# RevHalt.Theory.ThreeBlocksArchitecture
+# RevHalt.Theory.UnifiedArchitecture
 
-## Exhaustive Formalization of the Three-Blocks + Two-Liaisons Structure
+## A Single Interdependent Structure
 
-This file provides a complete, rigorous formalization of the architectural
-decomposition of RevHalt into three independent blocks and two liaisons.
+This file formalizes the unified architecture where:
+- **Machine is the primitive**: `Machine : Code → Trace` is fixed (not parameterized)
+- **LR is derived**: `LR Γ φ := Machine (compile Γ φ)`
+- **Kit is a parameter**: not wrapped in a structure
 
-### Block 1 — Turing (Dynamic)
-An interpreter that produces traces.
-- `Machine : Code → Trace`
-- `Machine e n` = "at step n, e has converged/produced a witness"
-- Associated object: `Halts (Machine e)`
-- No uniformity requirement: just a source of dynamics.
+The architecture is **interdependent**: the bridge goes through Machine,
+and all components reference the same primitive.
 
-### Block 2 — RevHalt (Syntax)
-The internal language that knows how to speak about:
-- `Trace`, `Halts`
-- closure/normalization `up`
-- procedures `Kit.Proj`
-- contract `DetectsMonotone`
-- canonical verdict `Rev0_K(K,T) := K.Proj(up T)`
-- rigidity T1: if `DetectsMonotone K`, then `Rev0_K(K,T) ↔ Halts T`
+## Structure
 
-This block does not "define" truth and does not "choose" Turing:
-it **organizes** dependencies and stabilizes procedures on traces.
-
-### Block 3 — Evaluative Semantics (Evaluation)
-A pure evaluation:
-- `Sat : Model → Sentence → Prop`
-- `E(Γ,φ) := (φ ∈ CloE(Γ))` (or equivalent)
-
-No procedure here either: just "true/false" in the chosen semantic sense.
-
-### Liaison A: Turing → RevHalt
-Instantiate the trace domain of the framework with those from Turing:
-- set `T := Machine e`
-- RevHalt gives a stable verdict `Rev0_K(K, Machine e)`
-
-### Liaison B: Evaluation → RevHalt (via compilation)
-Provide a compilation `LR : (Γ,φ) ↦ Trace` and a correctness hypothesis:
-- `DynamicBridge : E(Γ,φ) ↔ Halts(LR Γ φ)`
-
-Then RevHalt becomes the syntactic support allowing:
-  E(Γ,φ) ↔ Halts(LR Γ φ) ↔ Rev0_K(K, LR Γ φ)  (if DetectsMonotone K)
+1. Machine (fixed primitive)
+2. Semantics (Sat, CloE, evaluation)
+3. Compilation (compile : sentences → Code)
+4. LR (derived from Machine + compile)
+5. Bridge (on Machine, not LR)
+6. Master theorem (E ↔ Halts(Machine) ↔ Rev0_K)
 -/
 
 namespace RevHalt
 
 open Nat.Partrec
 
--- ============================================================================
--- BLOCK 1: TURING (DYNAMIC) — Source of traces
--- ============================================================================
-
-section Block1_Turing
-
 /-!
-## Block 1: Turing Machine as Dynamic Interpreter
+## 1) Machine: The Fixed Primitive
 
-The Turing block provides:
-1. A code type (`Code`)
-2. A machine semantics (`Machine : Code → Trace`)
-3. The halting predicate (`Halts (Machine e)`)
-
-This is purely dynamic — no uniformity, no procedures, just traces.
+Machine is not parameterized. It is THE canonical interpreter.
 -/
 
-/-- The Turing block: a source of traces from codes. -/
-structure TuringBlock where
-  /-- The type of codes/programs -/
-  Code : Type
-  /-- The machine semantics: code → trace -/
-  Machine : Code → Trace
-  /-- Halting is just the standard Halts on Machine traces -/
-  halts_def : ∀ e, Halts (Machine e) ↔ ∃ n, (Machine e) n
+-- Machine is already defined in RevHalt.Base as:
+-- def Machine (c : Code) : Trace := fun _ => ∃ x, x ∈ c.eval 0
 
-/-- The canonical Turing block using Mathlib's partial recursive codes. -/
-def canonicalTuringBlock : TuringBlock where
-  Code := Nat.Partrec.Code
-  Machine := RevHalt.Machine
-  halts_def := fun _ => Iff.rfl
-
-/-- Block 1 provides traces. Period. -/
-theorem block1_provides_traces (T : TuringBlock) (e : T.Code) :
-    ∃ trace : Trace, trace = T.Machine e :=
-  ⟨T.Machine e, rfl⟩
-
-end Block1_Turing
-
--- ============================================================================
--- BLOCK 2: REVHALT (SYNTAX) — Organization of dependencies
--- ============================================================================
-
-section Block2_RevHalt
+-- Code is Nat.Partrec.Code (from Mathlib)
 
 /-!
-## Block 2: RevHalt as Syntactic Framework
+## 2) Compilation: Sentences to Code
 
-The RevHalt block provides the internal language:
-1. `Trace`, `Halts` (from Base)
-2. `up` closure operator (from Base)
-3. `RHKit` and `DetectsMonotone` contract
-4. `Rev0_K` canonical verdict
-5. T1 rigidity theorem
-
-This block does NOT define truth. It ORGANIZES how procedures relate to traces.
+The key structural component: compile sentences to Machine code.
 -/
 
-/-- The RevHalt syntactic framework. -/
-structure RevHaltSyntax where
-  /-- A kit satisfying the contract -/
-  K : RHKit
-  /-- The contract is satisfied -/
-  h_contract : DetectsMonotone K
+/-- A compilation function from semantic queries to Machine code.
+    Note: Sentence only, no Model parameter needed. -/
+abbrev Compile (Sentence : Type) : Type :=
+  Set Sentence → Sentence → Code
 
-/-- Block 2 Component: The closure operator `up` is available. -/
-theorem block2_has_closure (T : Trace) :
-    Monotone (up T) ∧ ((∃ n, up T n) ↔ (∃ n, T n)) :=
-  ⟨up_mono T, exists_up_iff T⟩
+/-- LR is DERIVED from Machine and compile: LR Γ φ := Machine (compile Γ φ) -/
+abbrev LR_from_compile {Sentence : Type} (compile : Compile Sentence) :
+    Set Sentence → Sentence → Trace :=
+  fun Γ φ => Machine (compile Γ φ)
 
-/-- Block 2 Component: The canonical verdict is well-defined. -/
-def block2_verdict (S : RevHaltSyntax) (T : Trace) : Prop :=
-  Rev0_K S.K T
-
-/-- Block 2 Core Theorem: T1 Rigidity.
-    If DetectsMonotone K, then Rev0_K K T ↔ Halts T. -/
-theorem block2_rigidity (S : RevHaltSyntax) :
-    ∀ T : Trace, Rev0_K S.K T ↔ Halts T :=
-  T1_traces S.K S.h_contract
-
-/-- Block 2 Core Theorem: Uniqueness.
-    Any two valid kits give the same verdict. -/
-theorem block2_uniqueness (S1 S2 : RevHaltSyntax) :
-    ∀ T : Trace, Rev0_K S1.K T ↔ Rev0_K S2.K T :=
-  T1_uniqueness S1.K S2.K S1.h_contract S2.h_contract
-
-/-- Block 2 does NOT define truth — it stabilizes procedures. -/
-theorem block2_stabilizes_procedures (S1 S2 : RevHaltSyntax) (T : Trace) :
-    Rev0_K S1.K T = Rev0_K S2.K T := by
-  have h := block2_uniqueness S1 S2 T
-  apply propext h
-
-end Block2_RevHalt
-
--- ============================================================================
--- BLOCK 3: EVALUATIVE SEMANTICS — Pure evaluation
--- ============================================================================
-
-section Block3_Semantics
+/-- Simp lemma for unfolding LR_from_compile. -/
+@[simp] lemma LR_from_compile_apply {Sentence : Type} (compile : Compile Sentence)
+    (Γ : Set Sentence) (φ : Sentence) :
+    LR_from_compile compile Γ φ = Machine (compile Γ φ) := rfl
 
 /-!
-## Block 3: Evaluative Semantics
+## 3) Bridge: On Machine (Not LR)
 
-The semantics block provides pure evaluation:
-1. `Sat : Model → Sentence → Prop`
-2. `ModE`, `ThE`, `CloE` closure operators
-3. `SemConsequences Sat Γ φ := φ ∈ CloE Sat Γ`
+The bridge is fundamentally about Machine, not LR.
+LR-based bridge is a corollary.
+-/
 
-No procedure here — just "true/false" in the semantic sense.
+section Bridge
+
+variable {Sentence Model : Type}
+
+/-- The fundamental bridge: semantic evaluation ↔ Machine halting.
+    This is the primitive form. -/
+def DynamicBridgeMachine
+    (Sat : Model → Sentence → Prop)
+    (compile : Compile Sentence) : Prop :=
+  ∀ Γ φ, SemConsequences Sat Γ φ ↔ Halts (Machine (compile Γ φ))
+
+/-- From DynamicBridgeMachine to DynamicBridge on derived LR. -/
+theorem DynamicBridgeMachine.toDynamicBridge
+    (Sat : Model → Sentence → Prop)
+    (compile : Compile Sentence)
+    (h : DynamicBridgeMachine Sat compile) :
+    DynamicBridge Sat (LR_from_compile compile) := by
+  intro Γ φ
+  simpa [LR_from_compile] using (h Γ φ)
+
+end Bridge
+
+/-!
+## 4) T1 Applied to Machine Traces
+
+T1 (canonicity) applies directly to Machine traces.
+Kit is a PARAMETER, not wrapped.
+-/
+
+section T1_on_Machine
+
+/-- T1 specialized to Machine traces:
+    For any valid Kit K and any code e,
+    Rev0_K K (Machine e) ↔ Halts (Machine e) -/
+theorem T1_on_Machine (K : RHKit) (hK : DetectsMonotone K) (e : Code) :
+    Rev0_K K (Machine e) ↔ Halts (Machine e) :=
+  T1_traces K hK (Machine e)
+
+/-- All valid Kits agree on Machine traces. -/
+theorem kits_agree_on_Machine (K1 K2 : RHKit)
+    (h1 : DetectsMonotone K1) (h2 : DetectsMonotone K2) (e : Code) :
+    Rev0_K K1 (Machine e) ↔ Rev0_K K2 (Machine e) :=
+  T1_uniqueness K1 K2 h1 h2 (Machine e)
+
+end T1_on_Machine
+
+/-!
+## 5) The Unified Architecture
+
+One single structure with interdependent components.
 -/
 
 variable {Sentence Model : Type}
 
-/-- The evaluative semantics block. -/
-structure EvaluativeSemantics (Sentence Model : Type) where
-  /-- The satisfaction relation -/
+/-- The unified RevHalt architecture.
+    Machine is fixed. LR is derived. All components are interdependent. -/
+structure UnifiedArchitecture (Sentence Model : Type) where
+  /-- Semantic satisfaction relation -/
   Sat : Model → Sentence → Prop
+  /-- Compilation to Machine code -/
+  compile : Compile Sentence
+  /-- The fundamental bridge (on Machine) -/
+  bridge : DynamicBridgeMachine Sat compile
 
-/-- Block 3: The evaluation function E(Γ,φ). -/
-def block3_evaluation (E : EvaluativeSemantics Sentence Model)
+/-- LR derived from the architecture. -/
+def UnifiedArchitecture.LR (A : UnifiedArchitecture Sentence Model) :
+    Set Sentence → Sentence → Trace :=
+  LR_from_compile A.compile
+
+/-- Simp lemma for UnifiedArchitecture.LR. -/
+@[simp] lemma UnifiedArchitecture.LR_apply (A : UnifiedArchitecture Sentence Model)
+    (Γ : Set Sentence) (φ : Sentence) :
+    A.LR Γ φ = Machine (A.compile Γ φ) := by rfl
+
+/-- Evaluation derived from the architecture. -/
+def UnifiedArchitecture.Eval (A : UnifiedArchitecture Sentence Model)
     (Γ : Set Sentence) (φ : Sentence) : Prop :=
-  SemConsequences E.Sat Γ φ
+  SemConsequences A.Sat Γ φ
 
-/-- Block 3: Evaluation is purely semantic — no procedure. -/
-theorem block3_is_pure_evaluation (E : EvaluativeSemantics Sentence Model)
+/-- Simp lemma for UnifiedArchitecture.Eval. -/
+@[simp] lemma UnifiedArchitecture.Eval_def (A : UnifiedArchitecture Sentence Model)
     (Γ : Set Sentence) (φ : Sentence) :
-    block3_evaluation E Γ φ ↔ φ ∈ CloE E.Sat Γ :=
-  Iff.rfl
+    A.Eval Γ φ ↔ SemConsequences A.Sat Γ φ := Iff.rfl
 
-/-- Block 3: CloE is a closure operator (extensive, monotone, idempotent). -/
-theorem block3_CloE_is_closure (E : EvaluativeSemantics Sentence Model)
-    (Γ : Set Sentence) :
-    Γ ⊆ CloE E.Sat Γ ∧
-    (∀ Δ, Γ ⊆ Δ → CloE E.Sat Γ ⊆ CloE E.Sat Δ) ∧
-    CloE E.Sat (CloE E.Sat Γ) = CloE E.Sat Γ := by
-  refine ⟨?_, ?_, ?_⟩
-  · exact subset_CloE (Sat := E.Sat) Γ
-  · intro Δ h
-    exact CloE_monotone (Sat := E.Sat) h
-  · exact CloE_idem (Sat := E.Sat) Γ
-
-end Block3_Semantics
-
--- ============================================================================
--- LIAISON A: TURING → REVHALT
--- ============================================================================
-
-section LiaisonA_Turing_RevHalt
+/-- API Lemma: Evaluation ↔ Halts(Machine(compile)).
+    This direct bridge is useful for proofs. -/
+theorem eval_iff_halts
+    (A : UnifiedArchitecture Sentence Model)
+    (Γ : Set Sentence) (φ : Sentence) :
+    A.Eval Γ φ ↔ Halts (Machine (A.compile Γ φ)) := by
+  simpa [UnifiedArchitecture.Eval] using (A.bridge Γ φ)
 
 /-!
-## Liaison A: Turing → RevHalt
+## 6) Coverage: Local/Global Preparation
 
-Instantiate the trace domain of RevHalt with traces from Turing:
-- Set `T := Machine e`
-- RevHalt gives a stable verdict `Rev0_K(K, Machine e)`
-
-This liaison connects Block 1 to Block 2.
+CoversMachine formalizes when compilation "covers" all Machine codes.
 -/
 
-/-- Liaison A: Instantiate RevHalt with Turing traces. -/
-def liaisonA_instantiate (T : TuringBlock) (S : RevHaltSyntax) (e : T.Code) : Prop :=
-  Rev0_K S.K (T.Machine e)
+/-- Coverage property: every Machine code is reachable via compile. -/
+def CoversMachine {Sentence : Type} (compile : Compile Sentence) : Prop :=
+  ∀ e : Code, ∃ (Γ : Set Sentence) (φ : Sentence), compile Γ φ = e
 
-/-- Liaison A: The verdict on Turing traces equals Halts. -/
-theorem liaisonA_verdict_equals_halts (T : TuringBlock) (S : RevHaltSyntax) (e : T.Code) :
-    liaisonA_instantiate T S e ↔ Halts (T.Machine e) := by
-  unfold liaisonA_instantiate
-  exact block2_rigidity S (T.Machine e)
+/-- If CoversMachine holds, each code e has a witness (Γ, φ) with the bridge equivalence. -/
+theorem coverage_gives_instance_bridge
+    {Sentence Model : Type}
+    (A : UnifiedArchitecture Sentence Model)
+    (hCover : CoversMachine A.compile)
+    (e : Code) :
+    ∃ (Γ : Set Sentence) (φ : Sentence),
+      A.compile Γ φ = e ∧ (A.Eval Γ φ ↔ Halts (Machine e)) := by
+  rcases hCover e with ⟨Γ, φ, hEq⟩
+  refine ⟨Γ, φ, hEq, ?_⟩
+  simpa [UnifiedArchitecture.Eval, hEq] using (A.bridge Γ φ)
 
-/-- Liaison A: All valid kits agree on Turing traces. -/
-theorem liaisonA_kits_agree (T : TuringBlock) (S1 S2 : RevHaltSyntax) (e : T.Code) :
-    liaisonA_instantiate T S1 e ↔ liaisonA_instantiate T S2 e := by
-  unfold liaisonA_instantiate
-  exact block2_uniqueness S1 S2 (T.Machine e)
-
-/-- Liaison A is the ONLY connection from Block 1 to Block 2. -/
-theorem liaisonA_is_complete (T : TuringBlock) (S : RevHaltSyntax) (e : T.Code) :
-    (liaisonA_instantiate T S e ↔ Halts (T.Machine e)) ∧
-    (∀ S' : RevHaltSyntax, liaisonA_instantiate T S e ↔ liaisonA_instantiate T S' e) :=
-  ⟨liaisonA_verdict_equals_halts T S e, fun S' => liaisonA_kits_agree T S S' e⟩
-
-end LiaisonA_Turing_RevHalt
-
--- ============================================================================
--- LIAISON B: EVALUATION → REVHALT (via compilation)
--- ============================================================================
-
-section LiaisonB_Evaluation_RevHalt
+/-- If CoversMachine and Eval is decidable for all (Γ, φ),
+    then Halts(Machine e) is decidable for all e.
+    This is the key transfer: global uniform decidability of Eval ⇒ global uniform decidability of Halts. -/
+noncomputable def decidable_halts_of_decidable_eval
+    {Sentence Model : Type}
+    (A : UnifiedArchitecture Sentence Model)
+    (hCover : CoversMachine A.compile)
+    (hDec : ∀ (Γ : Set Sentence) (φ : Sentence), Decidable (A.Eval Γ φ))
+    (e : Code) : Decidable (Halts (Machine e)) := by
+  let Γ := Classical.choose (hCover e)
+  let h1 := Classical.choose_spec (hCover e)
+  let φ := Classical.choose h1
+  have hEq : A.compile Γ φ = e := Classical.choose_spec h1
+  have h : A.Eval Γ φ ↔ Halts (Machine e) := by
+    simpa [UnifiedArchitecture.Eval, hEq] using (A.bridge Γ φ)
+  cases hDec Γ φ with
+  | isTrue hEval => exact isTrue (h.mp hEval)
+  | isFalse hNotEval =>
+      exact isFalse (by intro hH; exact hNotEval (h.mpr hH))
 
 /-!
-## Liaison B: Evaluation → RevHalt (via LR + DynamicBridge)
+## 7) The Master Theorem
 
-Provide a compilation `LR : (Γ,φ) ↦ Trace` and a correctness hypothesis:
-- `DynamicBridge : E(Γ,φ) ↔ Halts(LR Γ φ)`
-
-Then RevHalt becomes the syntactic support:
-  E(Γ,φ) ↔ Halts(LR Γ φ) ↔ Rev0_K(K, LR Γ φ)
+The central result: the full equivalence chain going through Machine.
 -/
 
-variable {Sentence Model : Type}
-
-/-- Liaison B: The bridge structure connecting evaluation to RevHalt. -/
-structure LiaisonB (Sentence Model : Type) where
-  /-- The evaluative semantics -/
-  E : EvaluativeSemantics Sentence Model
-  /-- The compilation function -/
-  LR : Set Sentence → Sentence → Trace
-  /-- The bridge hypothesis: evaluation ↔ halting of compiled trace -/
-  bridge : DynamicBridge E.Sat LR
-
-/-- Liaison B: The compiled verdict. -/
-def liaisonB_verdict (L : LiaisonB Sentence Model) (S : RevHaltSyntax)
-    (Γ : Set Sentence) (φ : Sentence) : Prop :=
-  Rev0_K S.K (L.LR Γ φ)
-
-/-- Liaison B: The full equivalence chain.
-    E(Γ,φ) ↔ Halts(LR Γ φ) ↔ Rev0_K(K, LR Γ φ) -/
-theorem liaisonB_full_chain (L : LiaisonB Sentence Model) (S : RevHaltSyntax)
+/-- **API Lemma**: Evaluation ↔ Rev0_K verdict (the main interface).
+    This is the clean form to use in applications. -/
+theorem eval_iff_rev
+    (A : UnifiedArchitecture Sentence Model)
+    (K : RHKit) (hK : DetectsMonotone K)
     (Γ : Set Sentence) (φ : Sentence) :
-    (block3_evaluation L.E Γ φ ↔ Halts (L.LR Γ φ)) ∧
-    (Halts (L.LR Γ φ) ↔ liaisonB_verdict L S Γ φ) := by
-  constructor
-  · -- block3_evaluation ↔ Halts
-    exact L.bridge Γ φ
-  · -- Halts ↔ liaisonB_verdict
-    exact (block2_rigidity S (L.LR Γ φ)).symm
+    A.Eval Γ φ ↔ Rev0_K K (Machine (A.compile Γ φ)) := by
+  have h_bridge := eval_iff_halts A Γ φ
+  have h_T1 : Rev0_K K (Machine (A.compile Γ φ)) ↔ Halts (Machine (A.compile Γ φ)) :=
+    T1_traces K hK (Machine (A.compile Γ φ))
+  exact h_bridge.trans h_T1.symm
 
-/-- Liaison B: Evaluation equals verdict (the key connection). -/
-theorem liaisonB_evaluation_equals_verdict (L : LiaisonB Sentence Model) (S : RevHaltSyntax)
+/-- **Master Theorem (Bundle)**: The full equivalence chain (for documentation).
+    Prefer `eval_iff_rev` for applications. -/
+theorem master_theorem
+    (A : UnifiedArchitecture Sentence Model)
+    (K : RHKit) (hK : DetectsMonotone K)
     (Γ : Set Sentence) (φ : Sentence) :
-    block3_evaluation L.E Γ φ ↔ liaisonB_verdict L S Γ φ := by
-  unfold block3_evaluation liaisonB_verdict
-  have hBridge := L.bridge Γ φ
-  have hT1 := block2_rigidity S (L.LR Γ φ)
-  exact hBridge.trans hT1.symm
+    -- Step 1: Evaluation ↔ Machine halts
+    (A.Eval Γ φ ↔ Halts (Machine (A.compile Γ φ))) ∧
+    -- Step 2: Machine halts ↔ Rev0_K verdict
+    (Halts (Machine (A.compile Γ φ)) ↔ Rev0_K K (Machine (A.compile Γ φ))) ∧
+    -- Composition: Evaluation ↔ Rev0_K verdict
+    (A.Eval Γ φ ↔ Rev0_K K (Machine (A.compile Γ φ))) := by
+  have h_bridge := A.bridge Γ φ
+  have h_T1 := T1_on_Machine K hK (A.compile Γ φ)
+  exact ⟨h_bridge, h_T1.symm, eval_iff_rev A K hK Γ φ⟩
 
-/-- Liaison B: All valid kits give the same verdict on compiled traces. -/
-theorem liaisonB_kits_agree (L : LiaisonB Sentence Model) (S1 S2 : RevHaltSyntax)
+/-- All valid Kits give the same verdict (via the architecture). -/
+theorem architecture_kit_invariance
+    (A : UnifiedArchitecture Sentence Model)
+    (K1 K2 : RHKit) (h1 : DetectsMonotone K1) (h2 : DetectsMonotone K2)
     (Γ : Set Sentence) (φ : Sentence) :
-    liaisonB_verdict L S1 Γ φ ↔ liaisonB_verdict L S2 Γ φ := by
-  unfold liaisonB_verdict
-  exact block2_uniqueness S1 S2 (L.LR Γ φ)
-
-end LiaisonB_Evaluation_RevHalt
-
--- ============================================================================
--- COMPLETE ARCHITECTURE: All three blocks + both liaisons
--- ============================================================================
-
-section CompleteArchitecture
-
-/-!
-## Complete Architecture
-
-The full structure with all three blocks and both liaisons.
--/
-
-variable {Sentence Model : Type}
-
-/-- The complete RevHalt architecture. -/
-structure CompleteArchitecture (Sentence Model : Type) where
-  /-- Block 1: Turing (dynamic) -/
-  turing : TuringBlock
-  /-- Block 2: RevHalt (syntax) -/
-  revhalt : RevHaltSyntax
-  /-- Block 3: Semantics (evaluation) -/
-  semantics : EvaluativeSemantics Sentence Model
-  /-- Liaison B data: compilation + bridge -/
-  LR : Set Sentence → Sentence → Trace
-  bridge : DynamicBridge semantics.Sat LR
-
-/-- Extract Liaison B from the complete architecture. -/
-def CompleteArchitecture.liaisonB (A : CompleteArchitecture Sentence Model) :
-    LiaisonB Sentence Model :=
-  { E := A.semantics, LR := A.LR, bridge := A.bridge }
-
-/-- The Master Theorem: Everything connects properly.
-
-    For any code e and any semantic query (Γ, φ):
-    1. Turing provides traces (Block 1)
-    2. RevHalt stabilizes verdicts (Block 2)
-    3. Semantics provides evaluation (Block 3)
-    4. Liaison A connects Turing → RevHalt
-    5. Liaison B connects Semantics → RevHalt via LR
--/
-theorem master_architecture_theorem (A : CompleteArchitecture Sentence Model)
-    (e : A.turing.Code) (Γ : Set Sentence) (φ : Sentence) :
-    -- Liaison A works
-    (liaisonA_instantiate A.turing A.revhalt e ↔ Halts (A.turing.Machine e)) ∧
-    -- Liaison B works
-    (block3_evaluation A.semantics Γ φ ↔ liaisonB_verdict A.liaisonB A.revhalt Γ φ) ∧
-    -- All kits agree on both liaisons
-    (∀ S : RevHaltSyntax,
-      liaisonA_instantiate A.turing S e ↔ liaisonA_instantiate A.turing A.revhalt e) ∧
-    (∀ S : RevHaltSyntax,
-      liaisonB_verdict A.liaisonB S Γ φ ↔ liaisonB_verdict A.liaisonB A.revhalt Γ φ) := by
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · exact liaisonA_verdict_equals_halts A.turing A.revhalt e
-  · exact liaisonB_evaluation_equals_verdict A.liaisonB A.revhalt Γ φ
-  · intro S
-    exact liaisonA_kits_agree A.turing S A.revhalt e
-  · intro S
-    exact liaisonB_kits_agree A.liaisonB S A.revhalt Γ φ
+    Rev0_K K1 (Machine (A.compile Γ φ)) ↔ Rev0_K K2 (Machine (A.compile Γ φ)) :=
+  kits_agree_on_Machine K1 K2 h1 h2 (A.compile Γ φ)
 
 /-
-## Summary Diagram
+## Summary
+
+The architecture is:
 
 ```
-Block 1 (Turing)          Block 3 (Semantics)
-Machine : Code → Trace    Sat : Model → Sentence → Prop
-Halts (Machine e)         E(Γ,φ) := φ ∈ CloE(Γ)
-        │                         │
-        │ Liaison A               │ Liaison B (via LR + Bridge)
-        │ T := Machine e          │ DynamicBridge: E(Γ,φ) ↔ Halts(LR Γ φ)
-        ▼                         ▼
-        ╔═════════════════════════════════════════╗
-        ║           Block 2 (RevHalt)             ║
-        ║  Trace, Halts, up, Kit, DetectsMonotone ║
-        ║  Rev0_K(K,T) := K.Proj(up T)            ║
-        ║  T1: Rev0_K(K,T) ↔ Halts T              ║
-        ╚═════════════════════════════════════════╝
+Sat : Model → Sentence → Prop     (semantics)
+compile : Set Sentence → Sentence → Code  (compilation)
+                    │
+                    ▼
+              Machine (compile Γ φ)    (THE primitive)
+                    │
+       ┌────────────┼────────────┐
+       ▼            ▼            ▼
+    Halts    ←T1→  Rev0_K K  ←T1→  Halts
+       │
+       └── E(Γ,φ) via bridge
 ```
 
-- **Turing** provides traces.
-- **RevHalt** is the syntax that stabilizes procedure usage.
-- **Semantics** provides evaluation.
-- **LR/Bridge** is the connection "evaluation → trace".
+- Machine is fixed, not parameterized
+- LR = Machine ∘ compile (derived)
+- Bridge is on Machine (fundamental)
+- T1 applies to Machine traces
+- Kit K is a parameter, not packaged
+
+This is a single interdependent structure, not 3 independent blocks.
 -/
-
-end CompleteArchitecture
 
 end RevHalt
