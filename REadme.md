@@ -2,13 +2,13 @@
 
 ## Guiding Principle
 
-RevHalt clearly factorizes oracles (truth, compilation, procedure, negative r.e., two-sided decision) and proves a **rigidity principle**: once normalized by `up`, all procedures satisfying a minimal contract coincide on the verdict. Incompleteness is not bypassed; it is reconfigured into a complementarity of **internal proof + stable external certification**.
+RevHalt clearly factorizes oracles (truth, compilation, procedure, negative r.e. (semi-deciding `Provable ¬H`), two-sided decision) and proves a **rigidity principle**: once normalized by `up`, all procedures satisfying a minimal contract coincide on the verdict. Incompleteness is not bypassed; it is reconfigured into a complementarity of **internal proof + stable external certification**.
 
 The RevHalt framework introduces a **stable operational reference frame** to link:
 
 1. **Semantic Truth** (models/satisfaction),
 2. **Dynamics** (trace-based processes),
-3. **Procedure** (a abstract "Kit"/observer),
+3. **Procedure** (an abstract "Kit"/observer),
 4. **Internalization Limit** (internal provability à la Gödel).
 
 The goal is not to "make Halting decidable", but to **make operativity independent of internal incompleteness** by clearly separating these layers and stabilizing their interaction.
@@ -37,7 +37,7 @@ We transform any trace into a **cumulative** (monotone) trace:
   * `up_mono : Monotone (up T)`
   * `exists_up_iff : (∃ n, up T n) ↔ (∃ n, T n)`
 
-This normalization is the mechanism that "stabilizes" exotic behaviors possible on non-monotone traces.
+This normalization is the mechanism that **neutralizes** exotic procedural behavior on non-monotone traces by forcing every input into a monotone domain.
 
 ---
 
@@ -63,7 +63,7 @@ The canonized procedural verdict:
 
 * `Rev_K K T := K.Proj (up T)` (alias `Rev0_K`)
 
-`Rev` adds no "extensional truth" beyond `Halts`, but provides an **injection point** for procedures (solver, AI, oracle, engine, etc.) under a stability contract.
+Under `DetectsMonotone`, `Rev0_K` adds no "extensional truth" beyond `Halts`, but provides an **injection point** for procedures (solver, AI, oracle, engine, etc.) under a stability contract.
 
 ---
 
