@@ -1,6 +1,10 @@
 import RevHalt.Dynamics.Core.Fork
 import RevHalt.Dynamics.Core.RefSystem
+import RevHalt.Dynamics.Instances.OmegaChaitin
 import Mathlib.Data.Rat.Floor
+import Mathlib.Algebra.Order.Ring.Pow
+import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.NormNum
 
 namespace Example
 
@@ -39,6 +43,27 @@ lemma cut_pos_to_cut_neg (hε : (0 : ℚ) ≤ ε)
     E.Sat M (E.Cut (-ε) x) :=
   cut0_to_cut_neg (E := E) (M := M) (x := x) (ε := ε) hε
     (cut_pos_to_cut0 (E := E) (M := M) (x := x) (ε := ε) hε h)
+
+/-!
+**Dyadic specialization** (this is the “pm_zero_dyadic” you asked to eliminate `sorry` for):
+take ε = 1 / 2^n and get `Cut ε -> Cut 0 -> Cut (-ε)`.
+-/
+
+def dyad (n : ℕ) : ℚ := (1 : ℚ) / ((2 : ℚ) ^ n)
+
+lemma dyad_nonneg (n : ℕ) : (0 : ℚ) ≤ dyad n := by
+  unfold dyad
+  positivity
+
+theorem pm_zero_dyadic (n : ℕ)
+    (h : E.Sat M (E.Cut (dyad n) x)) :
+    E.Sat M (E.Cut 0 x) ∧ E.Sat M (E.Cut (-(dyad n)) x) := by
+  have hε : (0 : ℚ) ≤ dyad n := dyad_nonneg (n := n)
+  have h0 : E.Sat M (E.Cut 0 x) :=
+    cut_pos_to_cut0 (E := E) (M := M) (x := x) (ε := dyad n) hε h
+  have hneg : E.Sat M (E.Cut (-(dyad n)) x) :=
+    cut0_to_cut_neg (E := E) (M := M) (x := x) (ε := dyad n) hε h0
+  exact ⟨h0, hneg⟩
 
 end CutBounds
 
@@ -89,5 +114,42 @@ theorem not_both_sound_0pivot :
   (Fork.ofPivot ctx T0 (p0 (E := E) (x := x))).exclusion
 
 end ZeroFork
+
+/-!
+3) Dyadic-cut **kit invariance** in the Ω instance (your “OmegaLike invariance for dyadic cuts”).
+
+This is the clean “plumbing” statement:
+for any valid kits K₁ K₂, the Rev verdict for a dyadic cut query is identical.
+-/
+
+namespace OmegaDyadic
+
+open RevHalt.Dynamics.Instances.OmegaChaitin
+open RevHalt.Dynamics.Instances.OmegaChaitin.CutComputable
+
+theorem omega_dyadic_cut_kit_invariant
+    (K₁ K₂ : RHKit) (h₁ : DetectsMonotone K₁) (h₂ : DetectsMonotone K₂)
+    (n : ℕ) :
+    Rev0_K K₁ (LR_omega ∅ (OmegaSentence.CutGe ((1 : ℚ) / (2 ^ n)))) ↔
+    Rev0_K K₂ (LR_omega ∅ (OmegaSentence.CutGe ((1 : ℚ) / (2 ^ n)))) := by
+  exact omega_cut_kit_invariant (K₁ := K₁) (K₂ := K₂) (h₁ := h₁) (h₂ := h₂)
+    (q := (1 : ℚ) / (2 ^ n))
+
+theorem omega_pm0_dyadic_cut_kit_invariant
+    (K₁ K₂ : RHKit) (h₁ : DetectsMonotone K₁) (h₂ : DetectsMonotone K₂)
+    (n : ℕ) :
+    (Rev0_K K₁ (LR_omega ∅ (OmegaSentence.CutGe 0)) ↔
+     Rev0_K K₂ (LR_omega ∅ (OmegaSentence.CutGe 0))) ∧
+    (Rev0_K K₁ (LR_omega ∅ (OmegaSentence.CutGe ((1 : ℚ) / (2 ^ n)))) ↔
+     Rev0_K K₂ (LR_omega ∅ (OmegaSentence.CutGe ((1 : ℚ) / (2 ^ n))))) ∧
+    (Rev0_K K₁ (LR_omega ∅ (OmegaSentence.CutGe (-( (1 : ℚ) / (2 ^ n))))) ↔
+     Rev0_K K₂ (LR_omega ∅ (OmegaSentence.CutGe (-( (1 : ℚ) / (2 ^ n)))))) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact omega_cut_kit_invariant (K₁ := K₁) (K₂ := K₂) (h₁ := h₁) (h₂ := h₂) (q := 0)
+  · exact omega_dyadic_cut_kit_invariant (K₁ := K₁) (K₂ := K₂) (h₁ := h₁) (h₂ := h₂) (n := n)
+  · exact omega_cut_kit_invariant (K₁ := K₁) (K₂ := K₂) (h₁ := h₁) (h₂ := h₂)
+      (q := -((1 : ℚ) / (2 ^ n)))
+
+end OmegaDyadic
 
 end Example
