@@ -15,10 +15,15 @@ import RevHalt.Dynamics.Core.Fuel
 import RevHalt.Dynamics.Core.Fork
 import RevHalt.Theory.ThreeBlocksArchitecture
 
+import RevHalt.Dynamics.Core.Fork2
+import RevHalt.Theory.ClosureRigidity
+import RevHalt.Theory.InfiniteGaps
+import RevHalt.Theory.ProvableFrom
+
 namespace RevHalt.Core
 
 /-!
-## Closure Rigidity (T1)
+## Closure Rigidity (T1) & Generalizations
 -/
 
 #check up              -- Trace → Trace (monotone closure)
@@ -31,6 +36,11 @@ namespace RevHalt.Core
 
 #check T1_traces       -- Rev0_K K T ↔ Halts T
 #check T1_uniqueness   -- Kit invariance
+
+-- Abstract Rigidity
+#check Theory.ObservationClosure
+#check Theory.unique_extension_along_closure
+#check Theory.T1_as_closure_rigidity
 
 /-!
 ## Uniform Barrier (T2)
@@ -49,9 +59,22 @@ namespace RevHalt.Core
 -- Fuel (T2 as fuel for growth)
 #check Dynamics.Core.Fuel.fuel_from_T2
 
--- Fork (two-sided complementarity)
+-- Fork & Bifurcation
 #check Dynamics.Core.Fork.ofPivot
 #check Dynamics.Core.Fork.exclusion
+#check Dynamics.Core.Fork2
+#check Dynamics.Core.BinaryStep
+#check Dynamics.Core.oraclePick_to_binaryStep
+#check Dynamics.Core.oraclePick_to_fork_of_complementary
+
+-- Proof-Theoretic T3
+#check Theory.ProofSystem
+#check Theory.meta_soundness       -- Sound extension by Gap
+
+-- Infinite Gaps
+#check Theory.TaggedProposition
+#check Theory.GapFamily
+#check Theory.gapFamily_infinite
 
 /-!
 ## Architecture (OracleMachine)
