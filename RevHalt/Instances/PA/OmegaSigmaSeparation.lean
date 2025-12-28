@@ -264,13 +264,15 @@ theorem WinTruth_not_uniformly_sigma1
     | inl h0 =>
       refine ⟨t, 0, ?_⟩
       -- stepPair (n,t) = some 0
-      simp [searchBit, stepPair, h0]
+      simp [stepPair, h0]
     | inr h1 =>
-      refine ⟨t, 1, ?_⟩
-      -- if c0 doesn't halt, the step can still be some 1; we only need existence of some value.
-      -- Here we can witness with 1 directly by showing the second branch triggers.
-      -- We don't know c0 at t, so split on it.
-      cases h0' : haltsWithinDec t (enum.haltIfBit0 n) 0 <;> simp [searchBit, stepPair, h0', h1]
+      cases h0' : haltsWithinDec t (enum.haltIfBit0 n) 0
+      · -- h0' = false => c0 doesn't halt. We know c1 halts (h1). Res: 1
+        refine ⟨t, 1, ?_⟩
+        simp [stepPair, h0', h1]
+      · -- h0' = true => c0 halts. Res: 0
+        refine ⟨t, 0, ?_⟩
+        simp [stepPair, h0']
 
   -- Define the total decision function as the extracted value from the partial search.
   let decide : ℕ → ℕ := fun n => (searchBit n).get (searchBit_dom n)
@@ -297,23 +299,20 @@ theorem WinTruth_not_uniformly_sigma1
 
   -- Analyze stepPair (n,t) to determine which Halt-code actually halts, then conclude WinTruth via soundness+spec.
   cases h0 : haltsWithinDec t (enum.haltIfBit0 n) 0 <;> simp [stepPair, h0] at ht
-  · -- h0 = true, so decide n = 0 and c0 halts
+  · -- h0 = true, so decide n = 0.
     have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit0 n) 0 = true := ⟨t, by simpa using h0⟩
-    have hP : PATruth (PASentence.Halt (enum.haltIfBit0 n)) :=
-      (hSound.soundness (enum.haltIfBit0 n)).2 hReal
-    have hWin : WinTruth n 0 := (enum.spec0 n).1 hP
-    -- decide n = 0, so bitOfNat (decide n) = 0
-    -- ht came from simp: decide n = 0
-    subst ht
+    have hP := (hSound.soundness (enum.haltIfBit0 n)).2 hReal
+    have hWin := (enum.spec0 n).1 hP
+    cases ht -- derives equality 0 = decide n
     simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
-  · -- h0 = false, so stepPair checks c1; ht forces c1 halts and decide n = 1
+  · -- h0 = false.
     cases h1 : haltsWithinDec t (enum.haltIfBit1 n) 0 <;> simp [stepPair, h0, h1] at ht
-    have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit1 n) 0 = true := ⟨t, by simpa using h1⟩
-    have hP : PATruth (PASentence.Halt (enum.haltIfBit1 n)) :=
-      (hSound.soundness (enum.haltIfBit1 n)).2 hReal
-    have hWin : WinTruth n 1 := (enum.spec1 n).1 hP
-    subst ht
-    simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
+    · cases ht -- contradiction (decide n ∈ none)
+    · have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit1 n) 0 = true := ⟨t, by simpa using h1⟩
+      have hP := (hSound.soundness (enum.haltIfBit1 n)).2 hReal
+      have hWin := (enum.spec1 n).1 hP
+      cases ht -- derives equality 1 = decide n
+      simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
 
 /-! ## 5) Corollary: the access barrier is essential -/
 
