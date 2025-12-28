@@ -1,8 +1,20 @@
 /-
   RevHalt.Examples.CutInvariance
 
-  Demonstration: cuts are kit-invariant under the RefSystem framework.
-  This shows T1 rigidity at the RefSystem level.
+  ═══════════════════════════════════════════════════════════════════════════════
+  WHAT THIS DEMONSTRATES (Structure: Rigidity)
+  ═══════════════════════════════════════════════════════════════════════════════
+  1. T1 RIGIDITY at RefSystem level: cuts are kit-invariant.
+  2. Any two valid kits (DetectsMonotone) give the same Rev verdict on cuts.
+  3. The verdict depends only on semantic consequence, not on the kit choice.
+  4. DR1_ref: direct instantiation of closure rigidity for RefSystem.
+  5. DR0_ref: semantic consequence ↔ Rev verdict (with DynamicBridge).
+  6. Cuts (semi-decidable interface) are robust against kit variations.
+  7. This simplifies existing results: no need to reason about specific kits.
+  8. Pattern: closure C + agreement on C(X) ⇒ agreement on all X.
+  9. Applicable to Ω cuts: same verdict regardless of observation method.
+  10. Key insight: rigidity makes kit choice irrelevant for semantic queries.
+  ═══════════════════════════════════════════════════════════════════════════════
 -/
 
 import RevHalt.Dynamics.Core.RefSystem

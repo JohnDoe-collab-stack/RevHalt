@@ -1,11 +1,20 @@
 /-
   RevHalt.Examples.TwoSidedFrontier
 
-  Demonstrates the two-sided complementarity mechanism:
-  1. oraclePick_to_edge: binary (always valid) — OraclePick → Edge
-  2. oraclePick_to_fork_step: complementary (requires hcomp) — OraclePick → Fork-step
-
-  Key point: no `Decidable`, no global chooser. Certificate carries the branch.
+  ═══════════════════════════════════════════════════════════════════════════════
+  WHAT THIS DEMONSTRATES (Structure: Binary vs Complementary Two-sided)
+  ═══════════════════════════════════════════════════════════════════════════════
+  1. BINARY BIFURCATION: OraclePick → Edge (always valid, no exclusion).
+  2. COMPLEMENTARY BIFURCATION: OraclePick → Fork (requires hcomp, with exclusion).
+  3. The distinction: p/q arbitrary vs p/¬p complementary.
+  4. oraclePick_to_edge: works for any encode_halt/encode_not_halt.
+  5. oraclePick_to_fork_step: requires encode_not_halt e = Not(encode_halt e).
+  6. OraclePickCompl: design pattern - complementarity by construction.
+  7. Certificate carries the branch: no global `Decidable`.
+  8. Connects OraclePick (T3 frontier) to dynamics (Edge/Graph).
+  9. This is the "two-sided = certificate-carried branch" principle.
+  10. Key insight: T3 complementarity becomes Fork only with syntactic ¬.
+  ═══════════════════════════════════════════════════════════════════════════════
 -/
 
 import RevHalt.Bridge.Context
@@ -45,8 +54,6 @@ theorem oraclePick_to_edge
     (pick : OraclePick (S := ctx.toComplementaritySystem)
               encode_halt encode_not_halt e) :
     ∃ T1 : TheoryNode ctx, Edge ctx T0 T1 ∧ pick.p ∈ T1.theory := by
-  classical
-
   -- 1) Extract Truth(pick.p) from the certificate
   have hp : ctx.Truth pick.p := by
     rcases pick.cert with ⟨hR, hpEq⟩ | ⟨hNR, hpEq⟩
@@ -64,9 +71,10 @@ theorem oraclePick_to_edge
   refine ⟨T1, Edge.of_move m T0, ?_⟩
 
   -- 3) Membership: pick.p ∈ Extend T0.theory pick.p
-  simp only [T1, m, Move.apply_extend_theory, mem_Extend_iff]
+  simp only [T1, m, Move.apply_extend_theory]
+  rw [mem_Extend_iff]
   right
-  trivial
+  exact Set.mem_singleton _
 
 /-!
 ## Lemma 2: Complementary bifurcation (Fork)
@@ -91,7 +99,6 @@ theorem oraclePick_to_fork_step
     (pick : OraclePick (S := ctx.toComplementaritySystem)
               encode_halt encode_not_halt e) :
     ∃ T1 : TheoryNode ctx, Edge ctx T0 T1 ∧ pick.p ∈ T1.theory := by
-  classical
   rcases pick.cert with ⟨hR, hpEq⟩ | ⟨hNR, hpEq⟩
   · -- positive branch: p = encode_halt e → Fork.left
     have hpivot : ctx.Truth (encode_halt e) := hpos hR
@@ -99,7 +106,7 @@ theorem oraclePick_to_fork_step
     refine ⟨T1, Fork.ofPivot_edge_left ctx T0 (encode_halt e) hpivot, ?_⟩
     have hm : encode_halt e ∈ T1.theory :=
       Fork.ofPivot_pivot_mem_left ctx T0 (encode_halt e) hpivot
-    simp only [T1, hpEq] at hm ⊢
+    rw [hpEq]
     exact hm
   · -- negative branch: p = encode_not_halt e = Not pivot → Fork.right
     have hnot : ctx.Truth (encode_not_halt e) := hneg hNR
@@ -110,7 +117,7 @@ theorem oraclePick_to_fork_step
     refine ⟨T1, Fork.ofPivot_edge_right ctx T0 (encode_halt e) hnpivot, ?_⟩
     have hm : ctx.Not (encode_halt e) ∈ T1.theory :=
       Fork.ofPivot_not_pivot_mem_right ctx T0 (encode_halt e) hnpivot
-    simp only [T1, hpEq, hcomp] at hm ⊢
+    rw [hpEq, hcomp]
     exact hm
 
 /-!

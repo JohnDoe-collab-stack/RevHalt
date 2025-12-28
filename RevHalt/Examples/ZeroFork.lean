@@ -1,8 +1,20 @@
 /-
   RevHalt.Examples.ZeroFork
 
-  Demonstration: Fork on a natural pivot (e.g., Cut 0).
-  This shows two-sided bifurcation at the RefSystem level.
+  ═══════════════════════════════════════════════════════════════════════════════
+  WHAT THIS DEMONSTRATES (Structure: Local / Two-sided)
+  ═══════════════════════════════════════════════════════════════════════════════
+  1. FORK = LOCAL TWO-SIDED BIFURCATION without global decision.
+  2. Given any pivot p, Fork provides left (Truth p) and right (Truth ¬p) branches.
+  3. EXCLUSION: both branches cannot be sound simultaneously.
+  4. No Decidable required: certificate carries the branch choice.
+  5. Fork.ofPivot: canonical construction for any proposition.
+  6. fork_navigate_left/right: navigate with truth certificate → Edge.
+  7. Demonstrates T3 "local power": extend without uniform decider.
+  8. Integrates with Graph/Path: edges from Fork feed into Path.
+  9. Applicable to any RefSystem: Cut 0, Bit n a, etc.
+  10. Key insight: two-sided ≠ decision; it's certificate-carried branching.
+  ═══════════════════════════════════════════════════════════════════════════════
 -/
 
 import RevHalt.Dynamics.Core.Fork

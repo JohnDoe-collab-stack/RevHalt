@@ -1,8 +1,20 @@
 /-
   RevHalt.Examples.BitWindowTheorem
 
-  Demonstration: Bit and Win have the same satisfaction (non-trivial arithmetic).
-  This shows two operationally distinct sentences are observationally equivalent.
+  ═══════════════════════════════════════════════════════════════════════════════
+  WHAT THIS DEMONSTRATES (Structure: Barrier / Separation)
+  ═══════════════════════════════════════════════════════════════════════════════
+  1. BIT ↔ WIN EQUIVALENCE: two syntactically different sentences, same truth.
+  2. Bit = discrete digit assertion (non-computable to determine globally).
+  3. Win = dyadic window via cuts (semi-decidable approximation).
+  4. bit_cut_link bridges the discrete/continuous gap.
+  5. Semantic equivalence: same satisfaction in all models.
+  6. Rev equivalence: same verdict under any valid kit.
+  7. Separates SYNTAX from SEMANTICS: orthogonal representations, same meaning.
+  8. Simplifies Ω: bits are just boundaries between cut intervals.
+  9. Pattern: two "readings" of the same referent → observationally identical.
+  10. Key insight: cuts are the robust interface; bits are derived.
+  ═══════════════════════════════════════════════════════════════════════════════
 -/
 
 import RevHalt.Dynamics.Core.RefSystem
@@ -34,7 +46,7 @@ theorem bit_window_sat_equiv {M : Model} {n : ℕ} {a : Fin 2} {x : Referent} :
 theorem bit_window_sem_equiv (n : ℕ) (a : Fin 2) (x : Referent) (Γ : Set Sentence) :
     RefSystem.SemConsequences_ref E Γ (E.Bit n a x) ↔
     RefSystem.SemConsequences_ref E Γ (E.Win n a x) :=
-  RefSystem.sem_conseq_of_sat_equiv E (fun M => RefSystem.bit_win_sat_equiv E) Γ
+  RefSystem.sem_conseq_of_sat_equiv E (fun _ => RefSystem.bit_win_sat_equiv E) Γ
 
 /-!
 ## With Bridge: Bit ↔ Win at the Rev level
