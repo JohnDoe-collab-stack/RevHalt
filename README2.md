@@ -1,4 +1,3 @@
-````markdown
 # RevHalt
 
 RevHalt is a Lean 4 (Mathlib) formalization of a single idea:
@@ -238,4 +237,4 @@ lake env lean RevHalt/Theory/Canonicity.lean
 Add your license and contribution conventions here.
 
 ```
-```
+
