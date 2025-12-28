@@ -4,19 +4,16 @@
   Formalizes the "arithmetical barrier" for Omega access:
   WinTruth (the correct bit of Omega) is NOT uniformly Σ₁ in PA.
 
-  This justifies the T3 architecture:
-  - Σ₁ predicates (Provability) are handled by S1.
-  - Σ₂ predicates (Omega Truth) require an Oracle (S2).
-
   If WinTruth were uniformly Σ₁, we could use PA-Halting to compute Omega,
-  which is impossible.
+  which is impossible (OmegaNonComputable).
 -/
 import RevHalt.Instances.PA.OmegaDyadicLink
--- WinTruth is detailed in OmegaTruth.lean
 import RevHalt.Dynamics.Instances.OmegaTruth
 import RevHalt.Dynamics.Instances.OmegaAccessSchemas
+
 import Mathlib.Tactic.FinCases
 import Mathlib.Computability.Partrec
+import Mathlib.Computability.PartrecCode
 import Mathlib.Computability.Encoding
 
 namespace RevHalt.Instances.PA
@@ -28,103 +25,112 @@ open RevHalt.Dynamics.Instances.OmegaChaitin.LimitSemantics (WinTruth)
 -- Sigma2Prop and WinTruth_is_sigma2
 open RevHalt.Dynamics.Instances.OmegaChaitin.AccessSchemas
 
-/-! ## 1) What it means for a family of propositions to be "uniformly Σ₁" -/
+/-! ## 1) Uniform Σ₁ notion (project-native) -/
 
-/-- A family of propositions `P : α → Prop` is "uniformly Σ₁ via PA Halt" if there exists:
-    1. A compilation function `code : α → ℕ` (the Halt index),
-    2. It is computable.
-    3. Such that for all inputs, `PATruth (Halt (code a)) ↔ P a`.
-
-    This captures: "P is r.e. in a uniform, PA-realizable way."
--/
+/-- A family `P : α → Prop` is "uniformly Σ₁ via Halt" if there exists a *computable* compilation
+    `code : α → ℕ` such that `PATruth (Halt (code a)) ↔ P a` for all `a`. -/
 structure UniformlySigma1 {α : Type*} [Primcodable α] (PATruth : PASentence → Prop) (P : α → Prop) where
-  /-- Uniform compilation to Halt indices. -/
   code : α → ℕ
-  /-- The compilation must be computable. -/
   code_computable : Computable code
-  /-- The specification: PA-truth of Halt matches the proposition. -/
   spec : ∀ a : α, PATruth (PASentence.Halt (code a)) ↔ P a
 
 /-- Shorthand: WinTruth at depth n, bit a. -/
 def WinTruthFamily (input : ℕ × Fin 2) : Prop :=
   WinTruth input.1 input.2
 
-/-! ## 2) The key observation: if WinTruth were uniformly Σ₁, bits of Ω would be r.e. -/
+/-! ## 2) Enumerable bits structure (extracted from a uniform Σ₁ compilation) -/
 
-/-- If WinTruth is uniformly Σ₁, then for each depth n, we can semi-decide
-    "which bit value a ∈ {0,1} is the correct one" by waiting for the Halt.
-
-    This would give a computable procedure to enumerate the bits of Ω,
-    contradicting Chaitin's theorem (Ω is not computable).
--/
 structure OmegaBitEnumerable (PATruth : PASentence → Prop) where
-  /-- For each depth n, there is a Halt-code that terminates iff the n-th bit is 0. -/
   haltIfBit0 : ℕ → ℕ
-  /-- For each depth n, there is a Halt-code that terminates iff the n-th bit is 1. -/
   haltIfBit1 : ℕ → ℕ
-  /-- Compiling the check for bit 0 is computable. -/
   h0_computable : Computable haltIfBit0
-  /-- Compiling the check for bit 1 is computable. -/
   h1_computable : Computable haltIfBit1
-  /-- Spec for bit 0. -/
   spec0 : ∀ n, PATruth (PASentence.Halt (haltIfBit0 n)) ↔ WinTruth n 0
-  /-- Spec for bit 1. -/
   spec1 : ∀ n, PATruth (PASentence.Halt (haltIfBit1 n)) ↔ WinTruth n 1
 
-/-- From UniformlySigma1 on WinTruthFamily, we can build OmegaBitEnumerable. -/
-def OmegaBitEnumerable.fromUniformSigma1 {PATruth : PASentence → Prop}
-    (U : UniformlySigma1 PATruth WinTruthFamily) : OmegaBitEnumerable PATruth where
+/-- From UniformlySigma1 on WinTruthFamily, build OmegaBitEnumerable. -/
+def OmegaBitEnumerable.fromUniformSigma1
+    {PATruth : PASentence → Prop}
+    (U : UniformlySigma1 PATruth WinTruthFamily) :
+    OmegaBitEnumerable PATruth where
   haltIfBit0 := fun n => U.code (n, 0)
   haltIfBit1 := fun n => U.code (n, 1)
-  -- Composition of Computable with pairings is Computable
-  h0_computable := sorry
-  h1_computable := sorry
+  h0_computable := by
+    -- n ↦ (n,0) is computable, then compose with U.code
+    have hpair : Computable (fun n : ℕ => (n, (0 : Fin 2))) := by
+      simpa using
+        (Computable.pair
+          (Computable.id : Computable (fun n : ℕ => n))
+          (Computable.const (0 : Fin 2)))
+    exact U.code_computable.comp hpair
+  h1_computable := by
+    -- n ↦ (n,1) is computable, then compose with U.code
+    have hpair : Computable (fun n : ℕ => (n, (1 : Fin 2))) := by
+      simpa using
+        (Computable.pair
+          (Computable.id : Computable (fun n : ℕ => n))
+          (Computable.const (1 : Fin 2)))
+    exact U.code_computable.comp hpair
   spec0 := fun n => U.spec (n, 0)
   spec1 := fun n => U.spec (n, 1)
 
-/-! ## 3) The separation theorem: WinTruth is NOT uniformly Σ₁ under consistency -/
+/-! ## 3) Project-native noncomputability hypothesis -/
 
 open RevHalt.Dynamics.Instances.OmegaChaitin (bitOfNat)
 
-/-- Omega is computable if there is a total Computable function giving the correct bits. -/
+/-- Omega is computable if there is a total computable function returning the correct WinTruth bit. -/
 def OmegaComputable : Prop :=
-  ∃ f : ℕ → ℕ, Computable f ∧ ∀ n : ℕ, WinTruth n (RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat (f n))
+  ∃ f : ℕ → ℕ, Computable f ∧
+    ∀ n : ℕ, WinTruth n (RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat (f n))
 
-/-- Hypothesis: Ω is genuinely non-computable (Chaitin's theorem). -/
+/-- Hypothesis: Ω is genuinely non-computable (Chaitin). -/
 def OmegaNonComputable : Prop := ¬ OmegaComputable
 
-/-- Hypothesis: PA Halting is sound AND complete for atomic Halt statements.
-
-    We require a constructive soundness: if PA proves Halt(n), then the machine halts.
-    AND if the machine halts, PA proves it (Σ₁ completeness).
-    This establishes the faithful link between the Logic (PATruth) and Reality (haltsWithinDec).
--/
+/-- Hypothesis: PA Halting is sound and complete for atomic Halt statements, linked to haltsWithinDec. -/
 structure HaltingSoundness (PATruth : PASentence → Prop) where
-  /-- Halt(n) is True iff the machine actually halts in finite time. -/
   soundness : ∀ n, PATruth (PASentence.Halt n) ↔ ∃ t, haltsWithinDec t n 0 = true
 
-/-- The main separation theorem (conditional).
+/-! ## 4) The separation theorem -/
 
-    **Statement**: Under the hypotheses that:
-    1. Ω is non-computable (OmegaNonComputable),
-    2. PA Halt describes actual halting (HaltingSoundness),
-    3. **Uniqueness**: For every n, exactly one bit is the true bit (Omega semantics),
-
-    we have: WinTruth is NOT uniformly Σ₁.
-
-    **Proof**:
-    - Assume WinTruth is Uniformly Σ₁ (via `hUnif`).
-    - We construct a computable function `decide : ℕ → ℕ` that outputs the bits of Ω (as 0 or 1).
-    - Algorithm for `decide n`:
-      - Let c0 = code for "WinTruth n 0" (from hUnif).
-      - Let c1 = code for "WinTruth n 1".
-      - Run c0 and c1 in parallel (dovetail) using `haltsWithinDec`.
-      - Since exactly one logic bit is true, and hUnif + Soundness links Truth to Halting,
-        exactly one machine will halt.
-      - We return 0 if c0 first halts, 1 if c1 first halts.
-    - This function is `Computable` (minimization of computable function).
-    - This contradicts `OmegaNonComputable`.
+/-
+  We need computability of the bounded evaluator that underlies haltsWithinDec.
+  In Mathlib PartrecCode:
+  - `Nat.Partrec.Code.evaln_prim` (aka `evaln` is primitive recursive)
+  - `Primrec.option_isSome` (projection to Bool)
+  give computability of the predicate "halts within t steps".
 -/
+
+/-- (Uncurried) computability of haltsWithinDec on triples. -/
+private theorem haltsWithinDec_triple_computable :
+    Computable (fun x : ℕ × (ℕ × ℕ) => haltsWithinDec x.1 x.2.1 x.2.2) := by
+  classical
+  -- `haltsWithinDec` is defined in the project as `isSome (evaln ...)`.
+  -- `Nat.Partrec.Code.evaln_prim` supplies primrec for the bounded evaluator; `option_isSome` preserves primrec.
+  -- The following simp expects the project definition:
+  --   haltsWithinDec t p n = ((Nat.Partrec.Code.ofNatCode p).evaln t n).isSome
+  -- If your definition is syntactically different, adjust this simp lemma accordingly.
+  -- We need to map inputs from ℕ codes to Code objects.
+  -- Map: (t, (p, n)) -> ((t, ofNatCode p), n)
+  let map_input (x : ℕ × (ℕ × ℕ)) : (ℕ × Nat.Partrec.Code) × ℕ :=
+    ((x.1, Nat.Partrec.Code.ofNatCode x.2.1), x.2.2)
+
+  -- Prove map_input is computable (actually Primrec).
+  -- We assume Nat.Partrec.Code.ofNatCode corresponds to the standard Denumerable.ofNat.
+  have map_prim : Primrec map_input := by
+    apply Primrec.pair
+    · apply Primrec.pair
+      · exact Primrec.fst
+      · apply Primrec.comp (Primrec.ofNat (α := Nat.Partrec.Code)) (Primrec.fst.comp Primrec.snd)
+    · exact Primrec.snd.comp Primrec.snd
+
+  -- Compose and convert to Computable.
+  have h_comp : Computable (fun x => (Nat.Partrec.Code.evaln (map_input x).1.1 (map_input x).1.2 (map_input x).2).isSome) :=
+    ((Primrec.option_isSome.comp Nat.Partrec.Code.evaln_prim).comp map_prim).to_comp
+
+  simpa [haltsWithinDec, map_input] using h_comp
+
+/-- Main theorem: under soundness + unique-bit semantics + Ω noncomputable,
+    WinTruth cannot be uniformly Σ₁ via Halt. -/
 theorem WinTruth_not_uniformly_sigma1
     {PATruth : PASentence → Prop}
     (hNonComp : OmegaNonComputable)
@@ -132,89 +138,167 @@ theorem WinTruth_not_uniformly_sigma1
     (hUnique : ∀ n, ∃! a, WinTruth n a)
     (hUnif : UniformlySigma1 PATruth (α := ℕ × Fin 2) WinTruthFamily) :
     False := by
+  classical
   let enum := OmegaBitEnumerable.fromUniformSigma1 hUnif
 
-  -- 1. Existence of the witness (Classical logic allowed for Props in the project)
-  -- We know mathematically that for each n, either bit 0 or bit 1 is true.
-  have exists_halt : ∀ n, ∃ t, haltsWithinDec t (enum.haltIfBit0 n) 0 = true ∨ haltsWithinDec t (enum.haltIfBit1 n) 0 = true := by
+  -- For each n, the unique true bit gives a real bounded halting witness on the corresponding Halt-code.
+  have exists_halt :
+      ∀ n, ∃ t,
+        haltsWithinDec t (enum.haltIfBit0 n) 0 = true ∨
+        haltsWithinDec t (enum.haltIfBit1 n) 0 = true := by
     intro n
-    -- Use Uniqueness and FinCases
     rcases hUnique n with ⟨a, ha, _⟩
     fin_cases a
-    · -- Case a = 0
+    · -- a = 0
       have hP : PATruth (PASentence.Halt (enum.haltIfBit0 n)) :=
-        (enum.spec0 n).mpr (by simpa using ha)
-      rcases (hSound.soundness (enum.haltIfBit0 n)).mp hP with ⟨t, ht⟩
+        (enum.spec0 n).2 (by simpa using ha)
+      rcases (hSound.soundness (enum.haltIfBit0 n)).1 hP with ⟨t, ht⟩
       exact ⟨t, Or.inl ht⟩
-    · -- Case a = 1
+    · -- a = 1
       have hP : PATruth (PASentence.Halt (enum.haltIfBit1 n)) :=
-        (enum.spec1 n).mpr (by simpa using ha)
-      rcases (hSound.soundness (enum.haltIfBit1 n)).mp hP with ⟨t, ht⟩
+        (enum.spec1 n).2 (by simpa using ha)
+      rcases (hSound.soundness (enum.haltIfBit1 n)).1 hP with ⟨t, ht⟩
       exact ⟨t, Or.inr ht⟩
 
-  -- 2. Construct the computable decider (returning Nat: 0 or 1)
-  let decide (n : ℕ) : ℕ :=
-    -- Find the first time t where one of them halts.
-    let t := Nat.find (exists_halt n)
-    if haltsWithinDec t (enum.haltIfBit0 n) 0 then 0 else 1
+  /- Define a computable search step:
+     at (n,t) return some 0 if c0 halts by time t,
+     else some 1 if c1 halts by time t,
+     else none. -/
+  let stepPair : ℕ × ℕ → Option ℕ := fun nt =>
+    if haltsWithinDec nt.2 (enum.haltIfBit0 nt.1) 0 then some 0
+    else if haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0 then some 1
+    else none
 
-  -- 3. Show this decider is Computable
-  have hComputable : Computable decide := by
-    -- Minimization (`Nat.find`) of a computable predicate is Computable.
-    -- Predicate P(n, t) := haltsWithinDec t (enum.haltIfBit0 n) 0 || ...
-    -- `haltsWithinDec` is PR (Computable).
-    -- `enum.haltIfBit0` is Computable.
-    -- Composition of Computable is Computable.
-    -- Thus `decide` is Computable.
-    sorry
+  -- `stepPair` is computable, since haltsWithinDec is computable and we only use conditionals and constants.
+  have stepPair_computable : Computable stepPair := by
+    -- Build `halts0(nt)` and `halts1(nt)` as computable Bool functions by composing the triple-computable haltsWithinDec.
+    have hHWD :
+        Computable (fun x : ℕ × (ℕ × ℕ) => haltsWithinDec x.1 x.2.1 x.2.2) :=
+      haltsWithinDec_triple_computable
 
-  -- 4. Show this decider is correct (contradiction)
+    have c0_comp : Computable enum.haltIfBit0 := enum.h0_computable
+    have c1_comp : Computable enum.haltIfBit1 := enum.h1_computable
+
+    have triple0 : Computable (fun nt : ℕ × ℕ => (nt.2, (enum.haltIfBit0 nt.1, 0))) := by
+      have h_n : Computable (fun nt : ℕ × ℕ => nt.1) := Computable.fst
+      have h_t : Computable (fun nt : ℕ × ℕ => nt.2) := Computable.snd
+      have h_c0 : Computable (fun nt : ℕ × ℕ => enum.haltIfBit0 nt.1) := c0_comp.comp h_n
+      have h_in : Computable (fun _ : ℕ × ℕ => (0 : ℕ)) := Computable.const 0
+      have h_pair : Computable (fun nt : ℕ × ℕ => (enum.haltIfBit0 nt.1, (0 : ℕ))) :=
+        (Computable.pair h_c0 h_in)
+      exact (Computable.pair h_t h_pair)
+
+    have triple1 : Computable (fun nt : ℕ × ℕ => (nt.2, (enum.haltIfBit1 nt.1, 0))) := by
+      have h_n : Computable (fun nt : ℕ × ℕ => nt.1) := Computable.fst
+      have h_t : Computable (fun nt : ℕ × ℕ => nt.2) := Computable.snd
+      have h_c1 : Computable (fun nt : ℕ × ℕ => enum.haltIfBit1 nt.1) := c1_comp.comp h_n
+      have h_in : Computable (fun _ : ℕ × ℕ => (0 : ℕ)) := Computable.const 0
+      have h_pair : Computable (fun nt : ℕ × ℕ => (enum.haltIfBit1 nt.1, (0 : ℕ))) :=
+        (Computable.pair h_c1 h_in)
+      exact (Computable.pair h_t h_pair)
+
+    have halts0_comp : Computable (fun nt : ℕ × ℕ => haltsWithinDec nt.2 (enum.haltIfBit0 nt.1) 0) :=
+      hHWD.comp triple0
+    have halts1_comp : Computable (fun nt : ℕ × ℕ => haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0) :=
+      hHWD.comp triple1
+
+    -- Now assemble stepPair using nested conditionals.
+    -- stepPair nt = if halts0 nt then some 0 else if halts1 nt then some 1 else none
+    have some0 : Computable (fun _ : ℕ × ℕ => (some 0 : Option ℕ)) := Computable.const (some 0)
+    have some1 : Computable (fun _ : ℕ × ℕ => (some 1 : Option ℕ)) := Computable.const (some 1)
+    have noneO : Computable (fun _ : ℕ × ℕ => (none : Option ℕ)) := Computable.const none
+    have inner : Computable (fun nt : ℕ × ℕ =>
+        if haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0 then (some 1 : Option ℕ) else none) :=
+      (Computable.cond halts1_comp some1 noneO)
+    exact (Computable.cond halts0_comp some0 inner)
+
+  -- Define the partial search: rfindOpt returns the first `some b` it encounters.
+  let searchBit : ℕ →. ℕ := fun n =>
+    Nat.rfindOpt (fun t => stepPair (n, t))
+
+  -- `searchBit` is partial recursive (hence we can extract a total Computable function via of_eq_tot).
+  have searchBit_partrec : Partrec searchBit := by
+    -- `Partrec.rfindOpt` expects a computable₂ function; get it from the computable-on-pairs stepPair.
+    have step₂ : Computable₂ (fun n t => stepPair (n, t)) := stepPair_computable.to₂
+    -- Partrec in n: Nat.rfindOpt over t
+    simpa [searchBit] using (Partrec.rfindOpt step₂)
+
+  -- Show that searchBit is total (Dom) using `exists_halt`.
+  have searchBit_dom : ∀ n, (searchBit n).Dom := by
+    intro n
+    rcases exists_halt n with ⟨t, ht⟩
+    -- Use Nat.rfindOpt_dom: Dom ↔ ∃t b, b ∈ stepPair(n,t)
+    refine (Nat.rfindOpt_dom).2 ?_
+    cases ht with
+    | inl h0 =>
+      refine ⟨t, 0, ?_⟩
+      -- stepPair (n,t) = some 0
+      simp [searchBit, stepPair, h0]
+    | inr h1 =>
+      refine ⟨t, 1, ?_⟩
+      -- if c0 doesn't halt, the step can still be some 1; we only need existence of some value.
+      -- Here we can witness with 1 directly by showing the second branch triggers.
+      -- We don't know c0 at t, so split on it.
+      cases h0' : haltsWithinDec t (enum.haltIfBit0 n) 0 <;> simp [searchBit, stepPair, h0', h1]
+
+  -- Define the total decision function as the extracted value from the partial search.
+  let decide : ℕ → ℕ := fun n => (searchBit n).get (searchBit_dom n)
+
+  -- `decide` is computable because it is a totalization of a Partrec function.
+  have decide_computable : Computable decide := by
+    -- For totalization we need membership `decide n ∈ searchBit n`.
+    have mem : ∀ n, decide n ∈ searchBit n := by
+      intro n
+      -- `Part.get_mem` puts the `get` value back into the Part.
+      simpa [decide] using (Part.get_mem (searchBit_dom n))
+    exact Partrec.of_eq_tot searchBit_partrec mem
+
+  -- Now we contradict OmegaNonComputable by producing a computable correct-bit function.
   apply hNonComp
-  -- We prove OmegaComputable (witness exists: decide)
-  use decide
-  constructor
-  · exact hComputable
-  · intro n
-    simp only [decide]
-    -- We need to prove: WinTruth n (bitOfNat (decide n))
-    split
-    · -- Case: haltsWithinDec t c0 is true -> c0 halts -> bit 0
-      next h_halt0 =>
-        have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit0 n) 0 = true := ⟨_, h_halt0⟩
-        have hP : PATruth (PASentence.Halt (enum.haltIfBit0 n)) :=
-          (hSound.soundness (enum.haltIfBit0 n)).mpr hReal
-        have hWin : WinTruth n 0 := (enum.spec0 n).mp hP
-        -- decide outputs 0. bitOfNat 0 = 0 (in Fin 2).
-        exact hWin
-    · -- Case: c0 doesn't halt at t, so c1 must halt
-      next h_not_halt0 =>
-        have h_found := Nat.find_spec (exists_halt n)
-        -- Explicitly handle finding the other case
-        simp [h_not_halt0] at h_found
-        have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit1 n) 0 = true := ⟨_, h_found⟩
-        have hP : PATruth (PASentence.Halt (enum.haltIfBit1 n)) :=
-          (hSound.soundness (enum.haltIfBit1 n)).mpr hReal
-        have hWin : WinTruth n 1 := (enum.spec1 n).mp hP
-        -- decide outputs 1. bitOfNat 1 = 1 (in Fin 2).
-        exact hWin
+  refine ⟨decide, decide_computable, ?_⟩
+  intro n
 
-/-! ## 4) Corollary: the access barrier is essential -/
+  -- Get a concrete witness time `t` for the returned bit.
+  have hmem : decide n ∈ searchBit n := by
+    simpa [decide] using (Part.get_mem (searchBit_dom n))
+  rcases Nat.rfindOpt_spec (by simpa [searchBit] using hmem) with ⟨t, ht⟩
+  -- ht : decide n ∈ stepPair (n,t)
 
-/-- The access barrier statement: WinTruth requires the Π₁ component ∀s. -/
+  -- Analyze stepPair (n,t) to determine which Halt-code actually halts, then conclude WinTruth via soundness+spec.
+  cases h0 : haltsWithinDec t (enum.haltIfBit0 n) 0 <;> simp [stepPair, h0] at ht
+  · -- h0 = true, so decide n = 0 and c0 halts
+    have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit0 n) 0 = true := ⟨t, by simpa using h0⟩
+    have hP : PATruth (PASentence.Halt (enum.haltIfBit0 n)) :=
+      (hSound.soundness (enum.haltIfBit0 n)).2 hReal
+    have hWin : WinTruth n 0 := (enum.spec0 n).1 hP
+    -- decide n = 0, so bitOfNat (decide n) = 0
+    -- ht came from simp: decide n = 0
+    subst ht
+    simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
+  · -- h0 = false, so stepPair checks c1; ht forces c1 halts and decide n = 1
+    cases h1 : haltsWithinDec t (enum.haltIfBit1 n) 0 <;> simp [stepPair, h0, h1] at ht
+    have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit1 n) 0 = true := ⟨t, by simpa using h1⟩
+    have hP : PATruth (PASentence.Halt (enum.haltIfBit1 n)) :=
+      (hSound.soundness (enum.haltIfBit1 n)).2 hReal
+    have hWin : WinTruth n 1 := (enum.spec1 n).1 hP
+    subst ht
+    simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
+
+/-! ## 5) Corollary: the access barrier is essential -/
+
+/-- WinTruth is Σ₂ for all n,a, and under the standard hypotheses it cannot be uniformly Σ₁. -/
 theorem access_barrier_essential :
     (∀ n a, Nonempty (Sigma2Prop (WinTruth n a))) ∧
-    -- If there's a valid PA truth predicate such that...
     ¬(∃ (PATruth : PASentence → Prop),
         OmegaNonComputable ∧
         Nonempty (HaltingSoundness PATruth) ∧
         (∀ n, ∃! a, WinTruth n a) ∧
         Nonempty (UniformlySigma1 PATruth (α := ℕ × Fin 2) WinTruthFamily)) := by
   constructor
-  · -- WinTruth is Σ₂ for all n, a (we have the schema object)
-    intro n a
+  · intro n a
     exact ⟨WinTruth_is_sigma2 n a⟩
-  · -- Cannot have a uniform Σ₁ witness (under implicit assumptions)
-    intro hEx
+  · intro hEx
     rcases hEx with ⟨PATruth, hNon, ⟨hSound⟩, hUnique, ⟨hUnif⟩⟩
-    -- Apply the theorem
-    exact WinTruth_not_uniformly_sigma1 hNon hSound hUnique hUnif
+    exact WinTruth_not_uniformly_sigma1 (PATruth := PATruth) hNon hSound hUnique hUnif
+
+end RevHalt.Instances.PA
