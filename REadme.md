@@ -1,385 +1,276 @@
-# RevHalt Framework Theory
+# RevHalt
 
-## Guiding Principle
+Lean 4 (Mathlib) formalization of a "Reverse Halting" framework based on a central idea:
 
-RevHalt is **foundational** in the sense of *clarifying structure and dependencies*, not in the sense of providing new decision power.
+> **Monotonize any trace via a closure operator `up`, then impose a minimal correctness condition on Kits over monotone traces.**  
+> This forces a **rigidity phenomenon (T1)**: the operator `Rev0_K` becomes *inevitably* equivalent to standard halting.
 
-### What is foundational here
-
-* **Clean separation of layers:**
-  Dynamic (`Trace`, `Halts`, `up`) / Procedure (`Kit`, contract) / Semantic (`Sat`, `CloE`) / Internalization limit (Gödel/T2).
-  The reader is forced to see *where* each hypothesis lives.
-
-* **Rigidity as normalization:**
-  `up` + "correct on monotones" ⇒ all admissible mechanisms collapse to the same verdict.
-  This is an *operational reference frame*: exotic procedures outside the domain are neutralized by `up`.
-
-* **Explicit oracle localization:**
-  The power is not hidden in `Rev`. It is in the *bridge* (`LR` + `DynamicBridge`) and in diagonalization hypotheses for T2/T3.
-
-* **Complementarity, not bypass:**
-  Incompleteness is not evaded — it is organized into a frontier of "true (certified) but unprovable" + sound extensions.
-
-### What is NOT claimed
-
-* T1 does **not** give an effective decision procedure.
-* `Rev0_K` does **not** provide truth beyond `Halts` without external hypotheses.
-* The framework **does not bypass** incompleteness.
-
-### Core axis: Dependency → Typing → Localization
-
-The framework's value is making explicit: *what depends on what*, and *where incompleteness enters*.
+The project then establishes:
+- **T1 (Canonicity)**: `Rev0_K` = `Halts` for any trace (under `DetectsMonotone`).
+- **T2 (Impossibility)**: no uniform internalization (total/correct/complete + r.e.) of such a verdict exists (diagonalization/Kleene).
+- **T3 (Complementarity)**: **sound** extensions exist **instance by instance** (quantifier swap), via external certificates / localized choices.
+- **OracleMachine**: architecture making explicit where non-mechanical power resides (bridge/oracle), separated from the machine (PartRec).
 
 ---
 
-## 1) Dynamic Layer: Traces, Halting, Normalization
+## Mathematical Overview
 
-### Traces
+### Traces and Halting
 
-A **trace** is a logical process:
+- **Trace**: `Trace := ℕ → Prop`
+- **Halting**: `Halts (T : Trace) : Prop := ∃ n, T n`
 
-* `Trace := ℕ → Prop`
-* Intuition: `T n` means "at step n, the property is reached".
+### Monotone Closure `up`
 
-### Halting (Minimal Specification)
-
-* `Halts T := ∃ n, T n`
-
-### Monotone Normalization (`up`)
-
-We transform any trace into a **cumulative** (monotone) trace:
-
-* `up T n := ∃ k ≤ n, T k`
-* Properties:
-  * `up_mono : Monotone (up T)`
-  * `exists_up_iff : (∃ n, up T n) ↔ (∃ n, T n)`
-
-This normalization is the mechanism that **neutralizes** exotic procedural behavior on non-monotone traces by forcing every input into a monotone domain.
-
-### Typing: `Prop` vs `PropT`
-
-* `Prop` = meta-level truth (external, Lean's `Prop`)
-* `PropT` = object-level sentences (coded statements in an internal formal system)
-* `Provable : PropT → Prop` lives at the interface between the two levels
-
----
-
-## 2) Procedural Layer: Kits and Rev Operator
-
-### Kit (Abstract Observer)
-
-A Kit is an observation mechanism:
-
-* `RHKit` contains `Proj : Trace → Prop`
-
-### Minimal Contract: `DetectsMonotone`
-
-A Kit is **valid** if it is correct on monotone traces:
-
-* `DetectsMonotone K := ∀ X, Monotone X → (K.Proj X ↔ ∃ n, X n)`
-
-This is a **strong** condition: it imposes **exact equivalence** with `∃ n` on every monotone trace. This is precisely what makes T1 inevitable.
-
-> **Note:** `DetectsMonotone` fixes `Proj` entirely on the image of `up`; `Rev0_K` merely restricts the domain of application to this image.
-
-### Rev Operator
-
-The canonized procedural verdict:
-
-* `Rev_K K T := K.Proj (up T)` (alias `Rev0_K`)
-
-Under `DetectsMonotone`, `Rev0_K` adds no "extensional truth" beyond `Halts`, but provides an **injection point** for procedures (solver, AI, oracle, engine, etc.) under a stability contract.
-
----
-
-## 3) T1 — Canonicity: Inter-Procedural Stability
-
-### T1 (Traces)
-
-Under `DetectsMonotone K`, for any trace:
-
-* `Rev0_K K T ↔ Halts T`
-
-The canonicity is obtained by (i) a **minimal contract on monotones** (`DetectsMonotone`) and (ii) a **monotone normalization** (`up`) that forces every input into this domain.
-
-### Corollary (Uniqueness)
-
-Two valid Kits always yield the same verdict:
-
-* `Rev0_K K1 T ↔ Rev0_K K2 T`
-
-**Why this works:** `DetectsMonotone` demands *full extensional correctness* on monotone traces — i.e., exact equivalence with `∃ n`. Then `up` maps everything into that fragment. So T1 is inevitable: it is a **closure-induced extensional collapse**.
-
-**Foundational Sense:** Operativity is "plug-and-play": different mechanisms can be plugged in, and as long as they respect the minimal contract (on monotones), the verdict becomes **canonical**.
-
-> **Key points:**
-> * **T1 is a closure lemma:** correctness on closed points (monotones) + closure `up` ⇒ rigidity of verdict.
-> * **T1 adds no power beyond `Halts`** — it stabilizes heterogeneous procedures under a contract.
-> * **The power is elsewhere:** in `LR`, in `DynamicBridge(Sat, LR)`, and in diagonalization hypotheses (for T2/T3).
-
-> **Note:** `Rev0_K` is a *semantic equivalence* to `Halts`, not a computable decision method. Any computability lives in how a concrete `K.Proj` is realized.
-
----
-
-## 4) Semantic Bridge: Making Semantics "Dynamic"
-
-### External Semantics
-
-We fix:
-
-* `Sat : Model → Sentence → Prop`
-
-We define semantic consequence via model/theory closure:
-
-* `ModE Sat Γ := {M | ∀ φ ∈ Γ, Sat M φ}`
-* `ThE Sat 𝕄 := {φ | ∀ M ∈ 𝕄, Sat M φ}` (note: 𝕄 is a class of models, distinct from Kit `K`)
-* `CloE Sat Γ := ThE Sat (ModE Sat Γ)`
-* `SemConsequences Sat Γ φ := φ ∈ CloE Sat Γ`
-
-### Local Reading `LR`
-
-We introduce a local compilation:
-
-* `LR : Set Sentence → Sentence → Trace`
-
-### Bridge Hypothesis
-
-* `DynamicBridge Sat LR := ∀ Γ φ, SemConsequences Sat Γ φ ↔ Halts (LR Γ φ)`
-
-### Procedural Verdict on a Pair (Γ, φ)
-
-* `verdict_K LR K Γ φ := Rev0_K K (LR Γ φ)`
-
-### T1 (Semantics)
-
-For any semantics that admits an `LR` satisfying `DynamicBridge`, and any `K` satisfying `DetectsMonotone`:
-
-* **Hypotheses:** `DynamicBridge Sat LR` **and** `DetectsMonotone K`
-* **Conclusion:** `SemConsequences Sat Γ φ ↔ verdict_K LR K Γ φ`
-
-**Sense:** Semantics become **dynamic** via `LR`, then **operationally stable** via `Rev` and T1.
-
----
-
-## 5) Categorical Structure: Two Worlds, Two Closures
-
-The framework operates in **two distinct worlds**:
-
-| World | Objects | Closure Operator |
-|-------|---------|------------------|
-| **Dynamic** | Traces (`ℕ → Prop`) | `up` — monotonizes a trace |
-| **Semantic** | Theories (`Set Sentence`) | `CloE` — closes under logical consequence |
-
-Each world has its own closure:
-
-* In **traces**: `up T n := ∃ k ≤ n, T k` (cumulative/monotone)
-* In **sentences**: `CloE Γ := ThE (ModE Γ)` (semantic closure)
-
-Both satisfy: **extensive** (Γ ⊆ closure(Γ)), **monotone** (Γ ⊆ Δ → closure(Γ) ⊆ closure(Δ)), **idempotent** (closure(closure(Γ)) = closure(Γ)).
-
-**Why this matters:** The two worlds are independent. To connect them, we need a **bridge**.
-
----
-
-## 6) Bridge Conditions: Connecting the Two Worlds
-
-The bridge is `LR : Set Sentence → Sentence → Trace`. It compiles a semantic question (Γ, φ) into a trace.
-
-**The key question:** Does `LR` respect both closures?
-
-The answer is the **commutation condition**:
-
-```
-up (LR Γ φ) = LR (CloE Γ) φ
+```lean
+def up (T : Trace) : Trace := fun n => ∃ k ≤ n, T k
 ```
 
-**What this means:** 
-* Closing the theory first (`CloE`), then compiling (`LR`)
-* OR compiling first (`LR`), then normalizing the trace (`up`)
-* **Both paths give the same result.**
+Intuition: `up T n` means "**T has been true at or before instant n**".
+
+Two key facts (proved in `Base/Trace.lean`):
+
+* `up T` is monotone.
+* `∃n, up T n ↔ ∃n, T n` (exact preservation of existence).
+
+### Kits and Minimal Structural Condition
+
+A Kit:
+
+```lean
+structure RHKit where
+  Proj : Trace → Prop
+```
+
+Condition **DetectsMonotone**:
+
+```lean
+def DetectsMonotone (K : RHKit) : Prop :=
+  ∀ X : Trace, Monotone X → (K.Proj X ↔ ∃ n, X n)
+```
+
+Reading: the Kit is **forced to be standard on monotone traces** (but may be exotic elsewhere).
+
+### Reverse Halting
+
+```lean
+def Rev_K (K : RHKit) (T : Trace) : Prop := K.Proj (up T)
+abbrev Rev0_K := Rev_K
+```
+
+---
+
+## Results (Theorems)
+
+### T1 — Canonicity (Rigidity)
+
+* `T1_traces`: for any trace `T`, if `DetectsMonotone K` then
+  `Rev0_K K T ↔ Halts T`.
+* `T1_uniqueness`: all valid Kits yield the same verdict on any trace.
+
+Semantic version (`T1_semantics`): if a **bridge** links semantic consequence to `Halts (LR Γ φ)`, then the Kit verdict coincides with semantic consequence.
+
+### T2 — Impossibility of Uniform Internalization (Diagonalization)
+
+On `Nat.Partrec.Code`, we encode a constant "machine" trace:
+`Machine c : Trace := fun _ => ∃ x, x ∈ c.eval 0`.
+
+By combining:
+
+* T1 (which identifies the verdict with halting),
+* a diagonal bridge via Kleene `fixed_point₂`,
+* and a minimal notion of internal system (`ImpossibleSystem`),
+
+we obtain `T2_impossibility`: **no** internal predicate `H(e)` can be *uniformly* total + correct + complete (with the required r.e. semi-decidability).
+
+### T3 — Complementarity (Non-Uniform Sound Extensions)
+
+T3 constructs **corpora** (`Set PropT`) and proves their **external soundness** via a predicate `Truth : PropT → Prop`.
+
+* One-sided frontier: `S1Set S encode_halt`
+* Extension: `S3Set S S2 encode_halt := S2 ∪ S1Set ...`
+* Two-sided local variant: `OraclePick` chooses `encode_halt e` or `encode_not_halt e` via a certificate, and extends by `S2 ∪ {pick.p}`.
+
+### Quantifier Swap (Key to T2/T3 Coexistence)
+
+* **Forbidden (T2)**: `¬ ∃H, ∀e, ...` (uniform)
+* **Permitted (T3)**: `∀e, ∃Sₑ, ...` (instance by instance)
+
+The project formalizes that these two forms coexist without contradiction: power is **localized** (certificates/choices) and **non-uniformizable**.
+
+---
+
+## What is "New" (Structural Explanation)
+
+The novelty is not "an exotic Kit": **T1 shows this is impossible** once we impose correctness on monotone traces, because `Rev0_K` always passes through `up`.
+
+The following sections develop this point precisely.
+
+---
+
+## Structural Notes (A–H)
+
+### A. `up` is a Closure Operator (Reflection to Monotone Traces)
+
+Definition:
 
 ```
-Theories ──CloE──► Closed Theories
-    │                    │
-   LR                   LR
-    ▼                    ▼
-Traces ────up────► Monotone Traces
+(up T)(n)  ⟺  ∃ k ≤ n, T(k)
 ```
 
-**Consequence:** The verdict `Rev0_K K (LR Γ φ)` depends only on `CloE Sat Γ`, not on the syntactic presentation of Γ.
+Structural properties:
 
-**Structural interpretation:** This is the natural condition (closure morphism) ensuring that compilation is insensitive to the syntactic presentation of Γ. The *usage* here — connecting trace-level closure to semantic closure via a typed bridge — is what characterizes this framework.
+1. **Extensive**: `T ≤ up T` (pointwise)
+   `T(n) ⇒ (up T)(n)` by taking `k = n`.
 
-> **Note:** The equality `up (LR Γ φ) = LR (CloE Sat Γ) φ` is **strong** (extensional equality of traces). If you only need verdict invariance, a weaker condition suffices: `Halts(LR Γ φ) ↔ Halts(LR (CloE Sat Γ) φ)`.
+2. **Monotone (as operator)**: if `T ≤ U` then `up T ≤ up U`.
 
----
+3. **Idempotent**: `up(up T) = up T`.
+   (Flattening an existential quantifier over `≤`.)
 
-## 7) T2 — Impossibility: The Internalization Barrier
+Conclusion: `up` is a **closure** projecting any trace onto its **canonical monotone version**.
+In order/category language: it is a **reflection** into the subclass of monotone traces.
 
-### Concrete Computation Model
+### B. `Halts` and `up`: Isolating the Σ₁ Content (Existence)
 
-We take `Nat.Partrec.Code` and a "Machine" trace:
+```
+Halts(T) ⟺ ∃ n, T(n)
+```
 
-* `Machine c : Trace := fun _ => ∃ x, x ∈ c.eval 0`
-* Thus `Halts (Machine c) ↔ c converges on 0`
+And the lemma:
 
-### Diagonal Bridge
+```
+(∃ n, up(T)(n)) ⟺ (∃ n, T(n))
+```
 
-We fabricate a code `e` such that:
+Thus the closure `up` **exactly preserves** the existential content.
 
-* `Rev0_K K (Machine e) ↔ target e`
+This is the reason everything "locks in" afterwards.
 
-The fixed point (SRT) serves as an ingredient, but the diagonal statement applies to `Rev0_K` (the canonical verdict), not directly to `eval`.
+### C. `DetectsMonotone`: Correctness on Closed Objects
 
-### Minimal Internal System
+Axiom:
 
-`ImpossibleSystem` formalizes:
+```
+Monotone(X) ⇒ (K.Proj(X) ⟺ ∃ n, X(n))
+```
 
-* `Provable`, `Not`, `FalseT`, consistency, explosion.
+Combined with A, this means: on **closed** traces (fixed points of `up`), the Kit cannot "invent".
+The Kit is free only outside closed objects… but `Rev0_K` never gives it access to those cases.
 
-### Result
+### D. T1 = Unique Extension Along a Closure (Rigidity)
 
-There exists no internal predicate `H e` that is simultaneously:
+Definition:
 
-* **Total** (the system proves `H e` or `¬H e`),
-* **Correct and Complete** with respect to `Rev0_K`,
-* and **Semi-Decidable** on `Provable (¬H e)`.
+```
+Rev_K(T) := K.Proj(up T)
+```
 
-> **Why semi-decidability?** This hypothesis makes the diagonal attack *effective in the meta-reasoning*: it allows enumerating proofs of `¬H e` (r.e. of `Provable`), which is needed to construct the fixed-point code `e*`.
->
-> **Operationally:** There exists a partial recursive `f(e)` that halts iff `Provable(¬H e)`. This is the standard ingredient for effective diagonalization.
+Since `up T` is monotone:
 
-**What T2 really says:** This is a Rice/Gödel style diagonalization aimed at any internal total predicate trying to coincide with `Rev0_K` on machine traces. Since `Rev0_K K (Machine e) ↔ Halts(Machine e)` (by T1), "internalizing Rev0" is just "internally deciding halting."
+```
+Rev_K(T) ⟺ ∃ n, up(T)(n) ⟺ ∃ n, T(n) ⟺ Halts(T)
+```
 
-The barrier is not an artifact of the Kit layer — it is the standard internalization impossibility resurfacing *after* the normalization/canonicity step.
+Reading: **any** semantics `K.Proj` that is correct on closed objects, once precomposed with `up`,
+becomes a unique invariant: existence.
+Therefore, novelty cannot reside "in K".
 
-**Sense:** The canonical verdict cannot be absorbed into a total internal decider. Operativity must remain **external/complementary**, not totalized in `Provable`.
+### E. T2: Diagonalization = Impossibility of Uniformly Internalizing a Σ₁ Truth
 
----
+On machines:
 
-## 8) T3 — Complementarity: Non-Internalizable but Sound Frontier
+```
+Machine(c)(n) ⟺ ∃ x, x ∈ c.eval(0)
+```
 
-We fix:
+so `Halts(Machine(c))` = "c converges".
 
-* An internal corpus `S2 : Set PropT` with external soundness `h_S2_sound : p∈S2 → Truth p`,
-* A translation `encode_halt : Code → PropT`.
+T1 forces:
 
-### Frontier S₁ (One-Sided)
+```
+Rev(Machine(c)) ⟺ "c converges"
+```
 
-* `S1Set := { encode_halt e | Rev0_K K (Machine e) ∧ ¬ Provable(encode_halt e) }`
+With Kleene SRT, we construct `e` such that:
 
-The frontier is not "independence in the model-theoretic sense", it is "certified (external) but unprovable (internal)".
+```
+Rev(e) ⟺ S ⊢ ¬H(e)
+```
 
-### Complementary Extension
+Then totality/correctness/completeness of `H` (plus minimal consistency) yields contradiction.
 
-* `S3Set := S2 ∪ S1Set`
+Reading: we do not use "code details", only
 
-### T3.1 (Sound Extension)
+* an existential fact (Σ₁),
+* a minimal r.e. hypothesis (to diagonalize),
+* minimal consistency (to explode).
 
-Under encoding correctness hypotheses:
+### F. T3: Complementarity = Non-Uniform Sound Extensions (Subtlety)
 
-* `S3` extends `S2`, remains sound (w.r.t `Truth`),
-* and contains statements that are **certified** but **unprovable**.
+Here, T3 proves:
 
-### T3.2 (Disjoint Families)
+```
+∀ p ∈ S₃, Truth(p)
+```
 
-With infinitely many S₁ witnesses + index partition, we construct a family `{S3_n}` of sound extensions, disjoint on the added part.
+Thus T3 concerns **corpora** (sets of true axioms), not yet a proof relation `Provable_{S₃}` deductively closed.
+"Decision" is in the sense of: **adding the axiom** (membership), not: "uniform internal procedure".
 
-### Two-Sided Oracle Variant
+* one-sided:
+  ```
+  S₁ = { encode_halt(e) | Rev(e) ∧ ¬(S ⊢ encode_halt(e)) }
+  S₃ = S₂ ∪ S₁
+  ```
+* two-sided local: `OraclePick` carries the branch without decidability, and extends by `S₂ ∪ {p}`.
 
-`OraclePick` explicitly encapsulates the "halt / not halt" choice without internal decidability, enabling a local sound extension `S2 ∪ {pick.p}`.
+This is exactly `∀e, ∃` (certificate/extension), compatible with T2 (no uniform `∃`).
 
-> **Note**: Locally, we assume `pick`. Globalizing this into a function `e ↦ pick(e)` would require a form of decision (classical/Decidable) or an external oracle.
+### G. Where is the Novelty at the Structural Level?
 
-**What T3 requires (meta-assumptions):**
+1. **T1 Rigidity** (canonicity via closure): neutralizes any "Kit power".
+2. **Localization of non-mechanicity**: bridge/oracle/certificate/choice, and nowhere else.
+3. **Quantifier swap** as a difference in logical strength: `∃H, ∀e` vs `∀e, ∃Sₑ`.
+4. **Non-internalizable frontier**: `S₁` is indexed by a hard existential property (halting).
 
-1. `encode_halt` is truth-preserving: `Truth(encode_halt e) ↔ Halts(Machine e)`
-2. The base corpus is externally sound: `Provable p → Truth p`
-3. The internal system is **recursively axiomatized** (r.e.)
-4. The system has **enough arithmetic strength** (Σ1-representability of computation)
-5. **Σ1-soundness** (or stronger) to ensure existence of true-but-unprovable halts
+### H. Two Critical Points (To Be Aware Of)
 
-**Sense:** Instead of suffering incompleteness as a loss of operativity, we organize it into **complementarity**: internal proof (`S2`) + certifiable frontier (`S1`) + sound extensions (`S3`).
+1. **Deciding by axiom addition vs by deduction**: for "deciding in the proof-theoretic sense",
+   one must define `Provable_{Sₑ}` (deductive closure of `S` + added axioms) and relate the rules to `Truth`.
 
----
-
-## 9) Where is the "Oracle" in the Framework?
-
-The framework does not hide the oracle: it **factorizes** it.
-
-* **Truth Oracle**: `Sat` / `Truth`
-* **Compilation/Measure Oracle**: `LR` + `DynamicBridge`
-* **Procedural Oracle**: `K.Proj` (stabilized by `up` + T1)
-* **Negative R.E. Oracle**: `f` (semi-decidability used to diagonalize)
-* **Two-Sided Decision Oracle**: `OraclePick`
-
-This decomposition is precisely what makes the framework "surgical": every dependency is typed and localized.
-
----
-
-## Summary
-
-RevHalt is not a new definition of `Halts`: it is a **canonicalization mechanism** that:
-
-* Transforms semantic truths into dynamics (via `LR`),
-* Stabilizes heterogeneous procedures (via the closure `up` + T1),
-* Proves the internalization limit (T2),
-* Organizes incompleteness into sound complementarity (T3).
-
----
-
-## What is Proved vs What is Assumed
-
-### Proved (purely from definitions)
-
-| Result | Statement |
-|--------|-----------|
-| **T1 (traces)** | `Rev0_K K T ↔ Halts T` for any `K` satisfying `DetectsMonotone` |
-| **T1 (uniqueness)** | All valid Kits coincide on all traces |
-
-### Assumed (structural conditions on LR)
-
-| Assumption | Role |
-|------------|------|
-| `DynamicBridge(Sat, LR)` | Semantic-to-dynamic equivalence — the "oracle" is here |
-| `LR_commutes_with_closure` | Ensures verdict depends only on `CloE Sat Γ` (strong structural assumption) |
-| Computability claims on `LR` or `K` | Not provided by the framework |
-
-### Proved (given structural assumptions + meta-assumptions)
-
-| Result | Requires |
-|--------|----------|
-| **Verdict invariance** | `LR_commutes_with_closure` + `DetectsMonotone K` |
-| **T2** | Sound r.e. theory + diagonalization (Kleene fixed point) |
-| **T3** | r.e. axiomatization + Σ1-representability + Σ1-soundness |
+2. **Infinity of the frontier**: `InfiniteS1` is a hypothetical structure;
+   an "intrinsic" proof of infinity would require parameterized iteration/diagonalization.
 
 ---
 
-## Core Insight
+## File Organization
 
-`Rev0_K` is **not** a new capability or decision procedure. It is a **closure-induced canonicalization**: by precomposing any `Proj` with `up` and requiring correctness only on the monotone subdomain, all admissible procedures become extensionally equal.
-
-### Core Lemma (Closure Canonicalization)
-
-**Abstract form:**
-* Let `C` be a closure operator (extensive, monotone, idempotent).
-* Let `P` be any predicate that is *correct on closed points*: `∀ X, Closed(X) → (P X ↔ ∃ n, X n)`.
-* Then `P ∘ C` is unique and equals the existential.
-
-**Instantiation in RevHalt:**
-* `C = up` (closure on traces)
-* `P = K.Proj` with `DetectsMonotone K` (correct on monotones = closed points)
-* Conclusion: `Rev0_K K T = K.Proj (up T) ↔ Halts T`
-
-This makes the "closure-induced collapse" structure immediately visible.
+* `RevHalt/Base/Trace.lean`: `Trace`, `Halts`, `up`, `up_mono`, `exists_up_iff`
+* `RevHalt/Base/Kit.lean`: `RHKit`, `DetectsMonotone`, `Rev_K`, `Rev0_K`
+* `RevHalt/Theory/Canonicity.lean`: T1, semantic bridge
+* `RevHalt/Theory/Impossibility.lean`: T2 (Kleene SRT + diagonalization)
+* `RevHalt/Theory/Complementarity.lean`: T3 (one-sided, strong, two-sided oracle)
+* `RevHalt/Theory/QuantifierSwap.lean`: T2/T3 coexistence via quantifier swap
+* `RevHalt/Theory/OracleMachine.lean`: a/o/c-machine architecture, T2 barrier
 
 ---
 
-The abstraction:
+## Building / Verifying
 
-* `up` is a **closure operator** on traces,
-* `DetectsMonotone` requires correctness on the **closed subdomain**,
-* `Rev0_K` is **evaluation after closure**,
-* All valid Kits agree because `up` forces every input into the domain where the contract pins `Proj` down.
+Prerequisites: Lean 4 + Mathlib (via `lake`).
 
-Incompleteness is not bypassed — it is **isolated** into the bridge (`LR`, `DynamicBridge`) and into internalization constraints (T2).
+```bash
+lake build
+```
+
+To verify a specific file:
+
+```bash
+lake env lean RevHalt/Theory/Canonicity.lean
+```
+
+---
+
+## License / Contribution
+
+Add your license (MIT/BSD/etc.) and contribution conventions here as needed.
