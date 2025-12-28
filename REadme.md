@@ -1,276 +1,306 @@
 # RevHalt
 
-Lean 4 (Mathlib) formalization of a "Reverse Halting" framework based on a central idea:
+Lean 4 (Mathlib) formalization of a framework where a “reverse” verdict is forced to coincide with standard halting once it is routed through a closure operator.
 
-> **Monotonize any trace via a closure operator `up`, then impose a minimal correctness condition on Kits over monotone traces.**  
-> This forces a **rigidity phenomenon (T1)**: the operator `Rev0_K` becomes *inevitably* equivalent to standard halting.
+Core message:
 
-The project then establishes:
-- **T1 (Canonicity)**: `Rev0_K` = `Halts` for any trace (under `DetectsMonotone`).
-- **T2 (Impossibility)**: no uniform internalization (total/correct/complete + r.e.) of such a verdict exists (diagonalization/Kleene).
-- **T3 (Complementarity)**: **sound** extensions exist **instance by instance** (quantifier swap), via external certificates / localized choices.
-- **OracleMachine**: architecture making explicit where non-mechanical power resides (bridge/oracle), separated from the machine (PartRec).
+- T1 (rigidity): any valid kit is forced to agree with `Halts` on every trace (kit power collapses).
+- T2 (uniform barrier): no single internal predicate can uniformly totalize/correctly/complete-decide that verdict (diagonalization).
+- T3 (local power): sound extensions exist instance-by-instance, including a two-sided form where the branch is carried by a certificate (Fork/oracle), not computed uniformly.
 
----
-
-## Mathematical Overview
-
-### Traces and Halting
-
-- **Trace**: `Trace := ℕ → Prop`
-- **Halting**: `Halts (T : Trace) : Prop := ∃ n, T n`
-
-### Monotone Closure `up`
-
-```lean
-def up (T : Trace) : Trace := fun n => ∃ k ≤ n, T k
-```
-
-Intuition: `up T n` means "**T has been true at or before instant n**".
-
-Two key facts (proved in `Base/Trace.lean`):
-
-* `up T` is monotone.
-* `∃n, up T n ↔ ∃n, T n` (exact preservation of existence).
-
-### Kits and Minimal Structural Condition
-
-A Kit:
-
-```lean
-structure RHKit where
-  Proj : Trace → Prop
-```
-
-Condition **DetectsMonotone**:
-
-```lean
-def DetectsMonotone (K : RHKit) : Prop :=
-  ∀ X : Trace, Monotone X → (K.Proj X ↔ ∃ n, X n)
-```
-
-Reading: the Kit is **forced to be standard on monotone traces** (but may be exotic elsewhere).
-
-### Reverse Halting
-
-```lean
-def Rev_K (K : RHKit) (T : Trace) : Prop := K.Proj (up T)
-abbrev Rev0_K := Rev_K
-```
+This project does not claim a stronger decider. It formalizes:
+- where “power cannot live” (kits, once forced to be correct on monotone traces),
+- where it cannot be made uniform (internalization),
+- where it can live safely (local certified extensions and bifurcations).
 
 ---
 
-## Results (Theorems)
+## One-line contract
 
-### T1 — Canonicity (Rigidity)
+If a kit is correct on monotone traces, then after precomposing with the monotone closure `up`, the resulting verdict is forced to be exactly standard halting.
 
-* `T1_traces`: for any trace `T`, if `DetectsMonotone K` then
-  `Rev0_K K T ↔ Halts T`.
-* `T1_uniqueness`: all valid Kits yield the same verdict on any trace.
-
-Semantic version (`T1_semantics`): if a **bridge** links semantic consequence to `Halts (LR Γ φ)`, then the Kit verdict coincides with semantic consequence.
-
-### T2 — Impossibility of Uniform Internalization (Diagonalization)
-
-On `Nat.Partrec.Code`, we encode a constant "machine" trace:
-`Machine c : Trace := fun _ => ∃ x, x ∈ c.eval 0`.
-
-By combining:
-
-* T1 (which identifies the verdict with halting),
-* a diagonal bridge via Kleene `fixed_point₂`,
-* and a minimal notion of internal system (`ImpossibleSystem`),
-
-we obtain `T2_impossibility`: **no** internal predicate `H(e)` can be *uniformly* total + correct + complete (with the required r.e. semi-decidability).
-
-### T3 — Complementarity (Non-Uniform Sound Extensions)
-
-T3 constructs **corpora** (`Set PropT`) and proves their **external soundness** via a predicate `Truth : PropT → Prop`.
-
-* One-sided frontier: `S1Set S encode_halt`
-* Extension: `S3Set S S2 encode_halt := S2 ∪ S1Set ...`
-* Two-sided local variant: `OraclePick` chooses `encode_halt e` or `encode_not_halt e` via a certificate, and extends by `S2 ∪ {pick.p}`.
-
-### Quantifier Swap (Key to T2/T3 Coexistence)
-
-* **Forbidden (T2)**: `¬ ∃H, ∀e, ...` (uniform)
-* **Permitted (T3)**: `∀e, ∃Sₑ, ...` (instance by instance)
-
-The project formalizes that these two forms coexist without contradiction: power is **localized** (certificates/choices) and **non-uniformizable**.
+This is the source of T1 rigidity.
 
 ---
 
-## What is "New" (Structural Explanation)
+## Core objects
 
-The novelty is not "an exotic Kit": **T1 shows this is impossible** once we impose correctness on monotone traces, because `Rev0_K` always passes through `up`.
+### Traces and halting
 
-The following sections develop this point precisely.
+- Trace: `Trace := ℕ → Prop`
+- Halting: `Halts (T : Trace) : Prop := ∃ n, T n`
 
----
+### The monotone closure `up`
 
-## Structural Notes (A–H)
+`up` canonically monotonizes any trace:
 
-### A. `up` is a Closure Operator (Reflection to Monotone Traces)
+- `(up T) n` means: “T was true at or before time n”
+- `up T` is monotone in time
+- existential content is preserved exactly: `Halts (up T) ↔ Halts T`
 
-Definition:
+Intuition: `up` forgets non-monotone timing details and retains only “an event occurred at some time”.
 
-```
-(up T)(n)  ⟺  ∃ k ≤ n, T(k)
-```
+Structural viewpoint: `up` is a closure operator on traces:
+- extensive: `T ≤ up T`
+- monotone (as an operator): `T ≤ U` implies `up T ≤ up U`
+- idempotent: `up (up T) = up T`
 
-Structural properties:
+This closure viewpoint is what makes “rigidity” a theorem rather than a slogan.
 
-1. **Extensive**: `T ≤ up T` (pointwise)
-   `T(n) ⇒ (up T)(n)` by taking `k = n`.
+### Kits and the minimal correctness condition
 
-2. **Monotone (as operator)**: if `T ≤ U` then `up T ≤ up U`.
+A kit is just a projection on traces:
 
-3. **Idempotent**: `up(up T) = up T`.
-   (Flattening an existential quantifier over `≤`.)
+- `structure RHKit where Proj : Trace → Prop`
 
-Conclusion: `up` is a **closure** projecting any trace onto its **canonical monotone version**.
-In order/category language: it is a **reflection** into the subclass of monotone traces.
+A kit is considered valid when it is correct on monotone traces:
 
-### B. `Halts` and `up`: Isolating the Σ₁ Content (Existence)
+- `DetectsMonotone K := ∀ X, Monotone X → (K.Proj X ↔ Halts X)`
 
-```
-Halts(T) ⟺ ∃ n, T(n)
-```
+Crucial point: this condition does not restrict `K` on non-monotone traces.
+But `Rev0_K` will only feed monotone traces into `K` (because of `up`).
 
-And the lemma:
+### Reverse halting
 
-```
-(∃ n, up(T)(n)) ⟺ (∃ n, T(n))
-```
+Define the “reverse” verdict by precomposing the kit with `up`:
 
-Thus the closure `up` **exactly preserves** the existential content.
-
-This is the reason everything "locks in" afterwards.
-
-### C. `DetectsMonotone`: Correctness on Closed Objects
-
-Axiom:
-
-```
-Monotone(X) ⇒ (K.Proj(X) ⟺ ∃ n, X(n))
-```
-
-Combined with A, this means: on **closed** traces (fixed points of `up`), the Kit cannot "invent".
-The Kit is free only outside closed objects… but `Rev0_K` never gives it access to those cases.
-
-### D. T1 = Unique Extension Along a Closure (Rigidity)
-
-Definition:
-
-```
-Rev_K(T) := K.Proj(up T)
-```
-
-Since `up T` is monotone:
-
-```
-Rev_K(T) ⟺ ∃ n, up(T)(n) ⟺ ∃ n, T(n) ⟺ Halts(T)
-```
-
-Reading: **any** semantics `K.Proj` that is correct on closed objects, once precomposed with `up`,
-becomes a unique invariant: existence.
-Therefore, novelty cannot reside "in K".
-
-### E. T2: Diagonalization = Impossibility of Uniformly Internalizing a Σ₁ Truth
-
-On machines:
-
-```
-Machine(c)(n) ⟺ ∃ x, x ∈ c.eval(0)
-```
-
-so `Halts(Machine(c))` = "c converges".
-
-T1 forces:
-
-```
-Rev(Machine(c)) ⟺ "c converges"
-```
-
-With Kleene SRT, we construct `e` such that:
-
-```
-Rev(e) ⟺ S ⊢ ¬H(e)
-```
-
-Then totality/correctness/completeness of `H` (plus minimal consistency) yields contradiction.
-
-Reading: we do not use "code details", only
-
-* an existential fact (Σ₁),
-* a minimal r.e. hypothesis (to diagonalize),
-* minimal consistency (to explode).
-
-### F. T3: Complementarity = Non-Uniform Sound Extensions (Subtlety)
-
-Here, T3 proves:
-
-```
-∀ p ∈ S₃, Truth(p)
-```
-
-Thus T3 concerns **corpora** (sets of true axioms), not yet a proof relation `Provable_{S₃}` deductively closed.
-"Decision" is in the sense of: **adding the axiom** (membership), not: "uniform internal procedure".
-
-* one-sided:
-  ```
-  S₁ = { encode_halt(e) | Rev(e) ∧ ¬(S ⊢ encode_halt(e)) }
-  S₃ = S₂ ∪ S₁
-  ```
-* two-sided local: `OraclePick` carries the branch without decidability, and extends by `S₂ ∪ {p}`.
-
-This is exactly `∀e, ∃` (certificate/extension), compatible with T2 (no uniform `∃`).
-
-### G. Where is the Novelty at the Structural Level?
-
-1. **T1 Rigidity** (canonicity via closure): neutralizes any "Kit power".
-2. **Localization of non-mechanicity**: bridge/oracle/certificate/choice, and nowhere else.
-3. **Quantifier swap** as a difference in logical strength: `∃H, ∀e` vs `∀e, ∃Sₑ`.
-4. **Non-internalizable frontier**: `S₁` is indexed by a hard existential property (halting).
-
-### H. Two Critical Points (To Be Aware Of)
-
-1. **Deciding by axiom addition vs by deduction**: for "deciding in the proof-theoretic sense",
-   one must define `Provable_{Sₑ}` (deductive closure of `S` + added axioms) and relate the rules to `Truth`.
-
-2. **Infinity of the frontier**: `InfiniteS1` is a hypothetical structure;
-   an "intrinsic" proof of infinity would require parameterized iteration/diagonalization.
+- `Rev0_K K T := K.Proj (up T)`
 
 ---
 
-## File Organization
+## Main results (T1–T3)
 
-* `RevHalt/Base/Trace.lean`: `Trace`, `Halts`, `up`, `up_mono`, `exists_up_iff`
-* `RevHalt/Base/Kit.lean`: `RHKit`, `DetectsMonotone`, `Rev_K`, `Rev0_K`
-* `RevHalt/Theory/Canonicity.lean`: T1, semantic bridge
-* `RevHalt/Theory/Impossibility.lean`: T2 (Kleene SRT + diagonalization)
-* `RevHalt/Theory/Complementarity.lean`: T3 (one-sided, strong, two-sided oracle)
-* `RevHalt/Theory/QuantifierSwap.lean`: T2/T3 coexistence via quantifier swap
-* `RevHalt/Theory/OracleMachine.lean`: a/o/c-machine architecture, T2 barrier
+### T1 — Rigidity / canonicity
+
+Because `up T` is always monotone, `DetectsMonotone` applies immediately:
+
+- `Rev0_K K T ↔ Halts (up T) ↔ Halts T`
+
+Consequences:
+
+- No “exotic power” can be hidden in the kit: once it is correct on monotone traces, `Rev0_K` is forced to be standard halting.
+- All valid kits agree on every trace (kit-invariance): there do not exist two valid kits that differ on any input trace.
+
+This is the core structural novelty: correctness on the closed/reflected objects plus precomposition by the closure yields uniqueness/rigidity.
+
+### T2 — Impossibility of uniform internalization (diagonalization)
+
+Once T1 identifies the verdict with a Σ1-style existence fact (halting), one can ask for an internal predicate `H(e)` that is:
+
+- total (decides every code),
+- correct (proves `H(e)` when the machine halts),
+- complete (proves `Not (H(e))` when it does not),
+- and has the r.e./semi-decidability needed to run the diagonal construction.
+
+Using a fixed-point / diagonal bridge (Kleene style), the project derives a contradiction:
+
+- there is no single internal uniform procedure/predicate that captures the verdict on all codes.
+
+This is a barrier theorem: it is not about code tricks, but about the logical shape “uniformly deciding a Σ1 fact”.
+
+### T3 — Complementarity: sound extensions exist instance-by-instance
+
+T3 shows you can extend sound corpora by adding true but unprovable statements, locally, without contradicting T2.
+
+Important distinction:
+
+- T3 is stated at the level of corpora: sets of axioms with external truth (`Truth`).
+- It is not (by default) a claim about a deductively closed proof system `Provable_{S}`.
+- “Deciding” in T3 means: adding an axiom (membership), not producing a uniform internal decision predicate.
+
+T3 comes in two complementary forms:
+
+#### T3 (one-sided frontier)
+
+Build a frontier set of new true axioms indexed by instances:
+
+- include `encode_halt(e)` whenever `Rev(e)` holds but the base system does not prove it,
+- extend a sound base corpus by union with that frontier.
+
+This yields many sound extensions, but no uniform internal rule selecting all of them.
+
+#### T3 (two-sided local oracle / certificate)
+
+For each `e`, a certificate chooses one of two branches:
+
+- either add `encode_halt(e)`,
+- or add `encode_not_halt(e)`,
+
+and the extension by that single axiom is sound (assuming the certificate is sound relative to external truth).
+
+The certificate carries the branch. The framework never claims there is a uniform internal decider that outputs the branch.
+
+This is the explicit quantifier swap:
+
+- forbidden by T2: `exists H. forall e. decide(e)` (one uniform predicate),
+- permitted by T3: `forall e. exists certificate/extension. decide_locally(e)` (instance-by-instance).
 
 ---
 
-## Building / Verifying
+## Structural sketch (condensed)
+
+1) `up` is a closure operator on traces: it projects any trace to a monotone one and preserves `Halts` exactly.
+
+2) `DetectsMonotone` constrains a kit only on monotone traces; since `Rev0_K` evaluates `K` only on `up T`, the kit never sees non-closed inputs.
+
+3) T1 follows as rigidity: `Rev0_K K T` collapses to `Halts T` for all `T`, hence verdicts are kit-invariant.
+
+4) T2 is then a uniform impossibility: no internal predicate can totalize/correctly/complete-decide that existence fact for all codes (fixed point/diagonalization).
+
+5) From T2 one extracts typed “gap” objects (true-but-unprovable), yielding strict extensions; this becomes fuel in the axiom-dynamics graph.
+
+6) Fork packages two conditional branches around a pivot without global choice: left if `Truth p`, right if `Truth (Not p)`, with an exclusion principle.
+
+7) T3 one-sided: extend a sound base by adding certified true frontier statements that are not internally provable.
+
+8) T3 two-sided: a certificate chooses between `encode_halt(e)` and `encode_not_halt(e)`, producing a sound local extension `S2 ∪ {p}` without any uniform decider.
+
+9) Instances (RefSystem, Ω) show the separation concretely: robust kit-invariant answers on semi-decidable cut queries while bits remain non-uniformizable; and “Bit vs Window” gives two operationally distinct but observationally equivalent readings.
+
+---
+
+## How the dynamics part fits (Fuel / Fork)
+
+The project packages the T2/T3 phenomenon as an explicit dynamics on theories.
+
+### EnrichedContext and gap witnesses
+
+An `EnrichedContext` contains:
+- internal provability `Provable`,
+- external truth `Truth`,
+- a halting predicate `H e` linked to `Rev0_K` at the truth level,
+- and the r.e. witness needed for diagonalization.
+
+From T2 one derives:
+
+- `true_but_unprovable_exists`: there exists `p` with `Truth p` and `¬Provable p`,
+- `GapWitness`: a typed witness `{p // Truth p ∧ ¬Provable p}`,
+- `gapWitness_nonempty`: gap witnesses exist.
+
+These gap witnesses are the unit of non-uniformity: downstream constructions are parameterized by such a witness, never by a global chooser.
+
+### Fuel: strict moves exist
+
+`Fuel` states that from any node `T` contained in the provable set, there exists a strict extension move:
+
+- pick a `GapWitness`,
+- extend by it,
+- strictness is guaranteed because the witness is not provable.
+
+This is “T2 provides fuel”: incompleteness is turned into a constructive existence of strict growth steps.
+
+### Fork: bifurcation without global choice
+
+A `Fork` is an object encoding a local bifurcation around a pivot `p`:
+
+- left branch exists if you have `Truth p`,
+- right branch exists if you have `Truth (Not p)`,
+- exclusion: both extensions cannot be sound simultaneously.
+
+This is the two-sided complementarity mechanism expressed as an object, not as a chooser.
+
+---
+
+## RefSystem layer and the Ω instance (why it matters)
+
+The `RefSystem` layer connects:
+- continuous cut sentences (rational comparisons),
+- discrete bit sentences (digits),
+- a semantic relation `Sat`,
+- and a compatibility law relating bits to dyadic cut windows.
+
+Key pattern used in the Ω instance:
+
+- treat cuts as the computable / semi-decidable interface,
+- reconstruct bits as boundaries between cuts (a window condition).
+
+What this demonstrates:
+
+- cut queries behave well: halting/Rev characterizes “reached q”, and is kit-invariant under kit validity,
+- bit queries are not uniformly computable, but are semantically equivalent to a cut-window formulation,
+- two operationally distinct “readings” (Bit vs Window) can be proven observationally indistinguishable once routed through the Rev/Halts layer.
+
+This exemplifies the project’s separation:
+- what is robust and kit-invariant (T1),
+- what cannot be uniformized (T2),
+- what can be safely added locally with certificates (T3 / Fork).
+
+---
+
+## What T3 is (and is not)
+
+T3 provides soundness for sets of axioms:
+
+- statement form: “for all p in S, Truth p”.
+
+It does not automatically provide:
+
+- a deductively closed proof relation `Provable_S`,
+- or the meta-theorem “all inference rules preserve Truth”.
+
+If one wants a proof-theoretic “decision” statement (“S proves p or S proves not p”), one must:
+- define the closure of the corpus under chosen proof rules,
+- and prove that those rules preserve `Truth` (soundness of the proof system).
+
+This separation is intentional: T3 isolates the non-uniform extension phenomenon before committing to any specific proof calculus.
+
+---
+
+## File organization (high-level)
+
+Entry points (intended map):
+
+- `RevHalt/Base/Trace.lean`
+  - `Trace`, `Halts`, `up`, monotonicity, `Halts (up T) ↔ Halts T`
+
+- `RevHalt/Base/Kit.lean`
+  - `RHKit`, `DetectsMonotone`, `Rev0_K`
+
+- `RevHalt/Theory/Canonicity.lean`
+  - T1 statements, kit-invariance, semantics-facing variants (bridge forms)
+
+- `RevHalt/Theory/Impossibility.lean`
+  - T2 diagonalization / fixed-point barrier
+
+- `RevHalt/Theory/Complementarity.lean`
+  - T3 one-sided / strong / two-sided (certificate) variants
+
+- `RevHalt/Bridge/Context.lean`
+  - `EnrichedContext`, r.e. hypotheses, `GapWitness`, extraction of true-but-unprovable
+
+- `RevHalt/Dynamics/Core/Fuel.lean`
+  - strict extension moves from gap witnesses (“T2 as fuel”)
+
+- `RevHalt/Dynamics/Core/Fork.lean`
+  - `Fork` object: two-sided branching without global choice
+
+- `RevHalt/Dynamics/Core/RefSystem.lean`
+  - reference systems: `Cut` / `Bit`, bit-window link, DR0/DR1-style kit invariance
+
+- `RevHalt/Dynamics/Instances/OmegaChaitin.lean`
+  - constructive Ω approximations, bit-window theorem, kit-invariance for cuts
+
+- `RevHalt/Dynamics/Instances/OmegaComplexity.lean`
+  - gap lower bound and “precision requires time” (Kolmogorov-style precursor)
+
+(Exact filenames may differ slightly; this is the intended conceptual layout.)
+
+---
+
+## Build / verify
 
 Prerequisites: Lean 4 + Mathlib (via `lake`).
 
-```bash
-lake build
-```
+Build:
 
-To verify a specific file:
+- `lake build`
 
-```bash
-lake env lean RevHalt/Theory/Canonicity.lean
-```
+Check a file:
+
+- `lake env lean RevHalt/Theory/Canonicity.lean`
 
 ---
 
-## License / Contribution
+## License / contribution
 
-Add your license (MIT/BSD/etc.) and contribution conventions here as needed.
+Add your license and contribution conventions here.
