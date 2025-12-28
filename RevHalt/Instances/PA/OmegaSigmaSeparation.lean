@@ -207,10 +207,41 @@ theorem WinTruth_not_uniformly_sigma1
     have some0 : Computable (fun _ : ℕ × ℕ => (some 0 : Option ℕ)) := Computable.const (some 0)
     have some1 : Computable (fun _ : ℕ × ℕ => (some 1 : Option ℕ)) := Computable.const (some 1)
     have noneO : Computable (fun _ : ℕ × ℕ => (none : Option ℕ)) := Computable.const none
+    -- Inner conditional: Computable version using cond
+    have inner_cond : Computable (fun nt : ℕ × ℕ =>
+        cond (haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0) (some 1 : Option ℕ) none) :=
+      Computable.cond halts1_comp some1 noneO
+
+    -- Prove inner ite equals inner cond
+    have eq_inner : (fun nt : ℕ × ℕ => if haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0 then (some 1 : Option ℕ) else none) =
+                    (fun nt => cond (haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0) (some 1) none) := by
+      funext nt
+      simp only [Bool.cond_eq_ite]
+
+    -- Computable inner ite
     have inner : Computable (fun nt : ℕ × ℕ =>
-        if haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0 then (some 1 : Option ℕ) else none) :=
-      (Computable.cond halts1_comp some1 noneO)
-    exact (Computable.cond halts0_comp some0 inner)
+        if haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0 then (some 1 : Option ℕ) else none) := by
+      rw [eq_inner]
+      exact inner_cond
+
+    -- Outer expression matching stepPair's definition
+    -- stepPair nt = if ... then ... else (inner nt)
+
+    have outer_cond : Computable (fun nt : ℕ × ℕ =>
+        cond (haltsWithinDec nt.2 (enum.haltIfBit0 nt.1) 0) (some 0 : Option ℕ)
+             (if haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0 then some 1 else none)) :=
+      Computable.cond halts0_comp some0 inner
+
+    -- Prove stepPair equals outer_cond
+    have eq_step : stepPair =
+                   (fun nt => cond (haltsWithinDec nt.2 (enum.haltIfBit0 nt.1) 0) (some 0)
+                              (if haltsWithinDec nt.2 (enum.haltIfBit1 nt.1) 0 then some 1 else none)) := by
+      funext nt
+      simp only [stepPair]
+      rw [Bool.cond_eq_ite]
+
+    rw [eq_step]
+    exact outer_cond
 
   -- Define the partial search: rfindOpt returns the first `some b` it encounters.
   let searchBit : ℕ →. ℕ := fun n =>
