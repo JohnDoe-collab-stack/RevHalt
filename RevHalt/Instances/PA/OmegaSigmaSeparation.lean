@@ -4,6 +4,16 @@
   Formalizes the "arithmetical barrier" for Omega access:
   WinTruth (the correct bit of Omega) is NOT uniformly Σ₁ in PA.
 
+  ## The Role of Π₁ Stabilization
+  The crucial insight is that `WinTruth` (defined in `RevHalt.Dynamics.Instances.OmegaTruth`, namespace `LimitSemantics`)
+  is composed of two parts:
+  1. **Σ₁ (Cut/Existence)**: "We reached a threshold k/2^n". This is accessible via search.
+  2. **Π₁ (Window/Stabilization)**: "We will NEVER go beyond (k+1)/2^n". This is a guarantee of stability.
+
+  It is explicitly this **Π₁ component** that prevents `WinTruth` from being Uniformly Σ₁.
+  While discrete arithmetic properties are often simple, `WinTruth` inherits this "Access Barrier"
+  (stabilization requires infinite verification), making it Σ₂ (Σ₁ ∧ Π₁ in the limit) rather than Σ₁.
+
   If WinTruth were uniformly Σ₁, we could use PA-Halting to compute Omega,
   which is impossible (OmegaNonComputable).
 -/
