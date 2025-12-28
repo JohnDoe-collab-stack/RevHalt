@@ -298,21 +298,29 @@ theorem WinTruth_not_uniformly_sigma1
   -- ht : decide n ∈ stepPair (n,t)
 
   -- Analyze stepPair (n,t) to determine which Halt-code actually halts, then conclude WinTruth via soundness+spec.
-  cases h0 : haltsWithinDec t (enum.haltIfBit0 n) 0 <;> simp [stepPair, h0] at ht
-  · -- h0 = true, so decide n = 0.
-    have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit0 n) 0 = true := ⟨t, by simpa using h0⟩
-    have hP := (hSound.soundness (enum.haltIfBit0 n)).2 hReal
-    have hWin := (enum.spec0 n).1 hP
-    cases ht -- derives equality 0 = decide n
-    simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
-  · -- h0 = false.
-    cases h1 : haltsWithinDec t (enum.haltIfBit1 n) 0 <;> simp [stepPair, h0, h1] at ht
-    · cases ht -- contradiction (decide n ∈ none)
-    · have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit1 n) 0 = true := ⟨t, by simpa using h1⟩
+  cases h0 : haltsWithinDec t (enum.haltIfBit0 n) 0
+  · -- h0 = false. Check c1.
+    simp only [stepPair, h0] at ht
+    cases h1 : haltsWithinDec t (enum.haltIfBit1 n) 0
+    · simp only [h1] at ht
+      cases ht -- contradiction
+    · simp only [h1] at ht
+      -- ht : some 1 = some (decide n) -> 1 = decide n
+      have heq : 1 = decide n := Option.some.inj ht
+      have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit1 n) 0 = true := ⟨t, h1⟩
       have hP := (hSound.soundness (enum.haltIfBit1 n)).2 hReal
       have hWin := (enum.spec1 n).1 hP
-      cases ht -- derives equality 1 = decide n
+      rw [← heq]
       simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
+  · -- h0 = true. decide n = 0.
+    simp only [stepPair, h0, if_true] at ht
+    -- ht : some 0 = some (decide n) -> 0 = decide n
+    have heq : 0 = decide n := Option.some.inj ht
+    have hReal : ∃ t, haltsWithinDec t (enum.haltIfBit0 n) 0 = true := ⟨t, h0⟩
+    have hP := (hSound.soundness (enum.haltIfBit0 n)).2 hReal
+    have hWin := (enum.spec0 n).1 hP
+    rw [← heq]
+    simpa [RevHalt.Dynamics.Instances.OmegaChaitin.bitOfNat] using hWin
 
 /-! ## 5) Corollary: the access barrier is essential -/
 
