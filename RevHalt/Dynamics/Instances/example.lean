@@ -152,4 +152,48 @@ theorem omega_pm0_dyadic_cut_kit_invariant
 
 end OmegaDyadic
 
+/-!
+4) Dyadic Fork Simulation (Validation Module).
+
+This module simulates the "local certification" process.
+It models a dyadic tail (path in the binary tree) and measures
+the "fuel cost" required to certify that path.
+
+This corresponds to the Python simulation mentioned in the roadmap:
+- Each fork requires checking two branches.
+- Depth `n` corresponds to precision `1/2^n`.
+- Fuel cost grows with depth (exponentially in resolution, linear in path length).
+-/
+
+namespace DyadicSimulation
+
+/-- A dyadic tail is a path in the binary tree (List Bool).
+    true = right (1), false = left (0). -/
+def DyadicTail := List Bool
+
+/-- The "value" of a tail as a dyadic rational in [0, 1]. -/
+def tail_value (t : DyadicTail) : ℚ :=
+  t.foldl (fun acc b => acc / 2 + (if b then 1/2 else 0)) 0
+
+/-- Fuel cost to certify a fork at depth `d`.
+    Model: Cost = 2^d (as certification gets harder with precision).
+    This is a "computational cost" model. -/
+def step_cost (depth : ℕ) : ℕ := 2 ^ depth
+
+/-- Total fuel cost for a full dyadic tail. -/
+def fuel_cost (t : DyadicTail) : ℕ :=
+  (List.range t.length).foldl (fun acc d => acc + step_cost d) 0
+
+/-- Simulation of a fork process:
+    Given a target depth `n`, generate all tails and sum their structural cost. -/
+def simulate_tree_cost (n : ℕ) : ℕ :=
+  -- Number of nodes in a full binary tree of depth n is 2^n - 1 (or similar).
+  -- If we sum `step_cost` over all paths...
+  -- This is just a mock to validate the barrier intuition.
+  (Finset.range n).sum (fun d => 2^d * (step_cost d))
+
+#eval fuel_cost [true, false, true] -- Example calculation
+
+end DyadicSimulation
+
 end Example
