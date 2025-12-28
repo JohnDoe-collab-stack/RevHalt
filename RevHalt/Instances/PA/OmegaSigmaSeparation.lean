@@ -125,7 +125,7 @@ private theorem haltsWithinDec_triple_computable :
 
   -- Compose and convert to Computable.
   have h_comp : Computable (fun x => (Nat.Partrec.Code.evaln (map_input x).1.1 (map_input x).1.2 (map_input x).2).isSome) :=
-    ((Primrec.option_isSome.comp Nat.Partrec.Code.evaln_prim).comp map_prim).to_comp
+    ((Primrec.option_isSome.comp Nat.Partrec.Code.primrec_evaln).comp map_prim).to_comp
 
   simpa [haltsWithinDec, map_input] using h_comp
 
