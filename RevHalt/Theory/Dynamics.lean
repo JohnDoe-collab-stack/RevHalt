@@ -26,6 +26,7 @@ The dynamics is not about "provability" (`⊢_S p`), but about **accumulating se
 - `lim_schedule_free`: The ω-limit is `S0 ∪ AllOraclePicks` (schedule-independent).
 - `lim_eq_of_two_fair_schedules`: Two fair schedules produce the *same* limit.
 - `lim_eq_omegaState`: Fairness implies convergence to the canonical `omegaState`.
+- `omegaState_minimal`: The canonical state is the *smallest* sound extension (closure).
 -/
 
 namespace RevHalt
@@ -787,6 +788,25 @@ theorem lim_eq_omegaState
   rw [lim_schedule_free D S0 pickOf schedule hFair]
   rfl
 
+
+
+/--
+  **Minimality**: omegaState is the smallest sound corpus containing S0 and all picks.
+  This formalizes omegaState as the *closure* of S0 by the oracle.
+-/
+theorem omegaState_minimal
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D)
+    (T : Set PropT)
+    (hBase : S0.S ⊆ T)
+    (hPicks : AllOraclePicks D pickOf ⊆ T) :
+    (omegaState D S0 pickOf).S ⊆ T := by
+  intro p hp
+  cases hp with
+  | inl h => exact hBase h
+  | inr h => exact hPicks h
 
 -- =====================================================================================
 -- 17) Schedule Construction and Generic Existence
