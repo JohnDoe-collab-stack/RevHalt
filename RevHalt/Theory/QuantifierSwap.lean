@@ -29,40 +29,7 @@ namespace RevHalt
 
 open Nat.Partrec
 
-/--
-**Local Decision**: An extension Sₑ "decides" an encoded statement p
-if it proves either p or its negation.
--/
-def Decides {PropT : Type} (Provable : PropT → Prop) (Not : PropT → PropT) (p : PropT) : Prop :=
-  Provable p ∨ Provable (Not p)
 
-/--
-**Sound Extension**: An extension is sound w.r.t. an external truth predicate
-if every provable statement is true.
--/
-def SoundExtension {PropT : Type}
-    (Provable : PropT → Prop) (Truth : PropT → Prop) : Prop :=
-  ∀ p, Provable p → Truth p
-
-/--
-**Instancewise Decision Witness**: For a given code e and oracle pick,
-we can construct an extension that decides encode_halt(e).
--/
-structure InstancewiseDecision {Code PropT : Type}
-    (S : ComplementaritySystem Code PropT)
-    (Truth : PropT → Prop)
-    (encode_halt encode_not_halt : Code → PropT)
-    (e : Code) where
-  /-- The extension (represented as a set of sentences) -/
-  S_e : Set PropT
-  /-- S₂ is included -/
-  extends_S2 : ∀ S2 : Set PropT, S2 ⊆ S_e
-  /-- The chosen sentence is included -/
-  has_pick : ∃ p, p ∈ S_e ∧
-    ((Rev0_K S.K (S.Machine e) ∧ p = encode_halt e) ∨
-     (¬ Rev0_K S.K (S.Machine e) ∧ p = encode_not_halt e))
-  /-- Soundness -/
-  sound : ∀ p ∈ S_e, Truth p
 
 /--
 **T3 permits instancewise decision**: Given an oracle pick for e,
