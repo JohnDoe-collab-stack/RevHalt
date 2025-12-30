@@ -1,6 +1,7 @@
 import RevHalt.Base
 import RevHalt.Theory.Canonicity
 import RevHalt.Theory.Impossibility
+import RevHalt.Theory.Complementarity
 import Mathlib.Data.Set.Basic
 
 /-!
@@ -245,5 +246,189 @@ theorem contradiction_if_internalize_external_decider
   exact T2_impossibility S K hK hIH
 
 end ArchitecturalConstraints
+
+/-!
+## 9) T3 Integration — Certificate Types
+-/
+
+section Certificates
+
+variable (K : RHKit)
+
+/-- Σ₁ certificate: the machine halts. -/
+def HaltCertificate (e : Code) : Prop := Rev0_K K (aMachine e)
+
+/-- Π₁ certificate: the machine stabilizes. -/
+def StabCertificate (e : Code) : Prop := KitStabilizes K (aMachine e)
+
+/-- Σ₁ and Π₁ certificates are mutually exclusive (by definition). -/
+theorem certificate_exclusion_aMachine (e : Code) :
+    ¬ (HaltCertificate K e ∧ StabCertificate K e) := by
+  intro ⟨hHalt, hStab⟩
+  show False
+  have hH : Rev0_K K (aMachine e) := hHalt
+  have hS : ¬ Rev0_K K (aMachine e) := hStab
+  exact hS hH
+
+/-- HaltCertificate ↔ Halts for valid kit. -/
+theorem haltCertificate_iff_halts (hK : DetectsMonotone K) (e : Code) :
+    HaltCertificate K e ↔ Halts (aMachine e) := by
+  unfold HaltCertificate
+  exact T1_traces K hK (aMachine e)
+
+/-- StabCertificate ↔ Stabilizes for valid kit. -/
+theorem stabCertificate_iff_stabilizes (hK : DetectsMonotone K) (e : Code) :
+    StabCertificate K e ↔ Stabilizes (aMachine e) := by
+  unfold StabCertificate
+  exact T1_stabilization K hK (aMachine e)
+
+end Certificates
+
+/-!
+## 10) T3 Integration — Architecture to Certificates
+-/
+
+section ArchitecturalCertificates
+
+variable {Sentence Model : Type}
+variable (A : OracleMachine Sentence Model)
+variable (K : RHKit)
+
+/-- If Eval holds, the compiled code has a Σ₁ certificate. -/
+theorem eval_gives_halt_certificate
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence)
+    (hEval : A.Eval Γ φ) :
+    HaltCertificate K (A.compile Γ φ) := by
+  unfold HaltCertificate
+  have h := eval_iff_rev A K hK Γ φ
+  exact h.mp hEval
+
+/-- If ¬Eval holds, the compiled code has a Π₁ certificate. -/
+theorem not_eval_gives_stab_certificate
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence)
+    (hNotEval : ¬ A.Eval Γ φ) :
+    StabCertificate K (A.compile Γ φ) := by
+  unfold StabCertificate KitStabilizes
+  have h := eval_iff_rev A K hK Γ φ
+  intro hRev
+  exact hNotEval (h.mpr hRev)
+
+/-- Σ₁ certificate ↔ Eval. -/
+theorem haltCertificate_iff_eval
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence) :
+    HaltCertificate K (A.compile Γ φ) ↔ A.Eval Γ φ := by
+  unfold HaltCertificate
+  exact (eval_iff_rev A K hK Γ φ).symm
+
+/-- Π₁ certificate ↔ ¬Eval. -/
+theorem stabCertificate_iff_not_eval
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence) :
+    StabCertificate K (A.compile Γ φ) ↔ ¬ A.Eval Γ φ := by
+  unfold StabCertificate KitStabilizes
+  have h := eval_iff_rev A K hK Γ φ
+  constructor
+  · intro hStab hEval
+    exact hStab (h.mp hEval)
+  · intro hNotEval hRev
+    exact hNotEval (h.mpr hRev)
+
+end ArchitecturalCertificates
+
+/-!
+## 11) T3 Integration — OracleMachine to OraclePick
+
+The key connection between the OracleMachine architecture and T3:
+
+1. **c-machine** compiles `(Γ, φ)` to a `Code`
+2. **o-bridge** guarantees `Eval Γ φ ↔ Converges (compile Γ φ)`
+3. **Sections 9-10** give us: `Eval ↔ HaltCertificate`, `¬Eval ↔ StabCertificate`
+4. **This section** packages this as an `ArchitecturalOraclePick`
+
+The architectural pick is an OraclePick that comes from the OracleMachine structure,
+where the certificate is derived from the o-bridge evaluation.
+-/
+
+section OracleMachineToT3
+
+variable {Sentence Model : Type}
+variable (A : OracleMachine Sentence Model)
+variable (K : RHKit)
+
+/--
+  An architectural oracle pick for a compiled code.
+
+  Given `Γ : List Sentence` and `φ : Sentence`:
+  - The c-machine compiles them to `e := A.compile Γ φ`
+  - The o-bridge gives us: `A.Eval Γ φ ↔ Converges e`
+  - We package either:
+    - `HaltCertificate K e` (Σ₁) if `A.Eval Γ φ`, or
+    - `StabCertificate K e` (Π₁) if `¬ A.Eval Γ φ`
+-/
+structure ArchitecturalOraclePick (Γ : List Sentence) (φ : Sentence) where
+  /-- The compiled code via c-machine -/
+  code : Code := A.compile Γ φ
+  /-- The certificate: either Σ₁ (halt) or Π₁ (stab) -/
+  cert : HaltCertificate K code ∨ StabCertificate K code
+
+/-- From a positive Eval, we get a Σ₁ certificate. -/
+def architecturalPick_of_eval
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence)
+    (hEval : A.Eval Γ φ) :
+    ArchitecturalOraclePick A K Γ φ where
+  code := A.compile Γ φ
+  cert := Or.inl (eval_gives_halt_certificate A K hK Γ φ hEval)
+
+/-- From a negative Eval, we get a Π₁ certificate. -/
+def architecturalPick_of_not_eval
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence)
+    (hNotEval : ¬ A.Eval Γ φ) :
+    ArchitecturalOraclePick A K Γ φ where
+  code := A.compile Γ φ
+  cert := Or.inr (not_eval_gives_stab_certificate A K hK Γ φ hNotEval)
+
+/-- The architectural pick is exhaustive: every compiled code has a certificate. -/
+theorem architecturalPick_exhaustive
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence)
+    (h : A.Eval Γ φ ∨ ¬ A.Eval Γ φ) :
+    ∃ _ : ArchitecturalOraclePick A K Γ φ, True := by
+  cases h with
+  | inl hE => exact ⟨architecturalPick_of_eval A K hK Γ φ hE, trivial⟩
+  | inr hNE => exact ⟨architecturalPick_of_not_eval A K hK Γ φ hNE, trivial⟩
+
+/--
+  **Architectural T3 Theorem**:
+
+  Given an OracleMachine with:
+  - a-machine: `aMachine`
+  - c-machine: `A.compile`
+  - o-bridge: `A.oBridge`
+
+  And an `ArchitecturalOraclePick` for `(Γ, φ)`:
+
+  The o-bridge + T1 gives us a certificate (Σ₁ or Π₁) for the compiled code,
+  which can be used to construct sound extensions in T3.
+-/
+theorem architectural_T3_certificate_transfer
+    (hK : DetectsMonotone K)
+    (Γ : List Sentence) (φ : Sentence)
+    (pick : ArchitecturalOraclePick A K Γ φ) :
+    (Halts (aMachine pick.code) ∧ HaltCertificate K pick.code) ∨
+    (Stabilizes (aMachine pick.code) ∧ StabCertificate K pick.code) := by
+  cases pick.cert with
+  | inl hHalt =>
+      have hH : Halts (aMachine pick.code) := (haltCertificate_iff_halts K hK pick.code).mp hHalt
+      exact Or.inl ⟨hH, hHalt⟩
+  | inr hStab =>
+      have hS : Stabilizes (aMachine pick.code) := (stabCertificate_iff_stabilizes K hK pick.code).mp hStab
+      exact Or.inr ⟨hS, hStab⟩
+
+end OracleMachineToT3
 
 end RevHalt
