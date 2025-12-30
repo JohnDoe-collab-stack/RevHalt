@@ -32,7 +32,18 @@ theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
   have h_equiv := hK (up T) h_mono
   rw [h_equiv]
   -- 2. Use the fact that ∃ n, up T n ↔ ∃ n, T n
+  -- 2. Use the fact that ∃ n, up T n ↔ ∃ n, T n
   exact exists_up_iff T
+
+/--
+  **Corollary (Stabilization)**:
+  The negative verdict of a valid Kit captures exactly the stabilization property (never halting).
+  `¬ Rev0_K K T ↔ ∀ n, ¬ T n` (classically equivalent to ¬Halts, constructively defined as Stabilizes).
+-/
+theorem T1_neg_traces (K : RHKit) (hK : DetectsMonotone K) :
+    ∀ T : Trace, ¬ Rev0_K K T ↔ ¬ Halts T := by
+  intro T
+  rw [T1_traces K hK T]
 
 /-- Corollary: Independence of the specific Kit. Any two valid Kits yield the same verdict. -/
 theorem T1_uniqueness (K1 K2 : RHKit) (hK1 : DetectsMonotone K1) (hK2 : DetectsMonotone K2) :

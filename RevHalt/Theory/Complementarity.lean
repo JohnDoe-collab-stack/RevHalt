@@ -354,8 +354,8 @@ An explicit two-sided oracle *witness* for a given code `e`.
 
 It packages a chosen sentence `p : PropT` together with a certificate that `p` matches
 the Kit verdict:
-- either `Rev0_K ...` and `p = encode_halt e`,
-- or `¬ Rev0_K ...` and `p = encode_not_halt e`.
+- Left branch: `Rev0_K ...` (Halting Witness) → `p = encode_halt e`.
+- Right branch: `¬ Rev0_K ...` (Stabilization Certificate) → `p = encode_not_halt e`.
 
 No decidability of `Rev0_K` is assumed or used.
 -/

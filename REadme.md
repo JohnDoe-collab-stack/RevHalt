@@ -17,8 +17,7 @@ The novelty is **structural**:
 - **Beyond existence**: Gödel shows *there exist* true‑but‑unprovable statements.
   RevHalt gives a **systematic, instance‑wise mechanism** (T3 + certificates) and a
   **dynamic** on theories (chains / forks) to navigate them.
-- **No “hidden power”**: the only non‑mechanical power is localized in the semantic bridge
-  (`Sat` / `OracleBridge`), not in the kit itself.
+- **P1 Extraction (Stabilization)**: Standard theories treat "never halting" as a logical negation. RevHalt treats it as a **geometric certificate**: the failure of a monotone detector (`¬ Rev0_K`) is formally a proof of stabilization. This extracts $\Pi_1$ structure directly from the instrument, without needing Omega.
 
 If you want a slogan: **RevHalt is a geometry of the oracle, not a new oracle.**
 
@@ -153,7 +152,7 @@ T3 turns the barrier into usable structure:
   This is exactly “Σ₁ vs Π₁”, but *locally* and *by certificates*, not by a global decider:
 
   * left branch: a certificate `Truth p` (think: Σ₁-style witness / existence)
-  * right branch: a certificate `Truth (Not p)` (think: Π₁-style stabilization / never)
+  * right branch: a certificate `Truth (Not p)` (this is the **Stabilization Certificate** derived from `¬ Rev0_K`)
   * exclusion: both certificates cannot co-exist in a single sound node
 
 No global decision procedure is assumed; the branch is carried by a certificate, not computed.
@@ -244,7 +243,6 @@ while non-uniformizable bit-level content remains non-uniform (exactly as predic
 * `RevHalt/Dynamics/Core/RefSystem.lean` — `Cut`/`Bit`/`Win`, DR0/DR1-style transport
 * `RevHalt/Dynamics/Instances/OmegaChaitin.lean` — Ω approximation + cut/bit/window theorems
 * `RevHalt/Theory/OracleMachine.lean` — a-machine / c-machine / o-bridge, architecture-level constraints
-* (Optional) `RevHalt/Dynamics/Core/Fork2.lean` — generalized two-pivot fork
 
 ---
 

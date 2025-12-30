@@ -3,9 +3,15 @@ import RevHalt.Theory.Canonicity
 import Mathlib.Computability.PartrecCode
 
 /-!
+
 # RevHalt.Theory.Impossibility
 
 T2: Impossibility of Internalizing Rev associated with a Canonical Kit.
+
+**P1 Interpretation**:
+This theorem also establishes the **Impossibility of Uniform Stabilization Detection**.
+If we could uniformly decide which programs stabilize (P1), we could decide Halting (S1).
+T2 ensures that the "Stabilization Certificates" extracted by T3 are **non-trivial** and **local**.
 
 we use `Nat.Partrec.Code` + Kleene SRT (`fixed_point₂`)
 to derive the diagonal bridge, and then refute any internal predicate that is
