@@ -69,6 +69,20 @@ Key facts:
 
 This *exact preservation of ∃* is the structural reason the rigidity theorem locks in.
 
+### Algebraic Stabilization (Kernel of `up`)
+
+The operator `up` acts as a **projector** on traces.
+Its kernel defines stabilization algebraically:
+
+```lean
+up T = ⊥ ↔ ∀ n, ¬ T n
+```
+
+This means: a trace stabilizes iff it lies in the kernel of `up` (the "bottom" trace).
+Stabilization is not just a logical negation; it is **structural nullity**—the trace collapses to the zero element under the closure operator.
+
+This is formalized in `RevHalt/Theory/Categorical.lean` (`up_eq_bot_iff`, `up_is_projector`).
+
 ### Kits and minimal correctness
 
 A kit is a projection on traces:
@@ -158,16 +172,6 @@ T3 turns the barrier into usable structure:
 No global decision procedure is assumed; the branch is carried by a certificate, not computed.
 
 ---
-
-## Two-sided branching done correctly: OraclePick vs Fork vs Fork2
-
-RevHalt distinguishes *binary choice* from *logical complementarity*.
-
-### OraclePick (binary, always)
-
-`OraclePick` chooses between two arbitrary propositions:
-
-This is *not* yet Σ₁ vs Π₁. It is only a binary selection.
 To recover the real “two-side barrier” you need complementarity (p vs Not p),
 which is where the Π₁ stabilization meaning actually enters.
 
@@ -232,17 +236,17 @@ while non-uniformizable bit-level content remains non-uniform (exactly as predic
 
 ## File map (high level)
 
+### Base Layer
 * `RevHalt/Base/Trace.lean` — `Trace`, `Halts`, `up`, monotonicity, `Halts (up T) ↔ Halts T`
 * `RevHalt/Base/Kit.lean` — `RHKit`, `DetectsMonotone`, `Rev0_K`
-* `RevHalt/Theory/Canonicity.lean` — T1 (`T1_traces`, `T1_uniqueness`)
-* `RevHalt/Theory/Impossibility.lean` — T2 (diagonal/fixed-point barrier)
-* `RevHalt/Theory/Complementarity.lean` — T3, `OraclePick`, frontier constructions
-* `RevHalt/Bridge/Context.lean` — `EnrichedContext`, `Truth`, `GapWitness`, true-but-unprovable extraction
-* `RevHalt/Dynamics/Core/Fuel.lean` — strict extension moves from gap witnesses
-* `RevHalt/Dynamics/Core/Fork.lean` — `Fork.ofPivot`, exclusion
-* `RevHalt/Dynamics/Core/RefSystem.lean` — `Cut`/`Bit`/`Win`, DR0/DR1-style transport
-* `RevHalt/Dynamics/Instances/OmegaChaitin.lean` — Ω approximation + cut/bit/window theorems
-* `RevHalt/Theory/OracleMachine.lean` — a-machine / c-machine / o-bridge, architecture-level constraints
+
+### Theory Layer
+* `RevHalt/Theory/Canonicity.lean` — T1 (`T1_traces`, `T1_uniqueness`, `T1_neg_traces`)
+* `RevHalt/Theory/Impossibility.lean` — T2 (diagonal/fixed-point barrier, Impossibility of Uniform Stabilization Detection)
+* `RevHalt/Theory/Complementarity.lean` — T3, `OraclePick` (Halting Witness / Stabilization Certificate fork)
+* `RevHalt/Theory/Stabilization.lean` — `Stabilizes`, `KitStabilizes`, `T1_stabilization`, `KitStabilizes_iff_up_eq_bot` (P1 Kernel Certificate)
+* `RevHalt/Theory/Categorical.lean` — Order-theoretic structure: `up` as reflector, `BotTrace`, `up_eq_bot_iff`, `up_is_projector`
+* `RevHalt/Theory/QuantifierSwap.lean` — The Quantifier Swap principle (T2/T3 coexistence)
 
 ---
 
