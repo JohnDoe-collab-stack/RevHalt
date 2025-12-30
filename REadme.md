@@ -181,49 +181,54 @@ The barrier is the Π₁ side: "no witness will ever appear" requires stabilizat
 
 ---
 
-## Navigation Dynamics
+## Navigation Dynamics (T3)
 
-The dynamics is explicit: accumulating **semantic commitments** (`p ∈ S` with `Sound S`), not derivations.
+The dynamics is now fully formalized as a **canonical closure process**. It is not just an iteration, but a structural characterization of the "navigable space".
 
-### The Non-Trivial Part (T3 + Certificates)
+### 1. Local Dynamics (The Step)
 
-Each step consumes a certificate and extends the corpus:
+Every step consumes a certificate (Σ₁/Π₁) and produces a semantic commitment:
 
 ```lean
-truth_of_pick : OraclePick ... e → Truth pick.p
 step : Sound S ∧ Truth pick.p → Sound (S ∪ {pick.p})
+step_adds_new : pick.p ∉ S → S ⊂ (step ...).S  -- Strict progress
 ```
 
-This gives us `∀ n, Sound Truth (Chain n).S` by induction.
+### 2. Global Dynamics (The Limit)
 
-### The Mechanical Part (ω-Union)
+The process converges to a **unique canonical object**, independent of the order of operations (fairness-invariant).
 
-Once per-step soundness is established, the limit is trivial:
+*   **Canonical ω-State**:
+    ```lean
+    omegaState.S = S0.S ∪ AllOraclePicks
+    ```
+    The limit is exactly the base corpus plus all oracle commitments.
 
-```lean
-lim C := ⋃ n, C n
-lim_sound : (∀ n, Sound (C n)) → Sound (lim C)
-```
+*   **Schedule Invariance** (`lim_eq_of_two_fair_schedules`):
+    Any two fair schedules produce **exactly the same limit**. The "path" doesn't matter, only the oracle and the base.
 
-Proof: `p ∈ lim C` → `∃n, p ∈ C n` → `Sound (C n)` → `Truth p`.
+*   **Minimality** (`omegaState_minimal`):
+    The `omegaState` is the **smallest** sound set containing S0 and satisfying the oracle. It is the **semantic closure** of S0.
 
-### Summary
+### 3. Constructive Existence
 
-| Part | Content | Difficulty |
-|------|---------|------------|
-| `truth_of_pick` | Σ₁/Π₁ certificate → Truth | Non-trivial (T3) |
-| `step` | Soundness preservation | Non-trivial |
-| `Chain` | Iteration on ℕ | Mechanical |
-| `lim_sound` | ω-union soundness | Mechanical (∃-elimination) |
+We rigorously prove that such a limit is attainable:
 
-The **work** is in the step. The **limit** is automatic.
+*   **Existence** (`exists_fair_limit_eq_omegaState`):
+    For any `Encodable` code type, there structurally exists a fair schedule that reaches the canonical state.
+*   **Coverage**:
+    Under fairness, **every** code is covered by the limit. This is effectively proven, not assumed.
 
-> [!IMPORTANT]
-> **Coverage at ω**: The claim "all codes are covered at step ω" requires:
-> - `schedule` is surjective (every code appears)
-> - `Code` is countable (indexed by ℕ)
-> 
-> These hypotheses are **not proven** in the current code. The dynamics is polymorphic in `Code` and `schedule`. Coverage is only guaranteed for codes of the form `schedule n`.
+### Summary of Theorems
+
+| Theorem | Meaning | Status |
+|---------|---------|--------|
+| `chain_closed_form` | Finite state = $S_0 \cup$ consumed picks | ✅ |
+| `lim_schedule_free` | Limit = $S_0 \cup$ all oracle picks | ✅ |
+| `fair_implies_coverage` | Fair schedule $\implies$ all codes covered | ✅ |
+| `omegaState_minimal` | Limit is the closure (least fixed point) | ✅ |
+
+The dynamics transforms the "impossibility of deciding" into the "necessity of specific semantic commitments".
 
 ## OracleMachine Architecture
 
