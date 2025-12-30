@@ -181,6 +181,43 @@ The barrier is the Π₁ side: "no witness will ever appear" requires stabilizat
 
 ---
 
+## Navigation Dynamics
+
+The dynamics is explicit: accumulating **semantic commitments** (`p ∈ S` with `Sound S`), not derivations.
+
+### The Non-Trivial Part (T3 + Certificates)
+
+Each step consumes a certificate and extends the corpus:
+
+```lean
+truth_of_pick : OraclePick ... e → Truth pick.p
+step : Sound S ∧ Truth pick.p → Sound (S ∪ {pick.p})
+```
+
+This gives us `∀ n, Sound Truth (Chain n).S` by induction.
+
+### The Mechanical Part (ω-Union)
+
+Once per-step soundness is established, the limit is trivial:
+
+```lean
+lim C := ⋃ n, C n
+lim_sound : (∀ n, Sound (C n)) → Sound (lim C)
+```
+
+Proof: `p ∈ lim C` → `∃n, p ∈ C n` → `Sound (C n)` → `Truth p`.
+
+### Summary
+
+| Part | Content | Difficulty |
+|------|---------|------------|
+| `truth_of_pick` | Σ₁/Π₁ certificate → Truth | Non-trivial (T3) |
+| `step` | Soundness preservation | Non-trivial |
+| `Chain` | Iteration on ℕ | Mechanical |
+| `lim_sound` | ω-union soundness | Mechanical (∃-elimination) |
+
+The **work** is in the step. The **limit** is automatic.
+
 ## OracleMachine Architecture
 
 The non-mechanical power is localized:
