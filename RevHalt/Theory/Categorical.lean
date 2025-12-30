@@ -203,4 +203,99 @@ by
   · exact exists_up_iff T
   · exact up_eq_bot_iff T
 
+-- =====================================================================================
+-- 3) Frontier Anti-Monotonicity (Divergence under Extension)
+-- =====================================================================================
+
+section Frontier
+
+variable {PropT : Type}
+variable (Provable : Set PropT → PropT → Prop)
+variable (Truth : PropT → Prop)
+
+/--
+  **Frontier (S1)**: The set of true statements not provable in a given theory S2.
+  S1(S2) = { p | Truth p ∧ ¬ Provable S2 p }
+-/
+def Frontier (S2 : Set PropT) : Set PropT :=
+  { p | Truth p ∧ ¬ Provable S2 p }
+
+/--
+  **Provable Monotonicity**: Extending a theory can only add provable statements.
+  This is the standard weakening/monotonicity property of logical systems.
+-/
+def ProvableMonotone : Prop :=
+  ∀ S S' : Set PropT, S ⊆ S' → ∀ p : PropT, Provable S p → Provable S' p
+
+/--
+  **Frontier Anti-Monotonicity**:
+  If Provable is monotone, then S1 (Frontier) is anti-monotone:
+  S2 ⊆ S2' → Frontier(S2') ⊆ Frontier(S2)
+
+  More provable ⟹ smaller frontier.
+  (Note: divergent bases lead to incomparable frontiers only when
+  explicit witnesses exist; see `frontiers_incomparable`.)
+-/
+theorem frontier_anti_monotone (hMono : ProvableMonotone Provable) :
+    ∀ S2 S2' : Set PropT, S2 ⊆ S2' →
+      Frontier Provable Truth S2' ⊆ Frontier Provable Truth S2 := by
+  intro S2 S2' hSub p hp
+  unfold Frontier at hp ⊢
+  constructor
+  · exact hp.1
+  · intro hProv
+    have hProv' : Provable S2' p := hMono S2 S2' hSub p hProv
+    exact hp.2 hProv'
+
+/--
+  **Frontier Divergence Witness**:
+  If p is true, provable in S2_A but NOT provable in S2_B,
+  then p belongs to S1(B) but not S1(A).
+
+  This is the *sufficient condition* for frontier divergence:
+  you need an explicit witness, not just incomparability of bases.
+-/
+theorem frontier_divergence_witness
+    (S2_A S2_B : Set PropT)
+    (p : PropT)
+    (hp_true : Truth p)
+    (hp_prov_A : Provable S2_A p)
+    (hp_nprov_B : ¬ Provable S2_B p) :
+    p ∈ Frontier Provable Truth S2_B ∧ p ∉ Frontier Provable Truth S2_A := by
+  constructor
+  · -- p ∈ Frontier(S2_B)
+    unfold Frontier
+    exact ⟨hp_true, hp_nprov_B⟩
+  · -- p ∉ Frontier(S2_A)
+    unfold Frontier
+    intro ⟨_, hp_nprov_A⟩
+    exact hp_nprov_A hp_prov_A
+
+/--
+  **Mutual Divergence**:
+  If there exist witnesses in both directions (A proves something B doesn't,
+  and B proves something A doesn't), then the frontiers are genuinely incomparable.
+-/
+theorem frontiers_incomparable
+    (S2_A S2_B : Set PropT)
+    (p q : PropT)
+    (hp_true : Truth p) (hq_true : Truth q)
+    (hp_prov_A : Provable S2_A p) (hp_nprov_B : ¬ Provable S2_B p)
+    (hq_prov_B : Provable S2_B q) (hq_nprov_A : ¬ Provable S2_A q) :
+    ¬ (Frontier Provable Truth S2_A ⊆ Frontier Provable Truth S2_B) ∧
+    ¬ (Frontier Provable Truth S2_B ⊆ Frontier Provable Truth S2_A) := by
+  constructor
+  · -- S1(A) ⊄ S1(B) : q witnesses this
+    intro hSub
+    have hq_in_A : q ∈ Frontier Provable Truth S2_A := ⟨hq_true, hq_nprov_A⟩
+    have hq_in_B : q ∈ Frontier Provable Truth S2_B := hSub hq_in_A
+    exact hq_in_B.2 hq_prov_B
+  · -- S1(B) ⊄ S1(A) : p witnesses this
+    intro hSub
+    have hp_in_B : p ∈ Frontier Provable Truth S2_B := ⟨hp_true, hp_nprov_B⟩
+    have hp_in_A : p ∈ Frontier Provable Truth S2_A := hSub hp_in_B
+    exact hp_in_A.2 hp_prov_A
+
+end Frontier
+
 end RevHalt
