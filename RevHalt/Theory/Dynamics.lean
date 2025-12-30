@@ -715,4 +715,66 @@ theorem all_oracle_picks_sound
   rw [hpeq]
   exact truth_of_pick D e (pickOf e)
 
+-- =====================================================================================
+-- 16) Canonical ω-State and Invariance
+-- =====================================================================================
+
+/-- Sound is stable under binary union. -/
+theorem sound_union
+    {PropT : Type} (Truth : PropT → Prop)
+    (A B : Set PropT)
+    (hA : Sound Truth A) (hB : Sound Truth B) :
+    Sound Truth (A ∪ B) := by
+  intro p hp
+  cases hp with
+  | inl h => exact hA p h
+  | inr h => exact hB p h
+
+/--
+  **The Canonical ω-State**: base plus all oracle picks, defined without any schedule.
+
+  This is the "target" of any fair navigation: all fair schedules converge to this state.
+-/
+def omegaState
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D) : State PropT D.Truth where
+  S := S0.S ∪ AllOraclePicks D pickOf
+  sound := sound_union D.Truth S0.S (AllOraclePicks D pickOf) S0.sound (all_oracle_picks_sound D pickOf)
+
+/--
+  **Schedule Invariance**: Two fair schedules produce the same ω-limit.
+
+  This is the "signature theorem" of the dynamics: the limit depends only on
+  the oracle and base, not on the order of steps.
+-/
+theorem lim_eq_of_two_fair_schedules
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D)
+    (schedule₁ schedule₂ : ℕ → Code)
+    (hFair₁ : Fair schedule₁)
+    (hFair₂ : Fair schedule₂) :
+    lim (fun n => (Chain D S0 schedule₁ (picksFromOracle D pickOf schedule₁) n).S) =
+    lim (fun n => (Chain D S0 schedule₂ (picksFromOracle D pickOf schedule₂) n).S) := by
+  rw [lim_schedule_free D S0 pickOf schedule₁ hFair₁]
+  rw [lim_schedule_free D S0 pickOf schedule₂ hFair₂]
+
+/--
+  **Limit equals omegaState**: Under a fair schedule, the limit is exactly the canonical ω-state.
+-/
+theorem lim_eq_omegaState
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D)
+    (schedule : ℕ → Code)
+    (hFair : Fair schedule) :
+    lim (fun n => (Chain D S0 schedule (picksFromOracle D pickOf schedule) n).S) =
+    (omegaState D S0 pickOf).S := by
+  rw [lim_schedule_free D S0 pickOf schedule hFair]
+  rfl
+
 end RevHalt
