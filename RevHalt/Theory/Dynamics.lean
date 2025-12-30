@@ -820,7 +820,7 @@ variable {Code : Type} [Encodable Code] [Inhabited Code]
   Canonical schedule derived from `Encodable`.
   Visits code `dec(n)` at step `n`.
 -/
-noncomputable def scheduleOfEncodable : ℕ → Code :=
+def scheduleOfEncodable : ℕ → Code :=
   fun n => Option.getD (Encodable.decode n) default
 
 /-- The canonical schedule is Fair. -/
