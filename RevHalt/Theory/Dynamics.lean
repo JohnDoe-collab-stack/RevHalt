@@ -563,20 +563,25 @@ theorem step_adds_new
       exact hNew (hSub hIn)
 
 /--
-  **Idempotence**: if pick.p is already present, step doesn't change the corpus.
+  **True Idempotence**: if pick.p is already present, step returns the same corpus.
+  `(step D st e pick).S = st.S` when `pick.p ∈ st.S`.
 -/
-theorem step_already_present
+theorem step_idem_of_mem
     {Code PropT : Type}
     (D : DynamicsSpec Code PropT)
     (st : State PropT D.Truth)
     (e : Code)
     (pick : OraclePick D.Sys D.encode_halt D.encode_not_halt e)
     (hOld : pick.p ∈ st.S) :
-    (step D st e pick).S = st.S ∪ {pick.p} ∧
-    pick.p ∈ st.S := by
-  constructor
-  · rfl
-  · exact hOld
+    (step D st e pick).S = st.S := by
+  have hSub : ({pick.p} : Set PropT) ⊆ st.S := by
+    intro q hq
+    have : q = pick.p := hq
+    rw [this]
+    exact hOld
+  have : st.S ∪ {pick.p} = st.S := Set.union_eq_left.mpr hSub
+  unfold step
+  exact this
 
 /--
   **Union characterization**: step result is always st.S ∪ {pick.p}.
@@ -623,5 +628,91 @@ theorem lim_is_lub
   constructor
   · exact lim_upper_bound C
   · exact lim_least C
+
+-- =====================================================================================
+-- 15) Schedule-Free Closed Form
+-- =====================================================================================
+
+/--
+  The set of ALL oracle pick sentences, independent of any schedule.
+  `AllOraclePicks = { p | ∃ e, p = (pickOf e).p }`
+-/
+def AllOraclePicks
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (pickOf : PickOracle D) : Set PropT :=
+  { p | ∃ e : Code, p = (pickOf e).p }
+
+/--
+  **Schedule-Free Closed Form Inclusion**:
+  Under a fair schedule, the ω-limit contains S0 ∪ AllOraclePicks.
+
+  The converse (limit ⊆ S0 ∪ AllOraclePicks) also holds by `lim_closed_form`.
+-/
+theorem lim_contains_all_oracle_picks
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D)
+    (schedule : ℕ → Code)
+    (hFair : Fair schedule) :
+    AllOraclePicks D pickOf ⊆
+    lim (fun n => (Chain D S0 schedule (picksFromOracle D pickOf schedule) n).S) := by
+  intro p hp
+  unfold AllOraclePicks at hp
+  obtain ⟨e, hpeq⟩ := hp
+  have hCov := fair_implies_coverage D S0 pickOf schedule hFair e
+  rw [hpeq]
+  exact hCov
+
+/--
+  **Complete Schedule-Free Characterization**:
+  Under a fair schedule, `lim Chain = S0.S ∪ AllOraclePicks`.
+
+  This is the canonical characterization: the ω-corpus is exactly
+  the base plus all oracle commitments.
+-/
+theorem lim_schedule_free
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D)
+    (schedule : ℕ → Code)
+    (hFair : Fair schedule) :
+    lim (fun n => (Chain D S0 schedule (picksFromOracle D pickOf schedule) n).S) =
+    S0.S ∪ AllOraclePicks D pickOf := by
+  ext p
+  constructor
+  · intro hp
+    rw [lim_closed_form] at hp
+    cases hp with
+    | inl hS0 => exact Or.inl hS0
+    | inr hall =>
+        unfold allPicksUnbounded picksFromOracle at hall
+        obtain ⟨i, hpeq⟩ := hall
+        exact Or.inr ⟨schedule i, hpeq⟩
+  · intro hp
+    cases hp with
+    | inl hS0 =>
+        rw [mem_lim]
+        use 0
+        unfold Chain
+        exact hS0
+    | inr hall =>
+        exact lim_contains_all_oracle_picks D S0 pickOf schedule hFair hall
+
+/--
+  **Soundness of AllOraclePicks**: every element of AllOraclePicks is true.
+-/
+theorem all_oracle_picks_sound
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (pickOf : PickOracle D) :
+    Sound D.Truth (AllOraclePicks D pickOf) := by
+  intro p hp
+  unfold AllOraclePicks at hp
+  obtain ⟨e, hpeq⟩ := hp
+  rw [hpeq]
+  exact truth_of_pick D e (pickOf e)
 
 end RevHalt
