@@ -181,4 +181,26 @@ theorem CloE_idem (Γ : Set Sentence) :
 
 end Semantics
 
+
+-- =====================================================================================
+-- 1.6) Operative Projector Proofs (The "Filter" Demonstration)
+-- =====================================================================================
+
+/--
+  **Theorem: `up` is a Projector/Filter**.
+  This theorem bundles the three properties that demonstrate the operative nature:
+  1. **Idempotence**: Applying it twice changes nothing (Projector).
+  2. **Signal Preservation**: If there is a signal (Halts), it survives.
+  3. **Noise Annihilation**: If there is no signal (Stabilizes), it collapses to Bot.
+-/
+theorem up_is_projector (T : Trace) :
+    (up (up T) = up T) ∧                  -- Idempotence
+    ((∃ n, up T n) ↔ (∃ n, T n)) ∧        -- Signal Preservation
+    (up T = ⊥ ↔ ∀ n, ¬ T n) :=            -- Noise Annihilation (Kernel)
+by
+  refine ⟨?_, ?_, ?_⟩
+  · exact up_idem T
+  · exact exists_up_iff T
+  · exact up_eq_bot_iff T
+
 end RevHalt
