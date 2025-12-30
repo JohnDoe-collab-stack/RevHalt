@@ -223,10 +223,10 @@ We rigorously prove that such a limit is attainable:
 
 | Theorem | Meaning | Status |
 |---------|---------|--------|
-| `chain_closed_form` | Finite state = $S_0 \cup$ consumed picks | ✅ |
-| `lim_schedule_free` | Limit = $S_0 \cup$ all oracle picks | ✅ |
-| `fair_implies_coverage` | Fair schedule $\implies$ all codes covered | ✅ |
-| `omegaState_minimal` | Limit is the closure (least fixed point) | ✅ |
+| `chain_closed_form` | Finite state = $S_0 \cup$ consumed picks |
+| `lim_schedule_free` | Limit = $S_0 \cup$ all oracle picks |
+| `fair_implies_coverage` | Fair schedule $\implies$ all codes covered |
+| `omegaState_minimal` | Limit is the closure (least fixed point) |
 
 The dynamics transforms the "impossibility of deciding" into the "necessity of specific semantic commitments".
 
