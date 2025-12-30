@@ -218,6 +218,13 @@ Proof: `p ∈ lim C` → `∃n, p ∈ C n` → `Sound (C n)` → `Truth p`.
 
 The **work** is in the step. The **limit** is automatic.
 
+> [!IMPORTANT]
+> **Coverage at ω**: The claim "all codes are covered at step ω" requires:
+> - `schedule` is surjective (every code appears)
+> - `Code` is countable (indexed by ℕ)
+> 
+> These hypotheses are **not proven** in the current code. The dynamics is polymorphic in `Code` and `schedule`. Coverage is only guaranteed for codes of the form `schedule n`.
+
 ## OracleMachine Architecture
 
 The non-mechanical power is localized:

@@ -345,4 +345,191 @@ theorem lim_mono {PropT : Type} (C D : ℕ → Set PropT)
   obtain ⟨n, hn⟩ := hp
   exact ⟨n, h n hn⟩
 
+-- =====================================================================================
+-- 11) Closed Form of Chain
+-- =====================================================================================
+
+/-- Helper: extract the sentence from a pick at index i. -/
+def pickSentence
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (schedule : ℕ → Code)
+    (picks : ∀ n, OraclePick D.Sys D.encode_halt D.encode_not_halt (schedule n))
+    (i : ℕ) : PropT :=
+  (picks i).p
+
+/-- The set of all pick sentences up to index n-1. -/
+def allPicks
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (schedule : ℕ → Code)
+    (picks : ∀ n, OraclePick D.Sys D.encode_halt D.encode_not_halt (schedule n))
+    (n : ℕ) : Set PropT :=
+  prefixPicks (pickSentence D schedule picks) n
+
+/--
+  **Closed Form Theorem**: The chain at step n equals the initial state plus all picks consumed so far.
+
+  `(Chain n).S = S0.S ∪ { (picks i).p | i < n }`
+-/
+theorem chain_closed_form
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (schedule : ℕ → Code)
+    (picks : ∀ n, OraclePick D.Sys D.encode_halt D.encode_not_halt (schedule n))
+    (n : ℕ) :
+    (Chain D S0 schedule picks n).S = S0.S ∪ allPicks D schedule picks n := by
+  induction n with
+  | zero =>
+      unfold Chain allPicks prefixPicks pickSentence
+      ext p
+      constructor
+      · intro hp; exact Or.inl hp
+      · intro hp
+        cases hp with
+        | inl hS0 => exact hS0
+        | inr hpre =>
+            obtain ⟨i, hi, _⟩ := hpre
+            exact False.elim (Nat.not_lt_zero i hi)
+  | succ k ih =>
+      unfold Chain step allPicks
+      rw [prefixPicks_succ]
+      unfold pickSentence
+      -- (Chain k).S ∪ {(picks k).p} = S0.S ∪ (prefixPicks ... k ∪ {(picks k).p})
+      -- By IH: (Chain k).S = S0.S ∪ prefixPicks ... k
+      ext p
+      constructor
+      · intro hp
+        cases hp with
+        | inl hChain =>
+            rw [ih] at hChain
+            cases hChain with
+            | inl hS0 => exact Or.inl hS0
+            | inr hpre => exact Or.inr (Or.inl hpre)
+        | inr hpick =>
+            exact Or.inr (Or.inr hpick)
+      · intro hp
+        cases hp with
+        | inl hS0 =>
+            have : p ∈ (Chain D S0 schedule picks k).S := by rw [ih]; exact Or.inl hS0
+            exact Or.inl this
+        | inr hunion =>
+            cases hunion with
+            | inl hpre =>
+                have : p ∈ (Chain D S0 schedule picks k).S := by rw [ih]; exact Or.inr hpre
+                exact Or.inl this
+            | inr hpick =>
+                exact Or.inr hpick
+
+/-- The set of ALL pick sentences (no upper bound). -/
+def allPicksUnbounded
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (schedule : ℕ → Code)
+    (picks : ∀ n, OraclePick D.Sys D.encode_halt D.encode_not_halt (schedule n)) : Set PropT :=
+  { p | ∃ i, p = (picks i).p }
+
+/--
+  **Closed Form of Limit**: The ω-limit equals the initial state plus ALL pick sentences.
+
+  `lim Chain = S0.S ∪ { (picks i).p | i : ℕ }`
+-/
+theorem lim_closed_form
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (schedule : ℕ → Code)
+    (picks : ∀ n, OraclePick D.Sys D.encode_halt D.encode_not_halt (schedule n)) :
+    lim (fun n => (Chain D S0 schedule picks n).S) = S0.S ∪ allPicksUnbounded D schedule picks := by
+  ext p
+  constructor
+  · intro hp
+    rw [mem_lim] at hp
+    obtain ⟨n, hn⟩ := hp
+    rw [chain_closed_form] at hn
+    cases hn with
+    | inl hS0 => exact Or.inl hS0
+    | inr hpre =>
+        unfold allPicks prefixPicks pickSentence at hpre
+        obtain ⟨i, _, hpeq⟩ := hpre
+        exact Or.inr ⟨i, hpeq⟩
+  · intro hp
+    cases hp with
+    | inl hS0 =>
+        rw [mem_lim]
+        use 0
+        unfold Chain
+        exact hS0
+    | inr hall =>
+        rw [mem_lim]
+        unfold allPicksUnbounded at hall
+        obtain ⟨i, hpeq⟩ := hall
+        use i + 1
+        rw [chain_closed_form]
+        apply Or.inr
+        unfold allPicks prefixPicks pickSentence
+        exact ⟨i, Nat.lt_succ_self i, hpeq⟩
+
+-- =====================================================================================
+-- 12) Coverage via Fair Schedule
+-- =====================================================================================
+
+/--
+  A uniform pick oracle: for every code, we have a pick.
+  This is the "oracle power" that provides certificates for all codes.
+-/
+def PickOracle
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT) : Type :=
+  ∀ e : Code, OraclePick D.Sys D.encode_halt D.encode_not_halt e
+
+/-- Derive picks from a uniform pick oracle and a schedule. -/
+def picksFromOracle
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (pickOf : PickOracle D)
+    (schedule : ℕ → Code) :
+    ∀ n, OraclePick D.Sys D.encode_halt D.encode_not_halt (schedule n) :=
+  fun n => pickOf (schedule n)
+
+/--
+  **Fair Coverage Theorem**: If the schedule is fair, then every code's pick sentence is in the limit.
+
+  This is the canonical formulation of "ω covers all codes (given a fair schedule)".
+-/
+theorem fair_implies_coverage
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D)
+    (schedule : ℕ → Code)
+    (hFair : Fair schedule) :
+    ∀ e : Code, (pickOf e).p ∈ lim (fun n => (Chain D S0 schedule (picksFromOracle D pickOf schedule) n).S) := by
+  intro e
+  obtain ⟨n, hn⟩ := hFair e
+  rw [lim_closed_form]
+  apply Or.inr
+  unfold allPicksUnbounded picksFromOracle
+  use n
+  rw [hn]
+
+/--
+  **Corollary**: Under a fair schedule, the limit contains both halt and not-halt encodings
+  for every code (whichever the oracle pick selects).
+-/
+theorem fair_limit_complete
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D)
+    (schedule : ℕ → Code)
+    (hFair : Fair schedule)
+    (e : Code) :
+    (pickOf e).p ∈ lim (fun n => (Chain D S0 schedule (picksFromOracle D pickOf schedule) n).S) ∧
+    D.Truth (pickOf e).p := by
+  constructor
+  · exact fair_implies_coverage D S0 pickOf schedule hFair e
+  · exact truth_of_pick D e (pickOf e)
+
 end RevHalt
