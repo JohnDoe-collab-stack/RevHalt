@@ -206,7 +206,8 @@ Kits are not where the power is. Power lives in `Sat` / bridge / certificates.
 - `RevHalt/Theory/Stabilization.lean` — `Stabilizes`, `KitStabilizes`, kernel link
 - `RevHalt/Theory/Categorical.lean` — `up` as coreflector, `CloE`, `Frontier`, anti-monotonicity
 - `RevHalt/Theory/QuantifierSwap.lean` — Quantifier Swap principle
-- `RevHalt/Theory/ThreeBlocksArchitecture.lean` — OracleMachine, o-bridge
+- `RevHalt/Theory/ThreeBlocksArchitecture.lean` — OracleMachine, o-bridge, `ArchitecturalOraclePick`
+- `RevHalt/Theory/Dynamics.lean` — Navigation dynamics: `State`, `step`, `Chain`, `lim`, soundness preservation
 - `RevHalt/Theory/WitnessLogic.lean` — Witness soundness
 
 ---
