@@ -532,4 +532,96 @@ theorem fair_limit_complete
   · exact fair_implies_coverage D S0 pickOf schedule hFair e
   · exact truth_of_pick D e (pickOf e)
 
+-- =====================================================================================
+-- 13) Progress analysis: step with frontier tracking (constructive)
+-- =====================================================================================
+
+/--
+  **Progress Theorem**: step makes strict progress when the pick is new.
+
+  This is the constructive formulation: we don't ask "is pick.p ∈ st.S?",
+  we prove properties conditional on the answer.
+-/
+theorem step_adds_new
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (st : State PropT D.Truth)
+    (e : Code)
+    (pick : OraclePick D.Sys D.encode_halt D.encode_not_halt e)
+    (hNew : pick.p ∉ st.S) :
+    pick.p ∈ (step D st e pick).S ∧
+    st.S ⊂ (step D st e pick).S := by
+  have hStep : (step D st e pick).S = st.S ∪ {pick.p} := rfl
+  constructor
+  · rw [hStep]; exact Or.inr rfl
+  · constructor
+    · exact step_mono D st e pick
+    · intro hSub
+      -- hSub : (step...).S ⊆ st.S, i.e., st.S ∪ {pick.p} ⊆ st.S
+      have hIn : pick.p ∈ st.S ∪ {pick.p} := Or.inr rfl
+      rw [hStep] at hSub
+      exact hNew (hSub hIn)
+
+/--
+  **Idempotence**: if pick.p is already present, step doesn't change the corpus.
+-/
+theorem step_already_present
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (st : State PropT D.Truth)
+    (e : Code)
+    (pick : OraclePick D.Sys D.encode_halt D.encode_not_halt e)
+    (hOld : pick.p ∈ st.S) :
+    (step D st e pick).S = st.S ∪ {pick.p} ∧
+    pick.p ∈ st.S := by
+  constructor
+  · rfl
+  · exact hOld
+
+/--
+  **Union characterization**: step result is always st.S ∪ {pick.p}.
+-/
+theorem step_eq_union
+    {Code PropT : Type}
+    (D : DynamicsSpec Code PropT)
+    (st : State PropT D.Truth)
+    (e : Code)
+    (pick : OraclePick D.Sys D.encode_halt D.encode_not_halt e) :
+    (step D st e pick).S = st.S ∪ {pick.p} := rfl
+
+-- =====================================================================================
+-- 14) Lattice structure: lim as LUB (least upper bound)
+-- =====================================================================================
+
+/-- Every chain element is contained in the limit (upper bound). -/
+theorem lim_upper_bound
+    {PropT : Type}
+    (C : ℕ → Set PropT)
+    (n : ℕ) :
+    C n ⊆ lim C := by
+  intro p hp
+  rw [mem_lim]
+  exact ⟨n, hp⟩
+
+/-- The limit is the least upper bound: if T contains all C n, then T contains lim C. -/
+theorem lim_least
+    {PropT : Type}
+    (C : ℕ → Set PropT)
+    (T : Set PropT)
+    (hUB : ∀ n, C n ⊆ T) :
+    lim C ⊆ T := by
+  intro p hp
+  rw [mem_lim] at hp
+  obtain ⟨n, hn⟩ := hp
+  exact hUB n hn
+
+/-- lim is characterized as the unique set satisfying both LUB properties. -/
+theorem lim_is_lub
+    {PropT : Type}
+    (C : ℕ → Set PropT) :
+    (∀ n, C n ⊆ lim C) ∧ (∀ T, (∀ n, C n ⊆ T) → lim C ⊆ T) := by
+  constructor
+  · exact lim_upper_bound C
+  · exact lim_least C
+
 end RevHalt
