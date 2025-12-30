@@ -1,5 +1,6 @@
 import RevHalt.Theory.Complementarity
 import Mathlib.Data.Set.Basic
+import Mathlib.Logic.Encodable.Basic
 
 /-!
 # RevHalt.Theory.Dynamics
@@ -20,11 +21,11 @@ The dynamics is not about "provability" (`⊢_S p`), but about **accumulating se
 - `Chain`: iteration of steps indexed by ℕ
 - `lim`: limit (union) of a chain
 
-## Key Theorems
+## Signature Theorems
 
-- `chain_mono`: `(Chain n).S ⊆ (Chain (n+1)).S`
-- `chain_sound_all`: every state in the chain is sound
-- `lim_sound`: the limit is sound
+- `lim_schedule_free`: The ω-limit is `S0 ∪ AllOraclePicks` (schedule-independent).
+- `lim_eq_of_two_fair_schedules`: Two fair schedules produce the *same* limit.
+- `lim_eq_omegaState`: Fairness implies convergence to the canonical `omegaState`.
 -/
 
 namespace RevHalt
@@ -276,6 +277,9 @@ theorem mem_lim {PropT : Type} {C : ℕ → Set PropT} {p : PropT} :
     p ∈ lim C ↔ ∃ n, p ∈ C n := by
   unfold lim
   rw [Set.mem_iUnion]
+
+@[simp] theorem mem_lim_simp {PropT : Type} {C : ℕ → Set PropT} {p : PropT} :
+    p ∈ lim C ↔ ∃ n, p ∈ C n := mem_lim
 
 /-- The limit of a sound chain is sound. -/
 theorem lim_sound
@@ -583,9 +587,11 @@ theorem step_idem_of_mem
   unfold step
   exact this
 
+
 /--
   **Union characterization**: step result is always st.S ∪ {pick.p}.
 -/
+@[simp]
 theorem step_eq_union
     {Code PropT : Type}
     (D : DynamicsSpec Code PropT)
@@ -633,6 +639,7 @@ theorem lim_is_lub
 -- 15) Schedule-Free Closed Form
 -- =====================================================================================
 
+
 /--
   The set of ALL oracle pick sentences, independent of any schedule.
   `AllOraclePicks = { p | ∃ e, p = (pickOf e).p }`
@@ -642,6 +649,9 @@ def AllOraclePicks
     (D : DynamicsSpec Code PropT)
     (pickOf : PickOracle D) : Set PropT :=
   { p | ∃ e : Code, p = (pickOf e).p }
+
+@[simp] theorem mem_AllOraclePicks {Code PropT : Type} (D : DynamicsSpec Code PropT) (pickOf : PickOracle D) (p : PropT) :
+    p ∈ AllOraclePicks D pickOf ↔ ∃ e, p = (pickOf e).p := Iff.rfl
 
 /--
   **Schedule-Free Closed Form Inclusion**:
@@ -776,5 +786,51 @@ theorem lim_eq_omegaState
     (omegaState D S0 pickOf).S := by
   rw [lim_schedule_free D S0 pickOf schedule hFair]
   rfl
+
+
+-- =====================================================================================
+-- 17) Schedule Construction and Generic Existence
+-- =====================================================================================
+
+section ScheduleFromEncodable
+
+variable {Code : Type} [Encodable Code] [Inhabited Code]
+
+/--
+  Canonical schedule derived from `Encodable`.
+  Visits code `dec(n)` at step `n`.
+-/
+noncomputable def scheduleOfEncodable : ℕ → Code :=
+  fun n => Option.getD (Encodable.decode n) default
+
+/-- The canonical schedule is Fair. -/
+theorem scheduleOfEncodable_fair : Fair (scheduleOfEncodable (Code := Code)) := by
+  intro e
+  refine ⟨Encodable.encode e, ?_⟩
+  simp [scheduleOfEncodable, Encodable.encodek]
+
+end ScheduleFromEncodable
+
+/--
+  **Generic Existence Theorem**:
+  If Code is Encodable and Inhabited, there exists a fair schedule such that
+  the limit is the canonical ω-state.
+
+  This eliminates the `Fair` hypothesis by constructing a witness.
+-/
+theorem exists_fair_limit_eq_omegaState
+    {Code PropT : Type} [Encodable Code] [Inhabited Code]
+    (D : DynamicsSpec Code PropT)
+    (S0 : State PropT D.Truth)
+    (pickOf : PickOracle D) :
+    ∃ schedule : ℕ → Code,
+      Fair schedule ∧
+      lim (fun n => (Chain D S0 schedule (picksFromOracle D pickOf schedule) n).S) =
+      (omegaState D S0 pickOf).S := by
+  use scheduleOfEncodable
+  constructor
+  · exact scheduleOfEncodable_fair
+  · apply lim_eq_omegaState
+    exact scheduleOfEncodable_fair
 
 end RevHalt
