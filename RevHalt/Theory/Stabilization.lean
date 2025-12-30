@@ -68,4 +68,28 @@ theorem KitStabilizes_iff_up_eq_bot (K : RHKit) (hK : DetectsMonotone K) (T : Tr
   rw [T1_stabilization K hK T]
   exact Stabilizes_iff_up_eq_bot T
 
+/--
+  **Explicit Proof**:
+  Same as `KitStabilizes_iff_up_eq_bot`, but with manual unfolding of the T1 layers.
+  Shows step-by-step how `¬ Rev0` becomes `up T = ⊥`.
+-/
+theorem KitStabilizes_iff_up_eq_bot_explicit (K : RHKit) (hK : DetectsMonotone K) (T : Trace) :
+    (¬ Rev0_K K T) ↔ (up T = ⊥) := by
+  -- ¬Rev ↔ ¬Halts (T1), puis ¬Halts ↔ ∀n ¬Tn, puis ↔ upT=⊥
+  have h1 : Rev0_K K T ↔ Halts T := T1_traces K hK T
+  -- transforme ¬Halts en ∀n ¬Tn
+  -- et utilise up_eq_bot_iff
+  constructor
+  · intro hnot
+    have : ¬ Halts T := by
+      intro hH; exact hnot (h1.mpr hH)
+    have hstab : ∀ n, ¬ T n := by
+      intro n hn; exact this ⟨n, hn⟩
+    exact (up_eq_bot_iff (T := T)).2 hstab
+  · intro hupbot hrev
+    have : Halts T := h1.mp hrev
+    rcases this with ⟨n, hn⟩
+    have : ∀ n, ¬ T n := (up_eq_bot_iff (T := T)).1 hupbot
+    exact (this n) hn
+
 end RevHalt
