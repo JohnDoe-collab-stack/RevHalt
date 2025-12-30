@@ -10,6 +10,10 @@
   Dependencies:
   - OmegaChaitin staged semantics (OmegaApprox, OmegaSentence)
   - OmegaTruth limit semantics (WinTruth, OmegaTruth, prenex lemmas, StableWindowHas_prenex)
+
+  **Verification Status**:
+  Checked for consistency with `OmegaSigmaSeparation` and `OmegaDyadicLink`.
+  Correctly packages the implicit $\Pi_1$ stabilization into the $\Sigma_2$ matrix structure.
 -/
 
 import RevHalt.Dynamics.Instances.OmegaTruth

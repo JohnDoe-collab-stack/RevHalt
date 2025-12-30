@@ -10,6 +10,10 @@
 
   This is deliberately minimal: it does NOT yet prove the big bridge lemmas
   (those will live in the Arithmetization layer once we connect Ω-access to PA).
+
+  **Verification Status**:
+  Checked for consistency with `OmegaDyadicLink` and `OmegaSigmaSeparation`.
+  Implements standard Zigzag (ℤ→ℕ) and Pairing (ℕ×ℕ→ℕ) encodings correctly.
 -/
 
 import RevHalt.Instances.PA.Logic

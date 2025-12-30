@@ -11,6 +11,11 @@
 
   This is the correct "arithmetical" next move:
   it isolates exactly what the PA/Arithmetization layer must realize.
+
+  **Contrast with Logic/Separation**:
+  - `OmegaDyadicLink` handles `CutGe` (Reachability), which is **Σ₁** and accessible.
+  - `OmegaSigmaSeparation` handles `WinTruth` (Stabilization), which is **Σ₂** (has a Π₁ component) and inaccessible.
+  The "Link" here is strictly for the Σ₁ approximations.
 -/
 
 import RevHalt.Dynamics.Instances.OmegaAccessSchemas

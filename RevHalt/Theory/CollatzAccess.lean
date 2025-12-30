@@ -13,6 +13,12 @@
       ¬Collatz ↔ ∃n, ∀t, iter(t,n)≠1.
   - A “local fork by certificates”: you can move left with a Σ₁ witness,
     or move right with a Π₁ stabilization certificate; both certificates cannot coexist.
+
+  **Note on Complexity vs OmegaLogic**:
+  Unlike `WinTruth` (in `OmegaTruth.lean`) which *requires* Π₁ stabilization to define a single bit
+  (making it Σ₂), the "Access" here (`ReachOne`) is purely Σ₁ (Reachability).
+  The Π₁ component (`AvoidOne`) exists but is the *negation* of access, not a requirement for it.
+  There is no "stabilization barrier" to *reach* 1, only a search for a time t.
 -/
 
 import Mathlib.Data.Nat.Basic
@@ -74,6 +80,23 @@ theorem cert_exclusion (n : ℕ) :
   intro h
   rcases h with ⟨⟨⟨t, ht⟩⟩, hAvoid⟩
   exact hAvoid t ht
+
+/-- The "Fork" type: explicit outcome of the dynamic process.
+    Either we stop (reach 1) with a finite witness, or we continue forever (avoid 1). -/
+inductive CollatzOutcome (n : ℕ) where
+  | reaches (c : ReachCert n) : CollatzOutcome n
+  | avoids (c : AvoidCert n) : CollatzOutcome n
+
+/-- The Fork is exhaustive (classically), giving full coverage of the outcome space. -/
+theorem outcome_exhaustive (n : ℕ) : Nonempty (CollatzOutcome n) := by
+  classical
+  cases em (ReachOne n) with
+  | inl h =>
+    rcases (reachOne_iff_nonempty_cert n).1 h with ⟨c⟩
+    exact ⟨CollatzOutcome.reaches c⟩
+  | inr h =>
+    have hAv := (not_reachOne_iff_avoidOne n).1 h
+    exact ⟨CollatzOutcome.avoids hAv⟩
 
 /-- Global Collatz statement: Π₂ shape. -/
 def Collatz : Prop := ∀ n : ℕ, ReachOne n
