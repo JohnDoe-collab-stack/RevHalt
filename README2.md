@@ -2,9 +2,26 @@
 
 RevHalt is a Lean 4 (Mathlib) formalization of a single idea:
 
+
 **Turn an impossibility (undecidability of halting) into a navigable structure.**
 
 Instead of treating the Halting Theorem as a dead-end (“you can’t know, period”), RevHalt isolates what is **rigid**, what is **uniformly impossible**, and what is **locally extendable with certificates**, and packages this into a clean dynamics on theories.
+
+## What is actually new
+
+RevHalt is **not** “just an oracle” and **not** “just Gödel again”.
+The novelty is **structural**:
+
+- **Oracle decomposed**: instead of postulating a black‑box, RevHalt exposes a minimal
+  correctness condition (`DetectsMonotone`) + a closure operator (`up`) that **forces**
+  any valid observer to collapse to standard halting (rigidity).
+- **Beyond existence**: Gödel shows *there exist* true‑but‑unprovable statements.
+  RevHalt gives a **systematic, instance‑wise mechanism** (T3 + certificates) and a
+  **dynamic** on theories (chains / forks) to navigate them.
+- **No “hidden power”**: the only non‑mechanical power is localized in the semantic bridge
+  (`Sat` / `OracleBridge`), not in the kit itself.
+
+If you want a slogan: **RevHalt is a geometry of the oracle, not a new oracle.**
 
 ---
 
