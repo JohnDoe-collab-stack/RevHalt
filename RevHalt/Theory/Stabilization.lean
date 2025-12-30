@@ -1,6 +1,7 @@
 import RevHalt.Base.Trace
 import RevHalt.Base.Kit
 import RevHalt.Theory.Canonicity
+import RevHalt.Theory.Categorical
 
 /-!
 # RevHalt.Theory.Stabilization
@@ -35,6 +36,14 @@ theorem Stabilizes_up_iff (T : Trace) :
   have : Halts (up T) ↔ Halts T := (exists_up_iff T)
   tauto
 
+/--
+  **Bridge to Algebra**:
+  Stabilization (logical) is equivalent to lying in the Kernel of `up` (algebraic).
+-/
+theorem Stabilizes_iff_up_eq_bot (T : Trace) :
+  Stabilizes T ↔ up T = ⊥ := by
+  exact (up_eq_bot_iff T).symm
+
 /-- Kit-level negative verdict. -/
 def KitStabilizes (K : RHKit) (T : Trace) : Prop := ¬ Rev0_K K T
 
@@ -46,5 +55,17 @@ theorem T1_stabilization (K : RHKit) (hK : DetectsMonotone K) :
   rw [T1_traces K hK T]
   -- `Stabilizes T ↔ ¬ Halts T`
   rw [Stabilizes_iff_NotHalts]
+
+/--
+  **The Kernel Detector Theorem**:
+  A valid Kit detects exactly when a trace belongs to the kernel of `up`.
+  `KitStabilizes K T ↔ up T = ⊥`
+
+  This proves that the Kit is an instrument measuring the **algebraic nullity** of the trace.
+-/
+theorem KitStabilizes_iff_up_eq_bot (K : RHKit) (hK : DetectsMonotone K) (T : Trace) :
+    KitStabilizes K T ↔ up T = ⊥ := by
+  rw [T1_stabilization K hK T]
+  exact Stabilizes_iff_up_eq_bot T
 
 end RevHalt
