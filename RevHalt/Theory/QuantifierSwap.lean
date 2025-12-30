@@ -1,5 +1,6 @@
 import RevHalt.Theory.Complementarity
 import RevHalt.Theory.Impossibility
+import RevHalt.Theory.Stabilization
 
 /-!
 # RevHalt.Theory.QuantifierSwap
@@ -80,7 +81,7 @@ theorem T3_permits_instancewise
     (h_S2_sound : ∀ p ∈ S2, Truth p)
     (encode_halt encode_not_halt : Code → PropT)
     (h_pos : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
-    (h_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → Truth (encode_not_halt e))
+    (h_neg : ∀ e, KitStabilizes S.K (S.Machine e) → Truth (encode_not_halt e))
     (e : Code)
     (pick : OraclePick S encode_halt encode_not_halt e) :
     ∃ S_e : Set PropT,
@@ -100,7 +101,7 @@ theorem T3_permits_instancewise
         rw [hpEq]
         exact h_pos e hKit
     | inr h =>
-        have hNotKit : ¬ Rev0_K S.K (S.Machine e) := h.1
+        have hNotKit : KitStabilizes S.K (S.Machine e) := h.1
         have hpEq : pick.p = encode_not_halt e := h.2
         rw [hpEq]
         exact h_neg e hNotKit
@@ -148,7 +149,7 @@ theorem quantifier_swap_coexistence
     (h_S2_sound : ∀ p ∈ S2, Truth p)
     (encode_halt encode_not_halt : Code → PropT)
     (h_pos : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
-    (h_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → Truth (encode_not_halt e))
+    (h_neg : ∀ e, KitStabilizes S.K (S.Machine e) → Truth (encode_not_halt e))
     (picks : ∀ e, OraclePick S encode_halt encode_not_halt e) :
     -- T2: No uniform internal predicate
     (¬ ∃ _ : InternalHaltingPredicate S.toImpossibleSystem S.K, True) ∧

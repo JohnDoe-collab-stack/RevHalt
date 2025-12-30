@@ -1,4 +1,5 @@
 import RevHalt.Theory.Impossibility
+import RevHalt.Theory.Stabilization
 import Mathlib.Data.Set.Basic
 import Mathlib.Logic.Function.Basic
 import Mathlib.Data.Finite.Defs
@@ -364,7 +365,7 @@ structure OraclePick {Code PropT : Type} (S : ComplementaritySystem Code PropT)
   p : PropT
   cert :
     (Rev0_K S.K (S.Machine e) ∧ p = encode_halt e) ∨
-    (¬ Rev0_K S.K (S.Machine e) ∧ p = encode_not_halt e)
+    (KitStabilizes S.K (S.Machine e) ∧ p = encode_not_halt e)
 
 /-- Local S₁ for a fixed oracle pick: a single frontier sentence. -/
 def S1OneSet {PropT : Type} (pick_p : PropT) : Set PropT :=
@@ -393,7 +394,7 @@ theorem T3_oracle_extension_explicit
     (h_S2_sound : ∀ p ∈ S2, Truth p)
     (encode_halt encode_not_halt : Code → PropT)
     (h_pos : ∀ e, Rev0_K S.K (S.Machine e) → Truth (encode_halt e))
-    (h_neg : ∀ e, ¬ Rev0_K S.K (S.Machine e) → Truth (encode_not_halt e))
+    (h_neg : ∀ e, KitStabilizes S.K (S.Machine e) → Truth (encode_not_halt e))
     (e : Code)
     (pick : OraclePick S encode_halt encode_not_halt e)
     (hUnprov : ¬ S.Provable pick.p) :
@@ -404,11 +405,14 @@ theorem T3_oracle_extension_explicit
       pick.p ∈ S3 ∧
       ¬ S.Provable pick.p ∧
       ((Halts (S.Machine e) ∧ pick.p = encode_halt e) ∨
-       (¬ Halts (S.Machine e) ∧ pick.p = encode_not_halt e)) := by
+       (Stabilizes (S.Machine e) ∧ pick.p = encode_not_halt e)) := by
   let S3 : Set PropT := S3OneSet S2 pick.p
 
   have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) :=
     T1_traces S.K S.h_canon (S.Machine e)
+
+  have hIffStab : KitStabilizes S.K (S.Machine e) ↔ Stabilizes (S.Machine e) :=
+    T1_stabilization S.K S.h_canon (S.Machine e)
 
   have hTruthPick : Truth pick.p := by
     cases pick.cert with
@@ -419,7 +423,7 @@ theorem T3_oracle_extension_explicit
         rw [hpEq]
         exact hTrue
     | inr h =>
-        have hNotKit : ¬ Rev0_K S.K (S.Machine e) := h.1
+        have hNotKit : KitStabilizes S.K (S.Machine e) := h.1
         have hpEq : pick.p = encode_not_halt e := h.2
         have hTrue : Truth (encode_not_halt e) := h_neg e hNotKit
         rw [hpEq]
@@ -427,7 +431,7 @@ theorem T3_oracle_extension_explicit
 
   have hBranchHalt :
       (Halts (S.Machine e) ∧ pick.p = encode_halt e) ∨
-      (¬ Halts (S.Machine e) ∧ pick.p = encode_not_halt e) := by
+      (Stabilizes (S.Machine e) ∧ pick.p = encode_not_halt e) := by
     cases pick.cert with
     | inl h =>
         have hKit : Rev0_K S.K (S.Machine e) := h.1
@@ -435,13 +439,10 @@ theorem T3_oracle_extension_explicit
         have hHalt : Halts (S.Machine e) := (hIff).1 hKit
         exact Or.inl (And.intro hHalt hpEq)
     | inr h =>
-        have hNotKit : ¬ Rev0_K S.K (S.Machine e) := h.1
+        have hNotKit : KitStabilizes S.K (S.Machine e) := h.1
         have hpEq : pick.p = encode_not_halt e := h.2
-        have hNotHalt : ¬ Halts (S.Machine e) := by
-          intro hHalt
-          have hKit : Rev0_K S.K (S.Machine e) := (hIff).2 hHalt
-          exact hNotKit hKit
-        exact Or.inr (And.intro hNotHalt hpEq)
+        have hStab : Stabilizes (S.Machine e) := (hIffStab).1 hNotKit
+        exact Or.inr (And.intro hStab hpEq)
 
   refine Exists.intro S3 ?_
   refine And.intro rfl ?_

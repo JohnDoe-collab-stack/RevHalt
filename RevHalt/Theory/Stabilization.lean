@@ -5,79 +5,46 @@ import RevHalt.Theory.Canonicity
 /-!
 # RevHalt.Theory.Stabilization
 
-**P1 Access via Kit.**
+Turns the *negative* verdict of a valid Kit into a first-class Π₁ property.
 
-This file formalizes "Stabilization" as a first-class property derived directly
-from the Kit's negative verdict (via T1).
-
-## Definitions
-
-- `Stabilizes T`: The trace never becomes true (∀ n, ¬ T n). This is strictly Π₁.
+- `Stabilizes T := ∀ n, ¬ T n` (Π₁)
   *Algebraically corresponding to `up T = ⊥` (see Theory/Categorical.lean).*
-- `KitStabilizes K T`: The Kit output is false (`¬ Rev0_K K T`).
-- `T1_stabilization`: The bridge theorem. If K detects monotone, then `KitStabilizes ↔ Stabilizes`.
+- `KitStabilizes K T := ¬ Rev0_K K T`
+- `T1_stabilization`: if `DetectsMonotone K`, then `KitStabilizes K T ↔ Stabilizes T`
 -/
 
 namespace RevHalt
 
--- ==============================================================================================
--- 1. The Trace Level: P1 Definition
--- ==============================================================================================
-
-/--
-  **Stabilizes**: A trace stabilizes (to false) if it never becomes true.
-  Structure: `∀ n, ¬ T n` (Π₁).
-  This is the constructive negation of `Halts`.
--/
+/-- Π₁ stabilization: the trace never becomes true. -/
 def Stabilizes (T : Trace) : Prop := ∀ n, ¬ T n
 
-/--
-  Equivalence: Stabilization corresponds exactly to Non-Halting.
-  `Stabilizes T ↔ ¬ (∃ n, T n)`
--/
 theorem Stabilizes_iff_NotHalts (T : Trace) :
     Stabilizes T ↔ ¬ Halts T := by
   unfold Stabilizes Halts
-  push_neg
-  rfl
+  constructor
+  · intro h hex
+    rcases hex with ⟨n, hn⟩
+    exact h n hn
+  · intro h n hn
+    exact h ⟨n, hn⟩
 
-/--
-  **Stability under Closure**:
-  The `up` operator preserves stabilization exactly.
-  If the original trace never fires, the closure never fires.
--/
 theorem Stabilizes_up_iff (T : Trace) :
     Stabilizes (up T) ↔ Stabilizes T := by
   rw [Stabilizes_iff_NotHalts, Stabilizes_iff_NotHalts]
-  unfold Halts
-  rw [exists_up_iff T]
+  -- `Halts (up T) ↔ Halts T`
+  have : Halts (up T) ↔ Halts T := (exists_up_iff T)
+  tauto
 
--- ==============================================================================================
--- 2. The Kit Level: P1 Certificate
--- ==============================================================================================
+/-- Kit-level negative verdict. -/
+def KitStabilizes (K : RHKit) (T : Trace) : Prop := ¬ Rev0_K K T
 
-/--
-  **KitStabilizes**: The Kit's formal verdict for "No".
-  This is an observational property: "The instrument output is false".
--/
-def KitStabilizes (K : RHKit) (T : Trace) : Prop :=
-  ¬ Rev0_K K T
-
-/--
-  **Theorem T1 (Stabilization)**:
-  If the Kit is valid (DetectsMonotone), then a negative verdict
-  is a **Proof of Stabilization**.
-
-  This gives us Π₁ access "on a budget": we don't compute the infinite check,
-  we observe the Kit's rejection.
--/
 theorem T1_stabilization (K : RHKit) (hK : DetectsMonotone K) :
     ∀ T : Trace, KitStabilizes K T ↔ Stabilizes T := by
   intro T
   unfold KitStabilizes
-  -- Use T1: Rev0_K K T ↔ Halts T
+  -- `Rev0_K K T ↔ Halts T`
   rw [T1_traces K hK T]
-  -- Use Stabilizes ↔ ¬ Halts
-  rw [← Stabilizes_iff_NotHalts]
+  -- `Stabilizes T ↔ ¬ Halts T`
+  rw [Stabilizes_iff_NotHalts]
 
 end RevHalt
