@@ -23,6 +23,24 @@ Gödel and Turing prove that limits exist. RevHalt provides a **formal dynamics*
 
 Incompleteness becomes **navigable**: not a wall, but a structured space with typed certificates.
 
+### Π₁ Stabilization as First-Class Certificate
+
+Standard computability treats "doesn't halt" as `¬∃n. T n` — a **logical negation** of Σ₁.
+
+RevHalt treats "stabilizes" as `∀n. ¬T n` — a **first-class Π₁ structure**:
+
+| Approach | Form | Status |
+|----------|------|--------|
+| Standard | `¬∃n. T n` | Negation (derived) |
+| RevHalt | `∀n. ¬T n` | Π₁ certificate (primitive) |
+
+The Kit's negative verdict `¬Rev0_K` becomes a **typed Π₁ certificate** that can be:
+- **Carried** by `OraclePick` on the "stabilization" branch
+- **Used** as fuel for sound extensions in T3
+- **Linked** algebraically to the kernel of `up`: `up T = ⊥ ↔ ∀n. ¬T n`
+
+Stabilization is not "we don't know if it halts" — it is a **positive geometric structure** extracted from the instrument.
+
 ---
 
 ## Categorical Structure
