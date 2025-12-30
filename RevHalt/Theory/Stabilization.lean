@@ -13,6 +13,7 @@ from the Kit's negative verdict (via T1).
 ## Definitions
 
 - `Stabilizes T`: The trace never becomes true (∀ n, ¬ T n). This is strictly Π₁.
+  *Algebraically corresponding to `up T = ⊥` (see Theory/Categorical.lean).*
 - `KitStabilizes K T`: The Kit output is false (`¬ Rev0_K K T`).
 - `T1_stabilization`: The bridge theorem. If K detects monotone, then `KitStabilizes ↔ Stabilizes`.
 -/

@@ -77,6 +77,59 @@ theorem up_idem (T : Trace) : up (up T) = up T := by
   · exact (le_up_idem (T := T)) n
 
 
+
+-- =====================================================================================
+-- 1.5) Stabilization as Partial Order Bottom
+-- =====================================================================================
+
+/-- The bottom trace (constantly false). -/
+def BotTrace : Trace := fun _ => False
+
+instance : Bot Trace := ⟨BotTrace⟩
+
+@[simp] lemma bot_trace_apply (n : ℕ) : (⊥ : Trace) n = False := rfl
+
+/-- `up` preserves bottom. -/
+theorem up_bot : up ⊥ = ⊥ := by
+  funext n
+  apply propext
+  constructor
+  · intro h
+    rcases h with ⟨k, _, hk⟩
+    exact hk
+  · intro h
+    exact False.elim h
+
+/--
+  **Algebraic Stabilization (The Operative Core)**:
+  Standard theory defines stabilization logically (`∀ n, ¬ T n`).
+  RevHalt defines it operatively via the `up` closure (`up T = ⊥`).
+
+  The novelty is the operator `up` itself: it acts as a **Projector** / **Filter**.
+  - If `T` contains any signal (Halt), `up T` imposes `True` (eventually).
+  - If `T` stabilizes (No Halt), `up T` collapses to `⊥`.
+
+  This makes Stabilization a **structural nullity** detected by the operator,
+  rather than just a logical negation.
+-/
+theorem up_eq_bot_iff (T : Trace) :
+    up T = ⊥ ↔ ∀ n, ¬ T n := by
+  constructor
+  · intro h n hn
+    have hT : T ≤ up T := le_up T
+    have hBot : up T n := hT n hn
+    rw [h] at hBot
+    exact hBot
+  · intro h
+    funext n
+    apply propext
+    constructor
+    · intro hUp
+      rcases hUp with ⟨k, _, hk⟩
+      exact h k hk
+    · intro hBot
+      exact False.elim hBot
+
 -- =====================================================================================
 -- 2) `ModE` / `ThE` / `CloE` as Galois-style structure; `CloE` is a closure operator
 -- =====================================================================================

@@ -8,12 +8,14 @@ import RevHalt.Theory.Impossibility
 
 This file formalizes the key insight distinguishing T2 and T3:
 
-- **T2 (forbidden uniform)**: ¬∃H ∀e (H total + correct + complete + r.e.)
-- **T3 (permitted instancewise)**: ∀e ∃Sₑ ⊇ S₂ (Sₑ sound ∧ Sₑ decides encode_halt(e))
+- **T2 (Impossibility of Uniform Stabilization)**: ¬∃H ∀e (H total + correct + complete + r.e.)
+  If we could uniformly detecting stabilization, we could decide halting.
+- **T3 (Permissibility of Local Stabilization)**: ∀e ∃Sₑ ⊇ S₂ (Sₑ sound ∧ Sₑ determines e)
+  The Kit allows us to extract a local *stabilization certificate* (`¬ Rev0_K`) for any specific `e`.
 
-The "power" of RevHalt comes from this quantifier swap:
+The "power" of RevHalt comes from this structural shift:
 replacing the uniform demand `∃H ∀e` by the instancewise demand `∀e ∃Sₑ`,
-where the extra power is localized external certification.
+where the extra power is the **Stabilization Certificate** extracted from the Kit.
 
 ## Main Results
 
@@ -168,13 +170,13 @@ theorem quantifier_swap_coexistence
 /-
 **Summary of the Quantifier Swap**:
 
-| Demand | Quantifier Form | Status |
-|--------|-----------------|--------|
-| Turing (uniform) | ∃H ∀e | Forbidden (T2) |
-| RevHalt (instancewise) | ∀e ∃Sₑ | Permitted (T3) |
+| Demand | Quantifier Form | Status | Interpretation |
+|--------|-----------------|--------|----------------|
+| Turing (uniform) | ∃H ∀e | Forbidden (T2) | No uniform Stabilization Detector |
+| RevHalt (instancewise) | ∀e ∃Sₑ | Permitted (T3) | Local Stabilization Certificates |
 
-The swap `∃H ∀e` → `∀e ∃Sₑ` is exactly the move from internal totalization
-to external localized certification.
+The swap `∃H ∀e` → `∀e ∃Sₑ` is exactly the move from impossible uniform internal stability
+to possible local external stability certification.
 -/
 
 end RevHalt
