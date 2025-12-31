@@ -33,18 +33,21 @@ structure StructuralDichotomy (X : Type) [Preorder X] [Bot X] where
   Sig : X → Prop                      -- The "signal" (Σ₁-like)
   sig_invar : ∀ x, Sig (O x) ↔ Sig x -- Signal preservation
   ker_iff : ∀ x, O x = ⊥ ↔ ¬ Sig x   -- Kernel = ¬Signal (Π₁-like)
-```
+````
 
 **Where EM enters** (and ONLY here):
+
 ```lean
 -- Constructive: O x ≠ ⊥ → ¬¬Sig x
 theorem ne_bot_imp_notnot_sig : D.O x ≠ ⊥ → ¬¬ D.Sig x
 
--- Classical (requires EM): O x ≠ ⊥ → Sig x  
+-- Classical (requires EM): O x ≠ ⊥ → Sig x
 theorem ne_bot_imp_sig : D.O x ≠ ⊥ → D.Sig x
 ```
 
-**AC is NOT needed**: once the side is determined, the content is forced by structure.
+**AC is NOT needed**: once the side is determined, the certificate content is forced by the structure.
+
+**Noncomputability policy**: we avoid `noncomputable`. When needed, we use classical reasoning (`by_cases`) only at the “decide the side” point.
 
 ---
 
@@ -63,22 +66,29 @@ def traceSD : StructuralDichotomy Trace where
 ```
 
 Where:
-- `up T n := ∃ k ≤ n, T k` (cumulative monotonization)
-- `Halts T := ∃ n, T n` (Σ₁)
-- `Stabilizes T := ∀ n, ¬ T n` (Π₁ = kernel of up)
+
+* `up T n := ∃ k ≤ n, T k` (cumulative monotonization)
+* `Halts T := ∃ n, T n` (Σ₁ signal)
+* `Stabilizes T := ∀ n, ¬ T n` (Π₁ = kernel of up)
+
+Key fact (proved, not assumed):
+
+```lean
+up T = ⊥ ↔ ∀ n, ¬ T n
+```
 
 ---
 
 ## Separation of Principles
 
-| Principle | Role in RevHalt |
-|-----------|-----------------|
-| **Structure** | O, ker_iff, sig_invar — theorems about the operator |
-| **EM** | Deciding which side (one point: `¬¬P → P`) |
-| **AC** | NOT needed — "choice" is forced by structure |
-| **Computability** | Blocked by T2 — uniform decision impossible |
+| Principle         | Role in RevHalt                                     |
+| ----------------- | --------------------------------------------------- |
+| **Structure**     | O, ker_iff, sig_invar — theorems about the operator |
+| **EM**            | Deciding which side (one point: `¬¬P → P`)          |
+| **AC**            | NOT needed — “selection” is forced by structure     |
+| **Computability** | Blocked by T2 — uniform decision impossible         |
 
-This separation is the core contribution: **the "choice" in PickOracle is not arbitrary selection (AC), but structural reading (EM + geometry of up).**
+This separation is the core contribution: **the “choice” in PickOracle is not arbitrary selection (AC), but structural reading (EM + geometry of `up`).**
 
 ---
 
@@ -90,7 +100,7 @@ This separation is the core contribution: **the "choice" in PickOracle is not ar
 Rev0_K K T ↔ Halts T
 ```
 
-Any valid kit collapses to standard halting. The operator `up` determines truth; kits merely read it.
+Any valid kit collapses to standard halting. `up` supplies the structural operator (kernel identification + signal invariance); kits merely read the induced dichotomy.
 
 ### T2 — Uniform Barrier
 
@@ -101,12 +111,14 @@ The barrier lives in **uniformity** (`∃H.∀e`), not in **access**.
 ### T3 — Local Navigation
 
 For each code `e`, a certificate selects the correct side:
-- `encode_halt e` (with `Rev0_K` witness) — Σ₁
-- `encode_not_halt e` (with `KitStabilizes` witness) — Π₁
+
+* `encode_halt e` (with `Rev0_K` witness) — Σ₁
+* `encode_not_halt e` (with `KitStabilizes` witness) — Π₁
 
 **Quantifier Swap**:
-- T2 forbids: `∃H ∀e` (uniform)
-- T3 permits: `∀e ∃Sₑ` (instancewise)
+
+* T2 forbids: `∃H ∀e` (uniform)
+* T3 permits: `∀e ∃Sₑ` (instancewise)
 
 ---
 
@@ -122,12 +134,13 @@ structure PickWorld (Index PropT : Type) where
 ```
 
 Given this, we get **for free**:
-- Soundness preservation (`chain_sound`, `lim_sound`)
-- Closed form (`chain_closed_form`, `lim_closed_form`)
-- Schedule independence (`lim_eq_of_fair_schedules`)
-- Canonical ω-state (`omegaState`)
-- Minimality (`omegaState_minimal`)
-- Constructive existence (`exists_fair_limit_eq_omegaState`)
+
+* Soundness preservation (`chain_sound`, `lim_sound`)
+* Closed form (`chain_closed_form`, `lim_closed_form`)
+* Schedule independence (`lim_eq_of_fair_schedules`)
+* Canonical ω-state (`omegaState`)
+* Minimality (`omegaState_minimal`)
+* Constructive existence of fair schedule (`exists_fair_limit_eq_omegaState`)
 
 ---
 
@@ -136,24 +149,26 @@ Given this, we get **for free**:
 ### The Canonical ω-State
 
 ```lean
-omegaState.S = S0.S ∪ AllOraclePicks
+omegaState.S = S0.S ∪ AllPicks
 ```
 
-Properties:
-- **Sound**: all members are true
-- **Complete**: every code decided
-- **Minimal**: smallest such extension
-- **Canonical**: independent of schedule (confluence)
+Properties (relative to a pick oracle / PickWorld):
 
-### Ordinal Structure
+* **Sound**: all members are true
+* **Coverage (fairness)**: under a fair schedule, every index’s pick appears in the limit
+* **Minimal**: smallest sound extension containing the base and all picks
+* **Canonical (confluence)**: independent of fair schedule (same ω-limit)
 
-- `Chain n` : state at ordinal n < ω
-- `lim` : passage to ordinal ω
-- `omegaState` : the fixed point at ω
+### ω-Stage Structure
 
-ω is **exactly** the right ordinal:
-- Not less (Π₁ requires the limit)
-- Not more (codes are countable)
+* `Chain n` : state at step `n : ℕ`
+* `lim` : the ω-union (limit) of the chain
+* `omegaState` : the canonical closure at ω (under fairness + picks)
+
+ω is the correct stage:
+
+* not less (Π₁-style “no witness ever” is a limit phenomenon)
+* not more (countable coverage via fair scheduling)
 
 ---
 
@@ -162,51 +177,55 @@ Properties:
 The testable criterion:
 
 **Does there exist an operator O, natural in a poly-constrained category, such that:**
+
 1. O is functorial w.r.t. poly reductions
 2. O has a universal property (adjoint/coreflector)
 3. `O φ = ⊥ ↔ UNSAT φ` (non-tautological theorem)
 4. `SAT (O φ) ↔ SAT φ` (signal preservation)
 
-**If yes**: NP/coNP is structural like Σ₁/Π₁. P vs NP becomes "is the structure poly-readable?"
+**If yes**: NP/coNP is structural like Σ₁/Π₁. P vs NP becomes “is the structure poly-readable?”
 
-**If no**: NP/coNP is purely extensional — not just "harder", but geometrically different.
+**If no**: SAT/UNSAT has no comparable canonical operator geometry in the poly world (a different structural regime).
 
 ---
 
 ## File Map
 
 ### Base Layer
-- `RevHalt/Base/Trace.lean` — `Trace`, `Halts`, `up`
-- `RevHalt/Base/Kit.lean` — `RHKit`, `DetectsMonotone`, `Rev0_K`
+
+* `RevHalt/Base/Trace.lean` — `Trace`, `Halts`, `up`
+* `RevHalt/Base/Kit.lean` — `RHKit`, `DetectsMonotone`, `Rev0_K`
 
 ### Theory Layer
-- `RevHalt/Theory/Canonicity.lean` — T1 (`T1_traces`, `T1_uniqueness`)
-- `RevHalt/Theory/Impossibility.lean` — T2 (`diagonal_bridge`, `T2_impossibility`)
-- `RevHalt/Theory/Complementarity.lean` — T3 (`OraclePick`, `S1Set`, `S3Set`)
-- `RevHalt/Theory/Stabilization.lean` — `Stabilizes`, `KitStabilizes`, kernel link
-- `RevHalt/Theory/Categorical.lean` — `up` as coreflector, `CloE`, `Frontier`
-- `RevHalt/Theory/QuantifierSwap.lean` — Quantifier Swap principle
-- `RevHalt/Theory/ThreeBlocksArchitecture.lean` — OracleMachine, o-bridge
-- `RevHalt/Theory/Dynamics.lean` — Navigation dynamics
-- `RevHalt/Theory/WitnessLogic.lean` — Witness soundness
+
+* `RevHalt/Theory/Canonicity.lean` — T1 (`T1_traces`, `T1_uniqueness`)
+* `RevHalt/Theory/Impossibility.lean` — T2 (`diagonal_bridge`, `T2_impossibility`)
+* `RevHalt/Theory/Complementarity.lean` — T3 (`OraclePick`, `S1Set`, `S3Set`)
+* `RevHalt/Theory/Stabilization.lean` — `Stabilizes`, `KitStabilizes`, kernel link
+* `RevHalt/Theory/Categorical.lean` — `up` as coreflector, `CloE`, `Frontier`
+* `RevHalt/Theory/QuantifierSwap.lean` — Quantifier Swap principle
+* `RevHalt/Theory/ThreeBlocksArchitecture.lean` — OracleMachine, o-bridge
+* `RevHalt/Theory/Dynamics.lean` — Navigation dynamics
+* `RevHalt/Theory/WitnessLogic.lean` — Witness soundness
 
 ### Abstract Layer (NEW)
-- `StructuralDichotomy.lean` — The abstract schema + Trace/up instantiation
-- `AbstractDynamics.lean` — Schedule-independent dynamics from PickWorld
+
+* `StructuralDichotomy.lean` — Abstract schema + Trace/up instantiation
+* `AbstractDynamics.lean` — Schedule-independent dynamics from PickWorld
 
 ---
 
 ## Core Theorems
 
-| Theorem | Statement | Significance |
-|---------|-----------|--------------|
-| `up_eq_bot_iff` | `up T = ⊥ ↔ ∀n. ¬T n` | Π₁ = kernel (algebraization) |
-| `T1_traces` | `Rev0_K K T ↔ Halts T` | Kit rigidity |
-| `T2_impossibility` | No total+correct+complete+r.e. predicate | Uniform barrier |
-| `lim_schedule_free` | Limit = S₀ ∪ AllPicks | Schedule independence |
-| `omegaState_minimal` | ω-state is smallest extension | Closure property |
-| `sig_iff_ne_bot` | `Sig x ↔ O x ≠ ⊥` | Abstract dichotomy (classical) |
-| `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x` | Constructive content |
+| Theorem                 | Statement                                | Significance                   |
+| ----------------------- | ---------------------------------------- | ------------------------------ |
+| `up_eq_bot_iff`         | `up T = ⊥ ↔ ∀n. ¬T n`                    | Π₁ = kernel (algebraization)   |
+| `T1_traces`             | `Rev0_K K T ↔ Halts T`                   | Kit rigidity                   |
+| `T2_impossibility`      | No total+correct+complete+r.e. predicate | Uniform barrier                |
+| `lim_schedule_free`     | Limit = S₀ ∪ AllPicks                    | Schedule independence          |
+| `omegaState_minimal`    | ω-state is smallest extension            | Closure property               |
+| `sig_iff_ne_bot`        | `Sig x ↔ O x ≠ ⊥`                        | Abstract dichotomy (classical) |
+| `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x`                      | Constructive content           |
 
 ---
 
@@ -235,3 +254,4 @@ The criterion is now **code**, not prose.
 ## License / Contribution
 
 Add your license and contribution conventions here.
+
