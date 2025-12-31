@@ -44,6 +44,7 @@ Pointers:
 - Schema + instantiation: `RevHalt/Theory/StructuralDichotomy.lean`
 - Parametric dynamics: `RevHalt/Theory/AbstractDynamics.lean`
 - Bridge (SDOracle → PickWorld): `RevHalt/Theory/SD_Bridge.lean`
+- **Ordinal boundary (Dichotomy ↔ EM)**: `RevHalt/Theory/OrdinalBoundary.lean`
 
 ## Dependency Graph
 
@@ -63,6 +64,7 @@ graph TD
         SD["StructuralDichotomy.lean"]
         AD["AbstractDynamics.lean"]
         Bridge["SD_Bridge.lean"]
+        OB["OrdinalBoundary.lean"]
     end
     Trace --> Kit
     Kit --> Canon
@@ -71,5 +73,6 @@ graph TD
     Trace --> Stabil
     SD --> Bridge
     AD --> Bridge
+    OB --> SD
 ```
 
