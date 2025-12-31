@@ -54,46 +54,43 @@ def up (T : Trace) : Trace := fun n => ∃ k, k ≤ n ∧ T k    -- Cumulative c
 
 ---
 
-### 2. Boundary (where EM/LPO appear)
+### 2. Boundary (Algebraic Localization of Logic)
 
-#### 2.1 Class gap (Prop-valued traces)
+RevHalt identifies precisely *where* classical logic enters by parameterizing "Truth" and "Evaluation". This reveals two distinct, independent gaps.
 
-**Stage 0 localization.**
+#### 2.1 The Two Gaps
 
-```lean
-theorem stage_zero_is_em :
-    (∀ T : Trace, HaltsUpTo T 0 ∨ StabilizesUpTo T 0) ↔ (∀ P : Prop, P ∨ ¬ P)
-```
+| Gap | Transition | Logical Principle | Source |
+|---|---|---|---|
+| **Class Gap** | `Bool` ↪ `Prop` | **EM** (Excluded Middle) | Interpreting `Truth : PropT → Prop` as identity on standard Props (`TraceT Prop`). Quantifying over "all propositions" forces EM. |
+| **Ordinal Gap** | Finite ↪ `ω` | **LPO** (Omniscience) | Extending decidable checks to infinite sequences (`LPO_Eval`). Quantifying over "all stages" forces LPO. |
 
-This is a *sharp localization statement*: once you quantify over `Trace := ℕ → Prop`, even the weakest finite stage already recovers EM (via constant traces `constTrace : Prop → Trace`).
+#### 2.2 Algebraization of Meta-Logic
 
-So the “classical content” is not coming from ω here; it is coming from the **Prop-valued trace class**.
+We formalize meta-logic not as ambient axioms, but as **parametric properties of the interpreter**:
 
-#### 2.2 Ordinal gap (ω on decidable sequences)
+*   **Semantic Power**: `EM_Truth Truth := ∀ p, Truth p ∨ ¬ Truth p`
+*   **Evaluative Power**: `EM_Eval Eval Γ := ∀ φ, Eval Γ φ ∨ ¬ Eval Γ φ`
 
-For decidable data, the ω-step corresponds to LPO:
+The "problem of halting" is then algebraized as a kernel condition on the cumulative operator `upE` (evaluative closure):
 
-```lean
-def LPOBool : Prop :=
-  ∀ f : ℕ → Bool, (∃ n, f n = true) ∨ (∀ n, f n = false)
-```
+$$ upE(\text{Eval}, \Gamma, s) = \bot \iff \text{StabilizesE}(\text{Eval}, \Gamma, s) $$
 
-and you connect Bool-vs-decidable-predicate presentations:
+This theorem (`upE_bot_pointwise_iff`) holds **constructively** (0 axioms). The classical content is strictly confined to the decision of *which side* of the kernel boundary a trace belongs to.
 
-```lean
-theorem LPOBool_iff_LPOProp : LPOBool ↔ LPOProp
-```
+#### 2.3 Dependency Order
 
-**Interpretation.** On decidable traces, the finite-stage checks are constructive, but the passage to an ω-total dichotomy is exactly the LPO-type omniscience step.
+The project proves the exact dependency chain between these principles recursively:
 
-#### 2.3 Two distinct loci (precise statement)
+1.  **LPO → EM** (via "Constant Sequence"):
+    *   `LPO_Truth Truth → EM_Truth Truth`
+    *   `LPO_Eval Eval Γ → EM_Eval Eval Γ`
+2.  **Dichotomy is LPO**:
+    *   Total dichotomy on evaluative traces is definitionally `LPO_Eval`.
+3.  **Base Case Degeneracy**:
+    *   In the standard instance (`RevHalt/Base`), where `Trace = ℕ → Prop` and `Truth = id`, the "Stage 0" dichotomy recovers full EM (`stage_zero_is_em`).
 
-| Locus       | What changes                            | Principle |
-| ----------- | --------------------------------------- | --------- |
-| **Class**   | `ℕ → Bool` / decidables → `ℕ → Prop`    | EM        |
-| **Ordinal** | finite stages → ω (decidable sequences) | LPO       |
-
-And in constructive mathematics: **EM ⇒ LPO**, while LPO is strictly weaker than EM.
+Thus, RevHalt proves that the Halting Problem's unsolvability is **isomorphic** to the non-constructivity of the underlying boolean logic (Class Gap), distinct from the complexity of infinite search (Ordinal Gap).
 
 ---
 

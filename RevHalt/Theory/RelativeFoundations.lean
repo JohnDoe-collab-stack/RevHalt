@@ -3,21 +3,28 @@ import RevHalt.Base.Trace
 /-!
 # Relative Foundations: Syntax, Semantics, and Evaluation
 
-This file formalizes the distinction between "Logical Truth" and "Operational Evaluation"
-in the RevHalt architecture. It demonstrates that the so-called "Classical Assumptions"
-(EM, LPO) are relative to the *evaluator*, not necessarily the underlying logic.
+This file algebraically formalizes meta-logic by treating logical principles as parametric properties of interpreters. It demonstrates three key mathematical insights:
 
-## The Three Layers
+## 1. Logic as a Parameter (Interpreter Property)
+Instead of fixing "the" logic, we introduce **power predicates**:
+* **Semantic**: `EM_Truth Truth := ∀ p, Truth p ∨ ¬ Truth p`
+* **Evaluative**: `EM_Eval Eval Γ := ∀ φ, Eval Γ φ ∨ ¬ Eval Γ φ`
+Mathematically, EM becomes an **access property** (of a `Truth` or `Eval` instance), effectively an invariant of the model or interpreter.
 
-1. **Syntax**: `PropT` (Propositions), `Sentence` (Machine codes).
-2. **Semantics**: `Truth : PropT → Prop` (Platonic truth).
-3. **Evaluation**: `Eval : Context → Sentence → Prop` (Operational access).
+## 2. Structural Gap via Operator Kernel
+The algebraic core emerges when "stabilization" is presented as **kernel membership** of a cumulative operator:
+* **Evaluative Scheme**: `upE Eval Γ s n := ∃ k ≤ n, Eval Γ (s k)`
+* **Kernel Identity**: `upE Eval Γ s = botE ↔ StabilizesE Eval Γ s`
+This transforms the Σ/Π asymmetry into **operator geometry** (kernel vs signal), where the Π₁ side is an algebraic kernel criterion.
 
-## The Core Results
+## 3. Localization of Power (Dependency Order)
+The file formalizes "constant-sequence" implications that localize exactly what forces what:
+* **Semantics**: `LPO_Truth Truth → EM_Truth Truth` (via constant trace)
+* **Evaluation**: `LPO_Eval Eval Γ → EM_Eval Eval Γ` (via constant sequence)
+* **Trace Schema**: `DichotomyE Eval Γ` is definitionally `LPO_Eval Eval Γ`
 
-1. `EM_Truth`: The hypothesis that semantic truth is binary (`∀ p, Truth p ∨ ¬Truth p`).
-2. `EM_Eval`: The hypothesis that the evaluator is decisive (`Decidable (Eval Γ φ)`).
-3. `Base_Is_Degenerate`: The proof that `RevHalt/Base` is the special case where `Truth = id`.
+The **full equivalence** "Total Dichotomy ↔ EM" is carried by the degenerate instance `Trace := ℕ → Prop` (where `Truth := id`), confirming that quantifying over arbitrary Prop-traces reinjects EM.
+
 -/
 
 namespace RevHalt.RelativeFoundations
