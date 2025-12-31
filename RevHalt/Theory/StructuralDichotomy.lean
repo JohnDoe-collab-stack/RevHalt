@@ -166,7 +166,7 @@ theorem SDPick.is_true {x : X} (pick : SDPick D x) : pick.truth D := by
     simp only [Bool.false_eq_true, ↓reduceIte]
     have hcert : D.O x = ⊥ := by
       have := pick.cert
-      simp only [hside, ↓reduceIte] at this
+      simp only [hside] at this
       exact this
     exact D.bot_imp_not_sig x hcert
   | true =>
