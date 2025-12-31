@@ -62,20 +62,40 @@ theorem dichotomy_imp_EM_Truth (Truth : PropT → Prop) :
   | inr hS =>
     right; exact hS 0
 
+/-- LPO at the semantic level: total dichotomy on semantic traces -/
+def LPO_Truth (Truth : PropT → Prop) : Prop :=
+  ∀ T : TraceT PropT, HaltsT Truth T ∨ StabilizesT Truth T
+
+/--
+**Dependency**: LPO_Truth Truth → EM_Truth Truth (constant trace trick).
+
+This is the semantic-level version of the "constant sequence" argument.
+Note: The converse does NOT hold in general.
+-/
+theorem LPO_Truth_imp_EM_Truth (Truth : PropT → Prop) :
+    LPO_Truth Truth → EM_Truth Truth :=
+  dichotomy_imp_EM_Truth Truth
+
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 2. Evaluative Dichotomy (EM_Eval)
+-- 2. Evaluative Dichotomy (EM_Eval / LPO_Eval) — Isolated Variants
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-variable {Sentence Model : Type}
-variable (A : OracleMachine Sentence Model)
+/-!
+These definitions are parameterized directly by `Eval : List Sentence → Sentence → Prop`,
+without importing OracleMachine. This isolates the logical dependency.
+-/
 
-/-- The Principle of Evaluative Decidability (Operational Access) -/
-def EM_Eval (Γ : List Sentence) : Prop :=
-  ∀ φ : Sentence, A.Eval Γ φ ∨ ¬ A.Eval Γ φ
+section Eval
 
-/-- Evaluative LPO: Can we decide "Existential Eval" on a sequence of sentences? -/
-def LPO_Eval (Γ : List Sentence) : Prop :=
-  ∀ s : ℕ → Sentence, (∃ n, A.Eval Γ (s n)) ∨ (∀ n, ¬ A.Eval Γ (s n))
+variable {Sentence : Type}
+
+/-- Evaluative EM: the evaluator is decisive on all sentences -/
+def EM_Eval (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) : Prop :=
+  ∀ φ : Sentence, Eval Γ φ ∨ ¬ Eval Γ φ
+
+/-- Evaluative LPO: total dichotomy on sequences of sentences -/
+def LPO_Eval (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) : Prop :=
+  ∀ s : ℕ → Sentence, (∃ n, Eval Γ (s n)) ∨ (∀ n, ¬ Eval Γ (s n))
 
 /-! Generic (axiom-free) EM from decidability. -/
 theorem decidable_pred_imp_em {α : Type} (P : α → Prop)
@@ -86,7 +106,7 @@ theorem decidable_pred_imp_em {α : Type} (P : α → Prop)
   | isTrue h => exact Or.inl h
   | isFalse h => exact Or.inr h
 
-/-! Generic (axiom-free) EM from LPO on a predicate. -/
+/-! Generic (axiom-free) LPO → EM on a predicate. -/
 theorem LPO_pred_imp_em {α : Type} (P : α → Prop) :
     (∀ s : ℕ → α, (∃ n, P (s n)) ∨ (∀ n, ¬ P (s n))) →
     ∀ x, P x ∨ ¬ P x := by
@@ -101,24 +121,27 @@ theorem LPO_pred_imp_em {α : Type} (P : α → Prop) :
       right
       exact hall 0
 
-/-! The evaluator is decidable => evaluative EM (no axioms). -/
+/-- Decidability => EM_Eval (0 axiom) -/
 theorem decidable_Eval_imp_EM_Eval
-    (Γ : List Sentence)
-    (hDec : ∀ φ : Sentence, Decidable (A.Eval Γ φ)) :
-    EM_Eval A Γ := by
-  exact decidable_pred_imp_em (fun φ => A.Eval Γ φ) hDec
+    (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence)
+    (hDec : ∀ φ : Sentence, Decidable (Eval Γ φ)) :
+    EM_Eval Eval Γ := by
+  intro φ
+  cases hDec φ with
+  | isTrue h => exact Or.inl h
+  | isFalse h => exact Or.inr h
 
-/-! LPO at the evaluator => evaluative EM (constant sequence trick). -/
-theorem LPO_Eval_imp_EM_Eval (Γ : List Sentence) :
-    LPO_Eval A Γ → EM_Eval A Γ := by
-  intro hLPO
-  exact LPO_pred_imp_em (fun φ => A.Eval Γ φ) hLPO
+/-- LPO_Eval => EM_Eval (constant sequence trick, 0 axiom) -/
+theorem LPO_Eval_imp_EM_Eval
+    (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) :
+    LPO_Eval Eval Γ → EM_Eval Eval Γ := by
+  intro hLPO φ
+  have h := hLPO (fun _ => φ)
+  cases h with
+  | inl hex => exact Or.inl (hex.elim fun _ hx => hx)
+  | inr hall => exact Or.inr (hall 0)
 
-/-!
-Connection to the ordinal analysis:
-`LPO_Eval` is the evaluator-level analogue of the "ordinal gap" LPO principle,
-and this lemma shows it entails evaluative EM via the constant-sequence trick.
--/
+end Eval
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 3. The Degenerate Base Case
@@ -146,14 +169,12 @@ end RevHalt.RelativeFoundations
   This confirms that the dichotomy "at stage 0" identifies the logical strength (EM).
 -/
 
-
--- Axiom checks (auto):
+-- Axiom checks (all should be 0 axiom):
 #print axioms RevHalt.RelativeFoundations.dichotomy_imp_EM_Truth
+#print axioms RevHalt.RelativeFoundations.LPO_Truth_imp_EM_Truth
 #print axioms RevHalt.RelativeFoundations.decidable_pred_imp_em
 #print axioms RevHalt.RelativeFoundations.LPO_pred_imp_em
 #print axioms RevHalt.RelativeFoundations.decidable_Eval_imp_EM_Eval
 #print axioms RevHalt.RelativeFoundations.LPO_Eval_imp_EM_Eval
 #print axioms RevHalt.RelativeFoundations.Base_Is_Degenerate
 #print axioms RevHalt.RelativeFoundations.Halts_Is_Degenerate
-
-
