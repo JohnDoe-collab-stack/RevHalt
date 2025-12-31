@@ -122,7 +122,14 @@ theorem dichotomy_up_to (T : Trace) [∀ n, Decidable (T n)] (m : ℕ) :
     left
     exact ⟨n, hn, hTn⟩
 
-/-- Alternative: direct proof without decidability -/
+/--
+Direct proof by induction (still requires decidability of T).
+
+Note: For *arbitrary* traces (ℕ → Prop), even the finite stage dichotomy
+would require deciding `T n`, which is EM for specific propositions.
+So "Constructive at finite stages" implicitly assumes we are working with
+computable/decidable data (Bits), not arbitrary propositions.
+-/
 theorem dichotomy_up_to_direct (T : Trace) [∀ n, Decidable (T n)] (m : ℕ) :
     HaltsUpTo T m ∨ StabilizesUpTo T m := by
   induction m with
@@ -230,19 +237,22 @@ theorem dichotomy_iff_em :
 ## The Ordinal Structure - Mechanically Verified
 
 ### Stage n < ω (finite)
-- `HaltsUpTo T n` : decidable (for decidable T)
-- `StabilizesUpTo T n` : decidable (for decidable T)
-- `HaltsUpTo T n ∨ StabilizesUpTo T n` : **always true**, constructively
+- `HaltsUpTo T n` : decidable (for **decidable** T)
+- `StabilizesUpTo T n` : decidable (for **decidable** T)
+- `HaltsUpTo T n ∨ StabilizesUpTo T n` : **Always true** (for decidable T)
 
 ### Stage ω (limit)
-- `Halts T` = `∃m, HaltsUpTo T m` : NOT decidable in general
-- `Stabilizes T` = `∀m, StabilizesUpTo T m` : NOT decidable in general
-- `Halts T ∨ Stabilizes T` : **equivalent to EM**
+- `Halts T ∨ Stabilizes T` : **Equivalent to EM** (for **arbitrary** T)
 
-### The Gap
-- Finite stages: constructive ✓
-- Limit: exactly EM
-- The passage n → ω IS the content of EM
+### The Double Gap
+The boundary involves TWO jumps:
+1. **Ordinal**: Finite stage `n` → Limit `ω`
+2. **Class**: Decidable traces (`ℕ → Bool`) → Arbitrary traces (`ℕ → Prop`)
+
+If we restricted the limit to decidable traces, we would get LPO/LLPO (a weaker principle).
+If we allowed arbitrary traces at finite stages, we would need EM immediately.
+
+The equivalence `Dichotomy ↔ EM` relies on quantifying over **arbitrary** traces `ℕ → Prop`.
 -/
 
 /-- Summary: finite stage dichotomy requires no EM -/
