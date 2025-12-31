@@ -1,4 +1,5 @@
 import RevHalt.Theory.ThreeBlocksArchitecture
+import RevHalt.Base.Trace
 
 /-!
 # Relative Foundations: Syntax, Semantics, and Evaluation
@@ -76,6 +77,49 @@ def EM_Eval (Γ : List Sentence) : Prop :=
 def LPO_Eval (Γ : List Sentence) : Prop :=
   ∀ s : ℕ → Sentence, (∃ n, A.Eval Γ (s n)) ∨ (∀ n, ¬ A.Eval Γ (s n))
 
+/-! Generic (axiom-free) EM from decidability. -/
+theorem decidable_pred_imp_em {α : Type} (P : α → Prop)
+    (hDec : ∀ x, Decidable (P x)) :
+    ∀ x, P x ∨ ¬ P x := by
+  intro x
+  cases hDec x with
+  | isTrue h => exact Or.inl h
+  | isFalse h => exact Or.inr h
+
+/-! Generic (axiom-free) EM from LPO on a predicate. -/
+theorem LPO_pred_imp_em {α : Type} (P : α → Prop) :
+    (∀ s : ℕ → α, (∃ n, P (s n)) ∨ (∀ n, ¬ P (s n))) →
+    ∀ x, P x ∨ ¬ P x := by
+  intro hLPO x
+  have h := hLPO (fun _ => x)
+  cases h with
+  | inl hex =>
+      left
+      rcases hex with ⟨_, hx⟩
+      exact hx
+  | inr hall =>
+      right
+      exact hall 0
+
+/-! The evaluator is decidable => evaluative EM (no axioms). -/
+theorem decidable_Eval_imp_EM_Eval
+    (Γ : List Sentence)
+    (hDec : ∀ φ : Sentence, Decidable (A.Eval Γ φ)) :
+    EM_Eval A Γ := by
+  exact decidable_pred_imp_em (fun φ => A.Eval Γ φ) hDec
+
+/-! LPO at the evaluator => evaluative EM (constant sequence trick). -/
+theorem LPO_Eval_imp_EM_Eval (Γ : List Sentence) :
+    LPO_Eval A Γ → EM_Eval A Γ := by
+  intro hLPO
+  exact LPO_pred_imp_em (fun φ => A.Eval Γ φ) hLPO
+
+/-!
+Connection to the ordinal analysis:
+`LPO_Eval` is the evaluator-level analogue of the "ordinal gap" LPO principle,
+and this lemma shows it entails evaluative EM via the constant-sequence trick.
+-/
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 3. The Degenerate Base Case
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -101,3 +145,12 @@ end RevHalt.RelativeFoundations
   `dichotomy_imp_EM_Truth id` (and the converse for constant traces).
   This confirms that the dichotomy "at stage 0" identifies the logical strength (EM).
 -/
+
+-- Axiom checks (mechanical):
+#print axioms RevHalt.RelativeFoundations.decidable_pred_imp_em
+#print axioms RevHalt.RelativeFoundations.LPO_pred_imp_em
+#print axioms RevHalt.RelativeFoundations.dichotomy_imp_EM_Truth
+#print axioms RevHalt.RelativeFoundations.decidable_Eval_imp_EM_Eval
+#print axioms RevHalt.RelativeFoundations.LPO_Eval_imp_EM_Eval
+#print axioms RevHalt.RelativeFoundations.Base_Is_Degenerate
+#print axioms RevHalt.RelativeFoundations.Halts_Is_Degenerate
