@@ -7,18 +7,51 @@ import Mathlib.Data.Set.Basic
 /-!
 # Ordinal Boundary Theorem - Mechanical Verification
 
-## Thesis: Two Independent Sources of Classical Logic
+## Thesis: Two Distinct Sources of Classical Logic
 
 The analysis reveals two distinct sources of non-constructive behavior:
 
 1. **Trace Class (Prop)**: Quantifying over arbitrary traces `ℕ → Prop` yields **EM** immediately, even at stage 0.
 2. **Ordinal (ω)**: Passing from finite checking to the limit $\omega$ on *decidable* traces yields **LPO**.
 
+Note: They are distinct in origin (class vs ordinal), though in logical strength EM implies LPO.
+
 The combination (Limit + Arbitrary) is equivalent to EM, but `stage_zero_is_em` proves that the arbitrary quantification alone is sufficient for EM.
-
-
 -/
 namespace RevHalt.OrdinalMechanical
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 0) LPO FORMALIZATION (THE ORDINAL GAP)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- LPO in Bool: standard form -/
+def LPOBool : Prop :=
+  ∀ f : ℕ → Bool, (∃ n, f n = true) ∨ (∀ n, f n = false)
+
+/-- LPO in Prop: decidable predicates -/
+def LPOProp : Prop :=
+  ∀ p : ℕ → Prop, (∀ n, Decidable (p n)) → (∃ n, p n) ∨ (∀ n, ¬ p n)
+
+/-- The Ordinal Gap on decidable traces is exactly LPO -/
+theorem LPOBool_iff_LPOProp : LPOBool ↔ LPOProp := by
+  constructor
+  · intro h p hp
+    let f : ℕ → Bool := fun n => @decide (p n) (hp n)
+    cases h f with
+    | inl hT =>
+      left
+      rcases hT with ⟨n, hn⟩
+      exists n
+      exact of_decide_eq_true hn
+    | inr hF =>
+      right
+      intro n
+      have := hF n
+      exact of_decide_eq_false this
+  · intro h f
+    cases h (fun n => f n = true) (fun n => inferInstance) with
+    | inl hT => left; exact hT
+    | inr hF => right; intro n; exact Bool.eq_false_iff.mpr (hF n)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 1) BASIC DEFINITIONS
@@ -282,6 +315,7 @@ theorem stage_zero_is_em :
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 -- Finite stages: no axioms
+#print axioms LPOBool_iff_LPOProp
 #print axioms halts_up_to_decidable
 #print axioms stabilizes_up_to_decidable
 #print axioms dichotomy_up_to_decidable
