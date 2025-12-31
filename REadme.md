@@ -138,7 +138,7 @@ Given this, we get **for free**:
 
 * Soundness preservation (`chain_sound`, `lim_sound`)
 * Closed form (`chain_closed_form`, `lim_closed_form`)
-* Schedule independence (`lim_eq_of_fair_schedules`)
+* Schedule independence under fairness (`lim_eq_of_fair_schedules`)
 * Canonical ω-state (`omegaState`)
 * Minimality (`omegaState_minimal`)
 * Constructive existence of fair schedule (`exists_fair_limit_eq_omegaState`)
