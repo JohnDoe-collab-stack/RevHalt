@@ -5,14 +5,13 @@ import Mathlib.Data.Set.Basic
 /-!
 # Ordinal Boundary Theorem
 
-## Thesis
+## Thesis: Two Distinct Sources of Classical Logic
 
-The constructive/classical frontier **is** the finite/limit ordinal frontier.
+1. **Class gap**: `ℕ → Prop` vs `ℕ → Bool` yields EM even at stage 0
+   (see `stage_zero_is_em` in OrdinalMechanical.lean)
+2. **Ordinal gap**: finite → ω on *decidable* traces yields LPO
 
-This file formally demonstrates:
-1. All structure theorems are constructive (no `classical`)
-2. The only classical content is `¬¬P → P`
-3. This corresponds to passage from finite ordinals to ω
+The class gap is the **primary** source of EM in the dichotomy.
 
 ## Method
 
@@ -356,4 +355,3 @@ end RevHalt.OrdinalBoundary
 #print axioms RevHalt.OrdinalBoundary.em_of_dichotomy_all
 #print axioms RevHalt.OrdinalBoundary.dichotomy_all_iff_em
 #print axioms RevHalt.OrdinalBoundary.stabilizes_eq_forall_stabilizes_up_to
-

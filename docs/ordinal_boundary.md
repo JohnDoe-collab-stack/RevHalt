@@ -45,7 +45,9 @@ Without this encoding (i.e., if we restricted to decidable traces), we could not
 | Theorem | Trace Class | Ordinal | Result | Axioms |
 |---------|-------------|---------|--------|--------|
 | `dichotomy_up_to` | Decidable | Finite ($n$) | Constructive | 0 |
+| `stage_zero_is_em` | **Arbitrary** | **Stage 0** | **= EM** | 0 |
 | `limit_stage_is_em` | **Arbitrary** | Limit ($\omega$) | **= EM** | 0 |
+| `decidable_limit_iff_lpo` | Decidable | Limit ($\omega$) | **= LPO** | 0 |
 
 The formalization (`OrdinalMechanical.lean`) proves that the gap between "Constructive finite checks" and "Classical limit dichotomy" is exactly the content of Excluded Middle.
 

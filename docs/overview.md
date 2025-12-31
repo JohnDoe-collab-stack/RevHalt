@@ -70,6 +70,7 @@ graph TD
         SD["StructuralDichotomy.lean"]
         AD["AbstractDynamics.lean"]
         Bridge["SD_Bridge.lean"]
+        OM["OrdinalMechanical.lean (Two Gaps)"]
         OB["OrdinalBoundary.lean"]
     end
     Trace --> Kit
@@ -79,6 +80,6 @@ graph TD
     Trace --> Stabil
     SD --> Bridge
     AD --> Bridge
-    OB --> SD
+    OM -.-> OB
 ```
 

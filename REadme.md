@@ -185,6 +185,8 @@ This section is a *criterion*, not a formalization: it asks whether there exists
 | `omegaState_minimal`    | ω-state is smallest extension            | Closure property               |
 | `sig_iff_ne_bot`        | `Sig x ↔ O x ≠ ⊥`                        | Abstract dichotomy (classical) |
 | `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x`                      | Constructive content           |
+| `stage_zero_is_em`      | Stage 0 + Arbitrary = EM                 | Class gap is primary           |
+| `decidable_limit_iff_lpo`| Limit + Decidable = LPO                 | Ordinal gap is secondary       |
 | `dichotomy_all_iff_em`  | `Dichotomy ↔ EM`                         | Ordinal/Class Boundary         |
 
 ---

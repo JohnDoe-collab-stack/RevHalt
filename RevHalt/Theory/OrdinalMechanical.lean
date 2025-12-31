@@ -53,6 +53,11 @@ theorem LPOBool_iff_LPOProp : LPOBool ↔ LPOProp := by
     | inl hT => left; exact hT
     | inr hF => right; intro n; exact Bool.eq_false_iff.mpr (hF n)
 
+/-- The limit dichotomy on decidable traces is exactly LPO (by definition) -/
+theorem decidable_limit_iff_lpo :
+    (∀ T : ℕ → Bool, (∃ n, T n = true) ∨ (∀ n, T n = false)) ↔ LPOBool :=
+  Iff.rfl
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 1) BASIC DEFINITIONS
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -310,6 +315,18 @@ theorem stage_zero_is_em :
     | inl hT => left; exact ⟨0, Nat.le_refl 0, hT⟩
     | inr hnT => right; intro n hn; rw [Nat.le_zero.mp hn]; exact hnT
 
+/-!
+### LPO vs EM Separation
+
+In Lean (which is classical), we cannot prove `¬(LPO → EM)` directly.
+However, in constructive mathematics (e.g., realizability models):
+- LPO is strictly weaker than EM
+- LPO can be true while EM is false (Kleene's second model)
+
+The ordinal gap (finite → ω) on decidable traces gives LPO.
+The class gap (Bool → Prop) gives full EM.
+-/
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 10) VERIFICATION
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -357,4 +374,3 @@ end RevHalt.OrdinalMechanical
 #print axioms RevHalt.OrdinalMechanical.finite_stage_no_em
 #print axioms RevHalt.OrdinalMechanical.limit_stage_is_em
 #print axioms RevHalt.OrdinalMechanical.stage_zero_is_em
-

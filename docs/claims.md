@@ -67,18 +67,23 @@ Files:
 
 ## Claim F: Ordinal Boundary (NEW)
 
-Formal statement:
+Formal statements:
 ```lean
+theorem stage_zero_is_em :
+    (∀ T : Trace, HaltsUpTo T 0 ∨ StabilizesUpTo T 0) ↔ (∀ P : Prop, P ∨ ¬ P)
+
+theorem decidable_limit_iff_lpo :
+    (∀ T : ℕ → Bool, (∃ n, T n = true) ∨ (∀ n, T n = false)) ↔ LPOBool
+
 theorem dichotomy_all_iff_em :
     (∀ T : Trace, Halts T ∨ Stabilizes T) ↔ (∀ P : Prop, P ∨ ¬ P)
 ```
 
 Scope:
-- **Dichotomy = EM exactly** (verified by `#print axioms`: zero axioms)
-- **Two distinct sources verified**:
-  1. Arbitrary quantification (`ℕ → Prop`) implies EM.
-  2. Limit on decidable traces (`ℕ → Bool`) implies LPO.
-- All structure theorems are constructive (0 axioms)
+- **`stage_zero_is_em`**: Even at stage 0, arbitrary traces yield EM (Class gap is primary)
+- **`decidable_limit_iff_lpo`**: Limit on decidable traces yields LPO (weaker than EM)
+- **`dichotomy_all_iff_em`**: Total dichotomy = EM exactly
+- All verified with **zero axioms**
 
 Files:
 - `RevHalt/Theory/OrdinalMechanical.lean`
