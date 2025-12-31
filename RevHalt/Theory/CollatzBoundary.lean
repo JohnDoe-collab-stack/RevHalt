@@ -131,3 +131,9 @@ theorem CollatzTerminates_to_UniformCollatz (h : CollatzTerminates step) : Unifo
 end CollatzTrace
 
 end RevHalt
+
+-- Axiom audit (Classical.choice should only appear in CollatzTerminates_to_UniformCollatz):
+#print axioms RevHalt.haltsUpTo_or_stabilizesUpTo
+#print axioms RevHalt.finite_stage_dichotomy
+#print axioms RevHalt.up_hits1_eq_bot_iff
+#print axioms RevHalt.CollatzTerminates_to_UniformCollatz
