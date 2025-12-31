@@ -164,6 +164,25 @@ theorem not_stabilizes_imp_halts (T : Trace) : ¬ Stabilizes T → Halts T := by
   exact Classical.not_not.mp hnn
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- 4b) THE EXACT EM CHARACTERIZATION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+**The exact EM theorem**: Given EM as a hypothesis (not as an axiom),
+the dichotomy follows with ZERO axioms.
+
+This proves: Structure + EM → Dichotomy, where EM is the only non-constructive ingredient.
+-/
+theorem dichotomy_from_em (em : ∀ P : Prop, P ∨ ¬P) (T : Trace) :
+    Halts T ∨ Stabilizes T :=
+  (em (Halts T)).elim Or.inl (fun h => Or.inr ((stabilizes_iff_not_halts T).mpr h))
+
+/-- Same for not_stabilizes_imp_halts -/
+theorem not_stabilizes_imp_halts_from_em (em : ∀ P : Prop, P ∨ ¬P) (T : Trace) :
+    ¬ Stabilizes T → Halts T := fun hns =>
+  (em (Halts T)).elim id (fun hnh => False.elim (hns ((stabilizes_iff_not_halts T).mpr hnh)))
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- 5) ORDINAL INTERPRETATION
 -- ═══════════════════════════════════════════════════════════════════════════════
 
@@ -255,5 +274,9 @@ This is the ordinal completion operator: passage from "all finite stages" to "ω
 -- Verify: classical theorems use Classical.choice (via propDecidable)
 #print axioms dichotomy
 #print axioms not_stabilizes_imp_halts
+
+-- Verify: EM-as-hypothesis theorems use ZERO axioms
+#print axioms dichotomy_from_em
+#print axioms not_stabilizes_imp_halts_from_em
 
 end RevHalt.OrdinalBoundary
