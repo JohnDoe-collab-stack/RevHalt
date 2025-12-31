@@ -110,6 +110,17 @@ theorem up_hits1_eq_bot_iff (n : ℕ) :
   -- `up_eq_bot_iff` in RevHalt/Theory/Categorical.lean: `up T = ⊥ ↔ ∀ n, ¬ T n`
   simpa [hits1, iter] using (up_eq_bot_iff (T := hits1 step n))
 
+/-- Pointwise version: avoids propext/Quot.sound by not using equality of traces.
+    Same mathematical content (kernel = Π₁) without extensionality axioms. -/
+theorem up_hits1_bot_pointwise (n : ℕ) :
+    (∀ t, ¬ up (hits1 step n) t) ↔ (∀ k, iter step n k ≠ 1) := by
+  constructor
+  · intro h k hk
+    have : up (hits1 step n) k := ⟨k, Nat.le_refl k, hk⟩
+    exact h k this
+  · intro h t ⟨j, _, hj⟩
+    exact h j hj
+
 /-!
 ## Uniformization boundary (isolates `Classical.choice`)
 -/
@@ -136,4 +147,5 @@ end RevHalt
 #print axioms RevHalt.haltsUpTo_or_stabilizesUpTo
 #print axioms RevHalt.finite_stage_dichotomy
 #print axioms RevHalt.up_hits1_eq_bot_iff
+#print axioms RevHalt.up_hits1_bot_pointwise  -- should be []
 #print axioms RevHalt.CollatzTerminates_to_UniformCollatz
