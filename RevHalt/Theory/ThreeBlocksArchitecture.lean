@@ -432,3 +432,23 @@ theorem architectural_T3_certificate_transfer
 end OracleMachineToT3
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.halts_aMachine_iff
+#print axioms RevHalt.LR_from_compile_apply
+#print axioms RevHalt.T1_on_aMachine
+#print axioms RevHalt.kits_agree_on_aMachine
+#print axioms RevHalt.OracleMachine
+#print axioms RevHalt.eval_iff_halts
+#print axioms RevHalt.eval_iff_rev
+#print axioms RevHalt.contradiction_if_internalize_external_decider
+#print axioms RevHalt.certificate_exclusion_aMachine
+#print axioms RevHalt.haltCertificate_iff_halts
+#print axioms RevHalt.stabCertificate_iff_stabilizes
+#print axioms RevHalt.eval_gives_halt_certificate
+#print axioms RevHalt.not_eval_gives_stab_certificate
+#print axioms RevHalt.haltCertificate_iff_eval
+#print axioms RevHalt.stabCertificate_iff_not_eval
+#print axioms RevHalt.architecturalPick_exhaustive
+#print axioms RevHalt.architectural_T3_certificate_transfer
+

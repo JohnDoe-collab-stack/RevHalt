@@ -101,3 +101,9 @@ theorem sd_lim_eq_omegaState {Index : Type} (elem : Index → X)
   (pickWorldOfSDOracle D elem oracle).lim_eq_omegaState S0 schedule hFair
 
 end RevHalt.StructuralDichotomy
+
+-- Axiom checks (auto):
+#print axioms RevHalt.StructuralDichotomy.pickWorldOfSDOracle_truth
+#print axioms RevHalt.StructuralDichotomy.sd_lim_eq_of_fair_schedules
+#print axioms RevHalt.StructuralDichotomy.sd_lim_eq_omegaState
+

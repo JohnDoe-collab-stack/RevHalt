@@ -429,3 +429,25 @@ constructions through `Decidable`, which when not computationally available, use
 #print axioms StructuralDichotomy.sdpick_of_classical
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms StructuralDichotomy.RevHalt.sig_imp_ne_bot
+#print axioms StructuralDichotomy.RevHalt.ne_bot_imp_notnot_sig
+#print axioms StructuralDichotomy.RevHalt.bot_imp_not_sig
+#print axioms StructuralDichotomy.RevHalt.not_sig_imp_bot
+#print axioms StructuralDichotomy.RevHalt.ne_bot_imp_sig
+#print axioms StructuralDichotomy.RevHalt.sig_iff_ne_bot
+#print axioms StructuralDichotomy.RevHalt.mem_Ker_iff
+#print axioms StructuralDichotomy.RevHalt.O_mem_Fix
+#print axioms StructuralDichotomy.RevHalt.dichotomy
+#print axioms StructuralDichotomy.RevHalt.dichotomy_exclusive
+#print axioms RevHalt.SDPick
+#print axioms RevHalt.up_mono
+#print axioms RevHalt.up_idem
+#print axioms RevHalt.exists_up_iff
+#print axioms RevHalt.up_eq_bot_iff
+#print axioms RevHalt.Stabilizes_iff_not_Halts
+#print axioms RevHalt.traceSD_ker_eq_stabilizes
+#print axioms StructuralDichotomy.RevHalt.sdpick_of_classical_is_true
+#print axioms StructuralDichotomy.RevHalt.sdoracle_of_classical_all_true
+

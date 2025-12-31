@@ -46,3 +46,8 @@ lemma exists_up_iff (T : Trace) : (∃ n, up T n) ↔ (∃ n, T n) := by
     use n, n, Nat.le_refl n, hn
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.up_mono
+#print axioms RevHalt.exists_up_iff
+

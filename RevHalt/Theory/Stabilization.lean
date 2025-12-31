@@ -29,12 +29,16 @@ theorem Stabilizes_iff_NotHalts (T : Trace) :
   · intro h n hn
     exact h ⟨n, hn⟩
 
+/-- Constructive proof: Stabilizes (up T) ↔ Stabilizes T without Classical.choice -/
 theorem Stabilizes_up_iff (T : Trace) :
     Stabilizes (up T) ↔ Stabilizes T := by
   rw [Stabilizes_iff_NotHalts, Stabilizes_iff_NotHalts]
-  -- `Halts (up T) ↔ Halts T`
-  have : Halts (up T) ↔ Halts T := (exists_up_iff T)
-  tauto
+  have h : Halts (up T) ↔ Halts T := (exists_up_iff T)
+  constructor
+  · intro hNotUp hT
+    exact hNotUp (h.mpr hT)
+  · intro hNotT hUp
+    exact hNotT (h.mp hUp)
 
 /--
   **Bridge to Algebra**:
@@ -93,3 +97,11 @@ theorem KitStabilizes_iff_up_eq_bot_explicit (K : RHKit) (hK : DetectsMonotone K
     exact (this n) hn
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.Stabilizes_iff_NotHalts
+#print axioms RevHalt.Stabilizes_up_iff
+#print axioms RevHalt.Stabilizes_iff_up_eq_bot
+#print axioms RevHalt.T1_stabilization
+#print axioms RevHalt.KitStabilizes_iff_up_eq_bot
+#print axioms RevHalt.KitStabilizes_iff_up_eq_bot_explicit

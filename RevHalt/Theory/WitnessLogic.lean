@@ -38,3 +38,8 @@ theorem check_witness_correct (T : Trace) (n : ℕ) :
   exact witness_soundness T n h
 
 end RevHalt.Theory.WitnessLogic
+
+-- Axiom checks (auto):
+#print axioms RevHalt.Theory.WitnessLogic.witness_soundness
+#print axioms RevHalt.Theory.WitnessLogic.check_witness_correct
+

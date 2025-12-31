@@ -335,3 +335,25 @@ This is the ordinal completion operator: passage from "all finite stages" to "ω
 #print axioms dichotomy_all_iff_em
 
 end RevHalt.OrdinalBoundary
+
+-- Axiom checks (auto):
+#print axioms RevHalt.OrdinalBoundary.up_idem_iff
+#print axioms RevHalt.OrdinalBoundary.up_mono
+#print axioms RevHalt.OrdinalBoundary.halts_up_iff
+#print axioms RevHalt.OrdinalBoundary.stabilizes_iff_forall_not_up
+#print axioms RevHalt.OrdinalBoundary.stabilizes_iff_not_halts
+#print axioms RevHalt.OrdinalBoundary.halts_imp_not_stabilizes
+#print axioms RevHalt.OrdinalBoundary.stabilizes_imp_not_halts
+#print axioms RevHalt.OrdinalBoundary.dichotomy_exclusive
+#print axioms RevHalt.OrdinalBoundary.dichotomy_double_neg
+#print axioms RevHalt.OrdinalBoundary.not_stabilizes_imp_notnot_halts
+#print axioms RevHalt.OrdinalBoundary.dichotomy
+#print axioms RevHalt.OrdinalBoundary.not_stabilizes_imp_halts
+#print axioms RevHalt.OrdinalBoundary.dichotomy_from_em
+#print axioms RevHalt.OrdinalBoundary.not_stabilizes_imp_halts_from_em
+#print axioms RevHalt.OrdinalBoundary.Halts_constTrace_iff
+#print axioms RevHalt.OrdinalBoundary.Stabilizes_constTrace_iff
+#print axioms RevHalt.OrdinalBoundary.em_of_dichotomy_all
+#print axioms RevHalt.OrdinalBoundary.dichotomy_all_iff_em
+#print axioms RevHalt.OrdinalBoundary.stabilizes_eq_forall_stabilizes_up_to
+

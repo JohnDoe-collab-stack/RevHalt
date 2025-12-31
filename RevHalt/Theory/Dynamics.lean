@@ -854,3 +854,45 @@ theorem exists_fair_limit_eq_omegaState
     exact scheduleOfEncodable_fair
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.sound_empty
+#print axioms RevHalt.sound_union_singleton
+#print axioms RevHalt.sound_iUnion
+#print axioms RevHalt.truth_of_pick
+#print axioms RevHalt.step_mono
+#print axioms RevHalt.mem_prefixPicks
+#print axioms RevHalt.prefixPicks_zero
+#print axioms RevHalt.prefixPicks_succ
+#print axioms RevHalt.prefixPicks_mono
+#print axioms RevHalt.chain_mono
+#print axioms RevHalt.chain_sound_all
+#print axioms RevHalt.chain_mono_le
+#print axioms RevHalt.mem_lim
+#print axioms RevHalt.mem_lim_simp
+#print axioms RevHalt.lim_sound
+#print axioms RevHalt.chain_lim_sound
+#print axioms RevHalt.chain_subset_lim
+#print axioms RevHalt.infinitely_fair_implies_fair
+#print axioms RevHalt.lim_mono
+#print axioms RevHalt.chain_closed_form
+#print axioms RevHalt.lim_closed_form
+#print axioms RevHalt.fair_implies_coverage
+#print axioms RevHalt.fair_limit_complete
+#print axioms RevHalt.step_adds_new
+#print axioms RevHalt.step_idem_of_mem
+#print axioms RevHalt.step_eq_union
+#print axioms RevHalt.lim_upper_bound
+#print axioms RevHalt.lim_least
+#print axioms RevHalt.lim_is_lub
+#print axioms RevHalt.mem_AllOraclePicks
+#print axioms RevHalt.lim_contains_all_oracle_picks
+#print axioms RevHalt.lim_schedule_free
+#print axioms RevHalt.all_oracle_picks_sound
+#print axioms RevHalt.sound_union
+#print axioms RevHalt.lim_eq_of_two_fair_schedules
+#print axioms RevHalt.lim_eq_omegaState
+#print axioms RevHalt.omegaState_minimal
+#print axioms RevHalt.scheduleOfEncodable_fair
+#print axioms RevHalt.exists_fair_limit_eq_omegaState
+

@@ -340,3 +340,21 @@ theorem stage_zero_is_em :
 #print axioms stage_zero_is_em
 
 end RevHalt.OrdinalMechanical
+
+-- Axiom checks (auto):
+#print axioms RevHalt.OrdinalMechanical.LPOBool_iff_LPOProp
+#print axioms RevHalt.OrdinalMechanical.dichotomy_up_to
+#print axioms RevHalt.OrdinalMechanical.dichotomy_up_to_direct
+#print axioms RevHalt.OrdinalMechanical.halts_iff_exists_halts_up_to
+#print axioms RevHalt.OrdinalMechanical.stabilizes_iff_forall_stabilizes_up_to
+#print axioms RevHalt.OrdinalMechanical.all_finite_stages
+#print axioms RevHalt.OrdinalMechanical.Halts_constTrace_iff
+#print axioms RevHalt.OrdinalMechanical.Stabilizes_constTrace_iff
+#print axioms RevHalt.OrdinalMechanical.stabilizes_iff_not_halts
+#print axioms RevHalt.OrdinalMechanical.dichotomy_from_em
+#print axioms RevHalt.OrdinalMechanical.em_from_dichotomy
+#print axioms RevHalt.OrdinalMechanical.dichotomy_iff_em
+#print axioms RevHalt.OrdinalMechanical.finite_stage_no_em
+#print axioms RevHalt.OrdinalMechanical.limit_stage_is_em
+#print axioms RevHalt.OrdinalMechanical.stage_zero_is_em
+

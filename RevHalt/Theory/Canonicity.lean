@@ -108,3 +108,14 @@ theorem T1_semantics (K : RHKit) (hK : DetectsMonotone K)
   rw [T1_traces K hK]
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.T1_traces
+#print axioms RevHalt.T1_neg_traces
+#print axioms RevHalt.T1_uniqueness
+#print axioms RevHalt.mem_ModE
+#print axioms RevHalt.mem_ThE
+#print axioms RevHalt.SemConsequences_iff
+#print axioms RevHalt.CloE_eq
+#print axioms RevHalt.T1_semantics
+

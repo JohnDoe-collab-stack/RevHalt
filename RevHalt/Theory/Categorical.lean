@@ -299,3 +299,24 @@ theorem frontiers_incomparable
 end Frontier
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.le_up
+#print axioms RevHalt.up_mono_order
+#print axioms RevHalt.up_le_iff
+#print axioms RevHalt.up_idem_le
+#print axioms RevHalt.le_up_idem
+#print axioms RevHalt.up_idem
+#print axioms RevHalt.bot_trace_apply
+#print axioms RevHalt.up_bot
+#print axioms RevHalt.up_eq_bot_iff
+#print axioms RevHalt.ModE_ThE_iff
+#print axioms RevHalt.subset_CloE
+#print axioms RevHalt.CloE_monotone
+#print axioms RevHalt.ModE_CloE_eq
+#print axioms RevHalt.CloE_idem
+#print axioms RevHalt.up_is_projector
+#print axioms RevHalt.frontier_anti_monotone
+#print axioms RevHalt.frontier_divergence_witness
+#print axioms RevHalt.frontiers_incomparable
+

@@ -396,3 +396,25 @@ The open question: does such an O exist for SAT/UNSAT?
 -/
 
 end RevHalt.AbstractDynamics
+
+-- Axiom checks (auto):
+#print axioms RevHalt.AbstractDynamics.sound_empty
+#print axioms RevHalt.AbstractDynamics.sound_union_singleton
+#print axioms RevHalt.AbstractDynamics.sound_iUnion
+#print axioms PickWorld.RevHalt.AbstractDynamics.step_mono
+#print axioms PickWorld.RevHalt.AbstractDynamics.mem_lim
+#print axioms PickWorld.RevHalt.AbstractDynamics.chain_mono
+#print axioms PickWorld.RevHalt.AbstractDynamics.chain_sound
+#print axioms PickWorld.RevHalt.AbstractDynamics.lim_sound
+#print axioms PickWorld.RevHalt.AbstractDynamics.chain_closed_form
+#print axioms PickWorld.RevHalt.AbstractDynamics.lim_closed_form
+#print axioms PickWorld.RevHalt.AbstractDynamics.lim_contains_all_picks
+#print axioms PickWorld.RevHalt.AbstractDynamics.lim_schedule_free
+#print axioms PickWorld.RevHalt.AbstractDynamics.all_picks_sound
+#print axioms PickWorld.RevHalt.AbstractDynamics.sound_union
+#print axioms PickWorld.RevHalt.AbstractDynamics.lim_eq_of_fair_schedules
+#print axioms PickWorld.RevHalt.AbstractDynamics.lim_eq_omegaState
+#print axioms PickWorld.RevHalt.AbstractDynamics.omegaState_minimal
+#print axioms PickWorld.RevHalt.AbstractDynamics.scheduleOfEncodable_fair
+#print axioms PickWorld.RevHalt.AbstractDynamics.exists_fair_limit_eq_omegaState
+

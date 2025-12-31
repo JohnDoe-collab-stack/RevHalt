@@ -118,3 +118,9 @@ theorem T2_impossibility {PropT : Type}
       exact S.consistent (S.absurd (I.H e) hProvH hProvNotH)
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.Halts_Machine_iff
+#print axioms RevHalt.diagonal_bridge
+#print axioms RevHalt.T2_impossibility
+

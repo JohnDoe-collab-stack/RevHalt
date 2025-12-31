@@ -501,3 +501,15 @@ lemma mem_S1TwoSet_of_pick
   exact hUnprov
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.diagonal_bridge_of_realization
+#print axioms RevHalt.mem_S1Set_of_witness
+#print axioms RevHalt.S1Set_nonempty_of_witness
+#print axioms RevHalt.exists_unprovable_encode_halt
+#print axioms RevHalt.T3_weak_extension_explicit
+#print axioms RevHalt.InfiniteS1
+#print axioms RevHalt.T3_strong
+#print axioms RevHalt.T3_oracle_extension_explicit
+#print axioms RevHalt.mem_S1TwoSet_of_pick
+

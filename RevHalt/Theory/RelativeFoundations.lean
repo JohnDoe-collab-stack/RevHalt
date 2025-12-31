@@ -146,11 +146,14 @@ end RevHalt.RelativeFoundations
   This confirms that the dichotomy "at stage 0" identifies the logical strength (EM).
 -/
 
--- Axiom checks (mechanical):
+
+-- Axiom checks (auto):
+#print axioms RevHalt.RelativeFoundations.dichotomy_imp_EM_Truth
 #print axioms RevHalt.RelativeFoundations.decidable_pred_imp_em
 #print axioms RevHalt.RelativeFoundations.LPO_pred_imp_em
-#print axioms RevHalt.RelativeFoundations.dichotomy_imp_EM_Truth
 #print axioms RevHalt.RelativeFoundations.decidable_Eval_imp_EM_Eval
 #print axioms RevHalt.RelativeFoundations.LPO_Eval_imp_EM_Eval
 #print axioms RevHalt.RelativeFoundations.Base_Is_Degenerate
 #print axioms RevHalt.RelativeFoundations.Halts_Is_Degenerate
+
+

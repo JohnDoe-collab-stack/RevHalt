@@ -148,3 +148,8 @@ to possible local external stability certification.
 -/
 
 end RevHalt
+
+-- Axiom checks (auto):
+#print axioms RevHalt.T3_permits_instancewise
+#print axioms RevHalt.quantifier_swap_coexistence
+
