@@ -46,43 +46,35 @@ def Halts (T : Trace) : Prop := ∃ n, T n
 def Stabilizes (T : Trace) : Prop := ∀ n, ¬ T n
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 2) CONSTRUCTIVE THEOREMS: No `classical` keyword anywhere
+-- 2) CONSTRUCTIVE THEOREMS: No axioms at all (not even propext)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- Constructive: up is idempotent -/
-theorem up_idem (T : Trace) : up (up T) = up T := by
-  funext n
-  apply propext
+/-- Axiom-free: idempotence point by point -/
+theorem up_idem_iff (T : Trace) (n : ℕ) : up (up T) n ↔ up T n := by
   constructor
   · intro ⟨k, hkn, j, hjk, hTj⟩
     exact ⟨j, Nat.le_trans hjk hkn, hTj⟩
   · intro ⟨k, hkn, hTk⟩
     exact ⟨k, hkn, k, Nat.le_refl k, hTk⟩
 
-/-- Constructive: up is monotone -/
+/-- Axiom-free: up is monotone -/
 theorem up_mono {T U : Trace} (h : T ≤ U) : up T ≤ up U := by
   intro n ⟨k, hkn, hTk⟩
   exact ⟨k, hkn, h k hTk⟩
 
-/-- Constructive: Signal invariance -/
+/-- Axiom-free: Signal invariance -/
 theorem halts_up_iff (T : Trace) : Halts (up T) ↔ Halts T := by
   constructor
   · intro ⟨n, k, _, hTk⟩; exact ⟨k, hTk⟩
   · intro ⟨n, hn⟩; exact ⟨n, n, Nat.le_refl n, hn⟩
 
-/-- Constructive: Kernel characterization -/
-theorem up_eq_bot_iff (T : Trace) : up T = ⊥ ↔ Stabilizes T := by
+/-- Axiom-free: Stabilizes ↔ ∀n, ¬up T n -/
+theorem stabilizes_iff_forall_not_up (T : Trace) : Stabilizes T ↔ ∀ n, ¬ up T n := by
   constructor
-  · intro h n hn
-    have : up T n := ⟨n, Nat.le_refl n, hn⟩
-    rw [h] at this
-    exact this
-  · intro hs
-    funext n
-    apply propext
-    constructor
-    · intro ⟨k, _, hTk⟩; exact hs k hTk
-    · intro hf; exact False.elim hf
+  · intro hs n ⟨k, _, hTk⟩
+    exact hs k hTk
+  · intro hall n hn
+    exact hall n ⟨n, Nat.le_refl n, hn⟩
 
 /-- Constructive: Stabilizes ↔ ¬Halts -/
 theorem stabilizes_iff_not_halts (T : Trace) : Stabilizes T ↔ ¬ Halts T := by
@@ -250,11 +242,11 @@ The gap is exactly: `¬¬P → P`
 This is the ordinal completion operator: passage from "all finite stages" to "ω".
 -/
 
--- Verify: constructive theorems use no classical axioms
-#print axioms up_idem
+-- Verify: constructive theorems use NO axioms at all
+#print axioms up_idem_iff
 #print axioms up_mono
 #print axioms halts_up_iff
-#print axioms up_eq_bot_iff
+#print axioms stabilizes_iff_forall_not_up
 #print axioms stabilizes_iff_not_halts
 #print axioms dichotomy_exclusive
 #print axioms dichotomy_double_neg
