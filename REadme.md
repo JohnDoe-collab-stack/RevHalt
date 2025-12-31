@@ -45,7 +45,8 @@ theorem ne_bot_imp_notnot_sig : D.O x ≠ ⊥ → ¬¬ D.Sig x
 theorem ne_bot_imp_sig : D.O x ≠ ⊥ → D.Sig x
 ```
 
-**AC is NOT needed**: once the side is determined, the certificate content is forced by the structure.
+**AC is NOT needed** (nuanced): the oracle/side is external, but once the side is given,
+the certificate content is forced by `ker_iff` (structure, not choice).
 
 **Noncomputability policy**: we avoid `noncomputable`. When needed, we use classical reasoning (`by_cases`) only at the “decide the side” point.
 
