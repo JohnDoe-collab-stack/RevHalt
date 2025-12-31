@@ -43,4 +43,33 @@ Pointers:
   `RevHalt/Theory/Impossibility.lean`, `RevHalt/Theory/Complementarity.lean`
 - Schema + instantiation: `RevHalt/Theory/StructuralDichotomy.lean`
 - Parametric dynamics: `RevHalt/Theory/AbstractDynamics.lean`
+- Bridge (SDOracle → PickWorld): `RevHalt/Theory/SD_Bridge.lean`
+
+## Dependency Graph
+
+```mermaid
+graph TD
+    subgraph Base
+        Trace["Trace.lean"]
+        Kit["Kit.lean"]
+    end
+    subgraph Theory
+        Canon["Canonicity.lean (T1)"]
+        Imposs["Impossibility.lean (T2)"]
+        Compl["Complementarity.lean (T3)"]
+        Stabil["Stabilization.lean"]
+    end
+    subgraph Abstract
+        SD["StructuralDichotomy.lean"]
+        AD["AbstractDynamics.lean"]
+        Bridge["SD_Bridge.lean"]
+    end
+    Trace --> Kit
+    Kit --> Canon
+    Kit --> Imposs
+    Kit --> Compl
+    Trace --> Stabil
+    SD --> Bridge
+    AD --> Bridge
+```
 
