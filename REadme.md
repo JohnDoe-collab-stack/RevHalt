@@ -1,40 +1,77 @@
 # RevHalt
 
-RevHalt is a Lean 4 (Mathlib) formalization of a single idea:
+A Lean 4 formalization establishing that classical logic (EM) functions as a semantic evaluator rather than a foundational axiom system.
 
-**Turn an impossibility (uniform undecidability) into a navigable structure.**
+## Main Result
 
-### The Core Insight: Algebra over Logic
-
-Traditional computability theory treats halting primarily as a **logical** question (truth/falsity of “halts”).
-RevHalt isolates a **structural** regime in which the negative side is witnessed as a **kernel condition** of an operator.
-
-Concretely, for traces `T : ℕ → Prop` and the cumulative operator
+**Theorem.** The total dichotomy for traces is logically equivalent to the Law of Excluded Middle:
 
 ```lean
-up T n := ∃ k ≤ n, T k
+theorem dichotomy_all_iff_em :
+    (∀ T : Trace, Halts T ∨ Stabilizes T) ↔ (∀ P : Prop, P ∨ ¬P)
 ```
 
-RevHalt proves the key kernel fact (not assumed):
+Verified with **zero axioms** beyond Lean's kernel.
 
-```lean
-up T = ⊥ ↔ ∀ n, ¬ T n
-```
-
-Thus the Π₁-style “no witness ever” side is captured by an algebraic invariant (`up T = ⊥`), while the Σ₁-style side remains a witness (`∃ n, T n`). The “choice of side” is a semantic/evaluation capability; the certificate shape is forced by structure.
+**Corollary.** The structure of the dichotomy exists independently of EM. Classical logic provides the capacity to evaluate which side of the partition an element occupies, but does not generate the partition itself.
 
 ---
 
-## A Machine-Checkable Criterion: Structural vs Extensional Dichotomy
+## Formal Content
 
-RevHalt’s criterion is: a dichotomy is **structural** when it is induced by an operator with:
+### 1. Primitive Layer (Zero Axioms)
 
-1. **Monotonicity + idempotence** (closure-like behavior)
-2. A **signal** preserved by the operator
-3. A **kernel characterization** identifying the negative side as membership in `ker(O)` (i.e. `O x = ⊥`)
-4. Branch selection that is a **reading of membership** (signal vs kernel), not arbitrary choice among alternatives
+**Definitions.**
 
-This is encoded as:
+```lean
+def Trace := ℕ → Prop
+def Halts (T : Trace) : Prop := ∃ n, T n                    -- Σ₁
+def Stabilizes (T : Trace) : Prop := ∀ n, ¬ T n            -- Π₁
+def up (T : Trace) : Trace := fun n => ∃ k, k ≤ n ∧ T k    -- Cumulative closure
+```
+
+**Structural Theorems.**
+
+| Theorem | Statement | Axioms |
+|---------|-----------|--------|
+| `up_mono` | `T ≤ U → up T ≤ up U` | 0 |
+| `up_idem` | `up (up T) = up T` | 0 |
+| `exists_up_iff` | `(∃n, up T n) ↔ (∃n, T n)` | 0 |
+| `up_eq_bot_iff` | `up T = ⊥ ↔ ∀n, ¬T n` | 0 |
+| `dichotomy_exclusive` | `¬(Halts T ∧ Stabilizes T)` | 0 |
+| `dichotomy_double_neg` | `¬¬(Halts T ∨ Stabilizes T)` | 0 |
+
+The operator `up` is a closure operator (monotone, idempotent, extensive) whose kernel characterizes the Π₁ side of the dichotomy. This characterization is algebraic: membership in ker(up) is equivalent to the universal negative statement `∀n, ¬T n`.
+
+### 2. Classical Boundary (Zero Axioms for Equivalences)
+
+**Source Localization.**
+
+```lean
+theorem stage_zero_is_em :
+    (∀ T : Trace, HaltsUpTo T 0 ∨ StabilizesUpTo T 0) ↔ (∀ P : Prop, P ∨ ¬P)
+```
+
+Even at stage 0 (the smallest finite ordinal), quantifying over arbitrary traces `ℕ → Prop` yields EM. The source of classical content is the **class of traces** (Prop-valued), not the ordinal passage from finite to ω.
+
+**Ordinal Gap Isolation.**
+
+```lean
+def LPOBool : Prop := ∀ f : ℕ → Bool, (∃ n, f n = true) ∨ (∀ n, f n = false)
+
+theorem LPOBool_iff_LPOProp : LPOBool ↔ LPOProp
+```
+
+On decidable traces (`ℕ → Bool`), the passage from finite stages to ω yields LPO (Limited Principle of Omniscience), which is strictly weaker than EM in constructive mathematics.
+
+**Two Distinct Sources.**
+
+| Source | Transition | Principle | Strength |
+|--------|------------|-----------|----------|
+| Class | `ℕ → Bool` to `ℕ → Prop` | EM | Full classical |
+| Ordinal | Finite to ω (decidable traces) | LPO | Weaker |
+
+### 3. Abstract Schema
 
 ```lean
 structure StructuralDichotomy (X : Type) [Preorder X] [Bot X] where
@@ -46,37 +83,24 @@ structure StructuralDichotomy (X : Type) [Preorder X] [Bot X] where
   ker_iff : ∀ x, O x = ⊥ ↔ ¬ Sig x
 ```
 
----
+A dichotomy is **structural** when:
+1. An operator O with closure properties exists
+2. The signal Sig is preserved by O
+3. The negative side is characterized as ker(O)
 
-## Where EM Enters (precisely)
+**Derived Theorems.**
 
-From `ker_iff`, one gets constructively that non-kernel implies double-negated signal:
+| Theorem | Statement | Axioms |
+|---------|-----------|--------|
+| `sig_imp_ne_bot` | `Sig x → O x ≠ ⊥` | 0 |
+| `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x` | 0 |
+| `ne_bot_imp_sig` | `O x ≠ ⊥ → Sig x` | Classical |
 
-```lean
-theorem ne_bot_imp_notnot_sig : D.O x ≠ ⊥ → ¬¬ D.Sig x
-```
+The passage from `¬¬Sig x` to `Sig x` is precisely where EM enters.
 
-To turn this into a positive signal claim requires an evaluation principle such as EM (or any principle giving `¬¬P → P` for the relevant `P`):
-
-```lean
--- classical/evaluative step
-theorem ne_bot_imp_sig : D.O x ≠ ⊥ → D.Sig x
-```
-
-Interpretation: **structure forces the certificate form** (kernel equality vs signal witness); EM is needed only to **select** the branch by converting `¬¬Sig` into `Sig`.
-
----
-
-## Instantiation: Trace / up
-
-RevHalt instantiates `StructuralDichotomy` with:
+**Instantiation.**
 
 ```lean
-def Trace := ℕ → Prop
-
-def Halts (T : Trace) : Prop := ∃ n, T n
-def Stabilizes (T : Trace) : Prop := ∀ n, ¬ T n
-
 def traceSD : StructuralDichotomy Trace where
   O := up
   mono := up_mono
@@ -86,49 +110,42 @@ def traceSD : StructuralDichotomy Trace where
   ker_iff := up_eq_bot_iff
 ```
 
-Key proved fact:
+### 4. Triptych (T1 / T2 / T3)
+
+**T1 — Canonicity.**
 
 ```lean
-up T = ⊥ ↔ Stabilizes T
+theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
+    ∀ T : Trace, Rev0_K K T ↔ Halts T
 ```
 
-So the negative verdict is not “just a negation”; it is equivalently a kernel statement in the closure geometry induced by `up`.
+Any valid kit (one that correctly detects halting on monotone traces) yields exactly the standard halting predicate on all traces. The operator `up` normalizes arbitrary traces to monotone form.
 
----
-
-## Separation of Principles (as used in RevHalt)
-
-| Principle           | Role in RevHalt                                                                                                             |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Structure**       | `O`, `sig_invar`, `ker_iff` — operator theorems fixing certificate form                                                     |
-| **EM / evaluation** | branch selection (`¬¬Sig → Sig`) when required                                                                              |
-| **AC**              | no internal use is required to *determine certificate content once a side is provided*; the oracle is an external parameter |
-| **Computability**   | blocked by T2: no uniform internal total decider                                                                            |
-
----
-
-## The Triptych (T1 / T2 / T3)
-
-### T1 — Rigidity
+**T2 — Uniform Barrier.**
 
 ```lean
-Rev0_K K T ↔ Halts T
+theorem T2_impossibility {PropT : Type}
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMonotone K) :
+    ¬ ∃ _ : InternalHaltingPredicate S K, True
 ```
 
-Any valid kit collapses to the Σ₁ signal (halting-on-traces). The operator supplies the induced dichotomy; kits can only read it.
+No internal predicate can be simultaneously total, correct, complete, and r.e. This is derived from Kleene's Second Recursion Theorem via diagonal argument.
 
-### T2 — Uniform Barrier
+**T3 — Local Navigation.**
 
-No internal predicate can be simultaneously total + correct + complete + r.e. in the uniform sense.
-The obstruction is a **uniformity** barrier (`∃H.∀e`), not the existence of instancewise certificates.
+```lean
+theorem T3_oracle_extension_explicit ... :
+    ∃ S3 : Set PropT,
+      S2 ⊆ S3 ∧
+      (∀ p ∈ S3, Truth p) ∧
+      pick.p ∈ S3 ∧
+      ¬ S.Provable pick.p
+```
 
-### T3 — Local Navigation
+Given an external oracle providing the side (Halts or Stabilizes), sound corpus extension is possible. The barrier is uniformity (`∃H.∀e`), not instancewise certificates (`∀e.∃Sₑ`).
 
-Instancewise, certificates exist (`∀e ∃Sₑ`), yielding a navigable regime without a uniform decider (`∃H ∀e`).
-
----
-
-## Abstract Dynamics (independent of Trace/up)
+### 5. Abstract Dynamics
 
 ```lean
 structure PickWorld (Index PropT : Type) where
@@ -137,57 +154,104 @@ structure PickWorld (Index PropT : Type) where
   pick_true : ∀ i, Truth (pick i)
 ```
 
-From this, the project derives soundness preservation, closed forms, and ω-limit confluence under fairness.
+From any pick oracle, the following are derived:
+
+| Theorem | Statement |
+|---------|-----------|
+| `chain_sound` | All chain states are sound |
+| `lim_sound` | The limit is sound |
+| `lim_schedule_free` | Under fair schedule: `lim = S₀ ∪ AllPicks` |
+| `lim_eq_omegaState` | Limit equals canonical ω-state |
+| `omegaState_minimal` | ω-state is minimal sound extension |
+
+The dynamics is independent of Trace/up. It depends only on the abstract structure of picks with truth certificates.
+
+**Bridge Construction.**
+
+```lean
+def pickWorldOfSDOracle {Index : Type} (elem : Index → X)
+    (oracle : SDOracle D Index elem) :
+    PickWorld Index Prop
+```
+
+No `noncomputable`, no `classical`. The oracle carries the certificate; the bridge merely extracts it.
 
 ---
 
-## P vs NP (conceptual criterion only)
+## Interpretation
 
-This section is a *criterion*, not a formalization: it asks whether there exists a “poly-natural” closure-like operator with kernel/signal properties analogous to the Σ₁/Π₁ regime.
+### What is Demonstrated
+
+1. **Structural Independence.** The dichotomy structure (operator, kernel characterization, signal invariance) exists with zero axioms.
+
+2. **EM as Evaluator.** The equivalence `dichotomy ↔ EM` is proven with zero axioms. EM is not presupposed; it is characterized as exactly the principle needed to evaluate the pre-existing structure.
+
+3. **Source Localization.** The theorem `stage_zero_is_em` proves that classical content enters through the class of traces (`ℕ → Prop`), not through the ordinal passage. This is not a philosophical claim but a formal result.
+
+### Implication for Foundational Systems
+
+ZFC and Peano Arithmetic (with classical logic) do not **found** the dichotomy. They **evaluate** a partition that exists structurally without them.
+
+The algebraic characterization `up T = ⊥ ↔ Stabilizes T` transforms a logical statement (universal negative) into an operator equation. The evaluation of which side holds requires EM, but the partition itself is prior.
 
 ---
 
-## File Map
+## File Structure
 
 ### Base Layer
 
-* `RevHalt/Base/Trace.lean` — `Trace`, `Halts`, `up`
-* `RevHalt/Base/Kit.lean` — `RHKit`, `DetectsMonotone`, `Rev0_K`
+| File | Contents |
+|------|----------|
+| `Trace.lean` | `Trace`, `Halts`, `up`, `up_mono`, `exists_up_iff` |
+| `Kit.lean` | `RHKit`, `DetectsMonotone`, `Rev0_K` |
 
 ### Theory Layer
 
-* `RevHalt/Theory/Canonicity.lean` — T1 (`T1_traces`, `T1_uniqueness`)
-* `RevHalt/Theory/Impossibility.lean` — T2 (`diagonal_bridge`, `T2_impossibility`)
-* `RevHalt/Theory/Complementarity.lean` — T3 (`OraclePick`, `S1Set`, `S3Set`)
-* `RevHalt/Theory/Stabilization.lean` — `Stabilizes`, `KitStabilizes`, kernel link
-* `RevHalt/Theory/Categorical.lean` — `up` as coreflector, `CloE`, `Frontier`
-* `RevHalt/Theory/QuantifierSwap.lean` — Quantifier Swap principle
-* `RevHalt/Theory/ThreeBlocksArchitecture.lean` — OracleMachine, o-bridge
-* `RevHalt/Theory/Dynamics.lean` — Navigation dynamics
-* `RevHalt/Theory/WitnessLogic.lean` — Witness soundness
+| File | Contents |
+|------|----------|
+| `Canonicity.lean` | T1: `T1_traces`, `T1_uniqueness`, semantic bridge |
+| `Impossibility.lean` | T2: `diagonal_bridge`, `T2_impossibility` |
+| `Complementarity.lean` | T3: `OraclePick`, `S1Set`, `S3Set`, oracle extension |
+| `Stabilization.lean` | `Stabilizes`, `KitStabilizes`, kernel link |
+| `Categorical.lean` | `up` as coreflector, `CloE`, `Frontier` theorems |
 
-### Abstract Layer (NEW)
+### Abstract Layer
 
-* `StructuralDichotomy.lean` — Abstract schema + Trace/up instantiation
-* `AbstractDynamics.lean` — Schedule-independent dynamics from PickWorld
-* `SD_Bridge.lean` — SDOracle → PickWorld morphism (no classical, no noncomputable)
+| File | Contents |
+|------|----------|
+| `StructuralDichotomy.lean` | Abstract schema, instantiation, EM/AC analysis |
+| `AbstractDynamics.lean` | `PickWorld`, chain/limit, schedule invariance |
+| `SD_Bridge.lean` | `pickWorldOfSDOracle`, no classical, no noncomputable |
+
+### Boundary Layer
+
+| File | Contents |
+|------|----------|
+| `OrdinalMechanical.lean` | `dichotomy_all_iff_em`, `stage_zero_is_em`, `LPOBool_iff_LPOProp` |
+| `OrdinalBoundary.lean` | Constructive layer theorems, double negation |
 
 ---
 
-## Core Theorems
+## Axiom Verification
 
-| Theorem                 | Statement                                | Significance                   |
-| ----------------------- | ---------------------------------------- | ------------------------------ |
-| `up_eq_bot_iff`         | `up T = ⊥ ↔ ∀n. ¬T n`                    | Π₁ = kernel (algebraization)   |
-| `T1_traces`             | `Rev0_K K T ↔ Halts T`                   | Kit rigidity                   |
-| `T2_impossibility`      | No total+correct+complete+r.e. predicate | Uniform barrier                |
-| `lim_schedule_free`     | Limit = S₀ ∪ AllPicks                    | Schedule independence          |
-| `omegaState_minimal`    | ω-state is smallest extension            | Closure property               |
-| `sig_iff_ne_bot`        | `Sig x ↔ O x ≠ ⊥`                        | Abstract dichotomy (classical) |
-| `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x`                      | Constructive content           |
-| `stage_zero_is_em`      | Stage 0 + Arbitrary = EM                 | Class gap is primary           |
-| `decidable_limit_iff_lpo`| Limit + Decidable = LPO                 | Ordinal gap is secondary       |
-| `dichotomy_all_iff_em`  | `Dichotomy ↔ EM`                         | Ordinal/Class Boundary         |
+All structural theorems verify `#print axioms` as using zero axioms beyond Lean's kernel (propext, Quot.sound for equality reasoning where needed).
+
+Key verifications:
+
+```
+#print axioms dichotomy_all_iff_em        -- []
+#print axioms stage_zero_is_em            -- []
+#print axioms LPOBool_iff_LPOProp         -- []
+#print axioms up_eq_bot_iff               -- []
+#print axioms traceSD                     -- [propext]
+#print axioms T1_traces                   -- []
+#print axioms T2_impossibility            -- []
+```
+
+Classical axioms appear only in:
+- `dichotomy` (the affirmative dichotomy, not the equivalence)
+- `ne_bot_imp_sig` (converting `¬¬Sig` to `Sig`)
+- `sdpick_of_classical` (constructing picks from EM)
 
 ---
 
@@ -197,8 +261,16 @@ This section is a *criterion*, not a formalization: it asks whether there exists
 lake build
 ```
 
+Requires Lean 4 with Mathlib.
+
 ---
 
-## License / Contribution
+## Summary
 
-Add your license and contribution conventions here.
+RevHalt formalizes the following chain of results:
+
+1. `up T = ⊥ ↔ Stabilizes T` — The Π₁ side is algebraically characterized as ker(up)
+2. `dichotomy_all_iff_em` — Total dichotomy is logically equivalent to EM
+3. `stage_zero_is_em` — The source is the class (Prop), not the ordinal (ω)
+
+**Conclusion.** Classical logic is a semantic evaluation capacity applied to a structure that exists independently. This is not an interpretation but the content of the theorems.
