@@ -2,8 +2,7 @@ import Mathlib.Order.Basic
 import Mathlib.Logic.Basic
 import Mathlib.Data.Set.Basic
 
-/-!
-# Ordinal Boundary Theorem - Mechanical Verification
+
 
 /-!
 # Ordinal Boundary Theorem - Mechanical Verification
@@ -18,6 +17,7 @@ The analysis reveals two distinct sources of non-constructive behavior:
 The combination (Limit + Arbitrary) is equivalent to EM, but `stage_zero_is_em` proves that the arbitrary quantification alone is sufficient for EM.
 
 
+-/
 namespace RevHalt.OrdinalMechanical
 
 -- ═══════════════════════════════════════════════════════════════════════════════
