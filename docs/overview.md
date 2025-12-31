@@ -33,8 +33,9 @@ Contributions (formalized):
 
 4) Ordinal boundary theorem
    The total dichotomy `∀T, Halts T ∨ Stabilizes T` is **exactly equivalent**
-   to EM (`∀P, P ∨ ¬P`). All structure theorems use 0 axioms; EM is the
-   precise non-constructive content (`dichotomy_all_iff_em`).
+   to EM (`∀P, P ∨ ¬P`). We verify mechanically that this involves two distinct sources:
+   quantifying over arbitrary traces implies EM (Class Gap), while passing to the limit
+   on decidable traces implies LPO (Ordinal Gap).
 
 Scope and limits:
 
@@ -49,7 +50,7 @@ Pointers:
 - Schema + instantiation: `RevHalt/Theory/StructuralDichotomy.lean`
 - Parametric dynamics: `RevHalt/Theory/AbstractDynamics.lean`
 - Bridge (SDOracle → PickWorld): `RevHalt/Theory/SD_Bridge.lean`
-- **Ordinal boundary (Dichotomy ↔ EM)**: `RevHalt/Theory/OrdinalBoundary.lean`
+- **Ordinal boundary (Two Distinct Sources)**: `RevHalt/Theory/OrdinalMechanical.lean`
 
 ## Dependency Graph
 

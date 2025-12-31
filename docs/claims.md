@@ -75,12 +75,13 @@ theorem dichotomy_all_iff_em :
 
 Scope:
 - **Dichotomy = EM exactly** (verified by `#print axioms`: zero axioms)
+- **Two distinct sources verified**:
+  1. Arbitrary quantification (`ℕ → Prop`) implies EM.
+  2. Limit on decidable traces (`ℕ → Bool`) implies LPO.
 - All structure theorems are constructive (0 axioms)
-- EM as hypothesis suffices (no Classical.choice needed axiomatically)
-- The constructive/classical frontier = finite/ω ordinal frontier
 
 Files:
-- `RevHalt/Theory/OrdinalBoundary.lean`
+- `RevHalt/Theory/OrdinalMechanical.lean`
 
 ## Non-claims / open directions
 

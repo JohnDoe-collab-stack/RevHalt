@@ -55,3 +55,12 @@ This map links the main statements to their Lean proofs.
 - `pickWorldOfSDOracle`:
   `RevHalt/Theory/SD_Bridge.lean`
 
+## Ordinal boundary theorems
+
+- `LPOBool_iff_LPOProp` (Ordinal Gap = LPO):
+  `RevHalt/Theory/OrdinalMechanical.lean`
+- `stage_zero_is_em` (Class Gap = EM):
+  `RevHalt/Theory/OrdinalMechanical.lean`
+- `limit_stage_is_em` (Total dichotomy = EM):
+  `RevHalt/Theory/OrdinalMechanical.lean`
+
