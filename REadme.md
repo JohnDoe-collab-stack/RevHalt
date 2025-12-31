@@ -6,148 +6,79 @@ RevHalt is a Lean 4 (Mathlib) formalization of a single idea:
 
 ---
 
-## Why is this original?
+## The Problem That Couldn't Be Stated
 
-### Gödel/Turing vs RevHalt
+Before RevHalt, we knew:
+- **Gödel/Turing**: "There exist true but unprovable statements"
+- **AC**: "Selection functions exist" (postulated)
+- **EM**: "Every proposition has a truth value" (postulated)
 
-| Approach | Result | Character |
-|----------|--------|-----------|
-| **Gödel/Turing** | "There exist true but unprovable statements" | Existence theorem (static) |
-| **RevHalt** | "Here is the dynamics of navigating incompleteness" | Process (dynamic) |
+We couldn't clearly distinguish when a "selection" requires AC versus when it requires only EM.
 
-Gödel and Turing prove that limits exist. RevHalt provides a **formal dynamics** on those limits:
-
-1. **T1 (Rigidity)**: What is structurally fixed — any valid observer collapses to standard halting
-2. **T2 (Barrier)**: What is uniformly impossible — no internal predicate can decide all instances
-3. **T3 (Navigation)**: What is locally possible — certificate-carried extensions, step by step
-
-Incompleteness becomes **navigable**: not a wall, but a structured space with typed certificates.
-
-### Π₁ Stabilization as First-Class Certificate
-
-Standard computability treats "doesn't halt" as `¬∃n. T n` — a **logical negation** of Σ₁.
-
-RevHalt treats "stabilizes" as `∀n. ¬T n` — a **first-class Π₁ structure**:
-
-| Approach | Form | Status |
-|----------|------|--------|
-| Standard | `¬∃n. T n` | Negation (derived) |
-| RevHalt | `∀n. ¬T n` | Π₁ certificate (primitive) |
-
-The Kit's negative verdict `¬Rev0_K` becomes a **typed Π₁ certificate** that can be:
-- **Carried** by `OraclePick` on the "stabilization" branch
-- **Used** as fuel for sound extensions in T3
-- **Linked** algebraically to the kernel of `up`: `up T = ⊥ ↔ ∀n. ¬T n`
-
-Stabilization is not "we don't know if it halts" — it is a **positive geometric structure** extracted from the instrument.
+**RevHalt answers**: A dichotomy is **structural** (EM-regime, not AC) when:
+1. It comes from a **structural operator** (idempotent, monotone, with universal property)
+2. The **kernel** of the operator characterizes one side (theorem, not definition)
+3. The **signal** is preserved by the operator
+4. The "selection" is a **reading of membership**, not a choice among alternatives
 
 ---
 
-## Categorical Structure
-
-RevHalt exposes **two parallel operator structures**:
-
-### 1) `up` as Coreflector (Traces)
-
-The operator `up : Trace → Trace` is the coreflection into monotone traces:
+## The Abstract Schema
 
 ```lean
-up T ≤ X ↔ T ≤ X    (for monotone X)
+structure StructuralDichotomy (X : Type) [Preorder X] [Bot X] where
+  O : X → X                           -- The operator
+  mono : Monotone O                   -- Monotonicity
+  idem : ∀ x, O (O x) = O x          -- Idempotence
+  Sig : X → Prop                      -- The "signal" (Σ₁-like)
+  sig_invar : ∀ x, Sig (O x) ↔ Sig x -- Signal preservation
+  ker_iff : ∀ x, O x = ⊥ ↔ ¬ Sig x   -- Kernel = ¬Signal (Π₁-like)
 ```
 
-Properties:
-- **Idempotent**: `up (up T) = up T`
-- **Signal-preserving**: `Halts (up T) ↔ Halts T`
-- **Kernel = Stabilization**: `up T = ⊥ ↔ ∀ n, ¬ T n`
-
-The operator `up` acts as a **projector/filter**: it preserves signals (Halts) and annihilates noise (Stabilizes to ⊥).
-
-### 2) `CloE = ThE ∘ ModE` as Closure (Sentences)
-
-For sentences/models:
-
+**Where EM enters** (and ONLY here):
 ```lean
-ModE Sat Γ := { M | ∀ φ ∈ Γ, Sat M φ }
-ThE K := { φ | ∀ M ∈ K, Sat M φ }
-CloE := ThE ∘ ModE
+-- Constructive: O x ≠ ⊥ → ¬¬Sig x
+theorem ne_bot_imp_notnot_sig : D.O x ≠ ⊥ → ¬¬ D.Sig x
+
+-- Classical (requires EM): O x ≠ ⊥ → Sig x  
+theorem ne_bot_imp_sig : D.O x ≠ ⊥ → D.Sig x
 ```
 
-Properties:
-- **Galois connection**: `K ⊆ ModE Γ ↔ Γ ⊆ ThE K`
-- **Closure operator**: `CloE` is extensive, monotone, idempotent
-
-### 3) Frontier Anti-Monotonicity
-
-The **frontier** S1(S2) = { p | Truth p ∧ ¬Provable S2 p } is anti-monotone:
-
-```lean
-S2 ⊆ S2' → Frontier(S2') ⊆ Frontier(S2)
-```
-
-More you prove ⟹ smaller the frontier. Extensions shrink the "unknown".
-
-**Divergence witness**: If two theories prove different things, their frontiers become incomparable:
-
-```lean
-(A proves p, B doesn't) ∧ (B proves q, A doesn't) → Frontiers(A) ⊄ Frontiers(B) ∧ vice versa
-```
+**AC is NOT needed**: once the side is determined, the content is forced by structure.
 
 ---
 
-## Architecture: Kernel + State
+## Instantiation: Trace/up
 
-RevHalt separates two concerns:
+RevHalt instantiates the schema with:
 
-| Layer | Object | Meaning |
-|-------|--------|---------|
-| **Kernel** (fixed) | `S.Provable : PropT → Prop` | Internal derivability |
-| **State** (variable) | `S2, S3 : Set PropT` | Accepted/certified truths |
+```lean
+def traceSD : StructuralDichotomy Trace where
+  O := up
+  mono := up_mono
+  idem := up_idem
+  Sig := Halts
+  sig_invar := exists_up_iff
+  ker_iff := up_eq_bot_iff
+```
 
-**Key invariant**: `¬ S.Provable p` is absolute — p remains unprovable regardless of corpus extensions.
-
-T2 blocks uniform decision **in the calculus**.  
-T3 permits instancewise extension **in the corpus**.
+Where:
+- `up T n := ∃ k ≤ n, T k` (cumulative monotonization)
+- `Halts T := ∃ n, T n` (Σ₁)
+- `Stabilizes T := ∀ n, ¬ T n` (Π₁ = kernel of up)
 
 ---
 
-## Core Objects
+## Separation of Principles
 
-### Traces and halting
+| Principle | Role in RevHalt |
+|-----------|-----------------|
+| **Structure** | O, ker_iff, sig_invar — theorems about the operator |
+| **EM** | Deciding which side (one point: `¬¬P → P`) |
+| **AC** | NOT needed — "choice" is forced by structure |
+| **Computability** | Blocked by T2 — uniform decision impossible |
 
-```lean
-Trace := ℕ → Prop
-Halts (T : Trace) : Prop := ∃ n, T n
-```
-
-### The monotone closure `up`
-
-```lean
-up (T : Trace) : Trace := fun n => ∃ k ≤ n, T k
-```
-
-### Algebraic Stabilization
-
-```lean
-up T = ⊥ ↔ ∀ n, ¬ T n
-```
-
-Stabilization is **structural nullity** — the trace collapses to the zero element under the projector.
-
-### Kits and validity
-
-```lean
-structure RHKit where
-  Proj : Trace → Prop
-
-DetectsMonotone (K : RHKit) : Prop :=
-  ∀ X : Trace, Monotone X → (K.Proj X ↔ Halts X)
-```
-
-### Reverse halting
-
-```lean
-Rev0_K (K : RHKit) (T : Trace) : Prop := K.Proj (up T)
-```
+This separation is the core contribution: **the "choice" in PickOracle is not arbitrary selection (AC), but structural reading (EM + geometry of up).**
 
 ---
 
@@ -159,86 +90,86 @@ Rev0_K (K : RHKit) (T : Trace) : Prop := K.Proj (up T)
 Rev0_K K T ↔ Halts T
 ```
 
-Any valid kit collapses to standard halting. No hidden exotic power.
+Any valid kit collapses to standard halting. The operator `up` determines truth; kits merely read it.
 
 ### T2 — Uniform Barrier
 
-No internal predicate `H(e)` can be simultaneously total + correct + complete + r.e.
+No internal predicate can be simultaneously total + correct + complete + r.e.
 
-The barrier is the Π₁ side: "no witness will ever appear" requires stabilization, which cannot be uniformly internalized.
+The barrier lives in **uniformity** (`∃H.∀e`), not in **access**.
 
 ### T3 — Local Navigation
 
-**OraclePick**: For each code `e`, a certificate selects either:
-- `encode_halt e` (with `Rev0_K` witness)
-- `encode_not_halt e` (with `KitStabilizes` witness)
-
-**Extensions**: `S3 := S2 ∪ {pick.p}` preserves soundness.
+For each code `e`, a certificate selects the correct side:
+- `encode_halt e` (with `Rev0_K` witness) — Σ₁
+- `encode_not_halt e` (with `KitStabilizes` witness) — Π₁
 
 **Quantifier Swap**:
-- T2 forbids: `∃H ∀e` (uniform internal predicate)
-- T3 permits: `∀e ∃Sₑ` (instancewise sound extension)
+- T2 forbids: `∃H ∀e` (uniform)
+- T3 permits: `∀e ∃Sₑ` (instancewise)
 
 ---
 
-## Navigation Dynamics (T3)
+## Abstract Dynamics
 
-The dynamics is now fully formalized as a **canonical closure process**. It is not just an iteration, but a structural characterization of the "navigable space".
-
-### 1. Local Dynamics (The Step)
-
-Every step consumes a certificate (Σ₁/Π₁) and produces a semantic commitment:
+The dynamics is **independent of Trace/up**. It depends only on:
 
 ```lean
-step : Sound S ∧ Truth pick.p → Sound (S ∪ {pick.p})
-step_adds_new : pick.p ∉ S → S ⊂ (step ...).S  -- Strict progress
+structure PickWorld (Index PropT : Type) where
+  Truth : PropT → Prop
+  pick : Index → PropT
+  pick_true : ∀ i, Truth (pick i)
 ```
 
-### 2. Global Dynamics (The Limit)
+Given this, we get **for free**:
+- Soundness preservation (`chain_sound`, `lim_sound`)
+- Closed form (`chain_closed_form`, `lim_closed_form`)
+- Schedule independence (`lim_eq_of_fair_schedules`)
+- Canonical ω-state (`omegaState`)
+- Minimality (`omegaState_minimal`)
+- Constructive existence (`exists_fair_limit_eq_omegaState`)
 
-The process converges to a **unique canonical object**, independent of the order of operations (fairness-invariant).
+---
 
-*   **Canonical ω-State**:
-    ```lean
-    omegaState.S = S0.S ∪ AllOraclePicks
-    ```
-    The limit is exactly the base corpus plus all oracle commitments.
+## Navigation Dynamics
 
-*   **Schedule Invariance** (`lim_eq_of_two_fair_schedules`):
-    Any two fair schedules produce **exactly the same limit**. The "path" doesn't matter, only the oracle and the base.
+### The Canonical ω-State
 
-*   **Minimality** (`omegaState_minimal`):
-    The `omegaState` is the **smallest** sound set containing S0 and satisfying the oracle. It is the **semantic closure** of S0.
+```lean
+omegaState.S = S0.S ∪ AllOraclePicks
+```
 
-### 3. Constructive Existence
+Properties:
+- **Sound**: all members are true
+- **Complete**: every code decided
+- **Minimal**: smallest such extension
+- **Canonical**: independent of schedule (confluence)
 
-We rigorously prove that such a limit is attainable:
+### Ordinal Structure
 
-*   **Existence** (`exists_fair_limit_eq_omegaState`):
-    For any `Encodable` code type, there structurally exists a fair schedule that reaches the canonical state.
-*   **Coverage**:
-    Under fairness, **every** code is covered by the limit. This is effectively proven, not assumed.
+- `Chain n` : state at ordinal n < ω
+- `lim` : passage to ordinal ω
+- `omegaState` : the fixed point at ω
 
-### Summary of Theorems
+ω is **exactly** the right ordinal:
+- Not less (Π₁ requires the limit)
+- Not more (codes are countable)
 
-| Theorem | Meaning | Status |
-|---------|---------|--------|
-| `chain_closed_form` | Finite state = $S_0 \cup$ consumed picks |
-| `lim_schedule_free` | Limit = $S_0 \cup$ all oracle picks |
-| `fair_implies_coverage` | Fair schedule $\implies$ all codes covered |
-| `omegaState_minimal` | Limit is the closure (least fixed point) |
+---
 
-The dynamics transforms the "impossibility of deciding" into the "necessity of specific semantic commitments".
+## For P vs NP
 
-## OracleMachine Architecture
+The testable criterion:
 
-The non-mechanical power is localized:
+**Does there exist an operator O, natural in a poly-constrained category, such that:**
+1. O is functorial w.r.t. poly reductions
+2. O has a universal property (adjoint/coreflector)
+3. `O φ = ⊥ ↔ UNSAT φ` (non-tautological theorem)
+4. `SAT (O φ) ↔ SAT φ` (signal preservation)
 
-- **a-machine** (mechanical): `Machine : Code → Trace`
-- **c-machine** (compile): `compile : List Sentence → Sentence → Code`
-- **o-bridge** (oracle): `SemConsequences Sat Γ φ ↔ Converges (compile Γ φ)`
+**If yes**: NP/coNP is structural like Σ₁/Π₁. P vs NP becomes "is the structure poly-readable?"
 
-Kits are not where the power is. Power lives in `Sat` / bridge / certificates.
+**If no**: NP/coNP is purely extensional — not just "harder", but geometrically different.
 
 ---
 
@@ -253,11 +184,29 @@ Kits are not where the power is. Power lives in `Sat` / bridge / certificates.
 - `RevHalt/Theory/Impossibility.lean` — T2 (`diagonal_bridge`, `T2_impossibility`)
 - `RevHalt/Theory/Complementarity.lean` — T3 (`OraclePick`, `S1Set`, `S3Set`)
 - `RevHalt/Theory/Stabilization.lean` — `Stabilizes`, `KitStabilizes`, kernel link
-- `RevHalt/Theory/Categorical.lean` — `up` as coreflector, `CloE`, `Frontier`, anti-monotonicity
+- `RevHalt/Theory/Categorical.lean` — `up` as coreflector, `CloE`, `Frontier`
 - `RevHalt/Theory/QuantifierSwap.lean` — Quantifier Swap principle
-- `RevHalt/Theory/ThreeBlocksArchitecture.lean` — OracleMachine, o-bridge, `ArchitecturalOraclePick`
-- `RevHalt/Theory/Dynamics.lean` — Navigation dynamics: `State`, `step`, `Chain`, `lim`, soundness preservation
+- `RevHalt/Theory/ThreeBlocksArchitecture.lean` — OracleMachine, o-bridge
+- `RevHalt/Theory/Dynamics.lean` — Navigation dynamics
 - `RevHalt/Theory/WitnessLogic.lean` — Witness soundness
+
+### Abstract Layer (NEW)
+- `StructuralDichotomy.lean` — The abstract schema + Trace/up instantiation
+- `AbstractDynamics.lean` — Schedule-independent dynamics from PickWorld
+
+---
+
+## Core Theorems
+
+| Theorem | Statement | Significance |
+|---------|-----------|--------------|
+| `up_eq_bot_iff` | `up T = ⊥ ↔ ∀n. ¬T n` | Π₁ = kernel (algebraization) |
+| `T1_traces` | `Rev0_K K T ↔ Halts T` | Kit rigidity |
+| `T2_impossibility` | No total+correct+complete+r.e. predicate | Uniform barrier |
+| `lim_schedule_free` | Limit = S₀ ∪ AllPicks | Schedule independence |
+| `omegaState_minimal` | ω-state is smallest extension | Closure property |
+| `sig_iff_ne_bot` | `Sig x ↔ O x ≠ ⊥` | Abstract dichotomy (classical) |
+| `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x` | Constructive content |
 
 ---
 
@@ -269,6 +218,20 @@ lake build
 
 ---
 
-## License / contribution
+## What RevHalt Does
+
+Transforms a question about **limits** (undecidability) into a question about **structure** (operators, kernels, closures).
+
+The problem that couldn't be stated:
+
+> "When is a dichotomy structural rather than extensional?"
+
+Answer: when it instantiates `StructuralDichotomy`.
+
+The criterion is now **code**, not prose.
+
+---
+
+## License / Contribution
 
 Add your license and contribution conventions here.
