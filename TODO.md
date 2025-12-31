@@ -9,6 +9,11 @@ polynomially constrained setting.
 
 ## Steps
 
+### 0. Pre-req: poly-constrained category
+- [ ] Formalize a complexity model suitable for poly-time in Lean
+- [ ] Define the instance space with explicit size bounds
+- [ ] Show reductions respect the model (time/size)
+
 ### 1. Define SAT/UNSAT
 - [ ] Syntax: propositional formulas (CNF or general)
 - [ ] Semantics: assignments, satisfaction relation
