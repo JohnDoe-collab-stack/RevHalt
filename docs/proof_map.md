@@ -55,3 +55,13 @@ This map links the main statements to their Lean proofs.
 - `pickWorldOfSDOracle`:
   `RevHalt/Theory/SD_Bridge.lean`
 
+## Ordinal boundary (Dichotomy ↔ EM)
+
+- `dichotomy_all_iff_em` (exact equivalence):
+  `RevHalt/Theory/OrdinalBoundary.lean`
+- `dichotomy_from_em`, `em_of_dichotomy_all`:
+  `RevHalt/Theory/OrdinalBoundary.lean`
+- `constTrace`, `Halts_constTrace_iff`, `Stabilizes_constTrace_iff`:
+  `RevHalt/Theory/OrdinalBoundary.lean`
+
+
