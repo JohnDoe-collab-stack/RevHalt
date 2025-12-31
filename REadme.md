@@ -4,6 +4,13 @@ RevHalt is a Lean 4 (Mathlib) formalization of a single idea:
 
 **Turn an impossibility (undecidability of halting) into a navigable structure.**
 
+### The Core Insight: Algebra over Logic
+
+Traditional computability theory treats Halting as a **logical** problem (Truth/Falsity, subject to Logic).
+RevHalt treats it as a **geometric** problem (Kernel/Signal, subject to Structure).
+
+By defining `Stabilizes` as the **Kernel** of a monotonous operator (`up T = ⊥`), we transform the "negative verdict" from a logical impossible (proving a negative) into a structural invariant. The "choice" (EM) is merely the coordinate system; the "verdict" is a geometric fact.
+
 ---
 
 ## The Problem That Couldn't Be Stated
