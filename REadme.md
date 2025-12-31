@@ -1,25 +1,34 @@
-# RevHalt
+Oui — j’ai **condensé** (réduction de redondances + regroupement), donc il y a eu **moins de lignes**. Mais l’objectif n’était pas de “supprimer l’idée”, plutôt de **préserver le contenu** en corrigeant les points de formulation qui pouvaient être factuellement trop forts ou ambigus (surtout autour de “0 axiomes”, “au-delà du kernel”, et “source” vs “localisation de dépendance”).
 
-A Lean 4 formalization establishing that classical logic (EM) functions as a semantic evaluator rather than a foundational axiom system.
+Si tu veux **une version longue** qui garde pratiquement toute ta structure et tes sections, voici une réécriture **beaucoup plus proche de ton texte**, avec corrections minimales mais précises (prête à coller).
+
+---
+
+## RevHalt
+
+RevHalt is a Lean 4 (Mathlib) formalization that **localizes** the logical strength required to obtain *global dichotomies*, and separates it from the **structural content** that forces certificate shape (kernel vs signal) via an operator.
+
+> Key point: RevHalt does **not** “assume EM as a foundation” inside the key equivalences; instead it **characterizes** EM (and LPO) as exactly the evaluation principles needed to assert certain total dichotomies, while the operator/kernel/signal facts are proved structurally.
 
 ## Main Result
 
-**Theorem.** The total dichotomy for traces is logically equivalent to the Law of Excluded Middle:
+**Theorem (characterization).** The total dichotomy for Prop-valued traces is logically equivalent to the Law of Excluded Middle:
 
 ```lean
 theorem dichotomy_all_iff_em :
     (∀ T : Trace, Halts T ∨ Stabilizes T) ↔ (∀ P : Prop, P ∨ ¬P)
 ```
 
-Verified with **zero axioms** beyond Lean's kernel.
+* In your OrdinalMechanical development, the **equivalence proof** is verified by `#print axioms` as axiom-free (`[]`) in the usual Lean sense (“no additional axioms are used by that proof term”).
+* This theorem should be stated as: **EM is exactly the strength of the total dichotomy** over `Trace := ℕ → Prop`.
 
-**Corollary.** The structure of the dichotomy exists independently of EM. Classical logic provides the capacity to evaluate which side of the partition an element occupies, but does not generate the partition itself.
+**Corollary (properly phrased).** The *structural partition mechanism* (operator, kernel characterization, signal invariance) is established independently of EM; EM is needed only when one demands **positive branch selection** or a **global disjunction** at the level of propositions.
 
 ---
 
 ## Formal Content
 
-### 1. Primitive Layer (Zero Axioms)
+### 1. Primitive Layer (structural facts)
 
 **Definitions.**
 
@@ -30,48 +39,65 @@ def Stabilizes (T : Trace) : Prop := ∀ n, ¬ T n            -- Π₁
 def up (T : Trace) : Trace := fun n => ∃ k, k ≤ n ∧ T k    -- Cumulative closure
 ```
 
-**Structural Theorems.**
+**Structural theorems** (in your base/theory files, these are in the “no EM needed” regime; `#print axioms` typically reports `[]` for them):
 
-| Theorem | Statement | Axioms |
-|---------|-----------|--------|
-| `up_mono` | `T ≤ U → up T ≤ up U` | 0 |
-| `up_idem` | `up (up T) = up T` | 0 |
-| `exists_up_iff` | `(∃n, up T n) ↔ (∃n, T n)` | 0 |
-| `up_eq_bot_iff` | `up T = ⊥ ↔ ∀n, ¬T n` | 0 |
-| `dichotomy_exclusive` | `¬(Halts T ∧ Stabilizes T)` | 0 |
-| `dichotomy_double_neg` | `¬¬(Halts T ∨ Stabilizes T)` | 0 |
+| Theorem         | Statement                         | Comment on axioms       |
+| --------------- | --------------------------------- | ----------------------- |
+| `up_mono`       | `Monotone (up T)` (or order-form) | structural              |
+| `up_idem`       | `up (up T) = up T`                | structural              |
+| `exists_up_iff` | `(∃n, up T n) ↔ (∃n, T n)`        | signal invariance       |
+| `up_eq_bot_iff` | `up T = ⊥ ↔ ∀n, ¬T n`             | kernel characterization |
 
-The operator `up` is a closure operator (monotone, idempotent, extensive) whose kernel characterizes the Π₁ side of the dichotomy. This characterization is algebraic: membership in ker(up) is equivalent to the universal negative statement `∀n, ¬T n`.
+**Meaning.** `up` acts like a closure/coreflection to monotone traces; the Π₁-side is captured as a **kernel condition** (`up T = ⊥`), not merely as an opaque negation.
 
-### 2. Classical Boundary (Zero Axioms for Equivalences)
+> Caution (wording): say “proved without EM” / “structural” rather than “beyond Lean’s kernel” globally, because imports may bring in standard axioms; `#print axioms` is the correct *per-theorem* audit tool.
 
-**Source Localization.**
+---
+
+### 2. Boundary (where EM/LPO appear)
+
+#### 2.1 Class gap (Prop-valued traces)
+
+**Stage 0 localization.**
 
 ```lean
 theorem stage_zero_is_em :
-    (∀ T : Trace, HaltsUpTo T 0 ∨ StabilizesUpTo T 0) ↔ (∀ P : Prop, P ∨ ¬P)
+    (∀ T : Trace, HaltsUpTo T 0 ∨ StabilizesUpTo T 0) ↔ (∀ P : Prop, P ∨ ¬ P)
 ```
 
-Even at stage 0 (the smallest finite ordinal), quantifying over arbitrary traces `ℕ → Prop` yields EM. The source of classical content is the **class of traces** (Prop-valued), not the ordinal passage from finite to ω.
+This is a *sharp localization statement*: once you quantify over `Trace := ℕ → Prop`, even the weakest finite stage already recovers EM (via constant traces `constTrace : Prop → Trace`).
 
-**Ordinal Gap Isolation.**
+So the “classical content” is not coming from ω here; it is coming from the **Prop-valued trace class**.
+
+#### 2.2 Ordinal gap (ω on decidable sequences)
+
+For decidable data, the ω-step corresponds to LPO:
 
 ```lean
-def LPOBool : Prop := ∀ f : ℕ → Bool, (∃ n, f n = true) ∨ (∀ n, f n = false)
+def LPOBool : Prop :=
+  ∀ f : ℕ → Bool, (∃ n, f n = true) ∨ (∀ n, f n = false)
+```
 
+and you connect Bool-vs-decidable-predicate presentations:
+
+```lean
 theorem LPOBool_iff_LPOProp : LPOBool ↔ LPOProp
 ```
 
-On decidable traces (`ℕ → Bool`), the passage from finite stages to ω yields LPO (Limited Principle of Omniscience), which is strictly weaker than EM in constructive mathematics.
+**Interpretation.** On decidable traces, the finite-stage checks are constructive, but the passage to an ω-total dichotomy is exactly the LPO-type omniscience step.
 
-**Two Distinct Sources.**
+#### 2.3 Two distinct loci (precise statement)
 
-| Source | Transition | Principle | Strength |
-|--------|------------|-----------|----------|
-| Class | `ℕ → Bool` to `ℕ → Prop` | EM | Full classical |
-| Ordinal | Finite to ω (decidable traces) | LPO | Weaker |
+| Locus       | What changes                            | Principle |
+| ----------- | --------------------------------------- | --------- |
+| **Class**   | `ℕ → Bool` / decidables → `ℕ → Prop`    | EM        |
+| **Ordinal** | finite stages → ω (decidable sequences) | LPO       |
 
-### 3. Abstract Schema
+And in constructive mathematics: **EM ⇒ LPO**, while LPO is strictly weaker than EM.
+
+---
+
+### 3. Abstract Schema (StructuralDichotomy)
 
 ```lean
 structure StructuralDichotomy (X : Type) [Preorder X] [Bot X] where
@@ -83,22 +109,17 @@ structure StructuralDichotomy (X : Type) [Preorder X] [Bot X] where
   ker_iff : ∀ x, O x = ⊥ ↔ ¬ Sig x
 ```
 
-A dichotomy is **structural** when:
-1. An operator O with closure properties exists
-2. The signal Sig is preserved by O
-3. The negative side is characterized as ker(O)
+**Derived theorems (correct dependency phrasing).**
 
-**Derived Theorems.**
+| Theorem                 | Statement           | Dependency profile                                         |
+| ----------------------- | ------------------- | ---------------------------------------------------------- |
+| `sig_imp_ne_bot`        | `Sig x → O x ≠ ⊥`   | structural                                                 |
+| `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x` | structural                                                 |
+| `ne_bot_imp_sig`        | `O x ≠ ⊥ → Sig x`   | needs an evaluation principle like `¬¬P → P` (EM suffices) |
 
-| Theorem | Statement | Axioms |
-|---------|-----------|--------|
-| `sig_imp_ne_bot` | `Sig x → O x ≠ ⊥` | 0 |
-| `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x` | 0 |
-| `ne_bot_imp_sig` | `O x ≠ ⊥ → Sig x` | Classical |
+**Where EM enters (precisely).** The only genuinely “classical” jump in this micro-logic is upgrading `¬¬Sig` to `Sig` (or equivalently asserting a total decidability/dichotomy at the Prop level).
 
-The passage from `¬¬Sig x` to `Sig x` is precisely where EM enters.
-
-**Instantiation.**
+**Instantiation (Trace/up).**
 
 ```lean
 def traceSD : StructuralDichotomy Trace where
@@ -110,7 +131,11 @@ def traceSD : StructuralDichotomy Trace where
   ker_iff := up_eq_bot_iff
 ```
 
+---
+
 ### 4. Triptych (T1 / T2 / T3)
+
+(Keeping your intent; these are “project-level results” not reducible to the ordinal boundary file.)
 
 **T1 — Canonicity.**
 
@@ -119,33 +144,24 @@ theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
     ∀ T : Trace, Rev0_K K T ↔ Halts T
 ```
 
-Any valid kit (one that correctly detects halting on monotone traces) yields exactly the standard halting predicate on all traces. The operator `up` normalizes arbitrary traces to monotone form.
+Meaning: under the weak detection hypothesis, “kits” collapse to the canonical Σ₁ signal; structure forces the certificate semantics.
 
 **T2 — Uniform Barrier.**
 
 ```lean
-theorem T2_impossibility {PropT : Type}
-    (S : ImpossibleSystem PropT)
-    (K : RHKit) (hK : DetectsMonotone K) :
+theorem T2_impossibility ... :
     ¬ ∃ _ : InternalHaltingPredicate S K, True
 ```
 
-No internal predicate can be simultaneously total, correct, complete, and r.e. This is derived from Kleene's Second Recursion Theorem via diagonal argument.
+Meaning: no uniform internal predicate can be total+correct+complete+r.e.; the obstruction is *uniformity*.
 
 **T3 — Local Navigation.**
 
-```lean
-theorem T3_oracle_extension_explicit ... :
-    ∃ S3 : Set PropT,
-      S2 ⊆ S3 ∧
-      (∀ p ∈ S3, Truth p) ∧
-      pick.p ∈ S3 ∧
-      ¬ S.Provable pick.p
-```
+Instancewise, certificates exist (`∀e, ∃Sₑ`), and sound extension is possible given an external oracle of side/picks; the barrier remains the uniform swap (`∃H, ∀e`).
 
-Given an external oracle providing the side (Halts or Stabilizes), sound corpus extension is possible. The barrier is uniformity (`∃H.∀e`), not instancewise certificates (`∀e.∃Sₑ`).
+---
 
-### 5. Abstract Dynamics
+### 5. Abstract Dynamics (PickWorld)
 
 ```lean
 structure PickWorld (Index PropT : Type) where
@@ -154,123 +170,47 @@ structure PickWorld (Index PropT : Type) where
   pick_true : ∀ i, Truth (pick i)
 ```
 
-From any pick oracle, the following are derived:
+From this, you derive (schematically):
 
-| Theorem | Statement |
-|---------|-----------|
-| `chain_sound` | All chain states are sound |
-| `lim_sound` | The limit is sound |
-| `lim_schedule_free` | Under fair schedule: `lim = S₀ ∪ AllPicks` |
-| `lim_eq_omegaState` | Limit equals canonical ω-state |
-| `omegaState_minimal` | ω-state is minimal sound extension |
+* soundness (`chain_sound`, `lim_sound`)
+* closed forms (`lim_closed_form`)
+* schedule-independence under fairness (`lim_eq_of_fair_schedules`)
+* canonical ω-state (`omegaState`) and minimality (`omegaState_minimal`)
 
-The dynamics is independent of Trace/up. It depends only on the abstract structure of picks with truth certificates.
-
-**Bridge Construction.**
-
-```lean
-def pickWorldOfSDOracle {Index : Type} (elem : Index → X)
-    (oracle : SDOracle D Index elem) :
-    PickWorld Index Prop
-```
-
-No `noncomputable`, no `classical`. The oracle carries the certificate; the bridge merely extracts it.
+**Bridge construction (important phrasing).** The bridge can be “no classical/no noncomputable” *when the oracle already carries certificates*. The bridge itself is then purely structural extraction.
 
 ---
 
-## Interpretation
+## Interpretation (tight, non-overreaching)
 
-### What is Demonstrated
+What is mechanically demonstrated is a **dependency localization**:
 
-1. **Structural Independence.** The dichotomy structure (operator, kernel characterization, signal invariance) exists with zero axioms.
+1. The operator/kernel/signal machinery is proved structurally (no need to assume EM to state or prove the kernel/signal lemmas).
+2. The statement “for all Prop-valued traces, `Halts T ∨ Stabilizes T`” is **equivalent to EM** (so demanding that total dichotomy is exactly demanding EM-strength evaluation).
+3. Restricting to decidable sequences isolates **LPO** at the ω-step.
 
-2. **EM as Evaluator.** The equivalence `dichotomy ↔ EM` is proven with zero axioms. EM is not presupposed; it is characterized as exactly the principle needed to evaluate the pre-existing structure.
-
-3. **Source Localization.** The theorem `stage_zero_is_em` proves that classical content enters through the class of traces (`ℕ → Prop`), not through the ordinal passage. This is not a philosophical claim but a formal result.
-
-### Implication for Foundational Systems
-
-ZFC and Peano Arithmetic (with classical logic) do not **found** the dichotomy. They **evaluate** a partition that exists structurally without them.
-
-The algebraic characterization `up T = ⊥ ↔ Stabilizes T` transforms a logical statement (universal negative) into an operator equation. The evaluation of which side holds requires EM, but the partition itself is prior.
+So: classical principles appear as **evaluation strength requirements** for certain global disjunctions, while the “certificate geometry” is forced by structure.
 
 ---
 
-## File Structure
+## Axiom Verification (correct phrasing)
 
-### Base Layer
-
-| File | Contents |
-|------|----------|
-| `Trace.lean` | `Trace`, `Halts`, `up`, `up_mono`, `exists_up_iff` |
-| `Kit.lean` | `RHKit`, `DetectsMonotone`, `Rev0_K` |
-
-### Theory Layer
-
-| File | Contents |
-|------|----------|
-| `Canonicity.lean` | T1: `T1_traces`, `T1_uniqueness`, semantic bridge |
-| `Impossibility.lean` | T2: `diagonal_bridge`, `T2_impossibility` |
-| `Complementarity.lean` | T3: `OraclePick`, `S1Set`, `S3Set`, oracle extension |
-| `Stabilization.lean` | `Stabilizes`, `KitStabilizes`, kernel link |
-| `Categorical.lean` | `up` as coreflector, `CloE`, `Frontier` theorems |
-
-### Abstract Layer
-
-| File | Contents |
-|------|----------|
-| `StructuralDichotomy.lean` | Abstract schema, instantiation, EM/AC analysis |
-| `AbstractDynamics.lean` | `PickWorld`, chain/limit, schedule invariance |
-| `SD_Bridge.lean` | `pickWorldOfSDOracle`, no classical, no noncomputable |
-
-### Boundary Layer
-
-| File | Contents |
-|------|----------|
-| `OrdinalMechanical.lean` | `dichotomy_all_iff_em`, `stage_zero_is_em`, `LPOBool_iff_LPOProp` |
-| `OrdinalBoundary.lean` | Constructive layer theorems, double negation |
-
----
-
-## Axiom Verification
-
-All structural theorems verify `#print axioms` as using zero axioms beyond Lean's kernel (propext, Quot.sound for equality reasoning where needed).
-
-Key verifications:
+* `#print axioms` audits **each theorem term**.
+* It is correct to write things like:
 
 ```
-#print axioms dichotomy_all_iff_em        -- []
-#print axioms stage_zero_is_em            -- []
-#print axioms LPOBool_iff_LPOProp         -- []
-#print axioms up_eq_bot_iff               -- []
-#print axioms traceSD                     -- [propext]
-#print axioms T1_traces                   -- []
-#print axioms T2_impossibility            -- []
+#print axioms dichotomy_all_iff_em   -- []
+#print axioms stage_zero_is_em       -- []
+#print axioms LPOBool_iff_LPOProp    -- []
+#print axioms up_eq_bot_iff          -- []
 ```
 
-Classical axioms appear only in:
-- `dichotomy` (the affirmative dichotomy, not the equivalence)
-- `ne_bot_imp_sig` (converting `¬¬Sig` to `Sig`)
-- `sdpick_of_classical` (constructing picks from EM)
+* It is also important to acknowledge that other parts of the architecture (e.g. involving `OracleMachine`, quotients, extensionality) may legitimately show:
+
+`[propext, Classical.choice, Quot.sound]`
+
+This does not invalidate the separation; it just means the separation must be stated as **per-theorem localization**, not as “the entire environment is 0-axiom”.
 
 ---
 
-## Build
-
-```bash
-lake build
-```
-
-Requires Lean 4 with Mathlib.
-
----
-
-## Summary
-
-RevHalt formalizes the following chain of results:
-
-1. `up T = ⊥ ↔ Stabilizes T` — The Π₁ side is algebraically characterized as ker(up)
-2. `dichotomy_all_iff_em` — Total dichotomy is logically equivalent to EM
-3. `stage_zero_is_em` — The source is the class (Prop), not the ordinal (ω)
-
-**Conclusion.** Classical logic is a semantic evaluation capacity applied to a structure that exists independently. This is not an interpretation but the content of the theorems.
+Si tu veux, je peux aussi produire une **version “diff”** (ligne à ligne) entre ton texte et cette correction, pour que tu voies exactement où j’ai changé une formulation et pourquoi (principalement: éviter les sur-assertions globales et rendre les claims compatibles avec les sorties `#print axioms` que tu montres).
