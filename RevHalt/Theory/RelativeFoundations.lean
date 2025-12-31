@@ -1,4 +1,3 @@
-import RevHalt.Theory.ThreeBlocksArchitecture
 import RevHalt.Base.Trace
 
 /-!
@@ -144,6 +143,121 @@ theorem LPO_Eval_imp_EM_Eval
 end Eval
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- 2b. Evaluative Trace Schema (parallel to Base layer)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+We now lift the full trace/halting/stabilization schema to the evaluator level.
+
+Given:
+- `Eval : List Sentence → Sentence → Prop` (syntax-driven evaluation)
+- `Γ : List Sentence` (context)
+- `s : ℕ → Sentence` (sequence of sentences)
+
+We define:
+- `EvalTrace` : the trace induced by evaluating a sequence
+- `upE` : cumulative closure on evaluative traces
+- `HaltsE` : existential success (Σ₁)
+- `StabilizesE` : universal failure (Π₁)
+- `upE_eq_bot_iff` : kernel characterization
+-/
+
+section EvalTraceSchema
+
+variable {Sentence : Type}
+
+/-- The trace induced by evaluating a sequence of sentences -/
+def EvalTrace (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) : ℕ → Prop :=
+  fun n => Eval Γ (s n)
+
+/-- Σ₁ evaluative: there exists a successful evaluation -/
+def HaltsE (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) : Prop :=
+  ∃ n, Eval Γ (s n)
+
+/-- Π₁ evaluative: all evaluations fail -/
+def StabilizesE (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) : Prop :=
+  ∀ n, ¬ Eval Γ (s n)
+
+/-- Cumulative closure on evaluative traces -/
+def upE (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) : ℕ → Prop :=
+  fun n => ∃ k, k ≤ n ∧ Eval Γ (s k)
+
+/-- upE is the up operator applied to EvalTrace -/
+theorem upE_eq_up_EvalTrace (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
+    upE Eval Γ s = RevHalt.up (EvalTrace Eval Γ s) := rfl
+
+/-- Signal invariance: HaltsE is preserved by upE -/
+theorem exists_upE_iff (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
+    (∃ n, upE Eval Γ s n) ↔ HaltsE Eval Γ s := by
+  unfold upE HaltsE
+  constructor
+  · intro ⟨n, k, _, hk⟩
+    exact ⟨k, hk⟩
+  · intro ⟨n, hn⟩
+    exact ⟨n, n, Nat.le_refl n, hn⟩
+
+/-- Bottom evaluative trace -/
+def botE : ℕ → Prop := fun _ => False
+
+/-- Kernel characterization: upE = ⊥ ↔ StabilizesE -/
+theorem upE_eq_bot_iff (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
+    upE Eval Γ s = botE ↔ StabilizesE Eval Γ s := by
+  unfold upE botE StabilizesE
+  constructor
+  · intro h n hn
+    have : (∃ k, k ≤ n ∧ Eval Γ (s k)) = False := congrFun h n
+    have hup : ∃ k, k ≤ n ∧ Eval Γ (s k) := ⟨n, Nat.le_refl n, hn⟩
+    rw [this] at hup
+    exact hup
+  · intro h
+    funext n
+    apply propext
+    constructor
+    · intro ⟨k, _, hk⟩
+      exact h k hk
+    · intro hBot
+      exact False.elim hBot
+
+/-- StabilizesE ↔ ¬ HaltsE -/
+theorem StabilizesE_iff_not_HaltsE (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
+    StabilizesE Eval Γ s ↔ ¬ HaltsE Eval Γ s := by
+  unfold StabilizesE HaltsE
+  constructor
+  · intro h ⟨n, hn⟩
+    exact h n hn
+  · intro h n hn
+    exact h ⟨n, hn⟩
+
+/-- The dichotomy on evaluative traces -/
+def DichotomyE (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) : Prop :=
+  ∀ s : ℕ → Sentence, HaltsE Eval Γ s ∨ StabilizesE Eval Γ s
+
+/-- DichotomyE is exactly LPO_Eval -/
+theorem DichotomyE_iff_LPO_Eval (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) :
+    DichotomyE Eval Γ ↔ LPO_Eval Eval Γ := by
+  unfold DichotomyE LPO_Eval HaltsE StabilizesE
+  rfl
+
+/-- upE monotonicity follows from base layer -/
+theorem upE_mono (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
+    ∀ n m, n ≤ m → upE Eval Γ s n → upE Eval Γ s m := by
+  intro n m hnm ⟨k, hkn, hk⟩
+  exact ⟨k, Nat.le_trans hkn hnm, hk⟩
+
+/-- Constructive double negation: ¬¬ DichotomyE holds -/
+theorem dichotomyE_double_neg (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
+    ¬¬ (HaltsE Eval Γ s ∨ StabilizesE Eval Γ s) := by
+  intro h
+  apply h
+  right
+  intro n hn
+  apply h
+  left
+  exact ⟨n, hn⟩
+
+end EvalTraceSchema
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- 3. The Degenerate Base Case
 -- ═══════════════════════════════════════════════════════════════════════════════
 
@@ -176,5 +290,14 @@ end RevHalt.RelativeFoundations
 #print axioms RevHalt.RelativeFoundations.LPO_pred_imp_em
 #print axioms RevHalt.RelativeFoundations.decidable_Eval_imp_EM_Eval
 #print axioms RevHalt.RelativeFoundations.LPO_Eval_imp_EM_Eval
+-- Evaluative Trace Schema:
+#print axioms RevHalt.RelativeFoundations.upE_eq_up_EvalTrace
+#print axioms RevHalt.RelativeFoundations.exists_upE_iff
+#print axioms RevHalt.RelativeFoundations.upE_eq_bot_iff
+#print axioms RevHalt.RelativeFoundations.StabilizesE_iff_not_HaltsE
+#print axioms RevHalt.RelativeFoundations.DichotomyE_iff_LPO_Eval
+#print axioms RevHalt.RelativeFoundations.upE_mono
+#print axioms RevHalt.RelativeFoundations.dichotomyE_double_neg
+-- Degenerate case:
 #print axioms RevHalt.RelativeFoundations.Base_Is_Degenerate
 #print axioms RevHalt.RelativeFoundations.Halts_Is_Degenerate
