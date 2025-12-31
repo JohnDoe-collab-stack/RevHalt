@@ -228,6 +228,7 @@ The testable criterion:
 | `omegaState_minimal`    | ω-state is smallest extension            | Closure property               |
 | `sig_iff_ne_bot`        | `Sig x ↔ O x ≠ ⊥`                        | Abstract dichotomy (classical) |
 | `ne_bot_imp_notnot_sig` | `O x ≠ ⊥ → ¬¬Sig x`                      | Constructive content           |
+| `dichotomy_all_iff_em`  | `Dichotomy ↔ EM`                         | Ordinal/Class Boundary         |
 
 ---
 
