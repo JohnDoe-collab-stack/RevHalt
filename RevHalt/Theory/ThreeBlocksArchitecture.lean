@@ -137,14 +137,30 @@ def OracleMachine.LR (A : OracleMachine Sentence Model) :
     (Γ : List Sentence) (φ : Sentence) :
     A.LR Γ φ = aMachine (A.compile Γ φ) := rfl
 
-/-- o-machine evaluation (Semantics). -/
+/--
+**Evaluation (Syntax-Driven)**:
+Eval is defined purely from the c-machine (compile).
+It depends only on syntactic input (Γ, φ), not on Sat directly.
+-/
 def OracleMachine.Eval (A : OracleMachine Sentence Model)
     (Γ : List Sentence) (φ : Sentence) : Prop :=
-  SemConsequences A.Sat (Γset Γ) φ
+  Converges (A.compile Γ φ)
 
 @[simp] lemma OracleMachine.Eval_def (A : OracleMachine Sentence Model)
     (Γ : List Sentence) (φ : Sentence) :
-    A.Eval Γ φ ↔ SemConsequences A.Sat (Γset Γ) φ := Iff.rfl
+    A.Eval Γ φ ↔ Converges (A.compile Γ φ) := Iff.rfl
+
+/--
+**Bridge Theorem (Identification)**:
+The o-bridge identifies syntax-driven Eval with semantic SemConsequences.
+This is both correction and completeness in one equivalence.
+-/
+theorem Eval_iff_SemConsequences
+    (A : OracleMachine Sentence Model)
+    (Γ : List Sentence) (φ : Sentence) :
+    A.Eval Γ φ ↔ SemConsequences A.Sat (Γset Γ) φ := by
+  unfold OracleMachine.Eval
+  exact (A.oBridge Γ φ).symm
 
 /-- API Lemma: Eval ↔ Halts(aMachine). -/
 theorem eval_iff_halts
@@ -152,7 +168,7 @@ theorem eval_iff_halts
     (Γ : List Sentence) (φ : Sentence) :
     A.Eval Γ φ ↔ Halts (aMachine (A.compile Γ φ)) := by
   rw [halts_aMachine_iff]
-  exact A.oBridge Γ φ
+  rfl
 
 /-!
 ## 6) Properties: Coverage & Decidability
@@ -451,4 +467,3 @@ end RevHalt
 #print axioms RevHalt.stabCertificate_iff_not_eval
 #print axioms RevHalt.architecturalPick_exhaustive
 #print axioms RevHalt.architectural_T3_certificate_transfer
-
