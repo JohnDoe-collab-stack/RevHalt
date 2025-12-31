@@ -31,6 +31,11 @@ Contributions (formalized):
    schedule-independent and equals a canonical omega state (T3-style dynamics),
    without dependence on Trace/up.
 
+4) Ordinal boundary theorem
+   The total dichotomy `∀T, Halts T ∨ Stabilizes T` is **exactly equivalent**
+   to EM (`∀P, P ∨ ¬P`). All structure theorems use 0 axioms; EM is the
+   precise non-constructive content (`dichotomy_all_iff_em`).
+
 Scope and limits:
 
 - P vs NP is only a conceptual criterion in comments, not a formalization.
