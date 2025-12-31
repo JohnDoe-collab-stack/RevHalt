@@ -183,6 +183,55 @@ theorem not_stabilizes_imp_halts_from_em (em : ∀ P : Prop, P ∨ ¬P) (T : Tra
   (em (Halts T)).elim id (fun hnh => False.elim (hns ((stabilizes_iff_not_halts T).mpr hnh)))
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- 4c) THE EXACT EQUIVALENCE: Dichotomy ↔ EM
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Constant trace: T n = P for all n -/
+def constTrace (P : Prop) : Trace := fun _ => P
+
+/-- Halts for constant trace ↔ P -/
+theorem Halts_constTrace_iff (P : Prop) : Halts (constTrace P) ↔ P := by
+  constructor
+  · intro ⟨_, hn⟩; exact hn
+  · intro h; exact ⟨0, h⟩
+
+/-- Stabilizes for constant trace ↔ ¬P -/
+theorem Stabilizes_constTrace_iff (P : Prop) : Stabilizes (constTrace P) ↔ ¬ P := by
+  constructor
+  · intro hs hP
+    have : (constTrace P) 0 := hP
+    exact hs 0 this
+  · intro hP n hn
+    exact hP hn
+
+/--
+**The converse**: If dichotomy holds for all traces, then EM holds.
+
+This uses the constant trace encoding: any proposition P becomes a trace.
+-/
+theorem em_of_dichotomy_all
+    (dich : ∀ T : Trace, Halts T ∨ Stabilizes T) :
+    ∀ P : Prop, P ∨ ¬ P := by
+  intro P
+  have h := dich (constTrace P)
+  cases h with
+  | inl hH => exact Or.inl ((Halts_constTrace_iff P).1 hH)
+  | inr hS => exact Or.inr ((Stabilizes_constTrace_iff P).1 hS)
+
+/--
+**THE EXACT EQUIVALENCE**: Dichotomy for all traces ↔ EM.
+
+This is the precise characterization:
+- The dichotomy `∀T, Halts T ∨ Stabilizes T` is **exactly** EM in logical strength.
+- No more, no less.
+-/
+theorem dichotomy_all_iff_em :
+    (∀ T : Trace, Halts T ∨ Stabilizes T) ↔ (∀ P : Prop, P ∨ ¬ P) := by
+  constructor
+  · exact em_of_dichotomy_all
+  · intro em T; exact dichotomy_from_em em T
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- 5) ORDINAL INTERPRETATION
 -- ═══════════════════════════════════════════════════════════════════════════════
 
@@ -278,5 +327,11 @@ This is the ordinal completion operator: passage from "all finite stages" to "ω
 -- Verify: EM-as-hypothesis theorems use ZERO axioms
 #print axioms dichotomy_from_em
 #print axioms not_stabilizes_imp_halts_from_em
+
+-- Verify: EM equivalence theorems use ZERO axioms
+#print axioms Halts_constTrace_iff
+#print axioms Stabilizes_constTrace_iff
+#print axioms em_of_dichotomy_all
+#print axioms dichotomy_all_iff_em
 
 end RevHalt.OrdinalBoundary
