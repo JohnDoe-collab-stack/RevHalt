@@ -400,13 +400,7 @@ This is EM-regime, not AC-regime.
 
 ### Formal Verification
 
-The construction `sdpick_of_classical` compiles without:
-- `Classical.choice`
-- `Classical.indefiniteDescription`
-- `Classical.choose`
-- Any axiom beyond `Classical.em` (which `by_cases` uses via `Classical.decide`)
-
-This can be verified by checking the axioms used:
+Verify axioms used:
 ```
 #print axioms sdpick_of_classical
 ```
