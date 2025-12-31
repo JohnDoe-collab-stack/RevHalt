@@ -199,7 +199,18 @@ theorem exists_upE_iff (Eval : List Sentence → Sentence → Prop) (Γ : List S
 /-- Bottom evaluative trace -/
 def botE : ℕ → Prop := fun _ => False
 
-/-- Kernel characterization: upE = ⊥ ↔ StabilizesE -/
+/-- Kernel characterization (pointwise, 0 axiom) -/
+theorem upE_bot_pointwise_iff (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
+    (∀ n, ¬ upE Eval Γ s n) ↔ StabilizesE Eval Γ s := by
+  unfold upE StabilizesE
+  constructor
+  · intro h n hn
+    have hup : ∃ k, k ≤ n ∧ Eval Γ (s k) := ⟨n, Nat.le_refl n, hn⟩
+    exact h n hup
+  · intro h n ⟨k, _, hk⟩
+    exact h k hk
+
+/-- Kernel characterization (equality form, uses propext) -/
 theorem upE_eq_bot_iff (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence) (s : ℕ → Sentence) :
     upE Eval Γ s = botE ↔ StabilizesE Eval Γ s := by
   unfold upE botE StabilizesE
@@ -293,6 +304,9 @@ end RevHalt.RelativeFoundations
 -- Evaluative Trace Schema:
 #print axioms RevHalt.RelativeFoundations.upE_eq_up_EvalTrace
 #print axioms RevHalt.RelativeFoundations.exists_upE_iff
+-- Pointwise kernel (0 axiom):
+#print axioms RevHalt.RelativeFoundations.upE_bot_pointwise_iff
+-- Equality kernel (requires propext):
 #print axioms RevHalt.RelativeFoundations.upE_eq_bot_iff
 #print axioms RevHalt.RelativeFoundations.StabilizesE_iff_not_HaltsE
 #print axioms RevHalt.RelativeFoundations.DichotomyE_iff_LPO_Eval
