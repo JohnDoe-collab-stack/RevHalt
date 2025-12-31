@@ -213,6 +213,7 @@ The testable criterion:
 
 * `StructuralDichotomy.lean` — Abstract schema + Trace/up instantiation
 * `AbstractDynamics.lean` — Schedule-independent dynamics from PickWorld
+* `SD_Bridge.lean` — SDOracle → PickWorld morphism (no classical, no noncomputable)
 
 ---
 
