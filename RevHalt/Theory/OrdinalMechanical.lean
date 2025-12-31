@@ -8,29 +8,15 @@ import Mathlib.Data.Set.Basic
 /-!
 # Ordinal Boundary Theorem - Mechanical Verification
 
-## Thesis: The Double Gap
+## Thesis: Two Independent Sources of Classical Logic
 
-The boundary between constructive and classical behavior involves TWO simultaneous jumps:
+The analysis reveals two distinct sources of non-constructive behavior:
 
-1. **Ordinal**: Finite stages ($n$) vs Limit ($\omega$)
-2. **Trace Class**: Decidable traces (`ℕ → Bool`) vs Arbitrary traces (`ℕ → Prop`)
+1. **Trace Class (Prop)**: Quantifying over arbitrary traces `ℕ → Prop` yields **EM** immediately, even at stage 0.
+2. **Ordinal (ω)**: Passing from finite checking to the limit $\omega$ on *decidable* traces yields **LPO**.
 
-## Verified Mechanical Results
+The combination (Limit + Arbitrary) is equivalent to EM, but `stage_zero_is_em` proves that the arbitrary quantification alone is sufficient for EM.
 
-1. **Finite + Decidable**: Constructive.
-   `dichotomy_up_to` holds for traces with decidable bits, with 0 axioms.
-
-2. **Limit + Arbitrary**: Exactly EM.
-   `∀T, Halts T ∨ Stabilizes T` is equivalent to `∀P, P ∨ ¬P`.
-
-3. **Finite + Arbitrary**: Already problematic.
-   Even at stage 0, `HaltsUpTo T 0 ∨ StabilizesUpTo T 0` implies EM for arbitrary traces.
-
-## Conclusion
-
-The construction of the limit dichotomy requires BOTH the passage to $\omega$ AND quantification over arbitrary predicates.
--/
--/
 
 namespace RevHalt.OrdinalMechanical
 
@@ -274,9 +260,6 @@ theorem limit_stage_is_em :
     (∀ T : Trace, Halts T ∨ Stabilizes T) ↔ (∀ P : Prop, P ∨ ¬ P) :=
   dichotomy_iff_em
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- 9) STAGE 0 ANALYSIS: THE CLASS GAP
--- ═══════════════════════════════════════════════════════════════════════════════
 
 /-- Stage 0 for arbitrary traces is already EM -/
 theorem stage_zero_is_em :
@@ -285,9 +268,8 @@ theorem stage_zero_is_em :
   · intro h P
     cases h (constTrace P) with
     | inl hH =>
-      let ⟨n, hn, hP⟩ := hH
-      rw [Nat.le_zero.mp hn] at hP
-      exact Or.inl ((Halts_constTrace_iff P).mp ⟨0, hP⟩)
+      let ⟨_, _, hP⟩ := hH
+      exact Or.inl hP
     | inr hS =>
       exact Or.inr (hS 0 (Nat.le_refl 0))
   · intro em T
