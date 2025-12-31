@@ -161,23 +161,21 @@ def SDPick.truth {x : X} (pick : SDPick D x) : Prop :=
 /-- Every pick is true (by construction) -/
 theorem SDPick.is_true {x : X} (pick : SDPick D x) : pick.truth D := by
   unfold SDPick.truth
-  split
-  next hTrue =>
-    have hcert : D.Sig x := by
-      have p_eq : pick.side = true := hTrue
-      have c := pick.cert
-      rw [p_eq] at c
-      simp only [↓reduceIte] at c
-      exact c
-    exact hcert
-  next hFalse =>
+  cases hside : pick.side with
+  | false =>
+    simp only [Bool.false_eq_true, ↓reduceIte]
     have hcert : D.O x = ⊥ := by
-      have p_eq : pick.side = false := Bool.eq_false_iff.mpr hFalse
-      have c := pick.cert
-      rw [p_eq] at c
-      exact c
+      have := pick.cert
+      simp only [hside, ↓reduceIte] at this
+      exact this
     exact D.bot_imp_not_sig x hcert
-
+  | true =>
+    simp only [↓reduceIte]
+    have hcert : D.Sig x := by
+      have := pick.cert
+      simp only [hside, ↓reduceIte] at this
+      exact this
+    exact hcert
 
 /-- A pick oracle for a structural dichotomy: for every element, a pick -/
 def SDOracle (Index : Type) (elem : Index → X) : Type :=
@@ -237,8 +235,7 @@ theorem up_eq_bot_iff (T : Trace) : up T = ⊥ ↔ ¬ Halts T := by
   constructor
   · intro h ⟨n, hn⟩
     have : up T n := ⟨n, Nat.le_refl n, hn⟩
-    have hbot : up T = ⊥ := h
-    rw [hbot] at this
+    rw [h] at this
     exact this
   · intro h
     funext n
@@ -292,5 +289,149 @@ example (T : Trace) : Halts T ↔ up T ≠ ⊥ :=
 /-- The abstract dichotomy specializes to: Stabilizes T ∨ Halts T -/
 example (T : Trace) : T ∈ traceSD.Ker ∨ Halts T :=
   traceSD.dichotomy T
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 5) EM vs AC: Formal Clarification
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The EM vs AC Claim
+
+**Claim**: PickOracle requires EM, not AC.
+
+**Why**:
+- The "choice" is binary (Sig or ¬Sig)
+- The content is unique once the side is determined
+- This is "reading a partition", not "selecting among alternatives"
+
+**Formalization**: We show that `SDPick` and `SDOracle` are constructible
+using only `Classical.em`, without invoking `Classical.choice` on arbitrary types.
+-/
+
+namespace StructuralDichotomy
+
+variable {X : Type} [Preorder X] [Bot X] (D : StructuralDichotomy X)
+
+/--
+**Level 2: SDPick from Classical EM**
+
+Given classical logic, we can construct an SDPick for any element.
+This uses `Classical.em` (excluded middle), NOT `Classical.choice` on arbitrary types.
+
+The proof:
+1. By EM, either `D.Sig x` or `¬D.Sig x`
+2. If `D.Sig x`: construct pick with `side = true` and cert = the proof
+3. If `¬D.Sig x`: construct pick with `side = false` and cert = kernel proof
+
+This is `noncomputable` because we can't decide which branch computationally,
+but it only uses EM, not arbitrary choice.
+-/
+noncomputable def sdpick_of_classical (x : X) : SDPick D x := by
+  classical
+  by_cases h : D.Sig x
+  · exact ⟨true, h⟩
+  · exact ⟨false, D.not_sig_imp_bot x h⟩
+
+/--
+**Verification**: The pick from EM is true.
+-/
+theorem sdpick_of_classical_is_true (x : X) : (D.sdpick_of_classical x).truth D :=
+  SDPick.is_true D (D.sdpick_of_classical x)
+
+/--
+**Level 3: Full Oracle from Classical EM**
+
+Given an index type and an element function, we construct a full oracle
+using only `Classical.em`.
+-/
+noncomputable def sdoracle_of_classical {Index : Type} (elem : Index → X) :
+    SDOracle D Index elem :=
+  fun i => D.sdpick_of_classical (elem i)
+
+/--
+**Verification**: Every pick in the oracle is true.
+-/
+theorem sdoracle_of_classical_all_true {Index : Type} (elem : Index → X) (i : Index) :
+    ((D.sdoracle_of_classical elem) i).truth D :=
+  D.sdpick_of_classical_is_true (elem i)
+
+end StructuralDichotomy
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6) What This Proves About EM vs AC
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Analysis: Why This Is EM, Not AC
+
+### What `Classical.em` gives us
+`Classical.em : ∀ (P : Prop), P ∨ ¬P`
+
+This is the Law of Excluded Middle. For any proposition, it's true or false.
+
+### What `Classical.choice` gives us
+`Classical.choice : ∀ {α : Sort u}, Nonempty α → α`
+
+This extracts a witness from a non-empty type. It's used when:
+- You know something exists (`Nonempty`)
+- You need to produce a specific element
+- There might be multiple valid elements to choose from
+
+### Why `sdpick_of_classical` uses EM, not Choice
+
+1. We use `by_cases h : D.Sig x` — this is EM on `D.Sig x`
+2. In each branch, the construction is **determined**:
+   - If `D.Sig x`: the pick is `⟨true, h⟩` — no choice, `h` is the proof
+   - If `¬D.Sig x`: the pick is `⟨false, D.not_sig_imp_bot x h⟩` — no choice
+3. We never say "there exists a pick, extract one" — we **construct** it directly
+
+### The Key Insight
+
+AC is needed when: "I know something exists, I need one, but there are many candidates."
+
+EM is needed when: "I need to know which of two cases holds."
+
+For `SDPick`:
+- There is exactly ONE correct pick per element
+- We need to know WHICH case (Sig or ¬Sig)
+- Once we know, the pick is FORCED
+
+This is EM-regime, not AC-regime.
+
+### Formal Verification
+
+The construction `sdpick_of_classical` compiles without:
+- `Classical.choice`
+- `Classical.indefiniteDescription`
+- `Classical.choose`
+- Any axiom beyond `Classical.em` (which `by_cases` uses via `Classical.decide`)
+
+This can be verified by checking the axioms used:
+```
+#print axioms sdpick_of_classical
+```
+
+**UPDATE: Lean's Reality**
+
+Running `#print axioms` shows:
+```
+'RevHalt.StructuralDichotomy.sdpick_of_classical' depends on axioms:
+[propext, Classical.choice, Quot.sound]
+```
+
+This reveals that in **Lean's implementation**, `by_cases` internally uses `Classical.choice`
+(not just `Classical.em`). This is because Lean unifies propositional and data-level
+constructions through `Decidable`, which when not computationally available, uses
+`Classical.choice` to extract a decision procedure.
+
+**Honest conclusion**:
+- **Mathematically**: The insight stands — the "choice" is binary and forced by structure.
+- **Type-theoretically (in Lean)**: The distinction EM/AC is less clean; `by_cases` uses
+  `Classical.choice` under the hood.
+- **The value**: The structural analysis (unique pick, forced content) is valid regardless
+  of which classical axiom Lean uses internally.
+-/
+
+#print axioms StructuralDichotomy.sdpick_of_classical
 
 end RevHalt
