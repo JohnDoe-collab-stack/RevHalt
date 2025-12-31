@@ -5,22 +5,31 @@ import Mathlib.Data.Set.Basic
 /-!
 # Ordinal Boundary Theorem - Mechanical Verification
 
-## Thesis
+/-!
+# Ordinal Boundary Theorem - Mechanical Verification
 
-The passage from finite stages to ω **is** EM. Mechanically verified.
+## Thesis: The Double Gap
 
-## Structure
+The boundary between constructive and classical behavior involves TWO simultaneous jumps:
 
-1. Finite stages (n < ω): constructive, decidable
-2. Limit (ω): exactly EM
-3. The gap is formalized and verified by `#print axioms`
+1. **Ordinal**: Finite stages ($n$) vs Limit ($\omega$)
+2. **Trace Class**: Decidable traces (`ℕ → Bool`) vs Arbitrary traces (`ℕ → Prop`)
 
-## Key Results
+## Verified Mechanical Results
 
-- `dichotomy_up_to_decidable`: at each finite stage, dichotomy is decidable (0 axioms)
-- `finite_stages_constructive`: the conjunction of all finite stages is constructive (0 axioms)
-- `dichotomy_all_iff_em`: the limit (∀T) is exactly EM (0 axioms for the equivalence)
-- The gap between finite and limit IS the content of EM
+1. **Finite + Decidable**: Constructive.
+   `dichotomy_up_to` holds for traces with decidable bits, with 0 axioms.
+
+2. **Limit + Arbitrary**: Exactly EM.
+   `∀T, Halts T ∨ Stabilizes T` is equivalent to `∀P, P ∨ ¬P`.
+
+3. **Finite + Arbitrary**: Already problematic.
+   Even at stage 0, `HaltsUpTo T 0 ∨ StabilizesUpTo T 0` implies EM for arbitrary traces.
+
+## Conclusion
+
+The construction of the limit dichotomy requires BOTH the passage to $\omega$ AND quantification over arbitrary predicates.
+-/
 -/
 
 namespace RevHalt.OrdinalMechanical
@@ -249,8 +258,8 @@ The boundary involves TWO jumps:
 1. **Ordinal**: Finite stage `n` → Limit `ω`
 2. **Class**: Decidable traces (`ℕ → Bool`) → Arbitrary traces (`ℕ → Prop`)
 
-If we restricted the limit to decidable traces, we would get LPO/LLPO (a weaker principle).
-If we allowed arbitrary traces at finite stages, we would need EM immediately.
+If we restricted the limit to decidable traces, we would get **LPO** (a weaker principle than EM).
+If we allowed arbitrary traces at finite stages, we would need EM immediately (see below).
 
 The equivalence `Dichotomy ↔ EM` relies on quantifying over **arbitrary** traces `ℕ → Prop`.
 -/
@@ -266,7 +275,28 @@ theorem limit_stage_is_em :
   dichotomy_iff_em
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 9) VERIFICATION
+-- 9) STAGE 0 ANALYSIS: THE CLASS GAP
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Stage 0 for arbitrary traces is already EM -/
+theorem stage_zero_is_em :
+    (∀ T : Trace, HaltsUpTo T 0 ∨ StabilizesUpTo T 0) ↔ (∀ P : Prop, P ∨ ¬ P) := by
+  constructor
+  · intro h P
+    cases h (constTrace P) with
+    | inl hH =>
+      let ⟨n, hn, hP⟩ := hH
+      rw [Nat.le_zero.mp hn] at hP
+      exact Or.inl ((Halts_constTrace_iff P).mp ⟨0, hP⟩)
+    | inr hS =>
+      exact Or.inr (hS 0 (Nat.le_refl 0))
+  · intro em T
+    cases em (T 0) with
+    | inl hT => left; exact ⟨0, Nat.le_refl 0, hT⟩
+    | inr hnT => right; intro n hn; rw [Nat.le_zero.mp hn]; exact hnT
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 10) VERIFICATION
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 -- Finite stages: no axioms
@@ -289,5 +319,8 @@ theorem limit_stage_is_em :
 -- Summary theorems: no axioms
 #print axioms finite_stage_no_em
 #print axioms limit_stage_is_em
+
+-- Stage 0 analysis: no axioms
+#print axioms stage_zero_is_em
 
 end RevHalt.OrdinalMechanical
