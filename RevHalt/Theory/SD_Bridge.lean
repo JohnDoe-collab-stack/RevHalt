@@ -8,9 +8,6 @@ The morphism from StructuralDichotomy oracles to AbstractDynamics PickWorld.
 
 ## Key Point
 
-This bridge is:
-- **No `noncomputable`**: the oracle already carries the certificate
-- **No `classical`**: no decision is made here, just extraction
 
 The oracle *contains* the side + proof; we just package it into a PickWorld.
 This is the "parameterized dynamics" approach where the oracle is external.
@@ -106,4 +103,3 @@ end RevHalt.StructuralDichotomy
 #print axioms RevHalt.StructuralDichotomy.pickWorldOfSDOracle_truth
 #print axioms RevHalt.StructuralDichotomy.sd_lim_eq_of_fair_schedules
 #print axioms RevHalt.StructuralDichotomy.sd_lim_eq_omegaState
-
