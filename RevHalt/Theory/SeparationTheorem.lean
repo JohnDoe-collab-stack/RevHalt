@@ -61,7 +61,7 @@ theorem AdmTwoProbes_not_admits_const {Probe : Type} :
     ¬ AdmitsConst (Sentence := SentenceWithHidden Probe) AdmTwoProbes := by
   intro hConst
   have hs : AdmTwoProbes (fun _ => (SentenceWithHidden.hidden : SentenceWithHidden Probe)) :=
-    hConst _
+    hConst SentenceWithHidden.hidden
   rcases hs with ⟨_, _, _, h0, _, _⟩
   exact SentenceWithHidden.noConfusion h0
 
@@ -114,10 +114,8 @@ theorem not_EM_Eval_of_undecidable {Probe : Type} (probeEval : Probe → Prop)
     ¬ EM_Eval (Sentence := SentenceWithHidden Probe)
         (Eval := Eval probeEval HiddenVal) (Γ := []) := by
   intro hEM
-  have h := hEM (SentenceWithHidden.hidden : SentenceWithHidden Probe)
-  have : HiddenVal ∨ ¬ HiddenVal := by
-    simp [Eval] at h
-    exact h
+  have h := hEM SentenceWithHidden.hidden
+  have : HiddenVal ∨ ¬ HiddenVal := by simpa [Eval] using h
   exact hUndec this
 
 -- ═══════════════════════════════════════════════════════════════════════════════
