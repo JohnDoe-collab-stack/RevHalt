@@ -1,9 +1,3 @@
-Oui — j’ai **condensé** (réduction de redondances + regroupement), donc il y a eu **moins de lignes**. Mais l’objectif n’était pas de “supprimer l’idée”, plutôt de **préserver le contenu** en corrigeant les points de formulation qui pouvaient être factuellement trop forts ou ambigus (surtout autour de “0 axiomes”, “au-delà du kernel”, et “source” vs “localisation de dépendance”).
-
-Si tu veux **une version longue** qui garde pratiquement toute ta structure et tes sections, voici une réécriture **beaucoup plus proche de ton texte**, avec corrections minimales mais précises (prête à coller).
-
----
-
 ## RevHalt
 
 RevHalt is a Lean 4 (Mathlib) formalization that **localizes** the logical strength required to obtain *global dichotomies*, and separates it from the **structural content** that forces certificate shape (kernel vs signal) via an operator.
