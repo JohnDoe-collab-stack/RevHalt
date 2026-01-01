@@ -2408,3 +2408,93 @@ This defines a **branching tree** where:
 - Each branch gives a preimage `m`
 
 **Collatz = this tree covers all of U**.
+
+---
+
+## 30. R3 Retroaction on R1: How LPO Changes Formable Objects
+
+### 30.1 The Key Insight: R3 Determines What R1 Can Form
+
+> **R3 (evaluation capability) is not just a "verdict": it determines which objects become formable in R1.**
+> So EM vs LPO is not just "stronger/weaker": it **changes the effective grammar** of objects (functions, sequences, certificates) that can be manipulated.
+
+### 30.2 Under EM_Eval (Local Capability)
+
+Fix `n`. Let `a_n(k) = Collatz applied k times to n` and `P_n(k) = (a_n(k) = 1)`.
+
+Under EM_Eval, you can decide **each** `P_n(k)` individually (finite computation).
+
+**What R1 can form without LPO:**
+- The sequence `k ↦ a_n(k)` (deterministic recursion)
+- The sequence of tests `k ↦ P_n(k)`
+- Statements "at step k we reached 1"
+
+**What R1 cannot form "naturally":**
+- A **hitting time** `τ(n)` defined as "the first k such that P_n(k)" (because that requires deciding `∃ k`)
+
+> EM_Eval only gives **pointwise** access. You can answer "does this k work?" but not "is there a k?".
+
+### 30.3 Under LPO_Eval (Omega Capability)
+
+You can decide:
+```
+(∃ k, P_n(k)) ∨ (∀ k, ¬ P_n(k))
+```
+on **the admissible sequence** `k ↦ P_n(k)` (admissible in R1).
+
+And now a new object becomes formable in R1:
+- `τ(n)` = "a k that works" (and even "the smallest", with minimization)
+
+> **This is the "backdrop" retroaction:**
+> **LPO_Eval adds objects** (hitting time / witness extractor) that don't exist in operational syntax under EM_Eval alone.
+
+### 30.4 Why This Matters for Collatz: Coupled Referentials
+
+The Collatz dynamics imposes **two coupled referentials**:
+- `R_even`: rule `x ↦ x/2`
+- `R_odd`: rule `x ↦ 3x+1`
+- **Bridge**: "odd → even" via (+1)
+
+**Consequence in this framework:**
+- **EM_Eval** remains "local" (judges an isolated call)
+- **LPO_Eval** is not "local" here (the quantifier `∃ k` is over a trajectory that **crosses** both referentials)
+
+**Precise formulation:**
+> The pertinent sequence `s_n` is not a free sequence — it's a **dependent** sequence (the type/form of next step depends on current parity).
+> So the useful LPO here is **LPO relative to a grammar of dependent sequences** (your R1), not "absolute LPO over all sequences".
+
+### 30.5 Foundational Negation: Kernel, Not Meta-NOT
+
+The naive negation is:
+```
+¬(∃ k, P_n(k)) ≡ ∀ k, ¬ P_n(k)
+```
+This remains an infinite Π-form.
+
+The foundational move is:
+```
+"non" ⟺ membership in a kernel (O(.) = ⊥)
+```
+
+**This changes everything**: the "non" becomes a **stable structural invariant**, manipulable without requiring the infinite to be resolved by an evaluation act.
+
+### 30.6 What We Have vs What We Need
+
+**What we have (structural invariant):**
+- The negative branch is a kernel condition (stable, structural), independent of EM/LPO
+- `O(T_n) = ⊥ ⟺ ∀ k, ¬ P_n(k)`
+
+**What we don't have yet (arithmetic invariant):**
+- A structural/arithmetic law that **forces** the signal `∃ k, P_n(k)` for all `n` without LPO or witness extraction.
+
+### 30.7 The Target for Collatz in This Framework
+
+1. **R1**: Fix the exact grammar of admissible sequences (two referentials + bridge (+1))
+2. **R3**: Localize exactly:
+   - What EM_Eval gives (finite tests, iteration computation)
+   - What LPO_Eval adds (decide `∃ k` along admissible sequences, produce `τ(n)`)
+3. **Structure**: Construct `O_Collatz` adapted to even/odd coupling, express the relevant negative as **kernel**
+
+**Clean separation:**
+- "Classical mechanism" (EM/LPO) = **extraction/decision capability over infinity**
+- "Foundational mechanics" (kernel/negation) = **stable structure** where understanding happens
