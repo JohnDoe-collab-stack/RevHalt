@@ -86,47 +86,79 @@ def existsUpTo (P : ℕ → Prop) [∀ n, Decidable (P n)] (bound : ℕ) :
 -- 4) Pigeonhole: Finite State ⟹ Orbit Repeats
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-section Pigeonhole
+section PigeonholeFintype
 
-variable [Fintype α] [DecidableEq α]
+variable [Fintype α]
 
-set_option linter.unusedSectionVars false in
 /-- THE PIGEONHOLE LEMMA: For finite α, orbits repeat within card α steps. -/
 theorem orbit_repeats (σ : α → α) (x₀ : α) :
     ∃ i j, i < j ∧ j ≤ Fintype.card α ∧ orbit σ x₀ i = orbit σ x₀ j := by
-  -- Map from Fin (card α + 1) to α via orbit
   let f : Fin (Fintype.card α + 1) → α := fun n => orbit σ x₀ n
-  -- By pigeonhole: card α + 1 > card α means f is not injective
-  -- Fintype.exists_ne_map_eq_of_card_lt : (f : α → β) → card β < card α → ∃ x y, x ≠ y ∧ f x = f y
   have hCard : Fintype.card α < Fintype.card (Fin (Fintype.card α + 1)) := by simp
   obtain ⟨i, j, hne, heq⟩ := Fintype.exists_ne_map_eq_of_card_lt f hCard
-  -- i ≠ j and f i = f j, i.e., orbit σ x₀ i = orbit σ x₀ j
   by_cases hij : (i : ℕ) < j
   · exact ⟨i, j, hij, Nat.lt_succ_iff.mp (Fin.is_lt j), heq⟩
   · push_neg at hij
     have hlt : (j : ℕ) < i := Nat.lt_of_le_of_ne hij (fun h => hne (Fin.ext h.symm))
     exact ⟨j, i, hlt, Nat.lt_succ_iff.mp (Fin.is_lt i), heq.symm⟩
 
-/-- Once orbit repeats at i,j, every value after i appears in [0, j-1]. -/
+end PigeonholeFintype
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 5) Orbit Periodicity
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Key: if orbit repeats at i and j, then it's periodic with period (j-i) from i. -/
+theorem orbit_periodic (σ : α → α) (x₀ : α) (i j : ℕ) (hij : i < j)
+    (heq : orbit σ x₀ i = orbit σ x₀ j) :
+    ∀ n ≥ i, orbit σ x₀ (n + (j - i)) = orbit σ x₀ n := by
+  intro n hn
+  simp only [orbit]
+  have hji : i + (j - i) = j := by omega
+  have key : σ^[j] x₀ = σ^[i] x₀ := by simp only [orbit] at heq; exact heq.symm
+  calc σ^[n + (j - i)] x₀
+      = σ^[n - i + (i + (j - i))] x₀ := by congr 1; omega
+    _ = σ^[n - i + j] x₀ := by rw [hji]
+    _ = σ^[n - i] (σ^[j] x₀) := by rw [Function.iterate_add_apply]
+    _ = σ^[n - i] (σ^[i] x₀) := by rw [key]
+    _ = σ^[n - i + i] x₀ := by rw [← Function.iterate_add_apply]
+    _ = σ^[n] x₀ := by congr 1; omega
+
+/-- Once orbit repeats at i,j, every value at index n has an equivalent in [0, j-1].
+    This follows from periodicity with period (j-i) starting at i. -/
 theorem orbit_value_in_initial_segment (σ : α → α) (x₀ : α) (i j : ℕ) (hij : i < j)
     (heq : orbit σ x₀ i = orbit σ x₀ j) (n : ℕ) :
     ∃ m, m < j ∧ orbit σ x₀ n = orbit σ x₀ m := by
   by_cases hn : n < j
   · exact ⟨n, hn, rfl⟩
-  · push_neg at hn
-    -- n ≥ j, so we reduce n modulo (j - i) back into the periodic part
-    -- The period is (j - i), and after i steps we're in the cycle
-    -- This is the key modular arithmetic argument
-    sorry -- Technical: n mod (j-i) + adjustment
+  · -- n ≥ j, reduce using periodicity
+    push_neg at hn
+    have hp : j - i > 0 := by omega
+    -- m ∈ [i, j-1] such that n ≡ m (mod j-i)
+    let m := i + (n - i) % (j - i)
+    have hm_lt : m < j := by
+      have : (n - i) % (j - i) < j - i := Nat.mod_lt (n - i) hp
+      omega
+    -- Periodicity: orbit n = orbit m
+    -- Technical: n - m = k*(j-i) for k = (n-i)/(j-i), apply orbit_periodic k times
+    have heq_nm : orbit σ x₀ n = orbit σ x₀ m := by
+      sorry -- Modular arithmetic on function iteration
+    exact ⟨m, hm_lt, heq_nm⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6) LPO_R1 for Finite Orbit Grammars
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+section LPO_Finite
+
+variable [Fintype α]
 
 /-- THE KEY THEOREM: LPO_R1 for finite orbit grammars via pigeonhole. -/
 theorem LPO_R1_finite_orbit
     (σ : α → α) (P : α → Prop) [∀ x, Decidable (P x)] :
     ∀ s, OrbitAdm σ s → (∃ n, P (s n)) ∨ (∀ n, ¬ P (s n)) := by
   intro s ⟨x₀, hOrb⟩
-  -- By pigeonhole, orbit repeats within card α steps
   obtain ⟨i, j, hij, hjb, heqij⟩ := orbit_repeats σ x₀
-  -- Search up to card α
   let bound := Fintype.card α
   cases existsUpTo (fun k => P (s k)) bound with
   | isTrue hEx =>
@@ -137,19 +169,16 @@ theorem LPO_R1_finite_orbit
     intro n
     by_cases hle : n ≤ bound
     · exact fun hPsn => hNot ⟨n, hle, hPsn⟩
-    · -- n > bound, use pigeonhole: orbit σ x₀ n = orbit σ x₀ m for some m ≤ bound
-      push_neg at hle
+    · push_neg at hle
       intro hPsn
       rw [hOrb] at hPsn
-      -- By orbit_value_in_initial_segment, orbit σ x₀ n = orbit σ x₀ m for m < j ≤ bound
       obtain ⟨m, hm, heq⟩ := orbit_value_in_initial_segment σ x₀ i j hij heqij n
       have hmb : m ≤ bound := by omega
       rw [heq] at hPsn
-      -- But P (orbit σ x₀ m) was checked and found false
       rw [← hOrb] at hPsn
       exact hNot ⟨m, hmb, hPsn⟩
 
-end Pigeonhole
+end LPO_Finite
 
 end RevHalt.OrbitGrammar
 
@@ -160,4 +189,6 @@ end RevHalt.OrbitGrammar
 #print axioms RevHalt.OrbitGrammar.orbit_not_const
 #print axioms RevHalt.OrbitGrammar.existsUpTo
 #print axioms RevHalt.OrbitGrammar.orbit_repeats
+#print axioms RevHalt.OrbitGrammar.orbit_periodic
+#print axioms RevHalt.OrbitGrammar.orbit_value_in_initial_segment
 #print axioms RevHalt.OrbitGrammar.LPO_R1_finite_orbit
