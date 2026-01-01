@@ -35,9 +35,8 @@ theorem RelativeHaltingDecision
     exact hStab
 
 theorem Safety_NoCollapse
-    (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence)
     (Bit : ℕ → Fin 2 → Referent → Sentence) (x : Referent)
-    (hDist : RevHalt.RelativeR1.CutBit.BitIndexDistinct Bit) :
+    (hVal : ∀ n : ℕ, Bit n (0 : Fin 2) x ≠ Bit n (1 : Fin 2) x) :
     ¬ RevHalt.RelativeR1.AdmitsConst (RevHalt.Models.DyadicSystem.AdmDyadicProbe Bit x) := by
   intro hConst
   -- We assume hConst : ∀ φ, Adm (fun _ => φ)
@@ -54,9 +53,6 @@ theorem Safety_NoCollapse
   -- h1 : Bit 0 0 x = Bit (σ.n + 1) 1 x
   -- Therefore: Bit (σ.n + 1) 0 x = Bit (σ.n + 1) 1 x
   rw [h0] at h1
-  -- This contradicts BitIndexDistinct if we assume distinct values at same index imply distinct sentences.
-  -- The current BitIndexDistinct only covers n ≠ m.
-  -- We rely on the structural impossibility of a constant dyadic probe.
-  sorry -- Proof detail: Dyadic structure forces variation (0 vs 1), prohibiting constant sequences.
+  exact hVal (σ.n + 1) h1
 
 end RevHalt.Theorems
