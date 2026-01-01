@@ -142,7 +142,51 @@ theorem orbit_value_in_initial_segment (σ : α → α) (x₀ : α) (i j : ℕ) 
     -- Periodicity: orbit n = orbit m
     -- Technical: n - m = k*(j-i) for k = (n-i)/(j-i), apply orbit_periodic k times
     have heq_nm : orbit σ x₀ n = orbit σ x₀ m := by
-      sorry -- Modular arithmetic on function iteration
+      -- Key insight: n = m + k*(j-i) for some k ≥ 0
+      -- We prove by strong induction on (n - i)
+      have hm_ge_i : m ≥ i := by omega
+      have hn_ge_i : n ≥ i := by omega
+      -- The distance n - m is a multiple of (j - i)
+      have hdiv : (n - i) % (j - i) = (m - i) := by
+        simp only [m]
+        have : m - i = (n - i) % (j - i) := by omega
+        omega
+      -- We use that orbit_periodic gives us: orbit (n + (j-i)) = orbit n for n ≥ i
+      -- So orbit n = orbit (n - k*(j-i)) for appropriate k
+      -- Since n - m = ((n-i) / (j-i)) * (j-i) when (n-i) % (j-i) = m - i
+      -- We can reduce n to m by applying periodicity backwards
+      have hperiod := orbit_periodic σ x₀ i j hij heq
+      -- Prove by showing n and m give same orbit value via periodicity
+      -- n = m + q*(j-i) where q = (n - m) / (j - i)
+      have hmod_eq : (n - i) % (j - i) = m - i := by omega
+      -- Use Nat.div_add_mod: n - i = ((n-i) / (j-i)) * (j-i) + (n-i) % (j-i)
+      have hdiv_mod := Nat.div_add_mod (n - i) (j - i)
+      -- So n = i + (n-i)/(j-i) * (j-i) + (n-i) % (j-i)
+      --      = i + (n-i)/(j-i) * (j-i) + (m - i)
+      --      = m + (n-i)/(j-i) * (j-i)
+      let q := (n - i) / (j - i)
+      have hn_eq : n = m + q * (j - i) := by
+        have h1 : n - i = q * (j - i) + (n - i) % (j - i) := by
+          rw [mul_comm]; exact hdiv_mod.symm
+        have h2 : (n - i) % (j - i) = m - i := hmod_eq
+        omega
+      -- Now prove by induction on q that orbit (m + q*(j-i)) = orbit m
+      suffices h : ∀ k, orbit σ x₀ (m + k * (j - i)) = orbit σ x₀ m by
+        rw [hn_eq]; exact h q
+      intro k
+      induction k with
+      | zero => simp
+      | succ k' ih =>
+        have hm_k' : m + k' * (j - i) ≥ i := by omega
+        -- orbit (m + (k'+1)*(j-i)) = orbit (m + k'*(j-i) + (j-i))
+        -- by hperiod: orbit (m + k'*(j-i) + (j-i)) = orbit (m + k'*(j-i))
+        -- by ih: orbit (m + k'*(j-i)) = orbit m
+        have hstep : orbit σ x₀ (m + k' * (j - i) + (j - i)) = orbit σ x₀ (m + k' * (j - i)) :=
+          hperiod (m + k' * (j - i)) hm_k'
+        show orbit σ x₀ (m + (k' + 1) * (j - i)) = orbit σ x₀ m
+        have hArith : m + (k' + 1) * (j - i) = m + k' * (j - i) + (j - i) := by
+          simp only [Nat.add_mul, Nat.one_mul, Nat.add_assoc]
+        rw [hArith, hstep, ih]
     exact ⟨m, hm_lt, heq_nm⟩
 
 -- ═══════════════════════════════════════════════════════════════════════════════
