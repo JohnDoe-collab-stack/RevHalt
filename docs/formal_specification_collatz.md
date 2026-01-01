@@ -2283,3 +2283,128 @@ The parity/(+1) interdependence explains *why* "omega" access is not reducible t
 ## Document Complete
 
 This document contains **28 sections** providing a complete formal specification of how Collatz maps onto the R1/R2/R3 framework with the EM -> LPO hierarchy and the (+1) interdependence creating 2-adic referential structure.
+
+---
+
+## 29. Structural Formulation: Pre, O, B, K Operators
+
+### 29.1 R1 (Syntax): The Odd-Only Referential
+
+**Universe**: `U ⊂ N` = odd integers.
+
+**Compiled dynamics** (the even/odd coupling is internalized):
+```
+nu(x) := x / 2^{v_2(x)}   (odd part)
+sigma(m) := nu(3m + 1)    (for m odd)
+```
+
+The coupling "even/odd via +1" is exactly: `3m + 1` forces a passage through even, then `nu` returns to odd.
+
+### 29.2 R2 (Semantics): Collatz as a Fixed-Point Statement
+
+**Define the preimage operator (backward)** on subsets `S ⊆ U`:
+```
+Pre(S) := {m ∈ U | sigma(m) ∈ S}
+```
+
+**Define the closure operator** (monotone, idempotent at omega):
+```
+O(S) := S ∪ Pre(S)
+```
+
+Interpretation: `O` adds to `S` all states whose one step falls into `S`.
+
+**The basin of 1** (in the odd-only referential) is the least fixed point containing 1:
+```
+B := μX. ({1} ∪ Pre(X))   (backward closure of {1})
+```
+
+**Collatz (odd-only) is exactly**:
+```
+B = U
+```
+
+This is a purely structural formulation: no "choice", no evaluation, just an operator and its fixed point.
+
+### 29.3 The "Negative" Is No Longer ¬∃: It's a Kernel/Invariant
+
+Define the complement:
+```
+K := U \ B
+```
+
+Then `K` is (and must be, by construction) a **forward-invariant set that avoids 1**:
+```
+m ∈ K ==> sigma(m) ∈ K
+1 ∉ K
+```
+
+**Structural equivalence**:
+```
+Collatz is true ⟺ K = ∅
+```
+
+So the pertinent negation ("there exists a counterexample") becomes:
+```
+K ≠ ∅
+```
+
+i.e., there exists a non-trivial invariant disjoint from 1.
+
+This captures both "non-1 cycle" and "trajectory that never reaches 1" without speaking in meta of `forall k !=`.
+
+### 29.4 Where (+1) Interdependence Appears in the Operator
+
+The preimage `Pre` is not local/simple: it is parameterized by 2-adic valuations. Concretely, solving `sigma(m) = y` is equivalent to:
+```
+3m + 1 = 2^t * y   for some t >= 1
+```
+
+therefore:
+```
+m = (2^t * y - 1) / 3
+```
+
+with constraints "m ∈ U" and divisibility by 3.
+
+**The preimages of y are a family indexed by t** (and filtered by congruences). This is exactly the "even/odd via +1" coupling: the number of /2 absorbed (the t) pilots which branches exist.
+
+So the real structural object is not "a sequence `k |-> P(n, k)`" isolated: it is a **tree of preimages whose branching is governed by `v_2(3m + 1)`**.
+
+### 29.5 R3 (Evaluation): EM Then LPO — But Collatz Is One Level Above
+
+- **EM_Eval**: decide a finite constraint ("does this t work?", "is this m integer/odd?", "sigma(m) = y?") — pointwise
+- **LPO_Eval**: decide existence along a flow `(t)` or tree exploration for fixed `m` (is there a finite certificate of `m ∈ B`?)
+
+But Collatz, in this structural form, is:
+```
+forall m ∈ U, m ∈ B
+```
+
+i.e., there exists no invariant `K` disjoint from 1.
+
+This is not "just LPO on a sequence": it is the **global eradication of all possible kernels/invariants of the system**.
+
+### 29.6 What "Where This Leads" Means (Concrete)
+
+You replace "proving `forall k, !=`" by:
+
+1. **Construct O** (already done)
+2. **Characterize structurally** the sets `K ≠ ∅` such that `K ⊆ U \ {1}` and `sigma(K) ⊆ K`
+3. **Show that the only candidate is `K = ∅`**
+
+This is exactly "your negation" as kernel/invariant: if Collatz is false, it is not a negative sentence, it is an **object** (an invariant K).
+
+### 29.7 The Preimage Tree Structure
+
+For each `y ∈ U`, the preimages are:
+```
+Pre({y}) = {m ∈ U | m = (2^t * y - 1) / 3, t >= 1, 3 | (2^t * y - 1)}
+```
+
+This defines a **branching tree** where:
+- Root = 1
+- At each node `y`, branches are indexed by valid `t` values
+- Each branch gives a preimage `m`
+
+**Collatz = this tree covers all of U**.
