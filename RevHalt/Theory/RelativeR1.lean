@@ -181,11 +181,11 @@ namespace CutBit
 
 variable {Referent : Type}
 
-/-- Dyadique canonique (fenêtre à la profondeur n). -/
+/-- Canonical dyadic (window at depth n). -/
 def dyad (n : ℕ) (k : ℤ) : ℚ :=
   (k : ℚ) / ((2 : ℚ) ^ n)
 
-/-- Lien discret/continu au niveau sémantique (R2), exprimé *uniquement* avec Cut/Bit. -/
+/-- Discrete/continuous link at semantic level (R2), expressed *only* with Cut/Bit. -/
 def BitCutLink (Truth : Sentence → Prop)
     (Cut : ℚ → Referent → Sentence) (Bit : ℕ → Fin 2 → Referent → Sentence) : Prop :=
   ∀ (n : ℕ) (a : Fin 2) (x : Referent),
@@ -195,43 +195,43 @@ def BitCutLink (Truth : Sentence → Prop)
         ¬ Truth (Cut (dyad n (k + 1)) x) ∧
         (k.toNat % 2) = a.val
 
-/-- (R1) Grammaire Bit : suites de raffinements bit-indexés. -/
+/-- (R1) Bit Grammar: bit-indexed refinement sequences. -/
 def AdmBit (Bit : ℕ → Fin 2 → Referent → Sentence) (x : Referent) : (ℕ → Sentence) → Prop :=
   fun s => ∀ n, ∃ a : Fin 2, s n = Bit n a x
 
-/-- (R1) Grammaire Cut dyadique : suites de coupes dyadiques. -/
+/-- (R1) Dyadic Cut Grammar: sequences of dyadic cuts. -/
 def AdmCutDyadic (Cut : ℚ → Referent → Sentence) (x : Referent) : (ℕ → Sentence) → Prop :=
   fun s => ∀ n, ∃ k : ℤ, s n = Cut (dyad n k) x
 
-/-- (R1) Grammaire mixte : even=Cut, odd=Bit (deux référentiels couplés). -/
+/-- (R1) Mixed Grammar: even=Cut, odd=Bit (two coupled referentials). -/
 def AdmMix (Cut : ℚ → Referent → Sentence) (Bit : ℕ → Fin 2 → Referent → Sentence)
     (x : Referent) : (ℕ → Sentence) → Prop :=
   fun s =>
     (∀ t, ∃ k : ℤ, s (2*t) = Cut (dyad t k) x) ∧
     (∀ t, ∃ a : Fin 2, s (2*t + 1) = Bit t a x)
 
-/-- LPO_Eval relatif à la grammaire Bit (R1). -/
+/-- LPO_Eval relative to Bit grammar (R1). -/
 def LPO_Eval_Bit (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence)
     (Bit : ℕ → Fin 2 → Referent → Sentence) (x : Referent) : Prop :=
   LPO_Eval_R1 (Sentence := Sentence) Eval Γ (AdmBit (Sentence := Sentence) (Referent := Referent) Bit x)
 
-/-- LPO_Eval relatif à la grammaire Cut dyadique (R1). -/
+/-- LPO_Eval relative to Dyadic Cut grammar (R1). -/
 def LPO_Eval_CutDyadic (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence)
     (Cut : ℚ → Referent → Sentence) (x : Referent) : Prop :=
   LPO_Eval_R1 (Sentence := Sentence) Eval Γ (AdmCutDyadic (Sentence := Sentence) (Referent := Referent) Cut x)
 
-/-- LPO_Eval relatif à la grammaire mixte Cut/Bit (R1). -/
+/-- LPO_Eval relative to Mixed Cut/Bit grammar (R1). -/
 def LPO_Eval_Mix (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence)
     (Cut : ℚ → Referent → Sentence) (Bit : ℕ → Fin 2 → Referent → Sentence) (x : Referent) : Prop :=
   LPO_Eval_R1 (Sentence := Sentence) Eval Γ (AdmMix (Sentence := Sentence) (Referent := Referent) Cut Bit x)
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- (A) Pointwise: du Bit (vrai) on extrait des *témoins* Cut (sans choix global).
+-- (A) Pointwise: from Bit (true) we extract Cut *witnesses* (without global choice).
 -- ─────────────────────────────────────────────────────────────────────────────
 
-/-- Version pointwise (0 axiome) :
-si la suite `s` est Bit-admissible et chaque terme est vrai,
-alors pour chaque n on obtient un k (fenêtre dyadique) témoin. -/
+/-- Pointwise version (0 axiom):
+if sequence `s` is Bit-admissible and each term is true,
+then for each n we obtain a witness k (dyadic window). -/
 theorem bit_truth_to_cut_witness_pointwise
     (Truth : Sentence → Prop)
     (Cut : ℚ → Referent → Sentence) (Bit : ℕ → Fin 2 → Referent → Sentence)
@@ -257,12 +257,12 @@ theorem bit_truth_to_cut_witness_pointwise
   exact ⟨a, k, hsa, hkCut, hkNot, hkPar⟩
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- (B) Choix global: passer de ∀n ∃k ... à ∃f : ℕ → ℤ ...
---     (isole Classical.choice, comme tu veux).
+-- (B) Global Choice: going from ∀n ∃k ... to ∃f : ℕ → ℤ ...
+--     (isolating Classical.choice, as requested).
 -- ─────────────────────────────────────────────────────────────────────────────
 
-/-- Version "sélecteur" : on fabrique une fonction k(n).
-Cette étape isole exactement `Classical.choice`. -/
+/-- "Selector" version: we construct a function k(n).
+This step strictly isolates `Classical.choice`. -/
 theorem bit_truth_to_cut_selector
     (Truth : Sentence → Prop)
     (Cut : ℚ → Referent → Sentence) (Bit : ℕ → Fin 2 → Referent → Sentence)
@@ -291,16 +291,16 @@ theorem bit_truth_to_cut_selector
   exact Classical.choose_spec (Classical.choose_spec (hPW n))
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- (C) Non-collapse typique : AdmBit n’admet pas les constantes
---     dès qu’on assume la distinction des indices (optionnel mais utile).
+-- (C) Typical Non-collapse: AdmBit does not admit constants
+--     assuming index distinction (optional but useful).
 -- ─────────────────────────────────────────────────────────────────────────────
 
-/-- Hypothèse structurelle minimale : changer l’indice n change la formule Bit. -/
+/-- Minimal structural hypothesis: changing index n changes the Bit formula. -/
 def BitIndexDistinct (Bit : ℕ → Fin 2 → Referent → Sentence) : Prop :=
   ∀ {n m : ℕ} {a b : Fin 2} {x : Referent}, n ≠ m → Bit n a x ≠ Bit m b x
 
-/-- Sous BitIndexDistinct, la grammaire AdmBit n’admet pas les constantes.
-(=> le "const trick" est bloqué par R1, exactement ce que tu veux). -/
+/-- Under BitIndexDistinct, AdmBit grammar does not admit constants.
+(=> the "const trick" is blocked by R1, exactly as desired). -/
 theorem AdmBit_not_admits_const
     (Bit : ℕ → Fin 2 → Referent → Sentence)
     (hDist : BitIndexDistinct (Sentence := Sentence) (Referent := Referent) Bit)
@@ -308,15 +308,40 @@ theorem AdmBit_not_admits_const
     ¬ AdmitsConst (Sentence := Sentence)
         (AdmBit (Sentence := Sentence) (Referent := Referent) Bit x) := by
   intro hConst
-  -- applique AdmitsConst à φ = Bit 0 0 x
+  -- apply AdmitsConst to φ = Bit 0 0 x
   have hAdm : AdmBit (Sentence := Sentence) (Referent := Referent) Bit x (fun _ => Bit 0 (0 : Fin 2) x) :=
     hConst (Bit 0 (0 : Fin 2) x)
-  -- au rang 1, il faut exister a avec Bit 0 0 x = Bit 1 a x
+  -- at rank 1, there must exist a with Bit 0 0 x = Bit 1 a x
   rcases hAdm 1 with ⟨a1, ha1⟩
   have hEq : Bit 0 (0 : Fin 2) x = Bit 1 a1 x := by
     simpa using ha1
   have hNe : Bit 0 (0 : Fin 2) x ≠ Bit 1 a1 x := hDist (by decide)
   exact hNe hEq
+
+/-- (Clean) Non-collapse Package:
+    1) AdmBit does not admit constants (if BitIndexDistinct),
+    2) thus the only generic derivation (via LPO_R1_imp_EM_if_const) is blocked. -/
+theorem bit_noncollapse_package
+    (Eval : List Sentence → Sentence → Prop) (Γ : List Sentence)
+    (Bit : ℕ → Fin 2 → Referent → Sentence) (x : Referent)
+    (hDist : BitIndexDistinct (Sentence := Sentence) (Referent := Referent) Bit) :
+    (¬ AdmitsConst (Sentence := Sentence)
+        (AdmBit (Sentence := Sentence) (Referent := Referent) Bit x)) ∧
+    (AdmitsConst (Sentence := Sentence)
+        (AdmBit (Sentence := Sentence) (Referent := Referent) Bit x) →
+      (LPO_Eval_Bit (Sentence := Sentence) (Referent := Referent) Eval Γ Bit x →
+        EM_Eval (Sentence := Sentence) Eval Γ)) := by
+  refine And.intro ?noConst ?collapseIfConst
+  · exact AdmBit_not_admits_const
+      (Sentence := Sentence) (Referent := Referent) Bit hDist x
+  · intro hConst hLPO
+    -- this is exactly the generic brick, applied to Adm = AdmBit
+    exact LPO_R1_imp_EM_if_const
+      (Sentence := Sentence)
+      (Eval := Eval) (Γ := Γ)
+      (Adm := AdmBit (Sentence := Sentence) (Referent := Referent) Bit x)
+      hConst
+      hLPO
 
 end CutBit
 
@@ -337,3 +362,4 @@ end RevHalt.RelativeR1
 #print axioms RevHalt.RelativeR1.CutBit.bit_truth_to_cut_witness_pointwise
 #print axioms RevHalt.RelativeR1.CutBit.bit_truth_to_cut_selector
 #print axioms RevHalt.RelativeR1.CutBit.AdmBit_not_admits_const
+#print axioms RevHalt.RelativeR1.CutBit.bit_noncollapse_package
