@@ -1,8 +1,7 @@
-## RevHalt
+# RevHalt : décision relative à une grammaire et continuation cinétique au-delà de l’indécidabilité uniforme
 
-RevHalt is a Lean 4 (Mathlib) formalization that **localizes** the logical strength required to obtain *global dichotomies*, and separates it from the **structural content** that forces certificate shape (kernel vs signal) via an operator.
-
-> Key point: RevHalt does **not** “assume EM as a foundation” inside the key equivalences; instead it **characterizes** EM (and LPO) as exactly the evaluation principles needed to assert certain total dichotomies, while the operator/kernel/signal facts are proved structurally.
+## Résumé
+La pratique standard confond souvent trois niveaux distincts : (R1) ce qui est formable/testable (grammaire de suites admissibles), (R2) ce qui est vrai “en soi” (sémantique), et (R3) ce qui est accessible opératoirement (évaluation). RevHalt formalise cette séparation et montre que les principes “classiques” apparaissent comme des capacités d’accès plutôt que comme des axiomes implicites. Au cœur, l’opérateur de clôture up rigidifie le négatif : la stabilisation (Π₁) est caractérisée comme noyau (up T = ⊥), donc manipulable structurellement. Côté décision sur ω, RevHalt introduit une LPO relative à R1 (LPO_R1) et isole exactement le mécanisme de collapse vers EM : le “const-trick”, capturé par la condition AdmitsConst. On obtient un théorème conditionnel net : AdmitsConst → (LPO_R1 → EM_Eval), et des grammaires de probes (p.ex. dyadiques/bit) bloquent mécaniquement AdmitsConst, garantissant une dichotomie locale sans forcer EM global. Enfin, RevHalt remplace l’exigence impossible d’un décideur uniforme (T2, ¬∃H ∀e) par une continuation organisée (T3, ∀e ∃Sₑ) implémentée comme dynamique de chaînes et d’horizons-limites. L’apport est une architecture formelle qui localise, audite et contrôle l’usage de “classical” à travers les référentiels, plutôt que de l’assumer.
 
 ## Main Result
 
