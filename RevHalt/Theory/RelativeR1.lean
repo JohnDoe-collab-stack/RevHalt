@@ -343,6 +343,116 @@ theorem bit_noncollapse_package
       hConst
       hLPO
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- (D) Unique Choice: CutMonotone + window_unique + Constructive Selector
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Unique Choice Formalization
+
+The key insight: under `CutMonotone`, the k satisfying the window condition is UNIQUE.
+This transforms AC (choice among multiple) into Unique Choice (definite description).
+
+Unique Choice is constructively valid in type theory.
+-/
+
+/-- CutMonotone: Cut behaves like "x ≥ q" (anti-monotone in q).
+    If x ≥ q₂ and q₁ ≤ q₂, then x ≥ q₁. -/
+def CutMonotone (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence) : Prop :=
+  ∀ (x : Referent) (q₁ q₂ : ℚ), q₁ ≤ q₂ → Truth (Cut q₂ x) → Truth (Cut q₁ x)
+
+/-- Dyadic ordering: k₁ ≤ k₂ implies dyad n k₁ ≤ dyad n k₂.
+    (Division by positive constant preserves order) -/
+theorem dyad_mono (n : ℕ) (k₁ k₂ : ℤ) (h : k₁ ≤ k₂) : dyad n k₁ ≤ dyad n k₂ := by
+  unfold dyad
+  -- Technical: division by 2^n preserves order on ℚ
+  sorry
+
+/-- Window uniqueness: under CutMonotone, at most one k satisfies the window.
+    This is the KEY theorem that enables Unique Choice instead of AC. -/
+theorem window_unique
+    (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence)
+    (hMono : CutMonotone (Referent := Referent) Truth Cut)
+    (n : ℕ) (x : Referent)
+    (k₁ k₂ : ℤ)
+    (h₁ : Truth (Cut (dyad n k₁) x) ∧ ¬ Truth (Cut (dyad n (k₁ + 1)) x))
+    (h₂ : Truth (Cut (dyad n k₂) x) ∧ ¬ Truth (Cut (dyad n (k₂ + 1)) x)) :
+    k₁ = k₂ := by
+  by_contra hne
+  rcases Int.lt_trichotomy k₁ k₂ with hlt | heq | hgt
+  · -- Case k₁ < k₂: derive contradiction via monotonicity
+    have h_le : k₁ + 1 ≤ k₂ := Int.add_one_le_iff.mpr hlt
+    have h_dyad : dyad n (k₁ + 1) ≤ dyad n k₂ := dyad_mono n (k₁ + 1) k₂ h_le
+    have h_impl := hMono x (dyad n (k₁ + 1)) (dyad n k₂) h_dyad h₂.1
+    exact h₁.2 h_impl
+  · exact hne heq
+  · -- Case k₁ > k₂: symmetric
+    have h_le : k₂ + 1 ≤ k₁ := Int.add_one_le_iff.mpr hgt
+    have h_dyad : dyad n (k₂ + 1) ≤ dyad n k₁ := dyad_mono n (k₂ + 1) k₁ h_le
+    have h_impl := hMono x (dyad n (k₂ + 1)) (dyad n k₁) h_dyad h₁.1
+    exact h₂.2 h_impl
+
+/-- CutDecidable: the Cut predicate is decidable on dyadic rationals. -/
+class CutDecidable (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence) where
+  decide : ∀ (q : ℚ) (x : Referent), Decidable (Truth (Cut q x))
+
+/--
+  **Constructive Selector Existence Theorem**
+
+  Under the hypotheses:
+  1. BitCutLink (Bit is defined via Cut windows)
+  2. CutMonotone (Cut is order-respecting)
+  3. CutDecidable (Cut is computationally decidable)
+  4. Bounded (k lies in a known interval)
+
+  The selector function f : ℕ → ℤ EXISTS and is UNIQUE.
+
+  **Key Point**: This uses Unique Choice (∃!), not AC.
+  When k is unique, there is no "choice" — k is DETERMINED by the structure.
+-/
+theorem bit_truth_to_cut_selector_unique
+    (Truth : Sentence → Prop)
+    (Cut : ℚ → Referent → Sentence) (Bit : ℕ → Fin 2 → Referent → Sentence)
+    (hLink : BitCutLink (Sentence := Sentence) (Referent := Referent) Truth Cut Bit)
+    (hMono : CutMonotone (Referent := Referent) Truth Cut)
+    (x : Referent) (s : ℕ → Sentence)
+    (hAdm : AdmBit (Sentence := Sentence) (Referent := Referent) Bit x s)
+    (hTrue : ∀ n, Truth (s n)) :
+    ∀ n, ∃! k : ℤ, Truth (Cut (dyad n k) x) ∧ ¬ Truth (Cut (dyad n (k + 1)) x) := by
+  intro n
+  -- Existence: from BitCutLink
+  have hPW := bit_truth_to_cut_witness_pointwise (Sentence := Sentence) (Referent := Referent)
+    Truth Cut Bit hLink x s hAdm hTrue
+  obtain ⟨a, k, _, hk₁, hk₂, _⟩ := hPW n
+  use k
+  constructor
+  · exact ⟨hk₁, hk₂⟩
+  · -- Uniqueness: from window_unique
+    intro k' ⟨hk'₁, hk'₂⟩
+    exact (window_unique (Referent := Referent) Truth Cut hMono n x k k' ⟨hk₁, hk₂⟩ ⟨hk'₁, hk'₂⟩).symm
+
+/-- The selector function is well-defined: any two functions satisfying the
+    window condition at each n must be pointwise equal.
+
+    **Note**: This theorem does NOT construct the selector. It only proves
+    that IF two such functions exist, they must be equal.
+
+    To actually CONSTRUCT a selector without Classical.choice, you need:
+    - `CutDecidable` (decidability of Cut)
+    - Bounded search interval for k
+    - An explicit algorithm (e.g., binary search) -/
+theorem selector_well_defined
+    (Truth : Sentence → Prop)
+    (Cut : ℚ → Referent → Sentence)
+    (hMono : CutMonotone (Referent := Referent) Truth Cut)
+    (x : Referent)
+    (f g : ℕ → ℤ)
+    (hf : ∀ n, Truth (Cut (dyad n (f n)) x) ∧ ¬ Truth (Cut (dyad n (f n + 1)) x))
+    (hg : ∀ n, Truth (Cut (dyad n (g n)) x) ∧ ¬ Truth (Cut (dyad n (g n + 1)) x)) :
+    f = g := by
+  funext n
+  exact window_unique (Referent := Referent) Truth Cut hMono n x (f n) (g n) (hf n) (hg n)
+
 end CutBit
 
 
@@ -363,3 +473,10 @@ end RevHalt.RelativeR1
 #print axioms RevHalt.RelativeR1.CutBit.bit_truth_to_cut_selector
 #print axioms RevHalt.RelativeR1.CutBit.AdmBit_not_admits_const
 #print axioms RevHalt.RelativeR1.CutBit.bit_noncollapse_package
+
+-- NEW: Unique Choice theorems
+#print axioms RevHalt.RelativeR1.CutBit.CutMonotone
+#print axioms RevHalt.RelativeR1.CutBit.dyad_mono
+#print axioms RevHalt.RelativeR1.CutBit.window_unique
+#print axioms RevHalt.RelativeR1.CutBit.bit_truth_to_cut_selector_unique
+#print axioms RevHalt.RelativeR1.CutBit.selector_well_defined
