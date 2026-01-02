@@ -152,6 +152,49 @@ theorem S1Set_nonempty_of_witness
   exact Exists.intro (encode_halt e) (mem_S1Set_of_witness S encode_halt e hKit hUnprov)
 
 -- ==============================================================================================
+-- T3.0 — Subtraction Property (Missing Set)
+-- ==============================================================================================
+
+/--
+  "MissingFromS2" captures elements in the extension S3 that are **not** provable in the base system.
+  If S2 is purely provable, this set exactly recovers S1.
+-/
+def MissingFromS2 {Code PropT : Type} (S : ComplementaritySystem Code PropT) (S3 : Set PropT) : Set PropT :=
+  { p | p ∈ S3 ∧ ¬ S.Provable p }
+
+/--
+  **Prop T3.0 (Subtraction)**:
+  If the base corpus S2 consists only of provable truths (sound internal theory),
+  then the "missing" part of the extension S3 is exactly the frontier S1.
+  `MissingFromS2(S3) = S1`
+-/
+theorem missing_equals_S1
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
+    (S2 : Set PropT) (hS2_prov : ∀ p, p ∈ S2 → S.Provable p)
+    (encode_halt : Code → PropT) :
+    MissingFromS2 S (S3Set S S2 encode_halt) = S1Set S encode_halt := by
+  ext p
+  constructor
+  · intro hp
+    -- hp : p ∈ S3 ∧ ¬Provable p
+    rcases hp with ⟨hpS3, hNot⟩
+    cases hpS3 with
+    | inl hpS2 =>
+        have hProv : S.Provable p := hS2_prov p hpS2
+        exact False.elim (hNot hProv)
+    | inr hpS1 =>
+        exact hpS1
+  · intro hpS1
+    refine And.intro ?_ ?_
+    · -- p ∈ S3
+      exact Or.inr hpS1
+    · -- ¬ Provable p
+      rcases hpS1 with ⟨e, hpEq, _hKit, hUnprov⟩
+      intro hProv_p
+      rw [hpEq] at hProv_p
+      exact hUnprov hProv_p
+
+-- ==============================================================================================
 -- Unprovable Encoding Existence (uses diagonal_bridge_of_realization, no axioms)
 -- ==============================================================================================
 
@@ -512,4 +555,3 @@ end RevHalt
 #print axioms RevHalt.T3_strong
 #print axioms RevHalt.T3_oracle_extension_explicit
 #print axioms RevHalt.mem_S1TwoSet_of_pick
-
