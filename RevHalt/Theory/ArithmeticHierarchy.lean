@@ -16,8 +16,8 @@ and proves key structural theorems about the hierarchy.
 
 ## Key Insight
 
-The `StabFrom` in ProofAssistantAgentSpec has form `∀ chain, ∀ n, ¬P` which is ∀∀,
-hence Π₁ on product space — NOT true Π₂. True Π₂ would be `∀ chain, ∃ n, P`.
+A predicate of form `∀ x, ∀ y, ¬P(x,y)` is ∀∀, hence Π₁ on product space — NOT true Π₂.
+True Π₂ would be `∀ x, ∃ y, P(x,y)`.
 
 -/
 
