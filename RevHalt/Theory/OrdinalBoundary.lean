@@ -7,9 +7,10 @@ import Mathlib.Data.Set.Basic
 
 ## Thesis: Two Distinct Sources of Classical Logic
 
-1. **Class gap**: `ℕ → Prop` vs `ℕ → Bool` yields EM even at stage 0
-   (see `stage_zero_is_em` in OrdinalMechanical.lean)
-2. **Ordinal gap**: finite → ω on *decidable* traces yields LPO
+1. **Class gap**: requiring a total dichotomy for `Trace := ℕ → Prop` is exactly EM
+   (see `dichotomy_all_iff_em` / `stage_zero_is_em` below).
+2. **Ordinal gap**: for *decidable* traces (or Bool traces), the corresponding dichotomy statement is LPO
+   (see `LPO` / `LPOBool` below).
 
 The class gap is the **primary** source of EM in the dichotomy.
 
@@ -43,6 +44,89 @@ def Halts (T : Trace) : Prop := ∃ n, T n
 
 /-- Stabilizes: Π₁ predicate -/
 def Stabilizes (T : Trace) : Prop := ∀ n, ¬ T n
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 1b) ORDINAL GAP (LPO) AND CLASS GAP (Bool vs Prop)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Bool-valued traces (useful for phrasing LPO). -/
+def TraceB := ℕ → Bool
+
+/-- Halts for Bool-valued traces. -/
+def HaltsB (b : TraceB) : Prop := ∃ n, b n = true
+
+/-- Stabilizes for Bool-valued traces. -/
+def StabilizesB (b : TraceB) : Prop := ∀ n, b n = false
+
+/--
+LPO phrased on decidable Prop-valued traces:
+either we find a witness (finite stage), or we affirm the Π₁-side (the ω-limit).
+-/
+def LPO : Prop :=
+  ∀ T : Trace, (∀ n, Decidable (T n)) → Halts T ∨ Stabilizes T
+
+/-- LPO phrased on Bool-valued traces. -/
+def LPOBool : Prop :=
+  ∀ b : TraceB, HaltsB b ∨ StabilizesB b
+
+theorem lpoBool_of_lpo (hLPO : LPO) : LPOBool := by
+  intro b
+  let T : Trace := fun n => b n = true
+  have d : ∀ n, Decidable (T n) := fun _ => inferInstance
+  have h := hLPO T d
+  cases h with
+  | inl hH =>
+      rcases hH with ⟨n, hn⟩
+      exact Or.inl ⟨n, hn⟩
+  | inr hS =>
+      apply Or.inr
+      intro n
+      cases hbn : b n with
+      | false => rfl
+      | true =>
+          have : ¬ (b n = true) := hS n
+          exact False.elim (this hbn)
+
+theorem lpo_of_lpoBool (hLPO : LPOBool) : LPO := by
+  intro T d
+  let b : TraceB := fun n => @decide (T n) (d n)
+  have hb := hLPO b
+  cases hb with
+  | inl hH =>
+      rcases hH with ⟨n, hn⟩
+      apply Or.inl
+      refine ⟨n, ?_⟩
+      haveI : Decidable (T n) := d n
+      have hn' : decide (T n) = true := by
+        simpa [b] using hn
+      exact (decide_eq_true_iff (p := T n)).1 hn'
+  | inr hS =>
+      apply Or.inr
+      intro n
+      haveI : Decidable (T n) := d n
+      have hnFalse : decide (T n) = false := by
+        simpa [b] using hS n
+      exact (decide_eq_false_iff_not (p := T n)).1 hnFalse
+
+theorem lpoBool_iff_lpo : LPOBool ↔ LPO := by
+  constructor
+  · exact lpo_of_lpoBool
+  · exact lpoBool_of_lpo
+
+/--
+`AdmitsConst` is the “const-trick”: the ability to encode an arbitrary `P : Prop`
+as a Bool-valued trace whose LPO-dichotomy recovers `P ∨ ¬P`.
+-/
+def AdmitsConst : Prop :=
+  ∀ P : Prop, ∃ b : TraceB, (HaltsB b ↔ P) ∧ (StabilizesB b ↔ ¬ P)
+
+theorem em_of_lpoBool_of_admitsConst (hConst : AdmitsConst) (hLPO : LPOBool) :
+    ∀ P : Prop, P ∨ ¬ P := by
+  intro P
+  rcases hConst P with ⟨b, hHalt, hStab⟩
+  cases hLPO b with
+  | inl h => exact Or.inl (hHalt.1 h)
+  | inr h => exact Or.inr (hStab.1 h)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 2) CONSTRUCTIVE THEOREMS: No axioms at all (not even propext)
@@ -216,6 +300,11 @@ theorem em_of_dichotomy_all
   cases h with
   | inl hH => exact Or.inl ((Halts_constTrace_iff P).1 hH)
   | inr hS => exact Or.inr ((Stabilizes_constTrace_iff P).1 hS)
+
+/-- “Stage 0” extraction: a total Prop-trace dichotomy already yields EM (via constant traces). -/
+theorem stage_zero_is_em :
+    (∀ T : Trace, Halts T ∨ Stabilizes T) → (∀ P : Prop, P ∨ ¬ P) :=
+  em_of_dichotomy_all
 
 /--
 **THE EXACT EQUIVALENCE**: Dichotomy for all traces ↔ EM.
