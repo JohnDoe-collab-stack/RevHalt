@@ -320,3 +320,308 @@ end RevHalt
 #print axioms RevHalt.frontier_divergence_witness
 #print axioms RevHalt.frontiers_incomparable
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PART II: CATEGORICAL STRUCTURE
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+# Complete Categorical Formalization
+
+This section provides the full categorical structure of RevHalt:
+
+1. **Category of Traces** (thin category / preorder)
+2. **`up` as Closure Operator** (extensive, monotone, idempotent)
+3. **Category of Sound Sets** (chain-compatible extensions)
+4. **Chain as Monotone Sequence** (ℕ → SoundSet)
+5. **Limit as Colimit** (universal property)
+
+## The Key Insight
+
+RevHalt's dynamics works because:
+- `up` is a **closure operator** (monad on traces)
+- The limit is a **colimit** (canonical extension)
+- Extensions form a **category** (with sound inclusions as morphisms)
+- The dichotomy is the **kernel characterization** (`up T = ⊥`)
+-/
+
+namespace RevHalt.Categorical
+
+open Set
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 1) CATEGORY OF TRACES (Thin Category / Preorder)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Trace as a Type for categorical treatment. -/
+abbrev TraceObj := RevHalt.Trace
+
+/-- Hom-set in the trace category: T → U means T ≤ U pointwise.
+    This is a thin category (at most one morphism between objects). -/
+def TraceHom (T U : TraceObj) : Prop := ∀ n, T n → U n
+
+theorem TraceHom.refl (T : TraceObj) : TraceHom T T := fun _ h => h
+
+theorem TraceHom.trans {T U V : TraceObj} (hTU : TraceHom T U) (hUV : TraceHom U V) :
+    TraceHom T V := fun n hT => hUV n (hTU n hT)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 2) `up` AS CLOSURE OPERATOR
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- The `up` operator as a function on TraceObj. -/
+def upOp : TraceObj → TraceObj := RevHalt.up
+
+/-- Extensive: T ≤ up T -/
+theorem upOp_extensive (T : TraceObj) : TraceHom T (upOp T) := RevHalt.le_up T
+
+/-- Monotone: T ≤ U → up T ≤ up U -/
+theorem upOp_monotone {T U : TraceObj} (h : TraceHom T U) : TraceHom (upOp T) (upOp U) :=
+  RevHalt.up_mono_order h
+
+/-- Idempotent: up (up T) = up T -/
+theorem upOp_idempotent (T : TraceObj) : upOp (upOp T) = upOp T :=
+  RevHalt.up_idem T
+
+/-- Closure bundle. -/
+structure ClosureOperator (α : Type) where
+  cl : α → α
+  hom : α → α → Prop
+  extensive : ∀ a, hom a (cl a)
+  monotone : ∀ {a b}, hom a b → hom (cl a) (cl b)
+  idempotent : ∀ a, cl (cl a) = cl a
+
+/-- `up` is a closure operator on TraceObj. -/
+def upClosure : ClosureOperator TraceObj where
+  cl := upOp
+  hom := TraceHom
+  extensive := upOp_extensive
+  monotone := @upOp_monotone
+  idempotent := upOp_idempotent
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 3) CATEGORY OF SOUND SETS
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+variable {PropT : Type} (Truth : PropT → Prop)
+
+/-- A sound set: a set with proof of soundness. -/
+structure SoundSet where
+  carrier : Set PropT
+  sound : ∀ p ∈ carrier, Truth p
+
+/-- Morphisms between sound sets: inclusions. -/
+def SoundSetHom (S T : SoundSet Truth) : Prop := S.carrier ⊆ T.carrier
+
+theorem SoundSetHom.refl (S : SoundSet Truth) : SoundSetHom Truth S S := Set.Subset.refl _
+
+theorem SoundSetHom.trans {S T U : SoundSet Truth} (hST : SoundSetHom Truth S T)
+    (hTU : SoundSetHom Truth T U) : SoundSetHom Truth S U := Set.Subset.trans hST hTU
+
+/-- The empty sound set (initial object). -/
+def SoundSet.empty : SoundSet Truth where
+  carrier := ∅
+  sound := fun _ h => False.elim h
+
+/-- Empty is initial. -/
+theorem SoundSet.empty_initial (S : SoundSet Truth) : SoundSetHom Truth (SoundSet.empty Truth) S :=
+  Set.empty_subset _
+
+/-- Step: extend by adding a true element. -/
+def SoundSet.step (S : SoundSet Truth) (p : PropT) (hp : Truth p) : SoundSet Truth where
+  carrier := S.carrier ∪ {p}
+  sound := by
+    intro q hq
+    cases hq with
+    | inl h => exact S.sound q h
+    | inr h => rw [h]; exact hp
+
+/-- Step is monotone (S ≤ step S p). -/
+theorem SoundSet.le_step (S : SoundSet Truth) (p : PropT) (hp : Truth p) :
+    SoundSetHom Truth S (S.step Truth p hp) := Set.subset_union_left
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 4) CHAIN AND LIMIT
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- A chain is a monotone sequence of SoundSets. -/
+structure SoundChain where
+  seq : ℕ → SoundSet Truth
+  mono : ∀ n, SoundSetHom Truth (seq n) (seq (n + 1))
+
+/-- The limit of a chain: union of all stages. -/
+def SoundChain.lim (C : SoundChain Truth) : SoundSet Truth where
+  carrier := { p | ∃ n, p ∈ (C.seq n).carrier }
+  sound p hp := by
+    obtain ⟨n, hn⟩ := hp
+    exact (C.seq n).sound p hn
+
+/-- Each stage embeds into the limit. -/
+theorem SoundChain.seq_le_lim (C : SoundChain Truth) (n : ℕ) :
+    SoundSetHom Truth (C.seq n) (C.lim Truth) := by
+  intro p hp
+  exact ⟨n, hp⟩
+
+/-- Universal property of the limit (cocone mediating map). -/
+theorem SoundChain.lim_universal (C : SoundChain Truth) (T : SoundSet Truth)
+    (h : ∀ n, SoundSetHom Truth (C.seq n) T) :
+    SoundSetHom Truth (C.lim Truth) T := by
+  intro p hp
+  obtain ⟨n, hn⟩ := hp
+  exact h n hn
+
+/-- Colimit Characterization: lim is the smallest containing all stages. -/
+theorem SoundChain.lim_is_colimit (C : SoundChain Truth) (T : SoundSet Truth) :
+    SoundSetHom Truth (C.lim Truth) T ↔ ∀ n, SoundSetHom Truth (C.seq n) T := by
+  constructor
+  · intro hLim n
+    exact Set.Subset.trans (C.seq_le_lim Truth n) hLim
+  · exact C.lim_universal Truth T
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 5) KERNEL CHARACTERIZATION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- The kernel of up: traces where up T = ⊥. -/
+def upKernel : Set TraceObj := { T | upOp T = ⊥ }
+
+/-- Kernel membership is equivalent to stabilization. -/
+theorem mem_upKernel_iff (T : TraceObj) :
+    T ∈ upKernel ↔ ∀ n, ¬ T n :=
+  RevHalt.up_eq_bot_iff T
+
+/-- The dichotomy as categorical statement (requires EM). -/
+theorem trace_dichotomy_categorical (T : TraceObj)
+    (em : ∀ P : Prop, P ∨ ¬P) :
+    (∃ n, T n) ∨ T ∈ upKernel := by
+  cases em (∃ n, T n) with
+  | inl h => exact Or.inl h
+  | inr h =>
+    right
+    rw [mem_upKernel_iff]
+    intro n hn
+    exact h ⟨n, hn⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6) ADJUNCTION: up ⊣ inclusion
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- A trace is closed (monotone / fixed by up) if up T = T. -/
+def IsClosedTrace (T : TraceObj) : Prop := upOp T = T
+
+/-- The type of closed traces. -/
+def ClosedTrace := { T : TraceObj // IsClosedTrace T }
+
+/-- up T is always closed. -/
+theorem upOp_isClosed (T : TraceObj) : IsClosedTrace (upOp T) :=
+  upOp_idempotent T
+
+
+/-- up corestricts to closed traces. -/
+def upToClosed (T : TraceObj) : ClosedTrace :=
+  ⟨upOp T, upOp_isClosed T⟩
+
+/--
+**Adjunction**: `up T ≤ X (closed) ↔ T ≤ X`.
+
+This is the universal property making `up` left adjoint to inclusion.
+In categorical terms: up ⊣ inclusion.
+-/
+theorem up_left_adjoint (T : TraceObj) (X : ClosedTrace) :
+    TraceHom (upOp T) X.val ↔ TraceHom T X.val := by
+  constructor
+  · intro h
+    exact TraceHom.trans (upOp_extensive T) h
+  · intro hTX
+    have hClosed := X.property
+    have hMono : Monotone X.val := by
+      intro m n hmn hXm
+      -- X is closed means X = up X, so X is monotone
+      have hUpX : X.val = upOp X.val := by exact hClosed.symm
+      rw [hUpX] at hXm ⊢
+      obtain ⟨k, hk_le, hkX⟩ := hXm
+      exact ⟨k, Nat.le_trans hk_le hmn, hkX⟩
+    exact (RevHalt.up_le_iff hMono).mpr hTX
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 7) FUNCTORIALITY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- up is a functor (preserves morphisms). -/
+theorem upOp_functor {T U : TraceObj} (h : TraceHom T U) :
+    TraceHom (upOp T) (upOp U) :=
+  upOp_monotone h
+
+/-- Chain embedding is functorial: if C ≤ D pointwise, then lim C ≤ lim D. -/
+theorem SoundChain.lim_mono (C D : SoundChain Truth)
+    (h : ∀ n, SoundSetHom Truth (C.seq n) (D.seq n)) :
+    SoundSetHom Truth (C.lim Truth) (D.lim Truth) := by
+  intro p hp
+  obtain ⟨n, hn⟩ := hp
+  exact ⟨n, h n hn⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 8) CROSS-FILE CONNECTIONS
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Connections to Other RevHalt Modules
+
+The categorical structure connects to other files as follows:
+
+1. **Base/Trace.lean**: `upOp = RevHalt.up`, `mem_upKernel_iff = up_eq_bot_iff`
+
+2. **Theory/AbstractDynamics.lean**: `SoundSet` is analogous to `PickWorld.State`,
+   `SoundChain` is analogous to `Chain`, `lim` is analogous to `omegaState`.
+
+3. **Theory/RelativeFoundations.lean**: `upOp` relates to `upE` via:
+   `upE Eval Γ s = RevHalt.up (EvalTrace Eval Γ s)`
+
+4. **Theory/OrdinalBoundary.lean**: `trace_dichotomy_categorical` is the
+   parametric version of `dichotomy_from_em`.
+
+5. **Theory/RelativeR1.lean**: `CutMonotone` implies uniqueness of `k`,
+   which connects to the categorical view where the window is "terminal"
+   in a slice category.
+-/
+
+/-- Link to Base: upOp is RevHalt.up -/
+theorem upOp_eq_up : upOp = RevHalt.up := rfl
+
+/-- Link to Base: kernel characterization matches ¬Halts -/
+theorem upKernel_eq_not_halts (T : TraceObj) :
+    T ∈ upKernel ↔ ¬ RevHalt.Halts T := by
+  rw [mem_upKernel_iff]
+  constructor
+  · intro h ⟨n, hn⟩; exact h n hn
+  · intro h n hn; exact h ⟨n, hn⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SUMMARY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Summary: The Categorical Picture
+
+1. **TraceObj** forms a preorder category (thin category).
+2. **upOp** is a closure operator (extensive, monotone, idempotent).
+3. **SoundSet** forms a preorder category (sound extensions).
+4. **SoundChain.lim** is the colimit (universal property: `lim_is_colimit`).
+5. **Dichotomy = kernel characterization** (`trace_dichotomy_categorical`).
+-/
+
+end RevHalt.Categorical
+
+-- Axiom checks for categorical section:
+#print axioms RevHalt.Categorical.TraceHom.refl
+#print axioms RevHalt.Categorical.TraceHom.trans
+#print axioms RevHalt.Categorical.upOp_extensive
+#print axioms RevHalt.Categorical.upOp_monotone
+#print axioms RevHalt.Categorical.upOp_idempotent
+#print axioms RevHalt.Categorical.upClosure
+#print axioms RevHalt.Categorical.SoundSetHom.refl
+#print axioms RevHalt.Categorical.SoundSetHom.trans
+#print axioms RevHalt.Categorical.SoundSet.empty_initial
+#print axioms RevHalt.Categorical.SoundChain.seq_le_lim
+#print axioms RevHalt.Categorical.SoundChain.lim_is_colimit
+#print axioms RevHalt.Categorical.mem_upKernel_iff
+#print axioms RevHalt.Categorical.trace_dichotomy_categorical

@@ -76,6 +76,13 @@ Plusieurs fichiers finissent avec des `#print axioms ...` pour auditer les preuv
 Selon les imports et le style de preuve, certains résultats peuvent légitimement faire apparaître
 des axiomes (p.ex. `propext`, `Classical.choice`) : l’objectif est de **localiser** où ils entrent.
 
+## Choix (AC) : unique vs construction
+
+Dans `RevHalt/Theory/RelativeR1.lean` (`CutBit`), on sépare explicitement :
+- **Unicité (Prop)** : `window_unique` + `bit_truth_to_cut_selector_unique` donnent `∀ n, ∃! k, Window … n x k`.
+- **Construction (Type)** : produire une fonction `f : ℕ → ℤ` depuis du `∃` en `Prop` est une extraction Prop→Type ; `bit_truth_to_cut_selector` isole `Classical.choose`.
+- **Version constructive par calcul** : `boundedWindowSelector` construit un `f` à partir de `CutDecidable` + une borne finie `cands n` (recherche sur liste).
+
 ## Build
 
 Le projet dépend de mathlib (voir `lakefile.lean`). Commandes usuelles :

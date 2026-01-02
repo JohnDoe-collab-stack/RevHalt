@@ -1,4 +1,8 @@
 import RevHalt.Theory.RelativeFoundations
+import Mathlib.Algebra.Field.Rat
+import Mathlib.Algebra.Order.Field.Power
+import Mathlib.Algebra.Order.Ring.Cast
+import Mathlib.Data.List.Basic
 import Mathlib.Data.Rat.Defs
 import Mathlib.Data.Int.Basic
 import Mathlib.Data.Fin.Basic
@@ -365,8 +369,18 @@ def CutMonotone (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence
     (Division by positive constant preserves order) -/
 theorem dyad_mono (n : ℕ) (k₁ k₂ : ℤ) (h : k₁ ≤ k₂) : dyad n k₁ ≤ dyad n k₂ := by
   unfold dyad
-  -- Technical: division by 2^n preserves order on ℚ
-  sorry
+  have hk : (k₁ : ℚ) ≤ (k₂ : ℚ) := (Int.cast_le (R := ℚ)).2 h
+  have hpow : (0 : ℚ) ≤ ((2 : ℚ) ^ n) := by
+    have : (0 : ℚ) ≤ (2 : ℚ) := by decide
+    exact pow_nonneg this n
+  have hinv : (0 : ℚ) ≤ ((2 : ℚ) ^ n)⁻¹ := Rat.inv_nonneg hpow
+  have := mul_le_mul_of_nonneg_left hk hinv
+  simpa [div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc] using this
+
+/-- Dyadic window predicate. -/
+def Window (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence)
+    (n : ℕ) (x : Referent) (k : ℤ) : Prop :=
+  Truth (Cut (dyad n k) x) ∧ ¬ Truth (Cut (dyad n (k + 1)) x)
 
 /-- Window uniqueness: under CutMonotone, at most one k satisfies the window.
     This is the KEY theorem that enables Unique Choice instead of AC. -/
@@ -375,22 +389,21 @@ theorem window_unique
     (hMono : CutMonotone (Referent := Referent) Truth Cut)
     (n : ℕ) (x : Referent)
     (k₁ k₂ : ℤ)
-    (h₁ : Truth (Cut (dyad n k₁) x) ∧ ¬ Truth (Cut (dyad n (k₁ + 1)) x))
-    (h₂ : Truth (Cut (dyad n k₂) x) ∧ ¬ Truth (Cut (dyad n (k₂ + 1)) x)) :
+    (h₁ : Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x k₁)
+    (h₂ : Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x k₂) :
     k₁ = k₂ := by
-  by_contra hne
   rcases Int.lt_trichotomy k₁ k₂ with hlt | heq | hgt
   · -- Case k₁ < k₂: derive contradiction via monotonicity
     have h_le : k₁ + 1 ≤ k₂ := Int.add_one_le_iff.mpr hlt
     have h_dyad : dyad n (k₁ + 1) ≤ dyad n k₂ := dyad_mono n (k₁ + 1) k₂ h_le
     have h_impl := hMono x (dyad n (k₁ + 1)) (dyad n k₂) h_dyad h₂.1
-    exact h₁.2 h_impl
-  · exact hne heq
+    exact False.elim (h₁.2 h_impl)
+  · exact heq
   · -- Case k₁ > k₂: symmetric
     have h_le : k₂ + 1 ≤ k₁ := Int.add_one_le_iff.mpr hgt
     have h_dyad : dyad n (k₂ + 1) ≤ dyad n k₁ := dyad_mono n (k₂ + 1) k₁ h_le
     have h_impl := hMono x (dyad n (k₂ + 1)) (dyad n k₁) h_dyad h₁.1
-    exact h₂.2 h_impl
+    exact False.elim (h₂.2 h_impl)
 
 /-- CutDecidable: the Cut predicate is decidable on dyadic rationals. -/
 class CutDecidable (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence) where
@@ -405,10 +418,10 @@ class CutDecidable (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sente
   3. CutDecidable (Cut is computationally decidable)
   4. Bounded (k lies in a known interval)
 
-  The selector function f : ℕ → ℤ EXISTS and is UNIQUE.
+  For each n, the window witness k exists and is unique.
 
-  **Key Point**: This uses Unique Choice (∃!), not AC.
-  When k is unique, there is no "choice" — k is DETERMINED by the structure.
+  **Key Point**: This is a *pointwise* Unique Choice statement (`∀ n, ∃! k, ...`),
+  not a global function construction (`∃ f : ℕ → ℤ, ...`).
 -/
 theorem bit_truth_to_cut_selector_unique
     (Truth : Sentence → Prop)
@@ -418,18 +431,19 @@ theorem bit_truth_to_cut_selector_unique
     (x : Referent) (s : ℕ → Sentence)
     (hAdm : AdmBit (Sentence := Sentence) (Referent := Referent) Bit x s)
     (hTrue : ∀ n, Truth (s n)) :
-    ∀ n, ∃! k : ℤ, Truth (Cut (dyad n k) x) ∧ ¬ Truth (Cut (dyad n (k + 1)) x) := by
+    ∀ n, ∃! k : ℤ, Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x k := by
   intro n
   -- Existence: from BitCutLink
   have hPW := bit_truth_to_cut_witness_pointwise (Sentence := Sentence) (Referent := Referent)
     Truth Cut Bit hLink x s hAdm hTrue
-  obtain ⟨a, k, _, hk₁, hk₂, _⟩ := hPW n
+  obtain ⟨_, k, _, hk₁, hk₂, _⟩ := hPW n
   use k
   constructor
   · exact ⟨hk₁, hk₂⟩
   · -- Uniqueness: from window_unique
-    intro k' ⟨hk'₁, hk'₂⟩
-    exact (window_unique (Referent := Referent) Truth Cut hMono n x k k' ⟨hk₁, hk₂⟩ ⟨hk'₁, hk'₂⟩).symm
+    intro k' hk'
+    exact (window_unique (Sentence := Sentence) (Referent := Referent) Truth Cut hMono n x k k'
+      ⟨hk₁, hk₂⟩ hk').symm
 
 /-- The selector function is well-defined: any two functions satisfying the
     window condition at each n must be pointwise equal.
@@ -447,11 +461,145 @@ theorem selector_well_defined
     (hMono : CutMonotone (Referent := Referent) Truth Cut)
     (x : Referent)
     (f g : ℕ → ℤ)
-    (hf : ∀ n, Truth (Cut (dyad n (f n)) x) ∧ ¬ Truth (Cut (dyad n (f n + 1)) x))
-    (hg : ∀ n, Truth (Cut (dyad n (g n)) x) ∧ ¬ Truth (Cut (dyad n (g n + 1)) x)) :
+    (hf : ∀ n, Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x (f n))
+    (hg : ∀ n, Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x (g n)) :
     f = g := by
   funext n
   exact window_unique (Referent := Referent) Truth Cut hMono n x (f n) (g n) (hf n) (hg n)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- (E) Constructive selector under bounded search
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+instance instDecidableTruthCut
+    (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence)
+    [CutDecidable (Sentence := Sentence) (Referent := Referent) Truth Cut]
+    (q : ℚ) (x : Referent) : Decidable (Truth (Cut q x)) :=
+  CutDecidable.decide (Truth := Truth) (Cut := Cut) q x
+
+instance instDecidablePredWindow
+    (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence)
+    [CutDecidable (Sentence := Sentence) (Referent := Referent) Truth Cut]
+    (n : ℕ) (x : Referent) :
+    DecidablePred (Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x) := fun _ =>
+  by
+    dsimp [Window]
+    infer_instance
+
+namespace Selector
+
+def findFirst? {α : Type} (p : α → Prop) [DecidablePred p] : List α → Option α
+  | [] => none
+  | x :: xs => if p x then some x else findFirst? p xs
+
+theorem findFirst?_exists_eq_some {α : Type} (p : α → Prop) [DecidablePred p] :
+    ∀ {l : List α}, (∃ x, x ∈ l ∧ p x) → ∃ y, findFirst? p l = some y := by
+  intro l
+  induction l with
+  | nil =>
+    intro h
+    rcases h with ⟨x, hx, _⟩
+    cases hx
+  | cons a l ih =>
+    intro h
+    by_cases ha : p a
+    · refine ⟨a, ?_⟩
+      simp [findFirst?, ha]
+    · have : ∃ x, x ∈ l ∧ p x := by
+        rcases h with ⟨x, hx, hxP⟩
+        have hx' : x = a ∨ x ∈ l := by
+          simpa [List.mem_cons] using hx
+        cases hx' with
+        | inl hxa =>
+          subst hxa
+          exact False.elim (ha hxP)
+        | inr hxl =>
+          exact ⟨x, hxl, hxP⟩
+      rcases ih this with ⟨y, hy⟩
+      refine ⟨y, ?_⟩
+      simp [findFirst?, ha, hy]
+
+theorem findFirst?_mem_of_eq_some {α : Type} (p : α → Prop) [DecidablePred p] :
+    ∀ {l : List α} {y : α}, findFirst? p l = some y → y ∈ l := by
+  intro l
+  induction l with
+  | nil =>
+    intro y h
+    simp [findFirst?] at h
+  | cons a l ih =>
+    intro y h
+    by_cases ha : p a
+    · simp [findFirst?, ha] at h
+      subst h
+      simp
+    · simp [findFirst?, ha] at h
+      have : y ∈ l := ih h
+      simp [this]
+
+theorem findFirst?_prop_of_eq_some {α : Type} (p : α → Prop) [DecidablePred p] :
+    ∀ {l : List α} {y : α}, findFirst? p l = some y → p y := by
+  intro l
+  induction l with
+  | nil =>
+    intro y h
+    simp [findFirst?] at h
+  | cons a l ih =>
+    intro y h
+    by_cases ha : p a
+    · simp [findFirst?, ha] at h
+      subst h
+      exact ha
+    · simp [findFirst?, ha] at h
+      exact ih h
+
+def pickFromList {α : Type} (p : α → Prop) [DecidablePred p] (l : List α) (default : α) : α :=
+  (findFirst? p l).getD default
+
+theorem pickFromList_spec {α : Type} (p : α → Prop) [DecidablePred p] (l : List α) (default : α) :
+    (∃ x, x ∈ l ∧ p x) → (pickFromList p l default ∈ l ∧ p (pickFromList p l default)) := by
+  intro hex
+  rcases findFirst?_exists_eq_some (p := p) (l := l) hex with ⟨y, hy⟩
+  have hmem : y ∈ l := findFirst?_mem_of_eq_some (p := p) hy
+  have hp : p y := findFirst?_prop_of_eq_some (p := p) hy
+  have hPick : pickFromList p l default = y := by
+    simp [pickFromList, hy]
+  refine ⟨?_, ?_⟩
+  · simpa [hPick] using hmem
+  · simpa [hPick] using hp
+
+end Selector
+
+/--
+Constructive selector from bounded search.
+
+If you provide a finite candidate list `cands n` for each `n`, and `Cut` is decidable,
+then we can *compute* a selector by scanning `cands n` and taking the first `k` satisfying
+the window predicate.
+-/
+def boundedWindowSelector
+    (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence) (x : Referent)
+    [CutDecidable (Sentence := Sentence) (Referent := Referent) Truth Cut]
+    (cands : ℕ → List ℤ) : ℕ → ℤ :=
+  fun n =>
+    Selector.pickFromList
+      (p := Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x)
+      (l := cands n) (default := 0)
+
+theorem boundedWindowSelector_spec
+    (Truth : Sentence → Prop) (Cut : ℚ → Referent → Sentence) (x : Referent)
+    [CutDecidable (Sentence := Sentence) (Referent := Referent) Truth Cut]
+    (cands : ℕ → List ℤ)
+    (hExists : ∀ n, ∃ k, k ∈ cands n ∧ Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x k) :
+    ∀ n,
+      boundedWindowSelector (Sentence := Sentence) (Referent := Referent) Truth Cut x cands n ∈ cands n ∧
+        Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x
+          (boundedWindowSelector (Sentence := Sentence) (Referent := Referent) Truth Cut x cands n) := by
+  intro n
+  -- just the generic list-selector lemma, instantiated to `Window`
+  simpa [boundedWindowSelector] using
+    (Selector.pickFromList_spec
+      (p := Window (Sentence := Sentence) (Referent := Referent) Truth Cut n x)
+      (l := cands n) (default := (0 : ℤ)) (hExists n))
 
 end CutBit
 
@@ -477,6 +625,13 @@ end RevHalt.RelativeR1
 -- NEW: Unique Choice theorems
 #print axioms RevHalt.RelativeR1.CutBit.CutMonotone
 #print axioms RevHalt.RelativeR1.CutBit.dyad_mono
+#print axioms RevHalt.RelativeR1.CutBit.Window
 #print axioms RevHalt.RelativeR1.CutBit.window_unique
 #print axioms RevHalt.RelativeR1.CutBit.bit_truth_to_cut_selector_unique
 #print axioms RevHalt.RelativeR1.CutBit.selector_well_defined
+
+-- NEW: Bounded/algorithmic selector
+#print axioms RevHalt.RelativeR1.CutBit.Selector.findFirst?
+#print axioms RevHalt.RelativeR1.CutBit.Selector.pickFromList_spec
+#print axioms RevHalt.RelativeR1.CutBit.boundedWindowSelector
+#print axioms RevHalt.RelativeR1.CutBit.boundedWindowSelector_spec
