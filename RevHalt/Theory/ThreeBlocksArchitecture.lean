@@ -264,6 +264,54 @@ theorem contradiction_if_internalize_external_decider
 end ArchitecturalConstraints
 
 /-!
+## 8b) T3.0 Projection: Subtraction in Architecture
+-/
+
+section T3_0_Projection
+
+open Nat.Partrec
+-- open RevHalt -- already in namespace RevHalt
+
+variable {PropT : Type}
+variable (S : ImpossibleSystem PropT)
+variable (K : RHKit) (hK : DetectsMonotone K)
+variable (encode_halt : Code → PropT)
+
+-- 1) Instancier ComplementaritySystem sur le même a-machine / même Code
+def CS : ComplementaritySystem Code PropT :=
+{ Provable := S.Provable
+  FalseT := S.FalseT
+  Not := S.Not
+  consistent := S.consistent
+  absurd := S.absurd
+
+  K := K
+  h_canon := hK
+  Machine := aMachine
+
+  -- réalisation triviale sur RevHalt.Code = Code
+  enc := fun c => c
+  dec := fun c => c
+  enc_dec := by intro c; rfl
+  machine_eq := by intro e; rfl
+}
+
+-- 2) Choix standard : S2 = couche provable
+def S2prov : Set PropT := { p | S.Provable p }
+
+lemma S2prov_is_prov : ∀ p, p ∈ S2prov S → S.Provable p := by
+  intro p hp; exact hp
+
+-- 3) T3.0 : projection "ce qui manque à S2" = S1
+theorem Missing_projection_eq_S1 :
+    MissingFromS2 (CS S K hK) (S3Set (CS S K hK) (S2prov S) encode_halt) =
+    S1Set (CS S K hK) encode_halt := by
+  apply missing_equals_S1
+  exact S2prov_is_prov S
+
+end T3_0_Projection
+
+/-!
 ## 9) T3 Integration — Certificate Types
 -/
 
