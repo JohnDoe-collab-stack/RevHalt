@@ -14,9 +14,3 @@ require "mathlib" from git
 lean_lib "RevHalt" where
   -- Modular structure entry point
   roots := #[`RevHalt.Main, `RevHalt]
-
-lean_lib "AddOn" where
-  globs := #[.submodules `AddOn]
-
-lean_lib "Complexity" where
-  globs := #[.submodules `Complexity]

@@ -1,5 +1,14 @@
-$files = Get-Content all_files.txt
 $root = $PWD.Path
+$allFilesPath = Join-Path $root "all_files.txt"
+
+if (Test-Path $allFilesPath) {
+    $files = Get-Content $allFilesPath
+} else {
+    $files = Get-ChildItem -Recurse -Filter *.lean -File |
+        Where-Object { $_.FullName -notmatch "\\\\.lake\\\\" -and $_.FullName -notmatch "\\\\build\\\\" } |
+        ForEach-Object { $_.FullName }
+}
+
 foreach ($f in $files) {
     if ([string]::IsNullOrWhiteSpace($f)) { continue }
     # relative path
