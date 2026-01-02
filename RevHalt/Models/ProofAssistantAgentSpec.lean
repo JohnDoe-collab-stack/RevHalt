@@ -66,14 +66,23 @@ theorem Adm_not_admits_const [Inhabited (ProofState Context Goal)] :
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 5) PropT: Certificate Types
+--
+-- ARITHMETIC COMPLEXITY NOTE:
+-- - Thm       = Σ₁ : ∃ trace, Success ∧ TraceOK
+-- - StabChain = Π₁ : ∀ n, ¬EvalOnChain(chain, n)  [one universal, fixed chain]
+-- - StabFrom  = Π₁ on (chain,n) product : ∀ chain, ∀ n, ¬EvalOnChain(chain, n)
+--               This is ∀∀, which is Π₁ on ℕ×ℕ, NOT the true Π₂!
+--               True Π₂ would be ∀∃, e.g., "every chain halts" = ∀ chain, ∃ n, Eval
+--
+-- See RevHalt/Theory/ArithmeticHierarchy.lean for formal definitions.
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 variable (PolicyId : Type)
 
 inductive PropT where
-  | Thm (Γ : List (ProofState Context Goal)) (st : ProofState Context Goal)
-  | StabChain (st0 : ProofState Context Goal) (policy : PolicyId) (s : Nat → ProofState Context Goal)
-  | StabFrom (st0 : ProofState Context Goal) (policy : PolicyId)
+  | Thm (Γ : List (ProofState Context Goal)) (st : ProofState Context Goal)            -- Σ₁
+  | StabChain (st0 : ProofState Context Goal) (policy : PolicyId) (s : Nat → ProofState Context Goal)  -- Π₁
+  | StabFrom (st0 : ProofState Context Goal) (policy : PolicyId)                        -- Π₁ on product (∀∀)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 6) TraceOK (Recursive, no omega/Fin)

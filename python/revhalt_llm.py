@@ -113,16 +113,25 @@ class LexicographicR1Gate(R1Gate):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 3) PropT: Certificate Types (Σ₁ / Π₁ / Π₂)
+# 3) PropT: Certificate Types (Σ₁ / Π₁ / Π₁-product)
+# 
+# COMPLEXITY NOTE:
+# - Σ₁ = ∃n, P(n)                        One existential
+# - Π₁ = ∀n, P(n)                        One universal
+# - Π₂ = ∀x, ∃y, P(x,y)                  Universal then existential (NOT ∀∀!)
+# - ∀∀ = ∀x, ∀y, P(x,y) = Π₁ on product  Two universals = one universal on ℕ×ℕ
+#
+# STAB_FROM is ∀chain ∀n ¬P(chain,n), which is ∀∀, hence Π₁ on (chain,n) product.
+# True Π₂ would be: ∀chain ∃n P(chain,n) = "every chain halts" (not formalized here).
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class CertificateType(Enum):
-    THM = "Sigma1"                       # Proof found (positive)
+    THM = "Sigma1"                       # Proof found: ∃n, Success(trace n)
     DEAD_END = "DeadEnd"                 # R1-rejected step (operational negative)
     BUDGET_EXHAUSTED = "BudgetExhausted" # Max steps reached without resolution
     # Meta-only types (never emitted by explore() in lex-descent mode):
-    STAB_CHAIN = "Pi1"                   # Stabilization on infinite admissible chain
-    STAB_FROM = "Pi2"                    # Stabilization on ALL chains
+    STAB_CHAIN = "Pi1"                   # ∀n, ¬Eval(chain n) on ONE chain
+    STAB_FROM = "Pi1_product"            # ∀chain ∀n ¬Eval = Π₁ on (chain,n)
 
 
 @dataclass(frozen=True)
