@@ -264,13 +264,12 @@ theorem contradiction_if_internalize_external_decider
 end ArchitecturalConstraints
 
 /-!
-## 8b) T3.0 Projection: Subtraction in Architecture
+## 8b) T3.0 Structural — Frontier Necessity in Architecture
 -/
 
-section T3_0_Projection
+section T3_0_Structural
 
 open Nat.Partrec
--- open RevHalt -- already in namespace RevHalt
 
 variable {PropT : Type}
 variable (S : ImpossibleSystem PropT)
@@ -296,20 +295,27 @@ def CS : ComplementaritySystem Code PropT :=
   machine_eq := by intro e; rfl
 }
 
--- 2) Choix standard : S2 = couche provable
-def S2prov : Set PropT := { p | S.Provable p }
+/--
+  **T3.0 Architectural — Frontier Necessity**
 
-lemma S2prov_is_prov : ∀ p, p ∈ S2prov S → S.Provable p := by
-  intro p hp; exact hp
+  For the a-machine/o-machine architecture, the frontier S1Eff is necessarily non-empty
+  under the hypotheses of negative completeness and semi-decidability.
 
--- 3) T3.0 : projection "ce qui manque à S2" = S1
-theorem Missing_projection_eq_S1 :
-    MissingFromS2 (CS S K hK) (S3Set (CS S K hK) (S2prov S) encode_halt) =
-    S1Set (CS S K hK) encode_halt := by
-  apply missing_equals_S1
-  exact S2prov_is_prov S
+  This is the architectural instantiation of `frontier_necessary`.
+-/
+theorem frontier_necessary_arch
+    (h_neg_complete : ∀ c : Code,
+        ¬ Rev0_K K (aMachine c) → S.Provable (S.Not (encode_halt c)))
+    (f : Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (h_semidec : ∀ c : Code,
+        S.Provable (S.Not (encode_halt c)) ↔ (∃ x, x ∈ (f c) 0)) :
+    (S1Eff (CS S K hK) encode_halt).Nonempty := by
+  exact frontier_necessary (CS S K hK) encode_halt
+    (fun c hNotRev => h_neg_complete c hNotRev)
+    f hf h_semidec
 
-end T3_0_Projection
+end T3_0_Structural
 
 /-!
 ## 9) T3 Integration — Certificate Types
@@ -497,7 +503,7 @@ end OracleMachineToT3
 -- end RevHalt (temporarily comment out to insert new section inside namespace)
 
 /-!
-## 12) CertificateStore — Concrete S₃ Realization + T3.0 Subtraction (Architectural)
+## 12) CertificateStore — Concrete S₃ Realization
 -/
 
 section CertificateStore_Framework
@@ -506,85 +512,37 @@ variable {Sentence Model PropT : Type}
 variable (A : OracleMachine Sentence Model)
 variable (S : ImpossibleSystem PropT)
 variable (K : RHKit) (hK : DetectsMonotone K)
-variable (encode_halt : Code → PropT)
+variable (encode_halt encode_not_halt : Code → PropT)
 
 /--
   **CertificateStore**:
   Concrete architectural realization of the extension S3.
-  It consists of:
-  1. The base provable system (S2).
-  2. A collection of architectural certificates (witnesses from the o-machine).
+  A collection of architectural certificates (witnesses from the o-machine).
 -/
 structure CertificateStore where
-  -- The Certificates: a collection of picks indexed by some type I
-  index : Type -- Renamed 'I' to 'index' to avoid ambiguity
+  index : Type
   picks : index → List Sentence × Sentence
   certs : ∀ i, ArchitecturalOraclePick A K (picks i).1 (picks i).2
 
 /--
-  Map the Store to its Semantic Set (S3).
-  S3 = S2 ∪ { encoded certificates }
+  Map the Store to its one-sided semantic set.
+  S3 = Provable ∪ { encode_halt(code) | HaltCertificate }
 -/
-def StoreToS3 (store : CertificateStore A K) : Set PropT :=
+def StoreToS3_OneSided (store : CertificateStore A K) : Set PropT :=
+  { p | S.Provable p } ∪
+  { p | ∃ i, ∃ _ : HaltCertificate K (store.certs i).code, p = encode_halt (store.certs i).code }
+
+/--
+  Map the Store to its two-sided semantic set.
+  S3 = Provable ∪ { encode_halt(e) | Halt } ∪ { encode_not_halt(e) | Stab }
+-/
+def StoreToS3_TwoSided (store : CertificateStore A K) : Set PropT :=
   { p | S.Provable p } ∪
   { p | ∃ i,
-      let pick := store.certs i
-      -- Map certificate to PropT via encode_halt (if halt)
-      -- Focusing on the S1 part (Halt certificates) for the projection theorem
-      (∃ _ : HaltCertificate K pick.code, p = encode_halt pick.code)
-  }
-
-/--
-  **The Frontier of the Store**:
-  Elements of the store that correspond to Halt certificates but are NOT provable.
--/
-def StoreFrontier (store : CertificateStore A K) : Set PropT :=
-  { p | p ∈ StoreToS3 A S K encode_halt store ∧ ¬ S.Provable p }
-
-/--
-  **Architectural Subtraction Theorem**:
-  Applying T3.0 to the CertificateStore:
-  The "Missing" part of the Store (S3 \ S2) is exactly the set of non-provable Halt certificates.
--/
-theorem StoreMissing_eq_StoreFrontier (store : CertificateStore A K) :
-    StoreFrontier A S K encode_halt store =
-    { p | p ∈ StoreToS3 A S K encode_halt store ∧ ¬ S.Provable p } := rfl
-
-/-!
-### Two-Sided Variant (S3TwoSided)
--/
-
-variable (encode_not_halt : Code → PropT)
-
-/--
-  **StoreToS3TwoSided**:
-  Maps the store to S3 including both positive (Halt) and negative (Stab) certificates.
-  This realizes the full extension S3 = S2 ∪ S1(halt) ∪ S1(stab).
--/
-def StoreToS3TwoSided (store : CertificateStore A K) : Set PropT :=
-  { p | S.Provable p } ∪
-  { p | ∃ i,
-      let pick := store.certs i
-      let code := pick.code
-      -- Union of both certificate types
+      let code := (store.certs i).code
       (∃ _ : HaltCertificate K code, p = encode_halt code) ∨
       (∃ _ : StabCertificate K code, p = encode_not_halt code)
   }
-
-/--
-  **StoreFrontierTwoSided**:
-  The non-provable part of the two-sided projection.
--/
-def StoreFrontierTwoSided (store : CertificateStore A K) : Set PropT :=
-  { p | p ∈ StoreToS3TwoSided A S K encode_halt encode_not_halt store ∧ ¬ S.Provable p }
-
-/--
-  **Two-Sided Subtraction**:
-  The missing part of the full S3 is exactly the union of unprovable Halt and Stab certificates.
--/
-theorem StoreMissingTwoSided_eq_Frontier (store : CertificateStore A K) :
-    StoreFrontierTwoSided A S K encode_halt encode_not_halt store =
-    { p | p ∈ StoreToS3TwoSided A S K encode_halt encode_not_halt store ∧ ¬ S.Provable p } := rfl
 
 end CertificateStore_Framework
 
@@ -598,6 +556,8 @@ end RevHalt
 #print axioms RevHalt.eval_iff_halts
 #print axioms RevHalt.eval_iff_rev
 #print axioms RevHalt.contradiction_if_internalize_external_decider
+#print axioms RevHalt.CS
+#print axioms RevHalt.frontier_necessary_arch
 #print axioms RevHalt.certificate_exclusion_aMachine
 #print axioms RevHalt.haltCertificate_iff_halts
 #print axioms RevHalt.stabCertificate_iff_stabilizes
