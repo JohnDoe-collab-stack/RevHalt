@@ -57,6 +57,10 @@ La partie “opératoire” n’est pas un commentaire : elle est formalisée vi
   (`RevHalt/Theory/AbstractDynamics.lean`).
 - **Frontière ordinale (EM/LPO)** : la caractérisation `dichotomy_all_iff_em`, plus `LPO`/`LPOBool` et le “const-trick” `AdmitsConst`
   (`RevHalt/Theory/OrdinalBoundary.lean`).
+- **Fondations relatives** : principes paramétrés `EM_Truth` / `EM_Eval`, schémas `LPO_Truth` / `LPO_Eval`, opérateur cumulatif `upE` et caractérisations noyau/dichotomie
+  (`RevHalt/Theory/RelativeFoundations.lean`).
+- **R1 relatif (grammaires)** : `LPO_Eval_R1` restreint à une grammaire admissible `Adm`, condition de collapse `AdmitsConst`, et hiérarchies/contre-exemples (p.ex. `CutBit`)
+  (`RevHalt/Theory/RelativeR1.lean`).
 
 ## Points d’entrée
 

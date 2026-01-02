@@ -96,17 +96,31 @@ theorem lpo_of_lpoBool (hLPO : LPOBool) : LPO := by
       rcases hH with ⟨n, hn⟩
       apply Or.inl
       refine ⟨n, ?_⟩
-      haveI : Decidable (T n) := d n
-      have hn' : decide (T n) = true := by
-        simpa [b] using hn
-      exact (decide_eq_true_iff (p := T n)).1 hn'
+      cases hdn : d n with
+      | isTrue hT =>
+          exact hT
+      | isFalse hNot =>
+          have hbnfalse : b n = false := by
+            dsimp [b]
+            rw [hdn]
+            rfl
+          have hcontr : False :=
+            Bool.false_ne_true (hbnfalse.symm.trans hn)
+          exact False.elim hcontr
   | inr hS =>
       apply Or.inr
-      intro n
-      haveI : Decidable (T n) := d n
-      have hnFalse : decide (T n) = false := by
-        simpa [b] using hS n
-      exact (decide_eq_false_iff_not (p := T n)).1 hnFalse
+      intro n hT
+      cases hdn : d n with
+      | isTrue hT' =>
+          have hbtrue : b n = true := by
+            dsimp [b]
+            rw [hdn]
+            rfl
+          have hcontr : False :=
+            Bool.false_ne_true ((hS n).symm.trans hbtrue)
+          exact hcontr
+      | isFalse hNot =>
+          exact hNot hT
 
 theorem lpoBool_iff_lpo : LPOBool ↔ LPO := by
   constructor
@@ -421,6 +435,13 @@ This is the ordinal completion operator: passage from "all finite stages" to "ω
 #print axioms Stabilizes_constTrace_iff
 #print axioms em_of_dichotomy_all
 #print axioms dichotomy_all_iff_em
+#print axioms stage_zero_is_em
+
+-- Verify: ordinal-gap lemmas (LPO / const-trick) are auditable too
+#print axioms lpoBool_of_lpo
+#print axioms lpo_of_lpoBool
+#print axioms lpoBool_iff_lpo
+#print axioms em_of_lpoBool_of_admitsConst
 
 end RevHalt.OrdinalBoundary
 
@@ -443,4 +464,9 @@ end RevHalt.OrdinalBoundary
 #print axioms RevHalt.OrdinalBoundary.Stabilizes_constTrace_iff
 #print axioms RevHalt.OrdinalBoundary.em_of_dichotomy_all
 #print axioms RevHalt.OrdinalBoundary.dichotomy_all_iff_em
+#print axioms RevHalt.OrdinalBoundary.stage_zero_is_em
+#print axioms RevHalt.OrdinalBoundary.lpoBool_of_lpo
+#print axioms RevHalt.OrdinalBoundary.lpo_of_lpoBool
+#print axioms RevHalt.OrdinalBoundary.lpoBool_iff_lpo
+#print axioms RevHalt.OrdinalBoundary.em_of_lpoBool_of_admitsConst
 #print axioms RevHalt.OrdinalBoundary.stabilizes_eq_forall_stabilizes_up_to
