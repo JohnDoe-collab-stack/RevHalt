@@ -22,6 +22,10 @@ From that core, familiar foundational “lenses” show up as derived structure:
 
 All results are machine-verified in Lean 4, with per-theorem axiom audits.
 
+## Documentation
+
+- `docs/overview.md` (framework overview + claim map)
+
 ## Core Idea
 
 The project separates three layers that are often conflated:
