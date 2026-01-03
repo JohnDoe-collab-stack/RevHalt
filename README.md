@@ -51,6 +51,8 @@ par “dans quelle **région** (quel ouvert) se situe `T` ?”.
 - Conséquence nette : il n’existe pas de déciseur total **continu** `Trace → Bool` (Bool discret) qui reconnaisse
   `Stabilizes` (préimage de `{false}` serait un ouvert), et il n’y a pas de clopen non trivial (pas de séparation totale).
   (`RevHalt/Theory/ScottTopology.lean`).
+- Note “audit” : dans mathlib, l’enveloppe `IsOpen/IsClosed` du Scott-topos peut faire apparaître `Classical.choice`;
+  le contenu opératoire est déjà la paire “upper set + inaccessibilité par sups dirigés”.
 
 ## Ce qui est formalisé dans ce dépôt
 
