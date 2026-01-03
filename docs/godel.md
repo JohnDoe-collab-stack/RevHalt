@@ -55,6 +55,8 @@ Implemented in `RevHalt/Theory/GodelLens.lean`:
 
 - `RevHalt.not_total_of_correct_complete_semidec` (no witness extraction; axiom audit currently inherits `Classical.choice` from `PartrecCode`)
 - `RevHalt.exists_undecidable_classical_of_correct_complete_semidec` (classical: extracts a specific undecidable `e`)
+- `RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec` (classical: with an external `Truth` semantics and `Truth(Not p) ↔ ¬Truth p`,
+  produces a “true but unprovable” sentence)
 
 This stays in the RevHalt style: the interface is primary, classical extraction is isolated, and proofs are audited.
 
@@ -81,7 +83,8 @@ This is doable, but it is a new module-scale effort.
 
 - Diagonal barrier / fixed point packaged: `RevHalt.T2_impossibility` (`RevHalt/Theory/Impossibility.lean`)
 - Gödel lens (interface → incompleteness-shaped corollaries): `RevHalt.not_total_of_correct_complete_semidec`,
-  `RevHalt.exists_undecidable_classical_of_correct_complete_semidec` (`RevHalt/Theory/GodelLens.lean`)
+  `RevHalt.exists_undecidable_classical_of_correct_complete_semidec`,
+  `RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec` (`RevHalt/Theory/GodelLens.lean`)
 - Scott-style “no discrete separation” obstruction (derived lens): `RevHalt.scottCompatibleToBool_const` (`RevHalt/Theory/ScottTopology.lean`)
 - Exact EM boundary for global dichotomy: `RevHalt.OrdinalBoundary.dichotomy_all_iff_em` (`RevHalt/Theory/OrdinalBoundary.lean`)
 

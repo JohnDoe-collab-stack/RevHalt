@@ -100,6 +100,42 @@ theorem exists_undecidable_classical_of_correct_complete_semidec
   · intro hProvNot
     exact hNo (Or.inr hProvNot)
 
+/--
+Classical “true but unprovable” corollary, given an external truth predicate.
+
+This is the classical Gödel-I shape: there exists a sentence that is true (in the external semantics)
+but not provable by the internal system.
+
+Assumptions:
+- `Truth : PropT → Prop` is an external semantics.
+- `truth_not` says `S.Not` matches semantic negation.
+- We use the previous lemma to obtain an undecidable `e`, and then pick the true side.
+-/
+theorem exists_true_unprovable_classical_of_correct_complete_semidec
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (Truth : PropT → Prop)
+    (truth_not : ∀ p, Truth (S.Not p) ↔ ¬ Truth p)
+    (H : Code → PropT)
+    (correct : ∀ e, Rev0_K K (Machine e) → S.Provable (H e))
+    (complete : ∀ e, ¬ Rev0_K K (Machine e) → S.Provable (S.Not (H e)))
+    (f : Code → (Nat →. Nat))
+    (f_partrec : Partrec₂ f)
+    (semidec : ∀ c, S.Provable (S.Not (H c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    ∃ p, Truth p ∧ ¬ S.Provable p := by
+  classical
+  rcases
+      exists_undecidable_classical_of_correct_complete_semidec
+        (S := S) (K := K) (hK := hK)
+        (H := H) (correct := correct) (complete := complete)
+        (f := f) (f_partrec := f_partrec) (semidec := semidec)
+    with ⟨e, hNotH, hNotNotH⟩
+
+  by_cases hT : Truth (H e)
+  · exact ⟨H e, hT, hNotH⟩
+  · have hTNot : Truth (S.Not (H e)) := (truth_not (H e)).2 hT
+    exact ⟨S.Not (H e), hTNot, hNotNotH⟩
+
 end
 
 end RevHalt
@@ -107,3 +143,4 @@ end RevHalt
 -- Axiom checks (auto):
 #print axioms RevHalt.not_total_of_correct_complete_semidec
 #print axioms RevHalt.exists_undecidable_classical_of_correct_complete_semidec
+#print axioms RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec
