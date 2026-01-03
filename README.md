@@ -38,15 +38,16 @@ The operational layer is not commentary: it is formalized via an architecture an
 
 A robust way to read the core is to replace “is `Halts T` true/false?” by “in which **region** (which open set) does `T` lie?”.
 
-- Put on `Trace` the pointwise order (`T ≤ U` iff `T` implies `U` pointwise), and then the **Scott topology** (`Topology.WithScott Trace`).
-- A Scott-open set captures a **finitely observable** property: if a directed supremum lies in the open, then some stage already lies in the open.
-- In this sense, `HaltsSet := {T | Halts T}` is Scott-open (Σ₁) and `StabilizesSet := {T | Stabilizes T}` is Scott-closed (Π₁). Moreover,
-  `StabilizesSet` is not Scott-open, so the space cannot be “torn apart”.
-- A clean corollary: there is no total **continuous** decider `Trace → Bool` (with `Bool` discrete) that recognizes `Stabilizes`
-  (the preimage of `{false}` would have to be open), and there are no nontrivial clopen subsets (no total separation)
-  (`RevHalt/Theory/ScottTopology.lean`).
-- Audit note: in mathlib, the `IsOpen/IsClosed` wrapper for Scott topology may introduce `Classical.choice`; the operational content is already the pair
-  “upper set + directed-sup inaccessibility”.
+- Put on `Trace` the pointwise order (`T ≤ U` iff `T` implies `U` pointwise), and read “Scott-open” in the standard order-theoretic way:
+  `IsScottOpen s := IsUpperSet s ∧ DirSupInacc s` (finitely observable via directed sups).
+- `haltsSet_isScottOpen` shows `HaltsSet := {T | Halts T}` is Scott-open (Σ₁), and `stabilizesSet_isScottClosed` shows
+  `StabilizesSet := {T | Stabilizes T}` is Scott-closed (Π₁). Moreover, `stabilizesSet_not_isScottOpen` shows the space cannot be “torn apart”.
+- Model-independent obstruction: `scottCompatibleToBool_const` shows any Scott-compatible `f : α → Bool` (discrete) is forced to be constant
+  on any pointed information order (`OrderBot α`), i.e. it cannot separate a nontrivial predicate.
+- Specialization: `no_scottOpen_bool_decider_for_stabilizes` rules out any Scott-compatible total decider recognizing `Stabilizes`
+  (the `{false}` preimage would have to be Scott-open) (`RevHalt/Theory/ScottTopology.lean`).
+- Audit note: the equivalence with `IsOpen`/`IsClosed` for `Topology.WithScott Trace` exists in mathlib but currently uses `Classical.choice`;
+  this file keeps the core Scott claims `Classical.choice`-free by avoiding those wrappers.
 
 ## What Is Formalized In This Repository
 
@@ -54,7 +55,8 @@ A robust way to read the core is to replace “is `Halts T` true/false?” by �
 - **Structure**: pointwise order on `Trace`, `up` as a closure/reflector, kernel `up_eq_bot_iff`, and “domain/category” structure on `SoundSet`
   (`CompleteLattice`, `SoundChain.lim_eq_sSup_range`, thin categories) (`RevHalt/Theory/Categorical.lean`).
 - **Stabilization**: `Stabilizes`, `KitStabilizes`, and equivalences with `up T = ⊥` (`RevHalt/Theory/Stabilization.lean`).
-- **Topology (Scott)**: `HaltsSet` Scott-open and `StabilizesSet` Scott-closed (via `Topology.WithScott Trace`) (`RevHalt/Theory/ScottTopology.lean`).
+- **Topology (Scott)**: order-theoretic Scott-open/closed (`IsScottOpen`/`IsScottClosed`), `ScottCompatibleToBool`, and the discrete-separation obstruction
+  (`RevHalt/Theory/ScottTopology.lean`).
 - **T1 (Canonicity)**: `T1_traces` + semantic bridge `T1_semantics` (`RevHalt/Theory/Canonicity.lean`).
 - **T2 (Uniform Barrier)**: diagonalization and `T2_impossibility` (`RevHalt/Theory/Impossibility.lean`).
 - **T3 (Local Navigation)**: S1/S2/S3 complementarity, `OraclePick`, local extensions and “swap”
