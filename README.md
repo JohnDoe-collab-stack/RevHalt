@@ -25,6 +25,7 @@ All results are machine-verified in Lean 4, with per-theorem axiom audits.
 ## Documentation
 
 - `docs/overview.md` (framework overview + claim map)
+- `docs/godel.md` (what we already have + path to Gödel)
 
 ## Core Idea
 

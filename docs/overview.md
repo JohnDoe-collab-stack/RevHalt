@@ -66,6 +66,12 @@ RevHalt packages the “no total correct complete internalization” pattern as 
 This is the same skeleton that underlies Gödel-style diagonal arguments, but here it is expressed through the RevHalt interface:
 what matters is the ability to internalize a `Rev0_K`-like predicate with the wrong closure properties.
 
+For a “Gödel-I shaped” presentation (still without arithmetizing `PropT`), see the derived lens:
+
+- `RevHalt.not_total_of_correct_complete_semidec`
+- `RevHalt.exists_undecidable_classical_of_correct_complete_semidec`
+  (`RevHalt/Theory/GodelLens.lean`)
+
 ## 3) Claim map (one-sentence claims → Lean theorems)
 
 This is the “assume RevHalt” checklist: every conceptual sentence should point to a theorem.
@@ -76,6 +82,7 @@ This is the “assume RevHalt” checklist: every conceptual sentence should poi
 - **No Scott-compatible total boolean decider can recognize `Stabilizes`** → `RevHalt.no_scottOpen_bool_decider_for_stabilizes` (`RevHalt/Theory/ScottTopology.lean`)
 - **Scott-compatible `Bool` observables are constant (no nontrivial discrete separation)** → `RevHalt.scottCompatibleToBool_const` (`RevHalt/Theory/ScottTopology.lean`)
 - **Uniform barrier / diagonal impossibility** → `RevHalt.T2_impossibility` (`RevHalt/Theory/Impossibility.lean`)
+- **Gödel lens (non-totality; classical undecidable code)** → `RevHalt.not_total_of_correct_complete_semidec`, `RevHalt.exists_undecidable_classical_of_correct_complete_semidec` (`RevHalt/Theory/GodelLens.lean`)
 - **R1-restricted LPO collapses to EM only if constants are admissible** → `RevHalt.RelativeR1.LPO_R1_imp_EM_if_const` (`RevHalt/Theory/RelativeR1.lean`)
 
 ## 4) Axiom hygiene (why the audits matter)
@@ -93,4 +100,3 @@ The novelty is operational:
 - it turns foundational strength into **interface design** (access/bridges),
 - it makes derived readings (Scott/ordinal/diagonal) **portable across interfaces**,
 - and it keeps the story honest via machine-checked **axiom locality**.
-

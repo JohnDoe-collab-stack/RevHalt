@@ -89,7 +89,10 @@ structure InternalHaltingPredicate {PropT : Type}
 
 /--
 **T2** (packaged):
-no such internalization predicate exists (axiom-free diagonalization).
+no such internalization predicate exists (diagonalization / fixed point).
+
+Audit note: the fixed-point machinery used here comes from `Mathlib.Computability.PartrecCode`,
+and the axiom audit currently reports `Classical.choice` for this theorem.
 -/
 theorem T2_impossibility {PropT : Type}
     (S : ImpossibleSystem PropT)

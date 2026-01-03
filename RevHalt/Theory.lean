@@ -3,6 +3,7 @@ import RevHalt.Theory.Categorical
 import RevHalt.Theory.Stabilization
 import RevHalt.Theory.ScottTopology
 import RevHalt.Theory.Impossibility
+import RevHalt.Theory.GodelLens
 import RevHalt.Theory.Complementarity
 import RevHalt.Theory.QuantifierSwap
 import RevHalt.Theory.ThreeBlocksArchitecture
