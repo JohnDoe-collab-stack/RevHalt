@@ -37,6 +37,21 @@ La partie “opératoire” n’est pas un commentaire : elle est formalisée vi
   et `AbstractDynamics` itère ces pas le long d’une schedule puis prend une limite (union) ; `omegaState` capture
   l’état canonique sous fairness (`RevHalt/Theory/Complementarity.lean`, `RevHalt/Theory/AbstractDynamics.lean`).
 
+## Perspective topologique (Scott)
+
+Une manière très robuste de lire le noyau dur est de remplacer la question “`Halts T` est-il vrai/faux ?”
+par “dans quelle **région** (quel ouvert) se situe `T` ?”.
+
+- On met sur `Trace` l’ordre pointwise (`T ≤ U` si `T` implique `U` point par point), puis la **topologie de Scott**
+  (`Topology.WithScott Trace`).
+- Un ouvert de Scott formalise une propriété **observable finiment** : si un sup dirigé est dans l’ouvert,
+  alors un élément fini de la famille tombe déjà dans l’ouvert.
+- Dans ce sens, `HaltsSet := {T | Halts T}` est Scott-ouvert (Σ₁) et `StabilizesSet := {T | Stabilizes T}` est
+  Scott-fermé (Π₁). Plus fort : `StabilizesSet` n’est pas Scott-ouvert, donc on ne peut pas “déchirer” l’espace.
+- Conséquence nette : il n’existe pas de déciseur total **continu** `Trace → Bool` (Bool discret) qui reconnaisse
+  `Stabilizes` (préimage de `{false}` serait un ouvert), et il n’y a pas de clopen non trivial (pas de séparation totale).
+  (`RevHalt/Theory/ScottTopology.lean`).
+
 ## Ce qui est formalisé dans ce dépôt
 
 - **Base** : `Trace`, `Halts`, `up` (`RevHalt/Base/Trace.lean`) ; `RHKit`, `DetectsMonotone`, `Rev0_K`
