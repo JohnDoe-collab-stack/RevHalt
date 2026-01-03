@@ -1,6 +1,7 @@
 import RevHalt.Theory.Canonicity
 import RevHalt.Theory.Categorical
 import RevHalt.Theory.Stabilization
+import RevHalt.Theory.ScottTopology
 import RevHalt.Theory.Impossibility
 import RevHalt.Theory.Complementarity
 import RevHalt.Theory.QuantifierSwap

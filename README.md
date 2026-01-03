@@ -46,6 +46,8 @@ La partie “opératoire” n’est pas un commentaire : elle est formalisée vi
   (`RevHalt/Theory/Categorical.lean`).
 - **Stabilisation** : `Stabilizes`, `KitStabilizes` et équivalences avec `up T = ⊥`
   (`RevHalt/Theory/Stabilization.lean`).
+- **Topologie (Scott)** : `HaltsSet` Scott-ouvert et `StabilizesSet` Scott-fermé (via `Topology.WithScott Trace`)
+  (`RevHalt/Theory/ScottTopology.lean`).
 - **T1 (Canonicité)** : `T1_traces` + pont sémantique `T1_semantics`
   (`RevHalt/Theory/Canonicity.lean`).
 - **T2 (Barrière uniforme)** : diagonalisation et `T2_impossibility`
