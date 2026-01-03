@@ -67,6 +67,14 @@ In addition, for **Gödel I in the standard “true-but-unprovable” shape**, t
 
 This stays in the RevHalt style: the interface is primary, classical extraction is isolated, and proofs are audited.
 
+### Step A' — A single “Gödel I standard” interface (packaging)
+
+`RevHalt/Theory/GodelIStandard.lean` bundles exactly the assumptions needed to instantiate the standard
+“true but unprovable” conclusion, and then exports:
+
+- `RevHalt.GodelIStandard.exists_nonhalting_unprovable_neg`
+- `RevHalt.GodelIStandard.exists_true_unprovable`
+
 ### Step B — Instantiate on halting / r.e. predicates (already close)
 
 Show, as explicit corollaries, that any consistent internal system attempting to decide
