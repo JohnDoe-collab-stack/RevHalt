@@ -41,7 +41,8 @@ La partie “opératoire” n’est pas un commentaire : elle est formalisée vi
 
 - **Base** : `Trace`, `Halts`, `up` (`RevHalt/Base/Trace.lean`) ; `RHKit`, `DetectsMonotone`, `Rev0_K`
   (`RevHalt/Base/Kit.lean`).
-- **Structure** : ordre pointwise sur `Trace`, `up` comme fermeture/réflecteur, noyau `up_eq_bot_iff`
+- **Structure** : ordre pointwise sur `Trace`, `up` comme fermeture/réflecteur, noyau `up_eq_bot_iff`,
+  et structure “domain/catégorie” sur `SoundSet` (`CompleteLattice`, `SoundChain.lim_eq_sSup_range`, catégories minces)
   (`RevHalt/Theory/Categorical.lean`).
 - **Stabilisation** : `Stabilizes`, `KitStabilizes` et équivalences avec `up T = ⊥`
   (`RevHalt/Theory/Stabilization.lean`).

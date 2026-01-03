@@ -1,7 +1,10 @@
 import RevHalt.Base.Trace
 import RevHalt.Theory.Canonicity
+import Mathlib.CategoryTheory.Thin
 import Mathlib.Data.Set.Basic
+import Mathlib.Data.ULift
 import Mathlib.Order.Basic
+import Mathlib.Order.CompleteLattice.Defs
 import Mathlib.Order.Monotone.Basic
 
 /-!
@@ -347,6 +350,7 @@ RevHalt's dynamics works because:
 namespace RevHalt.Categorical
 
 open Set
+open CategoryTheory
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 1) CATEGORY OF TRACES (Thin Category / Preorder)
@@ -363,6 +367,39 @@ theorem TraceHom.refl (T : TraceObj) : TraceHom T T := fun _ h => h
 
 theorem TraceHom.trans {T U V : TraceObj} (hTU : TraceHom T U) (hUV : TraceHom U V) :
     TraceHom T V := fun n hT => hUV n (hTU n hT)
+
+-- ----------------------------------------------------------------------------
+-- 1.1) TraceObj as a genuine `CategoryTheory.Category`
+-- ----------------------------------------------------------------------------
+
+instance : CategoryStruct TraceObj where
+  Hom T U := ULift (PLift (TraceHom T U))
+  id T := ⟨⟨TraceHom.refl T⟩⟩
+  comp f g := ⟨⟨TraceHom.trans f.down.down g.down.down⟩⟩
+
+instance (T U : TraceObj) : Subsingleton (T ⟶ U) :=
+  ⟨fun _ _ => ULift.ext _ _ (Subsingleton.elim _ _)⟩
+
+instance : Quiver.IsThin TraceObj := fun _ _ => by
+  infer_instance
+
+instance : Category TraceObj := CategoryTheory.thin_category
+
+/-- Convert a Prop-level `TraceHom` into a categorical morphism. -/
+def homOfTraceHom {T U : TraceObj} (h : TraceHom T U) : T ⟶ U :=
+  ULift.up (PLift.up h)
+
+/-- Extract the underlying `TraceHom` from a categorical morphism. -/
+def traceHomOfHom {T U : TraceObj} (f : T ⟶ U) : TraceHom T U :=
+  f.down.down
+
+@[simp] theorem traceHomOfHom_homOfTraceHom {T U : TraceObj} (h : TraceHom T U) :
+    traceHomOfHom (homOfTraceHom h) = h :=
+  rfl
+
+@[simp] theorem homOfTraceHom_traceHomOfHom {T U : TraceObj} (f : T ⟶ U) :
+    homOfTraceHom (traceHomOfHom f) = f := by
+  apply Subsingleton.elim
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 2) `up` AS CLOSURE OPERATOR
@@ -417,6 +454,62 @@ theorem SoundSetHom.refl (S : SoundSet Truth) : SoundSetHom Truth S S := Set.Sub
 theorem SoundSetHom.trans {S T U : SoundSet Truth} (hST : SoundSetHom Truth S T)
     (hTU : SoundSetHom Truth T U) : SoundSetHom Truth S U := Set.Subset.trans hST hTU
 
+-- ----------------------------------------------------------------------------
+-- 3.1) SoundSet as a genuine `CategoryTheory.Category`
+-- ----------------------------------------------------------------------------
+
+instance : CategoryStruct (SoundSet Truth) where
+  Hom S T := ULift (PLift (SoundSetHom Truth S T))
+  id S := ⟨⟨SoundSetHom.refl (Truth := Truth) S⟩⟩
+  comp f g := ⟨⟨SoundSetHom.trans (Truth := Truth) f.down.down g.down.down⟩⟩
+
+instance (S T : SoundSet Truth) : Subsingleton (S ⟶ T) :=
+  ⟨fun _ _ => ULift.ext _ _ (Subsingleton.elim _ _)⟩
+
+instance : Quiver.IsThin (SoundSet Truth) := fun _ _ => by
+  infer_instance
+
+instance : Category (SoundSet Truth) := CategoryTheory.thin_category
+
+/-- Convert a Prop-level inclusion `SoundSetHom` into a categorical morphism. -/
+def homOfSoundSetHom {S T : SoundSet Truth} (h : SoundSetHom Truth S T) : S ⟶ T :=
+  ULift.up (PLift.up h)
+
+/-- Extract the underlying inclusion from a categorical morphism. -/
+def soundSetHomOfHom {S T : SoundSet Truth} (f : S ⟶ T) : SoundSetHom Truth S T :=
+  f.down.down
+
+@[simp] theorem soundSetHomOfHom_homOfSoundSetHom {S T : SoundSet Truth} (h : SoundSetHom Truth S T) :
+    soundSetHomOfHom (Truth := Truth) (homOfSoundSetHom (Truth := Truth) h) = h :=
+  rfl
+
+@[simp] theorem homOfSoundSetHom_soundSetHomOfHom {S T : SoundSet Truth} (f : S ⟶ T) :
+    homOfSoundSetHom (Truth := Truth) (soundSetHomOfHom (Truth := Truth) f) = f := by
+  apply Subsingleton.elim
+
+/-- Sound sets are extensional by their carrier (soundness proof is Prop). -/
+@[ext] theorem SoundSet.ext {S T : SoundSet Truth} (h : S.carrier = T.carrier) : S = T := by
+  cases S with
+  | mk SCarrier SSnd =>
+    cases T with
+    | mk TCarrier TSnd =>
+      cases h
+      have : SSnd = TSnd := by
+        apply Subsingleton.elim
+      cases this
+      rfl
+
+instance : LE (SoundSet Truth) := ⟨SoundSetHom Truth⟩
+
+instance : PartialOrder (SoundSet Truth) where
+  le := (· ≤ ·)
+  le_refl S := SoundSetHom.refl (Truth := Truth) S
+  le_trans _ _ _ := SoundSetHom.trans (Truth := Truth)
+  le_antisymm S T hST hTS := by
+    apply SoundSet.ext (Truth := Truth)
+    ext p
+    exact Iff.intro (fun hp => hST hp) (fun hp => hTS hp)
+
 /-- The empty sound set (initial object). -/
 def SoundSet.empty : SoundSet Truth where
   carrier := ∅
@@ -425,6 +518,94 @@ def SoundSet.empty : SoundSet Truth where
 /-- Empty is initial. -/
 theorem SoundSet.empty_initial (S : SoundSet Truth) : SoundSetHom Truth (SoundSet.empty Truth) S :=
   Set.empty_subset _
+
+/-- Top sound set: all true propositions. -/
+def SoundSet.top : SoundSet Truth where
+  carrier := {p | Truth p}
+  sound := by
+    intro p hp
+    simpa using hp
+
+/-- Binary sup on sound sets: union of carriers. -/
+def SoundSet.sup (S T : SoundSet Truth) : SoundSet Truth where
+  carrier := S.carrier ∪ T.carrier
+  sound := by
+    intro p hp
+    rcases hp with hp | hp
+    · exact S.sound p hp
+    · exact T.sound p hp
+
+/-- Binary inf on sound sets: intersection of carriers. -/
+def SoundSet.inf (S T : SoundSet Truth) : SoundSet Truth where
+  carrier := S.carrier ∩ T.carrier
+  sound := by
+    intro p hp
+    exact S.sound p hp.1
+
+instance : CompleteLattice (SoundSet Truth) where
+  le := (· ≤ ·)
+  le_refl S := SoundSetHom.refl (Truth := Truth) S
+  le_trans _ _ _ := SoundSetHom.trans (Truth := Truth)
+  le_antisymm S T hST hTS := by
+    apply SoundSet.ext (Truth := Truth)
+    ext p
+    exact Iff.intro (fun hp => hST hp) (fun hp => hTS hp)
+  sup := SoundSet.sup (Truth := Truth)
+  le_sup_left S T := by
+    intro p hp
+    exact Or.inl hp
+  le_sup_right S T := by
+    intro p hp
+    exact Or.inr hp
+  sup_le S T U hSU hTU := by
+    intro p hp
+    rcases hp with hp | hp
+    · exact hSU hp
+    · exact hTU hp
+  inf := SoundSet.inf (Truth := Truth)
+  inf_le_left S T := by
+    intro p hp
+    exact hp.1
+  inf_le_right S T := by
+    intro p hp
+    exact hp.2
+  le_inf S T U hST hSU := by
+    intro p hp
+    exact ⟨hST hp, hSU hp⟩
+  top := SoundSet.top Truth
+  le_top S := by
+    intro p hp
+    exact S.sound p hp
+  bot := SoundSet.empty Truth
+  bot_le S := by
+    intro p hp
+    exact False.elim hp
+  sSup K :=
+    { carrier := {p | ∃ S, S ∈ K ∧ p ∈ S.carrier}
+      sound := by
+        intro p hp
+        rcases hp with ⟨S, _hSK, hpS⟩
+        exact S.sound p hpS }
+  le_sSup K S hS := by
+    intro p hp
+    exact ⟨S, hS, hp⟩
+  sSup_le K S h := by
+    intro p hp
+    rcases hp with ⟨T, hTK, hpT⟩
+    exact h T hTK hpT
+  sInf K :=
+    { carrier := {p | Truth p ∧ ∀ S, S ∈ K → p ∈ S.carrier}
+      sound := by
+        intro p hp
+        exact hp.1 }
+  le_sInf K S h := by
+    intro p hp
+    refine ⟨S.sound p hp, ?_⟩
+    intro T hTK
+    exact h T hTK hp
+  sInf_le K S hS := by
+    intro p hp
+    exact hp.2 S hS
 
 /-- Step: extend by adding a true element. -/
 def SoundSet.step (S : SoundSet Truth) (p : PropT) (hp : Truth p) : SoundSet Truth where
@@ -454,6 +635,19 @@ def SoundChain.lim (C : SoundChain Truth) : SoundSet Truth where
   sound p hp := by
     obtain ⟨n, hn⟩ := hp
     exact (C.seq n).sound p hn
+
+/-- The limit is the supremum of the chain (viewed as a set via `range`). -/
+theorem SoundChain.lim_eq_sSup_range (C : SoundChain Truth) :
+    C.lim Truth = sSup (Set.range C.seq) := by
+  apply SoundSet.ext (Truth := Truth)
+  ext p
+  constructor
+  · intro hp
+    rcases hp with ⟨n, hn⟩
+    refine ⟨C.seq n, ⟨n, rfl⟩, hn⟩
+  · intro hp
+    rcases hp with ⟨S, ⟨n, rfl⟩, hpS⟩
+    exact ⟨n, hpS⟩
 
 /-- Each stage embeds into the limit. -/
 theorem SoundChain.seq_le_lim (C : SoundChain Truth) (n : ℕ) :
