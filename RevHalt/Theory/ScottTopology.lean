@@ -5,8 +5,12 @@ import Mathlib.Topology.Order.ScottTopology
 /-!
 # RevHalt.Theory.ScottTopology
 
-This file makes explicit the standard domain-theoretic / Scott-topological reading of the core
-trace predicates **without** relying on the `IsOpen`/`IsClosed` wrappers for `Topology.WithScott`.
+This file exposes a Scott/domain-theoretic lens as a **derived interface** for RevHalt’s operative core:
+instead of treating `Halts T` / `Stabilizes T` as mere booleans, we treat them as *regions* determined by
+finite observation / approximation.
+
+Concretely, we present the Scott reading of the core trace predicates **without** relying on the
+`IsOpen`/`IsClosed` wrappers for `Topology.WithScott`.
 
 Rationale: in mathlib, the equivalence between `IsOpen` in the Scott topology and the usual
 order-theoretic characterization (`IsUpperSet` + `DirSupInacc`) currently depends on

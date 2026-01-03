@@ -4,6 +4,24 @@ RevHalt is a Lean 4 / mathlib development around a “reverse-halting” theory 
 where non-constructive strength (EM, choice, etc.) enters: as a **localized access capability** (bridge/pick),
 not as an ambient implicit axiom.
 
+## Abstract
+
+RevHalt is an operational metatheory: it treats non-constructive strength (EM, choice, etc.) as an explicit,
+localized **access capability** (bridge/pick), and then audits theorem-by-theorem where that capability is used.
+
+The core objects are traces `Trace := ℕ → Prop` and the cumulative closure operator `up`, which turns the
+“negative” into an algebraic kernel (`up T = ⊥`) and makes the finite/ω boundary explicit. On top of this, the
+project separates formation (R1), semantics (R2), and evaluation/access (R3) via the 3-block architecture
+(compile/evaluate/bridge).
+
+From that core, familiar foundational “lenses” show up as derived structure:
+- **Ordinal boundary**: the global dichotomy `∀ T, Halts T ∨ Stabilizes T` is exactly EM in logical strength (`dichotomy_all_iff_em`).
+- **Scott obstruction**: under Scott-style finite-observation compatibility on a pointed information order, Scott-clopen regions collapse
+  (nonempty ⇒ `Set.univ`, proper ⇒ `∅`), so any Scott-compatible observable `α → Bool` is forced to be constant (`scottCompatibleToBool_const`).
+- **Diagonal barrier**: the Gödel/Lawvere/Kleene fixed-point pattern is captured as a uniform impossibility theorem (`T2_impossibility`).
+
+All results are machine-verified in Lean 4, with per-theorem axiom audits.
+
 ## Core Idea
 
 The project separates three layers that are often conflated:
@@ -34,16 +52,18 @@ The operational layer is not commentary: it is formalized via an architecture an
   and takes a limit (union); `omegaState` captures the canonical state under fairness
   (`RevHalt/Theory/Complementarity.lean`, `RevHalt/Theory/AbstractDynamics.lean`).
 
-## Topological Perspective (Scott)
+## Derived Perspective (Scott)
 
-A robust way to read the core is to replace “is `Halts T` true/false?” by “in which **region** (which open set) does `T` lie?”.
+Scott/domain language is a **derived** way to read RevHalt’s operative core: instead of asking “is `Halts T` true/false?” you ask
+“in which **region** (which open set) does `T` lie?”, i.e. what is finitely observable under approximation.
 
 - Put on `Trace` the pointwise order (`T ≤ U` iff `T` implies `U` pointwise), and read “Scott-open” in the standard order-theoretic way:
   `IsScottOpen s := IsUpperSet s ∧ DirSupInacc s` (finitely observable via directed sups).
 - `haltsSet_isScottOpen` shows `HaltsSet := {T | Halts T}` is Scott-open (Σ₁), and `stabilizesSet_isScottClosed` shows
   `StabilizesSet := {T | Stabilizes T}` is Scott-closed (Π₁). Moreover, `stabilizesSet_not_isScottOpen` shows the space cannot be “torn apart”.
 - Model-independent obstruction: `scottCompatibleToBool_const` shows any Scott-compatible `f : α → Bool` (discrete) is forced to be constant
-  on any pointed information order (`OrderBot α`), i.e. it cannot separate a nontrivial predicate.
+  on any pointed information order (`OrderBot α`), i.e. it cannot separate a nontrivial predicate. This is the “discrete undecidability” obstruction
+  extracted as an invariant of the access/observation interface.
 - Specialization: `no_scottOpen_bool_decider_for_stabilizes` rules out any Scott-compatible total decider recognizing `Stabilizes`
   (the `{false}` preimage would have to be Scott-open) (`RevHalt/Theory/ScottTopology.lean`).
 - Audit note: the equivalence with `IsOpen`/`IsClosed` for `Topology.WithScott Trace` exists in mathlib but currently uses `Classical.choice`;
