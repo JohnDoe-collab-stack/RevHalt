@@ -84,6 +84,8 @@ Scott/domain language is a **derived** way to read RevHalt’s operative core: i
   (`RevHalt/Theory/ScottTopology.lean`).
 - **T1 (Canonicity)**: `T1_traces` + semantic bridge `T1_semantics` (`RevHalt/Theory/Canonicity.lean`).
 - **T2 (Uniform Barrier)**: diagonalization and `T2_impossibility` (`RevHalt/Theory/Impossibility.lean`).
+- **Gödel lens**: “Gödel-I standard” true-but-unprovable output (without arithmetizing `PropT` yet), e.g.
+  `godelI_exists_true_unprovable_of_correct_semidec` (`RevHalt/Theory/GodelLens.lean`).
 - **T3 (Local Navigation)**: S1/S2/S3 complementarity, `OraclePick`, local extensions and “swap”
   (`RevHalt/Theory/Complementarity.lean`, `RevHalt/Theory/QuantifierSwap.lean`).
 - **3-block architecture**: `OracleMachine` + bridge `Eval ↔ SemConsequences`, plus “decidability/coverage” transfers

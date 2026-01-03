@@ -30,6 +30,86 @@ variable {PropT : Type}
 def Decides (S : ImpossibleSystem PropT) (H : Code → PropT) : Prop :=
   ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
 
+/-!
+## Gödel I (standard shape): a true but unprovable sentence
+
+The following is the minimal “Gödel I” output RevHalt can already deliver, without committing to a
+concrete arithmetization:
+
+If a system is consistent and can (i) prove the positive halting predicate `H e` whenever halting is
+semantically true, and (ii) semi-decide refutability `Provable (¬H e)`, then there exists a code `e`
+that does not halt, yet whose non-halting statement `¬H e` is not provable.
+
+With an external semantics `Truth` that interprets `H` as halting, this yields a sentence that is
+true but not provable (Gödel-I style).
+-/
+
+/--
+Gödel-I (constructive): there exists an `e` such that `e` does not halt, yet `¬H e` is not provable.
+
+This uses only:
+- consistency of `S` (already inside `ImpossibleSystem`),
+- positive correctness (`Rev0_K … → Provable (H e)`),
+- r.e. refutability of `H` (a semi-decider for `Provable (¬H e)`),
+and the diagonal bridge (`fixed_point₂`).
+-/
+theorem exists_nonhalting_unprovable_neg_of_correct_semidec
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (H : Code → PropT)
+    (correct : ∀ e, Rev0_K K (Machine e) → S.Provable (H e))
+    (f : Code → (Nat →. Nat))
+    (f_partrec : Partrec₂ f)
+    (semidec : ∀ c, S.Provable (S.Not (H c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    ∃ e, ¬ Rev0_K K (Machine e) ∧ ¬ S.Provable (S.Not (H e)) := by
+  -- Diagonalize against refutability: `Rev0_K … ↔ Provable (¬H e)`.
+  have diag :=
+    diagonal_bridge (K := K) (hK := hK)
+      (f := f) f_partrec
+      (target := fun c => S.Provable (S.Not (H c)))
+      (htarget := semidec)
+  rcases diag with ⟨e, he⟩
+
+  have hNotProvNot : ¬ S.Provable (S.Not (H e)) := by
+    intro hProvNot
+    have hReal : Rev0_K K (Machine e) := he.mpr hProvNot
+    have hProvH : S.Provable (H e) := correct e hReal
+    exact S.consistent (S.absurd (H e) hProvH hProvNot)
+
+  have hNotReal : ¬ Rev0_K K (Machine e) := mt he.mp hNotProvNot
+  exact ⟨e, hNotReal, hNotProvNot⟩
+
+/--
+Gödel-I (semantic form): assuming an external truth predicate interpreting `H` as halting,
+there exists a sentence that is true but not provable.
+-/
+theorem godelI_exists_true_unprovable_of_correct_semidec
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (Truth : PropT → Prop)
+    (truth_not : ∀ p, Truth (S.Not p) ↔ ¬ Truth p)
+    (H : Code → PropT)
+    (truth_H : ∀ e, Truth (H e) ↔ Rev0_K K (Machine e))
+    (correct : ∀ e, Rev0_K K (Machine e) → S.Provable (H e))
+    (f : Code → (Nat →. Nat))
+    (f_partrec : Partrec₂ f)
+    (semidec : ∀ c, S.Provable (S.Not (H c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    ∃ p, Truth p ∧ ¬ S.Provable p := by
+  rcases
+      exists_nonhalting_unprovable_neg_of_correct_semidec
+        (S := S) (K := K) (hK := hK)
+        (H := H) (correct := correct)
+        (f := f) (f_partrec := f_partrec) (semidec := semidec)
+    with ⟨e, hNotReal, hNotProv⟩
+
+  have hNotTruthH : ¬ Truth (H e) := by
+    intro hTH
+    have : Rev0_K K (Machine e) := (truth_H e).1 hTH
+    exact hNotReal this
+
+  have hTruthNotH : Truth (S.Not (H e)) := (truth_not (H e)).2 hNotTruthH
+  exact ⟨S.Not (H e), hTruthNotH, hNotProv⟩
+
 /--
 Gödel lens (no witness extraction):
 under correctness + completeness + r.e. refutability, totality is impossible.
@@ -144,3 +224,5 @@ end RevHalt
 #print axioms RevHalt.not_total_of_correct_complete_semidec
 #print axioms RevHalt.exists_undecidable_classical_of_correct_complete_semidec
 #print axioms RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec
+#print axioms RevHalt.exists_nonhalting_unprovable_neg_of_correct_semidec
+#print axioms RevHalt.godelI_exists_true_unprovable_of_correct_semidec

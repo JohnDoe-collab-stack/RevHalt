@@ -58,6 +58,13 @@ Implemented in `RevHalt/Theory/GodelLens.lean`:
 - `RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec` (classical: with an external `Truth` semantics and `Truth(Not p) ↔ ¬Truth p`,
   produces a “true but unprovable” sentence)
 
+In addition, for **Gödel I in the standard “true-but-unprovable” shape**, the file now includes:
+
+- `RevHalt.exists_nonhalting_unprovable_neg_of_correct_semidec` (constructive existential: builds a specific `e` with `¬Rev0_K …` and `¬Provable (¬H e)`
+  from *consistency + positive correctness + r.e. refutability*; no completeness hypothesis)
+- `RevHalt.godelI_exists_true_unprovable_of_correct_semidec` (semantic wrapper: given `Truth` interpreting `H` as halting and respecting negation,
+  returns `∃ p, Truth p ∧ ¬Provable p`)
+
 This stays in the RevHalt style: the interface is primary, classical extraction is isolated, and proofs are audited.
 
 ### Step B — Instantiate on halting / r.e. predicates (already close)

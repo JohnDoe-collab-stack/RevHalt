@@ -99,6 +99,8 @@ For a “Gödel-I shaped” presentation (still without arithmetizing `PropT`), 
 - `RevHalt.not_total_of_correct_complete_semidec`
 - `RevHalt.exists_undecidable_classical_of_correct_complete_semidec`
 - `RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec`
+- `RevHalt.exists_nonhalting_unprovable_neg_of_correct_semidec`
+- `RevHalt.godelI_exists_true_unprovable_of_correct_semidec`
   (`RevHalt/Theory/GodelLens.lean`)
 
 ## 3) Claim map (one-sentence claims → Lean theorems)
@@ -112,7 +114,7 @@ This is the “assume RevHalt” checklist: every conceptual sentence should poi
 - **Scott-compatible `Bool` observables are constant (no nontrivial discrete separation)** → `RevHalt.scottCompatibleToBool_const` (`RevHalt/Theory/ScottTopology.lean`)
 - **Uniform barrier / diagonal impossibility** → `RevHalt.T2_impossibility` (`RevHalt/Theory/Impossibility.lean`)
 - **Gödel lens (non-totality; classical undecidable code)** → `RevHalt.not_total_of_correct_complete_semidec`, `RevHalt.exists_undecidable_classical_of_correct_complete_semidec` (`RevHalt/Theory/GodelLens.lean`)
-- **Gödel-I shape (external truth ⇒ true-but-unprovable)** → `RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec` (`RevHalt/Theory/GodelLens.lean`)
+- **Gödel-I standard (true-but-unprovable)** → `RevHalt.godelI_exists_true_unprovable_of_correct_semidec` (`RevHalt/Theory/GodelLens.lean`)
 - **R1-restricted LPO collapses to EM only if constants are admissible** → `RevHalt.RelativeR1.LPO_R1_imp_EM_if_const` (`RevHalt/Theory/RelativeR1.lean`)
 
 ## 4) Axiom hygiene (why the audits matter)
