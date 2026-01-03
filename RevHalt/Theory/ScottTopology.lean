@@ -1,5 +1,6 @@
 import RevHalt.Theory.Stabilization
 import Mathlib.Data.Set.Lattice
+import Mathlib.Topology.Order
 import Mathlib.Topology.Order.ScottTopology
 
 /-!
@@ -62,6 +63,86 @@ theorem stabilizesSet_isClosed_scott : @IsClosed (Topology.WithScott Trace) _ (S
     (haltsSet_isOpen_scott).isClosed_compl
   simpa [stabilizesSet_eq_compl_haltsSet] using h
 
+theorem stabilizesSet_not_isOpen_scott :
+    ¬ @IsOpen (Topology.WithScott Trace) _ (StabilizesSet) := by
+  intro hOpen
+  have hUpper : IsUpperSet StabilizesSet :=
+    Topology.IsScott.isUpperSet_of_isOpen (α := Topology.WithScott Trace) (D := Set.univ) (s := StabilizesSet)
+      hOpen
+  have hbot : (⊥ : Trace) ∈ StabilizesSet := by
+    intro n hn
+    cases hn
+  have htop : (⊤ : Trace) ∈ StabilizesSet := by
+    have hle : (⊥ : Trace) ≤ (⊤ : Trace) := bot_le
+    exact hUpper hle hbot
+  have : ¬ Stabilizes (⊤ : Trace) := by
+    intro h
+    exact (h 0) (by trivial)
+  exact this htop
+
+theorem haltsSet_not_isClosed_scott :
+    ¬ @IsClosed (Topology.WithScott Trace) _ (HaltsSet) := by
+  intro hClosed
+  have hLower : IsLowerSet HaltsSet :=
+    Topology.IsScott.isLowerSet_of_isClosed (α := Topology.WithScott Trace) (s := HaltsSet) hClosed
+  have htop : (⊤ : Trace) ∈ HaltsSet := ⟨0, by trivial⟩
+  have hbot : (⊥ : Trace) ∈ HaltsSet := hLower (bot_le : (⊥ : Trace) ≤ (⊤ : Trace)) htop
+  rcases hbot with ⟨n, hn⟩
+  cases hn
+
+/--
+No continuous total decider (to discrete `Bool`) can separate `Stabilizes` from its complement.
+
+Topological reading:
+the preimage of `{false}` would need to be Scott-open, but `StabilizesSet` is not Scott-open.
+-/
+theorem no_continuous_bool_decider_for_stabilizes :
+    ¬ ∃ f : (Topology.WithScott Trace → Bool),
+        Continuous f ∧ (∀ T, f T = false ↔ Stabilizes T) := by
+  rintro ⟨f, hfCont, hf⟩
+  have hFalseOpen : IsOpen ({false} : Set Bool) := isOpen_discrete _
+  have hPreOpen : @IsOpen (Topology.WithScott Trace) _ (f ⁻¹' ({false} : Set Bool)) :=
+    hfCont.isOpen_preimage _ hFalseOpen
+  have hEq : (f ⁻¹' ({false} : Set Bool)) = StabilizesSet := by
+    ext T
+    constructor
+    · intro hT
+      have : f T = false := by simpa using hT
+      exact (hf T).1 this
+    · intro hT
+      have : f T = false := (hf T).2 hT
+      simpa [Set.mem_singleton_iff] using this
+  have : @IsOpen (Topology.WithScott Trace) _ (StabilizesSet) := by
+    simpa [hEq] using hPreOpen
+  exact stabilizesSet_not_isOpen_scott this
+
+/--
+`WithScott Trace` has no nontrivial clopen subsets.
+
+Intuition: in the Scott topology every nonempty closed set contains `⊥`, and any open set
+containing `⊥` is `Set.univ` (because opens are upper and `⊥ ≤ x` for all `x`).
+-/
+theorem isOpen_isClosed_eq_empty_or_univ (s : Set Trace)
+    (hsOpen : @IsOpen (Topology.WithScott Trace) _ s)
+    (hsClosed : @IsClosed (Topology.WithScott Trace) _ s) :
+    s = ∅ ∨ s = Set.univ := by
+  by_cases hne : s.Nonempty
+  · right
+    have hLower : IsLowerSet s :=
+      Topology.IsScott.isLowerSet_of_isClosed (α := Topology.WithScott Trace) (s := s) hsClosed
+    rcases hne with ⟨x, hx⟩
+    have hbot : (⊥ : Trace) ∈ s := hLower (bot_le : (⊥ : Trace) ≤ x) hx
+    have hUpper : IsUpperSet s :=
+      Topology.IsScott.isUpperSet_of_isOpen (α := Topology.WithScott Trace) (D := Set.univ) (s := s) hsOpen
+    ext y
+    constructor
+    · intro _; trivial
+    · intro _; exact hUpper (bot_le : (⊥ : Trace) ≤ y) hbot
+  · left
+    apply Set.eq_empty_iff_forall_notMem.2
+    intro x hx
+    exact hne ⟨x, hx⟩
+
 end RevHalt
 
 -- Axiom checks (auto):
@@ -71,3 +152,7 @@ end RevHalt
 #print axioms RevHalt.haltsSet_isOpen_scott
 #print axioms RevHalt.stabilizesSet_eq_compl_haltsSet
 #print axioms RevHalt.stabilizesSet_isClosed_scott
+#print axioms RevHalt.stabilizesSet_not_isOpen_scott
+#print axioms RevHalt.haltsSet_not_isClosed_scott
+#print axioms RevHalt.no_continuous_bool_decider_for_stabilizes
+#print axioms RevHalt.isOpen_isClosed_eq_empty_or_univ
