@@ -1,111 +1,98 @@
 # RevHalt
 
-RevHalt est un développement Lean 4 / mathlib sur une “théorie du reverse-halting” visant à rendre explicite
-où se situe la puissance non-constructive (EM, choix, etc.) : comme **capacité d’accès** localisée (bridge/pick),
-pas comme axiome ambiant implicite.
+RevHalt is a Lean 4 / mathlib development around a “reverse-halting” theory whose goal is to make explicit
+where non-constructive strength (EM, choice, etc.) enters: as a **localized access capability** (bridge/pick),
+not as an ambient implicit axiom.
 
-## Idée centrale
+## Core Idea
 
-Le projet sépare trois niveaux souvent confondus :
-- **(R1) Formable/testable** : ce qui est encodable et manipulable mécaniquement.
-- **(R2) Vrai sémantiquement** : ce qui est vrai dans un modèle (représenté externement).
-- **(R3) Accessible opératoirement** : ce qui est sélectionnable/décidable par un évaluateur/oracle.
+The project separates three layers that are often conflated:
+- **(R1) Formable/testable**: what is encodable and mechanically manipulable.
+- **(R2) Semantically true**: what holds in a model (represented externally).
+- **(R3) Operationally accessible**: what can be selected/decided by an evaluator/oracle.
 
-Le cœur structurel repose sur les traces `Trace := ℕ → Prop` et l’opérateur de clôture cumulative `up`,
-qui rigidifie le “négatif” : la stabilisation devient un **noyau** (`up T = ⊥`) au lieu d’une négation opaque.
+The structural core uses traces `Trace := ℕ → Prop` and the cumulative closure operator `up`,
+which rigidifies the “negative”: stabilization becomes a **kernel** (`up T = ⊥`) rather than an opaque negation.
 
-## Perspective opératoire (R3)
+## Operational Perspective (R3)
 
-La partie “opératoire” n’est pas un commentaire : elle est formalisée via une architecture et des transferts.
+The operational layer is not commentary: it is formalized via an architecture and transfer lemmas.
 
-- **Flux (concret)** : `⟨Sat, compile, oBridge⟩` (sémantique + compilation + pont) donne, pour une entrée `(Γ, φ)` :
-  1) du **code** `e := compile Γ φ`,
-  2) une **évaluation** `Eval Γ φ := Converges e`,
-  3) une **trace mécanique** `LR Γ φ := aMachine e`,
-  4) et, via le pont, l’identification `Eval Γ φ ↔ SemConsequences Sat Γ φ`
+- **Concrete flow**: `⟨Sat, compile, oBridge⟩` (semantics + compilation + bridge) gives, for an input `(Γ, φ)`:
+  1) code `e := compile Γ φ`,
+  2) an evaluation predicate `Eval Γ φ := Converges e`,
+  3) a mechanical trace `LR Γ φ := aMachine e`,
+  4) and, via the bridge, `Eval Γ φ ↔ SemConsequences Sat Γ φ`
   (`RevHalt/Theory/ThreeBlocksArchitecture.lean`).
-
-- `Rev0_K K T := K.Proj (up T)` force une normalisation (via `up`) avant observation : c’est une décision *par accès*
-  plutôt qu’une vérité primitive (`RevHalt/Base/Kit.lean`).
-- `OracleMachine.Eval` est défini uniquement depuis la compilation (`compile`) et la convergence, et `OracleBridge`
-  est l’unique hypothèse reliant cette évaluation à la conséquence sémantique (`SemConsequences`)
-  (`RevHalt/Theory/ThreeBlocksArchitecture.lean`).
-- La section “Coverage & Decidability” de `ThreeBlocksArchitecture` formalise des transferts du type :
-  “`Eval` décidable + compilation couvrante ⇒ `Halts` (et donc `Rev0_K`) décidable”, ce qui explicite
-  exactement où se loge la puissance de décision.
-- T3 formalise une procédure d’extension locale (un pas `S₂ ↦ S₂ ∪ {pick.p}`) à partir d’un certificat externe,
-  et `AbstractDynamics` itère ces pas le long d’une schedule puis prend une limite (union) ; `omegaState` capture
-  l’état canonique sous fairness (`RevHalt/Theory/Complementarity.lean`, `RevHalt/Theory/AbstractDynamics.lean`).
-
-## Perspective topologique (Scott)
-
-Une manière très robuste de lire le noyau dur est de remplacer la question “`Halts T` est-il vrai/faux ?”
-par “dans quelle **région** (quel ouvert) se situe `T` ?”.
-
-- On met sur `Trace` l’ordre pointwise (`T ≤ U` si `T` implique `U` point par point), puis la **topologie de Scott**
-  (`Topology.WithScott Trace`).
-- Un ouvert de Scott formalise une propriété **observable finiment** : si un sup dirigé est dans l’ouvert,
-  alors un élément fini de la famille tombe déjà dans l’ouvert.
-- Dans ce sens, `HaltsSet := {T | Halts T}` est Scott-ouvert (Σ₁) et `StabilizesSet := {T | Stabilizes T}` est
-  Scott-fermé (Π₁). Plus fort : `StabilizesSet` n’est pas Scott-ouvert, donc on ne peut pas “déchirer” l’espace.
-- Conséquence nette : il n’existe pas de déciseur total **continu** `Trace → Bool` (Bool discret) qui reconnaisse
-  `Stabilizes` (préimage de `{false}` serait un ouvert), et il n’y a pas de clopen non trivial (pas de séparation totale).
-  (`RevHalt/Theory/ScottTopology.lean`).
-- Note “audit” : dans mathlib, l’enveloppe `IsOpen/IsClosed` du Scott-topos peut faire apparaître `Classical.choice`;
-  le contenu opératoire est déjà la paire “upper set + inaccessibilité par sups dirigés”.
-
-## Ce qui est formalisé dans ce dépôt
-
-- **Base** : `Trace`, `Halts`, `up` (`RevHalt/Base/Trace.lean`) ; `RHKit`, `DetectsMonotone`, `Rev0_K`
+- `Rev0_K K T := K.Proj (up T)` forces a normalization (via `up`) before observation: a decision by access rather than a primitive truth
   (`RevHalt/Base/Kit.lean`).
-- **Structure** : ordre pointwise sur `Trace`, `up` comme fermeture/réflecteur, noyau `up_eq_bot_iff`,
-  et structure “domain/catégorie” sur `SoundSet` (`CompleteLattice`, `SoundChain.lim_eq_sSup_range`, catégories minces)
-  (`RevHalt/Theory/Categorical.lean`).
-- **Stabilisation** : `Stabilizes`, `KitStabilizes` et équivalences avec `up T = ⊥`
-  (`RevHalt/Theory/Stabilization.lean`).
-- **Topologie (Scott)** : `HaltsSet` Scott-ouvert et `StabilizesSet` Scott-fermé (via `Topology.WithScott Trace`)
+- `OracleMachine.Eval` is defined solely from compilation (`compile`) and convergence, and `OracleBridge` is the only hypothesis connecting that
+  evaluation to semantic consequence (`SemConsequences`) (`RevHalt/Theory/ThreeBlocksArchitecture.lean`).
+- The “Coverage & Decidability” section in `ThreeBlocksArchitecture` proves transfers such as:
+  “decidable `Eval` + covering compilation ⇒ decidable `Halts` (and hence decidable `Rev0_K`)”, making explicit where decision power lives.
+- T3 formalizes local extensions (a step `S₂ ↦ S₂ ∪ {pick.p}`) from external certificates, and `AbstractDynamics` iterates these steps along a schedule
+  and takes a limit (union); `omegaState` captures the canonical state under fairness
+  (`RevHalt/Theory/Complementarity.lean`, `RevHalt/Theory/AbstractDynamics.lean`).
+
+## Topological Perspective (Scott)
+
+A robust way to read the core is to replace “is `Halts T` true/false?” by “in which **region** (which open set) does `T` lie?”.
+
+- Put on `Trace` the pointwise order (`T ≤ U` iff `T` implies `U` pointwise), and then the **Scott topology** (`Topology.WithScott Trace`).
+- A Scott-open set captures a **finitely observable** property: if a directed supremum lies in the open, then some stage already lies in the open.
+- In this sense, `HaltsSet := {T | Halts T}` is Scott-open (Σ₁) and `StabilizesSet := {T | Stabilizes T}` is Scott-closed (Π₁). Moreover,
+  `StabilizesSet` is not Scott-open, so the space cannot be “torn apart”.
+- A clean corollary: there is no total **continuous** decider `Trace → Bool` (with `Bool` discrete) that recognizes `Stabilizes`
+  (the preimage of `{false}` would have to be open), and there are no nontrivial clopen subsets (no total separation)
   (`RevHalt/Theory/ScottTopology.lean`).
-- **T1 (Canonicité)** : `T1_traces` + pont sémantique `T1_semantics`
-  (`RevHalt/Theory/Canonicity.lean`).
-- **T2 (Barrière uniforme)** : diagonalisation et `T2_impossibility`
-  (`RevHalt/Theory/Impossibility.lean`).
-- **T3 (Navigation locale)** : complémentarité S1/S2/S3, `OraclePick`, extensions locales et “swap”
+- Audit note: in mathlib, the `IsOpen/IsClosed` wrapper for Scott topology may introduce `Classical.choice`; the operational content is already the pair
+  “upper set + directed-sup inaccessibility”.
+
+## What Is Formalized In This Repository
+
+- **Base**: `Trace`, `Halts`, `up` (`RevHalt/Base/Trace.lean`); `RHKit`, `DetectsMonotone`, `Rev0_K` (`RevHalt/Base/Kit.lean`).
+- **Structure**: pointwise order on `Trace`, `up` as a closure/reflector, kernel `up_eq_bot_iff`, and “domain/category” structure on `SoundSet`
+  (`CompleteLattice`, `SoundChain.lim_eq_sSup_range`, thin categories) (`RevHalt/Theory/Categorical.lean`).
+- **Stabilization**: `Stabilizes`, `KitStabilizes`, and equivalences with `up T = ⊥` (`RevHalt/Theory/Stabilization.lean`).
+- **Topology (Scott)**: `HaltsSet` Scott-open and `StabilizesSet` Scott-closed (via `Topology.WithScott Trace`) (`RevHalt/Theory/ScottTopology.lean`).
+- **T1 (Canonicity)**: `T1_traces` + semantic bridge `T1_semantics` (`RevHalt/Theory/Canonicity.lean`).
+- **T2 (Uniform Barrier)**: diagonalization and `T2_impossibility` (`RevHalt/Theory/Impossibility.lean`).
+- **T3 (Local Navigation)**: S1/S2/S3 complementarity, `OraclePick`, local extensions and “swap”
   (`RevHalt/Theory/Complementarity.lean`, `RevHalt/Theory/QuantifierSwap.lean`).
-- **Architecture 3-blocs** : `OracleMachine` + bridge `Eval ↔ SemConsequences`, plus transferts “decidability/coverage”
+- **3-block architecture**: `OracleMachine` + bridge `Eval ↔ SemConsequences`, plus “decidability/coverage” transfers
   (`RevHalt/Theory/ThreeBlocksArchitecture.lean`).
-- **Dynamique abstraite** : `PickWorld`, chaînes/limites, `omegaState`
-  (`RevHalt/Theory/AbstractDynamics.lean`).
-- **Frontière ordinale (EM/LPO)** : la caractérisation `dichotomy_all_iff_em`, plus `LPO`/`LPOBool` et le “const-trick” `AdmitsConst`
+- **Abstract dynamics**: `PickWorld`, chains/limits, `omegaState` (`RevHalt/Theory/AbstractDynamics.lean`).
+- **Ordinal boundary (EM/LPO)**: characterization `dichotomy_all_iff_em`, plus `LPO`/`LPOBool` and the “const-trick” `AdmitsConst`
   (`RevHalt/Theory/OrdinalBoundary.lean`).
-- **Vérification mécanique (frontière ordinale)** : version “audit/étapes finies → ω” avec `HaltsUpTo`/`StabilizesUpTo`, `LPOBool ↔ LPOProp`, et `stage_zero_is_em`
-  (`RevHalt/Theory/OrdinalMechanical.lean`).
-- **Fondations relatives** : principes paramétrés `EM_Truth` / `EM_Eval`, schémas `LPO_Truth` / `LPO_Eval`, opérateur cumulatif `upE` et caractérisations noyau/dichotomie
-  (`RevHalt/Theory/RelativeFoundations.lean`).
-- **R1 relatif (grammaires)** : `LPO_Eval_R1` restreint à une grammaire admissible `Adm`, condition de collapse `AdmitsConst`, et hiérarchies/contre-exemples (p.ex. `CutBit`)
-  (`RevHalt/Theory/RelativeR1.lean`).
+- **Mechanical verification (ordinal boundary)**: “audit / finite stages → ω” with `HaltsUpTo`/`StabilizesUpTo`, `LPOBool ↔ LPOProp`,
+  and `stage_zero_is_em` (`RevHalt/Theory/OrdinalMechanical.lean`).
+- **Relative foundations**: parameterized principles `EM_Truth` / `EM_Eval`, schemes `LPO_Truth` / `LPO_Eval`, cumulative operator `upE`,
+  and kernel/dichotomy characterizations (`RevHalt/Theory/RelativeFoundations.lean`).
+- **R1-relative (grammars)**: `LPO_Eval_R1` restricted to an admissible grammar `Adm`, collapse condition `AdmitsConst`, and hierarchy/counterexamples
+  (e.g. `CutBit`) (`RevHalt/Theory/RelativeR1.lean`).
 
-## Points d’entrée
+## Entry Points
 
-- Racine librairie : `RevHalt.lean` (importe `RevHalt.Main`).
-- Entrée base : `RevHalt/Base.lean`.
-- Entrée théorie : `RevHalt/Theory.lean`.
+- Library root: `RevHalt.lean` (imports `RevHalt.Main`).
+- Base entry: `RevHalt/Base.lean`.
+- Theory entry: `RevHalt/Theory.lean`.
 
-## Audit d’axiomes
+## Axiom Audit
 
-Plusieurs fichiers finissent avec des `#print axioms ...` pour auditer les preuves **par théorème**.
-Selon les imports et le style de preuve, certains résultats peuvent légitimement faire apparaître
-des axiomes (p.ex. `propext`, `Classical.choice`) : l’objectif est de **localiser** où ils entrent.
+Many files end with `#print axioms ...` to audit proofs **theorem-by-theorem**.
+Depending on imports and proof style, some results may legitimately mention axioms (e.g. `propext`, `Classical.choice`):
+the goal is to **localize** where they enter.
 
-## Choix (AC) : unique vs construction
+## Choice (AC): Unique vs Construction
 
-Dans `RevHalt/Theory/RelativeR1.lean` (`CutBit`), on sépare explicitement :
-- **Unicité (Prop)** : `window_unique` + `bit_truth_to_cut_selector_unique` donnent `∀ n, ∃! k, Window … n x k`.
-- **Construction (Type)** : produire une fonction `f : ℕ → ℤ` depuis du `∃` en `Prop` est une extraction Prop→Type ; `bit_truth_to_cut_selector` isole `Classical.choose`.
-- **Version constructive par calcul** : `boundedWindowSelector` construit un `f` à partir de `CutDecidable` + une borne finie `cands n` (recherche sur liste).
+In `RevHalt/Theory/RelativeR1.lean` (`CutBit`), we separate explicitly:
+- **Uniqueness (Prop)**: `window_unique` + `bit_truth_to_cut_selector_unique` give `∀ n, ∃! k, Window … n x k`.
+- **Construction (Type)**: producing `f : ℕ → ℤ` from an existence in `Prop` is a Prop→Type extraction; `bit_truth_to_cut_selector` isolates `Classical.choose`.
+- **Constructive-by-search version**: `boundedWindowSelector` builds `f` from `CutDecidable` + a finite bound `cands n` (list search).
 
 ## Build
 
-Le projet dépend de mathlib (voir `lakefile.lean`). Commandes usuelles :
+The project depends on mathlib (see `lakefile.lean`). Common commands:
 
 - `lake build`
 - `lake build RevHalt`
