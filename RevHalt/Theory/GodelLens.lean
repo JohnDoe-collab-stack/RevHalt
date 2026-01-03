@@ -1,4 +1,5 @@
 import RevHalt.Theory.Impossibility
+import RevHalt.Theory.RECodePred
 
 /-!
 # RevHalt.Theory.GodelLens
@@ -79,6 +80,20 @@ theorem exists_nonhalting_unprovable_neg_of_correct_semidec
   have hNotReal : ¬ Rev0_K K (Machine e) := mt he.mp hNotProvNot
   exact ⟨e, hNotReal, hNotProvNot⟩
 
+/-- Same as `exists_nonhalting_unprovable_neg_of_correct_semidec`, but with the r.e. hypothesis bundled. -/
+theorem exists_nonhalting_unprovable_neg_of_correct_re
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (H : Code → PropT)
+    (correct : ∀ e, Rev0_K K (Machine e) → S.Provable (H e))
+    (re : RECodePred fun c => S.Provable (S.Not (H c))) :
+    ∃ e, ¬ Rev0_K K (Machine e) ∧ ¬ S.Provable (S.Not (H e)) := by
+  exact
+    exists_nonhalting_unprovable_neg_of_correct_semidec
+      (S := S) (K := K) (hK := hK)
+      (H := H) (correct := correct)
+      (f := re.f) (f_partrec := re.f_partrec) (semidec := re.spec)
+
 /--
 Gödel-I (semantic form): assuming an external truth predicate interpreting `H` as halting,
 there exists a sentence that is true but not provable.
@@ -110,6 +125,24 @@ theorem godelI_exists_true_unprovable_of_correct_semidec
   have hTruthNotH : Truth (S.Not (H e)) := (truth_not (H e)).2 hNotTruthH
   exact ⟨S.Not (H e), hTruthNotH, hNotProv⟩
 
+/-- Same as `godelI_exists_true_unprovable_of_correct_semidec`, but with the r.e. hypothesis bundled. -/
+theorem godelI_exists_true_unprovable_of_correct_re
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (Truth : PropT → Prop)
+    (truth_not : ∀ p, Truth (S.Not p) ↔ ¬ Truth p)
+    (H : Code → PropT)
+    (truth_H : ∀ e, Truth (H e) ↔ Rev0_K K (Machine e))
+    (correct : ∀ e, Rev0_K K (Machine e) → S.Provable (H e))
+    (re : RECodePred fun c => S.Provable (S.Not (H c))) :
+    ∃ p, Truth p ∧ ¬ S.Provable p := by
+  exact
+    godelI_exists_true_unprovable_of_correct_semidec
+      (S := S) (K := K) (hK := hK)
+      (Truth := Truth) (truth_not := truth_not)
+      (H := H) (truth_H := truth_H) (correct := correct)
+      (f := re.f) (f_partrec := re.f_partrec) (semidec := re.spec)
+
 /--
 Gödel lens (no witness extraction):
 under correctness + completeness + r.e. refutability, totality is impossible.
@@ -137,6 +170,21 @@ theorem not_total_of_correct_complete_semidec
             , f_partrec := f_partrec
             , semidec := semidec }, trivial⟩
   exact (T2_impossibility (S := S) (K := K) hK) this
+
+/-- Same as `not_total_of_correct_complete_semidec`, but with the r.e. hypothesis bundled. -/
+theorem not_total_of_correct_complete_re
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (H : Code → PropT)
+    (correct : ∀ e, Rev0_K K (Machine e) → S.Provable (H e))
+    (complete : ∀ e, ¬ Rev0_K K (Machine e) → S.Provable (S.Not (H e)))
+    (re : RECodePred fun c => S.Provable (S.Not (H c))) :
+    ¬ Decides (S := S) H := by
+  exact
+    not_total_of_correct_complete_semidec
+      (S := S) (K := K) (hK := hK)
+      (H := H) (correct := correct) (complete := complete)
+      (f := re.f) (f_partrec := re.f_partrec) (semidec := re.spec)
 
 /--
 Classical witness extraction:
@@ -222,7 +270,10 @@ end RevHalt
 
 -- Axiom checks (auto):
 #print axioms RevHalt.not_total_of_correct_complete_semidec
+#print axioms RevHalt.not_total_of_correct_complete_re
 #print axioms RevHalt.exists_undecidable_classical_of_correct_complete_semidec
 #print axioms RevHalt.exists_true_unprovable_classical_of_correct_complete_semidec
 #print axioms RevHalt.exists_nonhalting_unprovable_neg_of_correct_semidec
+#print axioms RevHalt.exists_nonhalting_unprovable_neg_of_correct_re
 #print axioms RevHalt.godelI_exists_true_unprovable_of_correct_semidec
+#print axioms RevHalt.godelI_exists_true_unprovable_of_correct_re

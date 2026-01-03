@@ -25,7 +25,7 @@ All results are machine-verified in Lean 4, with per-theorem axiom audits.
 ## Documentation
 
 - `docs/overview.md` (framework overview + claim map)
-- `docs/godel.md` (what we already have + path to Gödel)
+- `docs/godel.md` (Gödel lens + exhaustive implementation checklist)
 
 ## Core Idea
 
@@ -86,6 +86,8 @@ Scott/domain language is a **derived** way to read RevHalt’s operative core: i
 - **T2 (Uniform Barrier)**: diagonalization and `T2_impossibility` (`RevHalt/Theory/Impossibility.lean`).
 - **Gödel lens**: “Gödel-I standard” true-but-unprovable output (without arithmetizing `PropT` yet), e.g.
   `godelI_exists_true_unprovable_of_correct_semidec` (`RevHalt/Theory/GodelLens.lean`).
+- **r.e. utilities**: reusable packaging for semi-decidability on `Nat.Partrec.Code` (`RECodePred`) used by the diagonal/Gödel interfaces
+  (`RevHalt/Theory/RECodePred.lean`).
 - **Gödel-I arithmetic staging**: first-order arithmetic syntax + standard-model truth, provability interface wrapper,
   and an arithmetic `GodelIStandard` instantiation (`RevHalt/Theory/ArithmeticLanguage.lean`, `RevHalt/Theory/ArithmeticProvability.lean`,
   `RevHalt/Theory/GodelIArithmetic.lean`).

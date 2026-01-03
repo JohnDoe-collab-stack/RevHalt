@@ -1,5 +1,6 @@
 import RevHalt.Base
 import RevHalt.Theory.Canonicity
+import RevHalt.Theory.RECodePred
 import Mathlib.Computability.PartrecCode
 
 /-!
@@ -65,6 +66,15 @@ theorem diagonal_bridge
 
   exact hT1.trans (hTerm.trans hTarget)
 
+/-- `diagonal_bridge`, with the semi-decidability hypothesis bundled as an `RECodePred`. -/
+theorem diagonal_bridge_re
+    (K : RHKit) (hK : DetectsMonotone K)
+    (target : Code → Prop)
+    (re : RECodePred target) :
+    ∃ e : Code, Rev0_K K (Machine e) ↔ target e := by
+  exact diagonal_bridge (K := K) (hK := hK) (f := re.f) (hf := re.f_partrec)
+    (target := target) (htarget := re.spec)
+
 /-- Minimal internal proof system data used by T2. -/
 structure ImpossibleSystem (PropT : Type) where
   Provable : PropT → Prop
@@ -102,7 +112,9 @@ theorem T2_impossibility {PropT : Type}
   rcases h with ⟨I, _⟩
 
   let target : Code → Prop := fun c => S.Provable (S.Not (I.H c))
-  have diag := diagonal_bridge K hK I.f I.f_partrec target I.semidec
+  have diag :=
+    diagonal_bridge_re (K := K) (hK := hK) (target := target)
+      { f := I.f, f_partrec := I.f_partrec, spec := I.semidec }
   rcases diag with ⟨e, he⟩
   -- he : Rev0_K K (Machine e) ↔ S.Provable (S.Not (I.H e))
 
@@ -125,5 +137,6 @@ end RevHalt
 -- Axiom checks (auto):
 #print axioms RevHalt.Halts_Machine_iff
 #print axioms RevHalt.diagonal_bridge
+#print axioms RevHalt.diagonal_bridge_re
 #print axioms RevHalt.T2_impossibility
 

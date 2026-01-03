@@ -1,5 +1,6 @@
 import RevHalt.Theory.GodelIStandard
 import RevHalt.Theory.ArithmeticProvability
+import RevHalt.Theory.RECodePred
 
 /-!
 # RevHalt.Theory.GodelIArithmetic
@@ -65,6 +66,13 @@ def toGodelIStandard (I : GodelIArith) : RevHalt.GodelIStandard Sentence where
   f_partrec := I.f_partrec
   semidec := I.semidec
 
+/-- Bundle the r.e. refutability field of `GodelIArith` as an `RECodePred`. -/
+def reNotH (I : GodelIArith) :
+    RECodePred fun c => I.T.Provable (I.H c).not where
+  f := I.f
+  f_partrec := I.f_partrec
+  spec := I.semidec
+
 /-- There exists a code `e` that does not halt, yet `¬H e` is not provable. -/
 theorem exists_nonhalting_unprovable_notH (I : GodelIArith) :
     ∃ e, ¬ Rev0_K I.K (Machine e) ∧ ¬ I.T.Provable (I.H e).not := by
@@ -86,5 +94,6 @@ end RevHalt
 -- Axiom checks (auto):
 #print axioms RevHalt.Arithmetic.GodelIArith
 #print axioms RevHalt.Arithmetic.GodelIArith.toGodelIStandard
+#print axioms RevHalt.Arithmetic.GodelIArith.reNotH
 #print axioms RevHalt.Arithmetic.GodelIArith.exists_nonhalting_unprovable_notH
 #print axioms RevHalt.Arithmetic.GodelIArith.exists_true_unprovable

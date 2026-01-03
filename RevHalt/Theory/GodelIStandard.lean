@@ -1,4 +1,5 @@
 import RevHalt.Theory.GodelLens
+import RevHalt.Theory.RECodePred
 
 /-!
 # RevHalt.Theory.GodelIStandard
@@ -62,24 +63,31 @@ structure GodelIStandard (PropT : Type) where
 
 namespace GodelIStandard
 
+/-- Bundle the semi-decidability field of `GodelIStandard` as an `RECodePred`. -/
+def reNotH (I : GodelIStandard PropT) :
+    RECodePred fun c => I.S.Provable (I.S.Not (I.H c)) where
+  f := I.f
+  f_partrec := I.f_partrec
+  spec := I.semidec
+
 /-- There exists a specific code `e` that does not halt, yet `¬H e` is not provable. -/
 theorem exists_nonhalting_unprovable_neg (I : GodelIStandard PropT) :
     ∃ e, ¬ Rev0_K I.K (Machine e) ∧ ¬ I.S.Provable (I.S.Not (I.H e)) := by
   exact
-    exists_nonhalting_unprovable_neg_of_correct_semidec
+    exists_nonhalting_unprovable_neg_of_correct_re
       (S := I.S) (K := I.K) (hK := I.hK)
       (H := I.H) (correct := I.correct)
-      (f := I.f) (f_partrec := I.f_partrec) (semidec := I.semidec)
+      (re := I.reNotH)
 
 /-- Gödel I standard form: a sentence is true (externally) but not provable (internally). -/
 theorem exists_true_unprovable (I : GodelIStandard PropT) :
     ∃ p, I.Truth p ∧ ¬ I.S.Provable p := by
   exact
-    godelI_exists_true_unprovable_of_correct_semidec
+    godelI_exists_true_unprovable_of_correct_re
       (S := I.S) (K := I.K) (hK := I.hK)
       (Truth := I.Truth) (truth_not := I.truth_not)
       (H := I.H) (truth_H := I.truth_H) (correct := I.correct)
-      (f := I.f) (f_partrec := I.f_partrec) (semidec := I.semidec)
+      (re := I.reNotH)
 
 end GodelIStandard
 
@@ -87,6 +95,6 @@ end RevHalt
 
 -- Axiom checks (auto):
 #print axioms RevHalt.GodelIStandard
+#print axioms RevHalt.GodelIStandard.reNotH
 #print axioms RevHalt.GodelIStandard.exists_nonhalting_unprovable_neg
 #print axioms RevHalt.GodelIStandard.exists_true_unprovable
-
