@@ -26,6 +26,34 @@ RevHalt’s core commitments are not “Scott” or “ordinal ω” by default.
 
 Once these are fixed, you can *compute* what is possible without pretending the power is “free”.
 
+## 1.5) Interface → invariants (the “RevHalt machine”)
+
+One way to read the project is as a compiler from **access interfaces** to **foundation-level invariants**.
+
+```
+RevHalt interface (you choose)                 Derived lenses (RevHalt computes)
+──────────────────────────────────             ───────────────────────────────────────────
+Trace := ℕ → Prop                              Scott lens (finite observation)
+Order: pointwise entailment  (≤)               - Scott-open/closed regions
+Basepoint: ⊥                                   - no nontrivial discrete separation
+Normalizer: up                                 (`RevHalt/Theory/ScottTopology.lean`)
+R1/R2/R3 + explicit bridges/oracles       ──▶
+                                                Ordinal lens (finite → ω / EM boundary)
+                                                - dichotomy strength = EM exactly
+                                                (`RevHalt/Theory/OrdinalBoundary.lean`)
+
+                                                Diagonal/Gödel lens (internalization barrier)
+                                                - no total+correct+complete internalization
+                                                - “Gödel-I shape” corollaries (with/without witness)
+                                                (`RevHalt/Theory/Impossibility.lean`,
+                                                 `RevHalt/Theory/GodelLens.lean`)
+
+                                     Axiom audit channel: `#print axioms ...`
+```
+
+The point is not that Scott/ordinals/diagonalization are “new”, but that RevHalt treats them as **outputs**:
+change the access interface, and the same lenses re-compute what becomes observable/decidable/impossible.
+
 ## 2) Derived lenses (what you get “for free” once the interface is fixed)
 
 ### (A) Ordinal boundary (finite → ω)
