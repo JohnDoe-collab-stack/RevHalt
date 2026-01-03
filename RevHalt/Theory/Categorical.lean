@@ -1,5 +1,7 @@
 import RevHalt.Base.Trace
 import RevHalt.Theory.Canonicity
+import Mathlib.CategoryTheory.Thin
+import Mathlib.Data.ULift
 import Mathlib.Data.Set.Basic
 import Mathlib.Order.Basic
 import Mathlib.Order.Monotone.Basic
@@ -347,6 +349,7 @@ RevHalt's dynamics works because:
 namespace RevHalt.Categorical
 
 open Set
+open CategoryTheory
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 1) CATEGORY OF TRACES (Thin Category / Preorder)
@@ -363,6 +366,40 @@ theorem TraceHom.refl (T : TraceObj) : TraceHom T T := fun _ h => h
 
 theorem TraceHom.trans {T U V : TraceObj} (hTU : TraceHom T U) (hUV : TraceHom U V) :
     TraceHom T V := fun n hT => hUV n (hTU n hT)
+
+-- ----------------------------------------------------------------------------
+-- 1.1) TraceObj as a genuine `CategoryTheory.Category`
+-- ----------------------------------------------------------------------------
+
+instance : CategoryStruct TraceObj where
+  Hom T U := ULift (PLift (TraceHom T U))
+  id T := ⟨⟨TraceHom.refl T⟩⟩
+  comp f g := ⟨⟨TraceHom.trans f.down.down g.down.down⟩⟩
+
+instance (T U : TraceObj) : Subsingleton (T ⟶ U) :=
+  ⟨fun _ _ => ULift.ext _ _ (Subsingleton.elim _ _)⟩
+
+instance : Quiver.IsThin TraceObj := fun _ _ => by
+  infer_instance
+
+instance : Category TraceObj := CategoryTheory.thin_category
+
+/-- Convert a Prop-level `TraceHom` into a categorical morphism. -/
+def homOfTraceHom {T U : TraceObj} (h : TraceHom T U) : T ⟶ U :=
+  ULift.up (PLift.up h)
+
+/-- Extract the underlying `TraceHom` from a categorical morphism. -/
+def traceHomOfHom {T U : TraceObj} (f : T ⟶ U) : TraceHom T U :=
+  f.down.down
+
+@[simp] theorem traceHomOfHom_homOfTraceHom {T U : TraceObj} (h : TraceHom T U) :
+    traceHomOfHom (homOfTraceHom h) = h :=
+  rfl
+
+@[simp] theorem homOfTraceHom_traceHomOfHom {T U : TraceObj} (f : T ⟶ U) :
+    homOfTraceHom (traceHomOfHom f) = f :=
+  by
+  apply Subsingleton.elim
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 2) `up` AS CLOSURE OPERATOR
@@ -416,6 +453,40 @@ theorem SoundSetHom.refl (S : SoundSet Truth) : SoundSetHom Truth S S := Set.Sub
 
 theorem SoundSetHom.trans {S T U : SoundSet Truth} (hST : SoundSetHom Truth S T)
     (hTU : SoundSetHom Truth T U) : SoundSetHom Truth S U := Set.Subset.trans hST hTU
+
+-- ----------------------------------------------------------------------------
+-- 3.1) SoundSet as a genuine `CategoryTheory.Category`
+-- ----------------------------------------------------------------------------
+
+instance : CategoryStruct (SoundSet Truth) where
+  Hom S T := ULift (PLift (SoundSetHom Truth S T))
+  id S := ⟨⟨SoundSetHom.refl (Truth := Truth) S⟩⟩
+  comp f g := ⟨⟨SoundSetHom.trans (Truth := Truth) f.down.down g.down.down⟩⟩
+
+instance (S T : SoundSet Truth) : Subsingleton (S ⟶ T) :=
+  ⟨fun _ _ => ULift.ext _ _ (Subsingleton.elim _ _)⟩
+
+instance : Quiver.IsThin (SoundSet Truth) := fun _ _ => by
+  infer_instance
+
+instance : Category (SoundSet Truth) := CategoryTheory.thin_category
+
+/-- Convert a Prop-level inclusion `SoundSetHom` into a categorical morphism. -/
+def homOfSoundSetHom {S T : SoundSet Truth} (h : SoundSetHom Truth S T) : S ⟶ T :=
+  ULift.up (PLift.up h)
+
+/-- Extract the underlying inclusion from a categorical morphism. -/
+def soundSetHomOfHom {S T : SoundSet Truth} (f : S ⟶ T) : SoundSetHom Truth S T :=
+  f.down.down
+
+@[simp] theorem soundSetHomOfHom_homOfSoundSetHom {S T : SoundSet Truth} (h : SoundSetHom Truth S T) :
+    soundSetHomOfHom (Truth := Truth) (homOfSoundSetHom (Truth := Truth) h) = h :=
+  rfl
+
+@[simp] theorem homOfSoundSetHom_soundSetHomOfHom {S T : SoundSet Truth} (f : S ⟶ T) :
+    homOfSoundSetHom (Truth := Truth) (soundSetHomOfHom (Truth := Truth) f) = f :=
+  by
+  apply Subsingleton.elim
 
 /-- The empty sound set (initial object). -/
 def SoundSet.empty : SoundSet Truth where
