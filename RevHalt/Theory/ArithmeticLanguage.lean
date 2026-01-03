@@ -54,6 +54,18 @@ instance : Lang.Structure ℕ where
     intro _n r
     cases r
 
+@[simp] theorem funMap_zero (x : Fin 0 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang) (M := ℕ) Func.zero x = 0 := rfl
+
+@[simp] theorem funMap_succ (x : Fin 1 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang) (M := ℕ) Func.succ x = Nat.succ (x 0) := rfl
+
+@[simp] theorem funMap_add (x : Fin 2 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang) (M := ℕ) Func.add x = x 0 + x 1 := rfl
+
+@[simp] theorem funMap_mul (x : Fin 2 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang) (M := ℕ) Func.mul x = x 0 * x 1 := rfl
+
 abbrev Sentence : Type := Lang.Sentence
 
 /-- External (standard-model) truth for arithmetic sentences. -/
@@ -66,4 +78,3 @@ def Truth (φ : Sentence) : Prop :=
 end Arithmetic
 
 end RevHalt
-

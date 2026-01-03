@@ -47,6 +47,8 @@ As of now, the “sentence type + standard-model truth” part is also fixed:
   its standard structure on `ℕ`, and `Truth : Sentence → Prop` as satisfaction in `ℕ`.
 - `RevHalt/Theory/ArithmeticProvability.lean` turns a provability predicate on arithmetic sentences into an
   `ImpossibleSystem` (using syntactic `⊥` and `p.not`).
+- `RevHalt/Theory/RobinsonQ.lean` defines Robinson arithmetic `Q` as a concrete finite theory object (`QTheory`)
+  and proves semantic soundness in the standard model (`nat_models_QTheory : (ℕ : Type) ⊨ QTheory`).
 
 What remains to get *full* “Gödel classical” is the PA/Q instantiation of `Provable` and the computation-to-arithmetic bridge (`H` below).
 
