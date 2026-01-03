@@ -5,6 +5,9 @@ import RevHalt.Theory.ScottTopology
 import RevHalt.Theory.Impossibility
 import RevHalt.Theory.GodelLens
 import RevHalt.Theory.GodelIStandard
+import RevHalt.Theory.ArithmeticLanguage
+import RevHalt.Theory.ArithmeticProvability
+import RevHalt.Theory.GodelIArithmetic
 import RevHalt.Theory.Complementarity
 import RevHalt.Theory.QuantifierSwap
 import RevHalt.Theory.ThreeBlocksArchitecture

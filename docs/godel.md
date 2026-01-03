@@ -41,6 +41,15 @@ To recover that shape inside RevHalt, you need an explicit *syntax/proof* interf
 RevHalt already provides (4) in a *computability-coded* form (fixed points over `Nat.Partrec.Code`),
 and (3) abstractly as `ImpossibleSystem` inside `Impossibility.lean`.
 
+As of now, the “sentence type + standard-model truth” part is also fixed:
+
+- `RevHalt/Theory/ArithmeticLanguage.lean` defines a minimal first-order arithmetic language (`0`, `succ`, `+`, `*`),
+  its standard structure on `ℕ`, and `Truth : Sentence → Prop` as satisfaction in `ℕ`.
+- `RevHalt/Theory/ArithmeticProvability.lean` turns a provability predicate on arithmetic sentences into an
+  `ImpossibleSystem` (using syntactic `⊥` and `p.not`).
+
+What remains to get *full* “Gödel classical” is the PA/Q instantiation of `Provable` and the computation-to-arithmetic bridge (`H` below).
+
 What is still missing for “full Gödel” is an explicit instantiation where:
 
 - `PropT` genuinely represents *arithmetical sentences*,
@@ -93,6 +102,15 @@ If you want Gödel in the classical sense (PA/Q/etc.), you will need:
 - and a consistency/soundness assumption to conclude “true but unprovable”.
 
 This is doable, but it is a new module-scale effort.
+
+RevHalt now provides an explicit staging point for it:
+
+- `RevHalt/Theory/GodelIArithmetic.lean` packages exactly the remaining obligations as an interface
+  (`RevHalt.Arithmetic.GodelIArith`) and then produces:
+  - `RevHalt.Arithmetic.GodelIArith.exists_nonhalting_unprovable_notH`
+  - `RevHalt.Arithmetic.GodelIArith.exists_true_unprovable`
+
+In other words: once you supply the PA/Q proof predicate and the arithmetization of halting (`H`), the “true in ℕ but not provable” output is automatic.
 
 ## 4) Claim map (current state)
 
