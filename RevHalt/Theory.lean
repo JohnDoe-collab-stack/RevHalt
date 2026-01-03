@@ -7,6 +7,7 @@ import RevHalt.Theory.Impossibility
 import RevHalt.Theory.GodelLens
 import RevHalt.Theory.GodelIStandard
 import RevHalt.Theory.ArithmeticLanguage
+import RevHalt.Theory.ArithmeticEncoding
 import RevHalt.Theory.ArithmeticProvability
 import RevHalt.Theory.GodelIArithmetic
 import RevHalt.Theory.RobinsonQ

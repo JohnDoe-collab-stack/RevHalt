@@ -22,7 +22,7 @@ namespace Arithmetic
 open FirstOrder
 
 /-- Function symbols of the arithmetic language: `0`, `succ`, `+`, `*`. -/
-inductive Func : ℕ → Type
+inductive Func : ℕ → Type 0
   | zero : Func 0
   | succ : Func 1
   | add  : Func 2
@@ -30,7 +30,7 @@ inductive Func : ℕ → Type
 deriving DecidableEq
 
 /-- First-order language of arithmetic (no relation symbols besides equality). -/
-def Lang : FirstOrder.Language where
+def Lang : FirstOrder.Language.{0, 0} where
   Functions := Func
   Relations := fun _ => PEmpty
 

@@ -46,6 +46,8 @@ As of now, the “sentence type + standard-model truth” part is also fixed:
 
 - `RevHalt/Theory/ArithmeticLanguage.lean` defines a minimal first-order arithmetic language (`0`, `succ`, `+`, `*`),
   its standard structure on `ℕ`, and `Truth : Sentence → Prop` as satisfaction in `ℕ`.
+- `RevHalt/Theory/ArithmeticEncoding.lean` equips the arithmetic syntax (`Sentence`) with `Encodable` (via mathlib’s list encodings),
+  which is a prerequisite for any r.e. (proof-checking / enumeration) approach to Gödel classical.
 - `RevHalt/Theory/ArithmeticProvability.lean` turns a provability predicate on arithmetic sentences into an
   `ImpossibleSystem` (using syntactic `⊥` and `p.not`).
 - `RevHalt/Theory/RobinsonQ.lean` defines Robinson arithmetic `Q` as a concrete finite theory object (`QTheory`)
