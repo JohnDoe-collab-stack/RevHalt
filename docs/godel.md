@@ -278,7 +278,9 @@ To keep RevHalt “interface-first” *and* make the classical instantiation man
    - `RevHalt/Theory/Arithmetization/PartrecCode.lean`:
      encode/interpret `Nat.Partrec.Code` computations as arithmetic relations.
    - `RevHalt/Theory/Arithmetization/HaltsSigma1.lean`:
-     define `H : Code → Sentence` and prove `truth_H`, then prove Σ₁ correctness `halts → Provable (H e)`.
+     staging layer for the Σ₁ halting shape. Currently defines `HaltsSigma1` and the interface
+     `ArithmetizesEvaln`; this is the right home for the eventual `H : Code → Sentence`, `truth_H`,
+     and Σ₁ correctness `halts → Provable (H e)`.
 
 3. **Final instantiation (C6)**:
    - `RevHalt/Theory/GodelIArithmeticQ.lean`:
@@ -302,6 +304,8 @@ A dependency-correct order that keeps the repo green is:
    and package it as `RevHalt.Arithmetic.ProvabilitySystem`.
 3. **Define the halting schema `H : Code → Sentence`** (Σ₁ form, typically via `Code.encodeCode` and an `evaln`/Kleene-T predicate),
    then prove `truth_H : Truth (H e) ↔ Rev0_K K (Machine e)`.
+   - Supporting computability lemma: `RevHalt.rev0_K_machine_iff_exists_evaln` (`RevHalt/Theory/ConvergenceSigma1.lean`)
+     exposes the Σ₁ witness shape `Rev0_K K (Machine e) ↔ ∃ k x, evaln k e 0 = some x`.
 4. **Prove positive correctness**: from a concrete halting witness, build a proof of `H e` in Q
    (`Rev0_K K (Machine e) → Provable_Q (H e)`).
 5. **Derive r.e. refutability**: build `RECodePred (fun c => Provable_Q (¬(H c)))` from the general proof enumerator

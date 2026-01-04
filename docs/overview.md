@@ -118,6 +118,7 @@ This is the “assume RevHalt” checklist: every conceptual sentence should poi
 - **Gödel-I arithmetic (Truth = ℕ)** → `RevHalt.Arithmetic.GodelIArith.exists_true_unprovable` (`RevHalt/Theory/GodelIArithmetic.lean`)
 - **Gödel-I from an effective proof checker** → `RevHalt.Arithmetic.GodelIArithFromChecker.exists_true_unprovable` / `RevHalt.Arithmetic.GodelIArithFromCheckerRE.exists_true_unprovable`
   (`RevHalt/Theory/GodelIProofChecker.lean`)
+- **Rev0_K on machine codes is Σ₁ (evaln witness)** → `RevHalt.rev0_K_machine_iff_exists_evaln` (`RevHalt/Theory/ConvergenceSigma1.lean`)
 - **Robinson Q (theory object)** → `RevHalt.Arithmetic.QTheory`, `RevHalt.Arithmetic.nat_models_QTheory` (`RevHalt/Theory/RobinsonQ.lean`)
 - **R1-restricted LPO collapses to EM only if constants are admissible** → `RevHalt.RelativeR1.LPO_R1_imp_EM_if_const` (`RevHalt/Theory/RelativeR1.lean`)
 

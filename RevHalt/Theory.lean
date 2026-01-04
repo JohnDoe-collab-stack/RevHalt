@@ -22,6 +22,7 @@ import RevHalt.Theory.Complementarity
 import RevHalt.Theory.QuantifierSwap
 import RevHalt.Theory.ThreeBlocksArchitecture
 import RevHalt.Theory.ConvergenceSigma1
+import RevHalt.Theory.Arithmetization.HaltsSigma1
 import RevHalt.Theory.AbstractDynamics
 import RevHalt.Theory.OrdinalBoundary
 import RevHalt.Theory.OrdinalMechanical

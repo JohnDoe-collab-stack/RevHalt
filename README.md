@@ -101,6 +101,8 @@ Scott/domain language is a **derived** way to read RevHalt’s operative core: i
   (`RevHalt/Theory/Complementarity.lean`, `RevHalt/Theory/QuantifierSwap.lean`).
 - **3-block architecture**: `OracleMachine` + bridge `Eval ↔ SemConsequences`, plus “decidability/coverage” transfers
   (`RevHalt/Theory/ThreeBlocksArchitecture.lean`).
+- **Σ₁ convergence witness**: `Converges` / `Rev0_K` on machine codes reduce to `∃ k x, evaln k e 0 = some x`
+  (`RevHalt.converges_iff_exists_evaln`, `RevHalt.rev0_K_machine_iff_exists_evaln`) (`RevHalt/Theory/ConvergenceSigma1.lean`).
 - **Abstract dynamics**: `PickWorld`, chains/limits, `omegaState` (`RevHalt/Theory/AbstractDynamics.lean`).
 - **Ordinal boundary (EM/LPO)**: characterization `dichotomy_all_iff_em`, plus `LPO`/`LPOBool` and the “const-trick” `AdmitsConst`
   (`RevHalt/Theory/OrdinalBoundary.lean`).
