@@ -154,6 +154,8 @@ Already implemented:
   (`HaltsSigma1`, `ArithmetizesEvaln`, `truth_H_of_arithmetizesEvaln`, `correct_of_correctSigma1`).
 - **Proof-checker → Gödel-I wiring (Σ₁/evaln convenience)**: `RevHalt/Theory/GodelIProofCheckerEvaln.lean`
   (`GodelIArithFromCheckerEvaln`), bridging `ArithmetizesEvaln` + Σ₁ correctness into `GodelIArithFromChecker`.
+- **Concrete end-to-end arithmetic instance (Σ₁ halting provability)**: `RevHalt/Theory/GodelIArithEvalnSigma1.lean`
+  (`GodelIArithEvalnSigma1`, `exists_true_unprovable_evalnSigma1`).
 
 ## 3.5) Exhaustive “Gödel I standard” implementation checklist (PA/Q target)
 

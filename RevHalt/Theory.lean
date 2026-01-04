@@ -16,6 +16,7 @@ import RevHalt.Theory.ArithmeticProofSystem
 import RevHalt.Theory.GodelIArithmetic
 import RevHalt.Theory.GodelIProofChecker
 import RevHalt.Theory.GodelIProofCheckerEvaln
+import RevHalt.Theory.GodelIArithEvalnSigma1
 import RevHalt.Theory.GodelIArithmeticQ
 import RevHalt.Theory.RobinsonQ
 import RevHalt.Theory.RobinsonQProvability

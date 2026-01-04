@@ -116,6 +116,7 @@ This is the “assume RevHalt” checklist: every conceptual sentence should poi
 - **Gödel lens (non-totality; classical undecidable code)** → `RevHalt.not_total_of_correct_complete_semidec`, `RevHalt.exists_undecidable_classical_of_correct_complete_semidec` (`RevHalt/Theory/GodelLens.lean`)
 - **Gödel-I standard (true-but-unprovable)** → `RevHalt.godelI_exists_true_unprovable_of_correct_semidec` (`RevHalt/Theory/GodelLens.lean`)
 - **Gödel-I arithmetic (Truth = ℕ)** → `RevHalt.Arithmetic.GodelIArith.exists_true_unprovable` (`RevHalt/Theory/GodelIArithmetic.lean`)
+- **Gödel-I arithmetic (concrete Σ₁ instance via `evaln`)** → `RevHalt.Arithmetic.exists_true_unprovable_evalnSigma1` (`RevHalt/Theory/GodelIArithEvalnSigma1.lean`)
 - **Gödel-I from an effective proof checker** → `RevHalt.Arithmetic.GodelIArithFromChecker.exists_true_unprovable` / `RevHalt.Arithmetic.GodelIArithFromCheckerRE.exists_true_unprovable`
   (`RevHalt/Theory/GodelIProofChecker.lean`)
 - **Gödel-I from an effective proof checker (Σ₁/evaln staging)** → `RevHalt.Arithmetic.GodelIArithFromCheckerEvaln.exists_true_unprovable`
