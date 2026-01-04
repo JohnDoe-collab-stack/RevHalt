@@ -1,6 +1,8 @@
 import RevHalt.Theory.GodelIStandard
 import RevHalt.Theory.ArithmeticProvability
+import RevHalt.Theory.ArithmeticNumerals
 import RevHalt.Theory.RECodePred
+import RevHalt.Theory.RECodePredExtras
 
 /-!
 # RevHalt.Theory.GodelIArithmetic
@@ -72,6 +74,47 @@ def reNotH (I : GodelIArith) :
   f := I.f
   f_partrec := I.f_partrec
   spec := I.semidec
+
+/--
+Convenience: derive the `RECodePred` hypothesis needed by Gödel-I from:
+- r.e. provability (`REPred I.T.Provable`), and
+- a computable map `c ↦ (H c).not`.
+
+This is the point where `REPred → RECodePred` glue (`RECodePred.of_REPred_comp`) is used.
+-/
+def reNotH_of_REPred (I : GodelIArith)
+    (reProvable : REPred I.T.Provable)
+    (hNotComp : Computable fun c : Code => (I.H c).not) :
+    RECodePred fun c => I.T.Provable (I.H c).not :=
+  RECodePred.of_REPred_comp (P := I.T.Provable) reProvable (fun c => (I.H c).not) hNotComp
+
+/--
+Convenience constructor: build a `GodelIArith` instance by deriving r.e. refutability from
+`REPred Provable` + a computable negated-halting map.
+
+This packages (C5) in `docs/godel.md` as a single step once the two ingredients are available.
+-/
+def mk_of_REPred
+    (T : ProvabilitySystem)
+    (reProvable : REPred T.Provable)
+    (K : RHKit) (hK : DetectsMonotone K)
+    (H : Code → Sentence)
+    (truth_H : ∀ e, Truth (H e) ↔ Rev0_K K (Machine e))
+    (correct : ∀ e, Rev0_K K (Machine e) → T.Provable (H e))
+    (hNotComp : Computable fun c : Code => (H c).not) :
+    GodelIArith := by
+  let reNotH : RECodePred fun c => T.Provable (H c).not :=
+    RECodePred.of_REPred_comp (P := T.Provable) reProvable (fun c => (H c).not) hNotComp
+  exact
+    { T := T
+      K := K
+      hK := hK
+      H := H
+      truth_H := truth_H
+      correct := correct
+      f := reNotH.f
+      f_partrec := reNotH.f_partrec
+      semidec := reNotH.spec }
 
 /-- There exists a code `e` that does not halt, yet `¬H e` is not provable. -/
 theorem exists_nonhalting_unprovable_notH (I : GodelIArith) :

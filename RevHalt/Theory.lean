@@ -4,6 +4,7 @@ import RevHalt.Theory.Stabilization
 import RevHalt.Theory.ScottTopology
 import RevHalt.Theory.RECodePred
 import RevHalt.Theory.RECodePredExtras
+import RevHalt.Theory.REPredExtras
 import RevHalt.Theory.Impossibility
 import RevHalt.Theory.GodelLens
 import RevHalt.Theory.GodelIStandard
