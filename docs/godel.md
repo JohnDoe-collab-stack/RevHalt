@@ -128,6 +128,28 @@ RevHalt now provides an explicit staging point for it:
 
 In other words: once you supply the PA/Q proof predicate and the arithmetization of halting (`H`), the “true in ℕ but not provable” output is automatic.
 
+### Step A.5 — Current status (what is already wired)
+
+At this point the Gödel track is *structurally complete*: the remaining work is not “the diagonal idea”,
+but concrete instantiations of the interfaces.
+
+Already implemented:
+
+- **Diagonal barrier**: `RevHalt.T2_impossibility` (`RevHalt/Theory/Impossibility.lean`).
+- **Gödel lens** (incompleteness-shaped corollaries, with/without witness): `RevHalt/Theory/GodelLens.lean`.
+- **Standard Gödel-I interface**: `RevHalt/Theory/GodelIStandard.lean`.
+- **Arithmetic staging** (syntax + standard-model truth + encodings + `Primcodable Sentence`):
+  `RevHalt/Theory/ArithmeticLanguage.lean`, `RevHalt/Theory/ArithmeticEncoding.lean`,
+  `RevHalt/Theory/ArithmeticNumerals.lean`.
+- **Provability wrapper** (turn any `Provable` into an `ImpossibleSystem`): `RevHalt/Theory/ArithmeticProvability.lean`.
+- **r.e. plumbing**:
+  - `RevHalt/Theory/REPredExtras.lean` (`rePred_exists_nat_of_computable`)
+  - `RevHalt/Theory/RECodePredExtras.lean` (`RECodePred.of_REPred_comp`)
+- **Proof-checker interface (effective provability)**: `RevHalt/Theory/ArithmeticProofSystem.lean`
+  (`ProofChecker`, `ProofChecker.rePred_Provable`).
+- **Proof-checker → Gödel-I wiring**: `RevHalt/Theory/GodelIProofChecker.lean`
+  (`GodelIArithFromChecker.exists_true_unprovable`), i.e. once `H/truth_H/correct` exist the final theorem is a corollary.
+
 ## 3.5) Exhaustive “Gödel I standard” implementation checklist (PA/Q target)
 
 This is the complete list of remaining technical work to turn the current “Gödel lens” into a

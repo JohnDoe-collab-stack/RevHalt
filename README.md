@@ -86,6 +86,9 @@ Scott/domain language is a **derived** way to read RevHalt’s operative core: i
 - **T2 (Uniform Barrier)**: diagonalization and `T2_impossibility` (`RevHalt/Theory/Impossibility.lean`).
 - **Gödel lens**: “Gödel-I standard” true-but-unprovable output (without arithmetizing `PropT` yet), e.g.
   `godelI_exists_true_unprovable_of_correct_semidec` (`RevHalt/Theory/GodelLens.lean`).
+- **Gödel-I from an effective proof checker**: connects r.e. provability (via a computable proof checker) to the arithmetic Gödel-I interface,
+  so once `H`/`truth_H`/`correct` are supplied the “true in ℕ but not provable” theorem is immediate
+  (`RevHalt/Theory/GodelIProofChecker.lean`).
 - **r.e. utilities**: reusable packaging for semi-decidability on `Nat.Partrec.Code` (`RECodePred`) used by the diagonal/Gödel interfaces
   (`RevHalt/Theory/RECodePred.lean`).
 - **Gödel-I arithmetic staging**: first-order arithmetic syntax + standard-model truth, provability interface wrapper,
