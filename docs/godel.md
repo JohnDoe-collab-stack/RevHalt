@@ -149,6 +149,11 @@ Already implemented:
   (`ProofChecker`, `ProofChecker.rePred_Provable`).
 - **Proof-checker → Gödel-I wiring**: `RevHalt/Theory/GodelIProofChecker.lean` (`GodelIArithFromChecker` / `GodelIArithFromCheckerRE`),
   so once `H`/`truth_H`/`correct` exist the “true in ℕ but not provable” theorem is a corollary.
+- **Σ₁ convergence witness**: `RevHalt/Theory/ConvergenceSigma1.lean` (`converges_iff_exists_evaln`, `rev0_K_machine_iff_exists_evaln`).
+- **Arithmetization staging (Σ₁ halting / `evaln`)**: `RevHalt/Theory/Arithmetization/HaltsSigma1.lean`
+  (`HaltsSigma1`, `ArithmetizesEvaln`, `truth_H_of_arithmetizesEvaln`, `correct_of_correctSigma1`).
+- **Proof-checker → Gödel-I wiring (Σ₁/evaln convenience)**: `RevHalt/Theory/GodelIProofCheckerEvaln.lean`
+  (`GodelIArithFromCheckerEvaln`), bridging `ArithmetizesEvaln` + Σ₁ correctness into `GodelIArithFromChecker`.
 
 ## 3.5) Exhaustive “Gödel I standard” implementation checklist (PA/Q target)
 
@@ -182,6 +187,9 @@ already exists in mathlib today (so you can reuse it rather than rebuilding from
   - `GodelIArithFromChecker`: derives (C5) from r.e. provability + a computable map `c ↦ (H c).not`;
   - `GodelIArithFromCheckerRE`: avoids that extra computability obligation by taking (C5) as an explicit `RECodePred`.
   In both cases, once `H`/`truth_H`/`correct` are provided the “true-but-unprovable” output is a one-line corollary.
+- **Proof-checker → Gödel-I packaging (Σ₁/evaln convenience)**: `RevHalt/Theory/GodelIProofCheckerEvaln.lean`
+  provides `GodelIArithFromCheckerEvaln`, which lets you state `truth_H` and correctness at the Σ₁ witness level
+  (`HaltsSigma1`) and then reuse `GodelIArithFromChecker`.
 - **Gödel’s β-function lemma**: `Mathlib.Logic.Godel.GodelBetaFunction` proves the β-function lemma,
   the standard way to arithmetize finite sequences inside arithmetic.
 - **Partial recursive codes**: `Mathlib.Computability.PartrecCode` (which RevHalt already uses) gives
@@ -306,6 +314,9 @@ A dependency-correct order that keeps the repo green is:
    then prove `truth_H : Truth (H e) ↔ Rev0_K K (Machine e)`.
    - Supporting computability lemma: `RevHalt.rev0_K_machine_iff_exists_evaln` (`RevHalt/Theory/ConvergenceSigma1.lean`)
      exposes the Σ₁ witness shape `Rev0_K K (Machine e) ↔ ∃ k x, evaln k e 0 = some x`.
+   - Staging bridge (arithmetization-facing): `RevHalt/Theory/Arithmetization/HaltsSigma1.lean` defines
+     `HaltsSigma1` and `ArithmetizesEvaln`; plus helper lemmas turning Σ₁-witness correctness into the
+     `Rev0_K`-level correctness field used by `GodelIArith`.
 4. **Prove positive correctness**: from a concrete halting witness, build a proof of `H e` in Q
    (`Rev0_K K (Machine e) → Provable_Q (H e)`).
 5. **Derive r.e. refutability**: build `RECodePred (fun c => Provable_Q (¬(H c)))` from the general proof enumerator

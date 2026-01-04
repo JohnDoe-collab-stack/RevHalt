@@ -90,6 +90,9 @@ Scott/domain language is a **derived** way to read RevHalt’s operative core: i
   so once `H`/`truth_H`/`correct` are supplied the “true in ℕ but not provable” theorem is immediate
   (`RevHalt/Theory/GodelIProofChecker.lean`). A second variant `GodelIArithFromCheckerRE` lets you supply r.e. refutability as an explicit
   `RECodePred`, avoiding a `Computable (fun c => (H c).not)` obligation.
+- **Gödel-I from an effective proof checker (Σ₁/evaln convenience)**: if you prefer to state the halting interface at the witness level
+  `HaltsSigma1 e := ∃ k x, evaln k e 0 = some x`, `GodelIArithFromCheckerEvaln` bridges it back to `GodelIArithFromChecker`
+  (`RevHalt/Theory/GodelIProofCheckerEvaln.lean`).
 - **r.e. utilities**: reusable packaging for semi-decidability on `Nat.Partrec.Code` (`RECodePred`) used by the diagonal/Gödel interfaces
   (`RevHalt/Theory/RECodePred.lean`).
 - **Gödel-I arithmetic staging**: first-order arithmetic syntax + standard-model truth, provability interface wrapper,
@@ -103,6 +106,9 @@ Scott/domain language is a **derived** way to read RevHalt’s operative core: i
   (`RevHalt/Theory/ThreeBlocksArchitecture.lean`).
 - **Σ₁ convergence witness**: `Converges` / `Rev0_K` on machine codes reduce to `∃ k x, evaln k e 0 = some x`
   (`RevHalt.converges_iff_exists_evaln`, `RevHalt.rev0_K_machine_iff_exists_evaln`) (`RevHalt/Theory/ConvergenceSigma1.lean`).
+- **Arithmetization staging (halting)**: `HaltsSigma1` and `ArithmetizesEvaln` isolate the exact interface needed to later define
+  an arithmetic halting sentence `H : Code → Sentence` with `Truth (H e) ↔ HaltsSigma1 e`, yielding `truth_H` automatically
+  (`RevHalt/Theory/Arithmetization/HaltsSigma1.lean`).
 - **Abstract dynamics**: `PickWorld`, chains/limits, `omegaState` (`RevHalt/Theory/AbstractDynamics.lean`).
 - **Ordinal boundary (EM/LPO)**: characterization `dichotomy_all_iff_em`, plus `LPO`/`LPOBool` and the “const-trick” `AdmitsConst`
   (`RevHalt/Theory/OrdinalBoundary.lean`).

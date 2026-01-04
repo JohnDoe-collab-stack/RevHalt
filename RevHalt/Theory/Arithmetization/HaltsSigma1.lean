@@ -49,6 +49,22 @@ theorem truth_H_of_arithmetizesEvaln (K : RHKit) (hK : DetectsMonotone K)
   intro e
   exact (hH e).trans (haltsSigma1_iff_rev0_K (K := K) (hK := hK) e)
 
+/--
+Σ₁-correctness helper:
+if a theory can prove `H e` from a Σ₁ halting witness (`HaltsSigma1 e`),
+then it can prove `H e` from `Rev0_K K (Machine e)`.
+
+This is useful because `HaltsSigma1 e` is the *certificate* form (`∃ k x, evaln ...`),
+while `Rev0_K` is the RevHalt-level halting predicate used by the Gödel interfaces.
+-/
+theorem correct_of_correctSigma1 (K : RHKit) (hK : DetectsMonotone K)
+    (H : Code → Sentence) (Provable : Sentence → Prop)
+    (correctSigma1 : ∀ e, HaltsSigma1 e → Provable (H e)) :
+    ∀ e, Rev0_K K (Machine e) → Provable (H e) := by
+  intro e hRev
+  apply correctSigma1 e
+  exact (haltsSigma1_iff_rev0_K (K := K) (hK := hK) e).2 hRev
+
 end Arithmetic
 
 end RevHalt
@@ -58,4 +74,4 @@ end RevHalt
 #print axioms RevHalt.Arithmetic.haltsSigma1_iff_rev0_K
 #print axioms RevHalt.Arithmetic.ArithmetizesEvaln
 #print axioms RevHalt.Arithmetic.truth_H_of_arithmetizesEvaln
-
+#print axioms RevHalt.Arithmetic.correct_of_correctSigma1
