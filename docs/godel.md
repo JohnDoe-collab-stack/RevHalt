@@ -142,6 +142,10 @@ already exists in mathlib today (so you can reuse it rather than rebuilding from
   `FirstOrder.Language.Term` and `FirstOrder.Language.BoundedFormula`. It already provides `Encodable`
   instances, and explicitly notes the next missing layer (“Primcodable instances … computability facts …”)
   that you will likely need for a full incompleteness proof.
+- **RevHalt countability / `Primcodable` for arithmetic sentences**: `RevHalt/Theory/ArithmeticNumerals.lean`
+  gives an explicit injection `ℕ → Sentence`, hence `Infinite Sentence`, and then installs
+  `Denumerable Sentence` and `Primcodable Sentence`. This unlocks r.e. / partial-recursive interfaces
+  over `Sentence` without waiting on upstream `Primcodable` instances for all first-order syntax.
 - **Gödel’s β-function lemma**: `Mathlib.Logic.Godel.GodelBetaFunction` proves the β-function lemma,
   the standard way to arithmetize finite sequences inside arithmetic.
 - **Partial recursive codes**: `Mathlib.Computability.PartrecCode` (which RevHalt already uses) gives
