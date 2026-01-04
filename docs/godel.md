@@ -150,6 +150,12 @@ already exists in mathlib today (so you can reuse it rather than rebuilding from
   `RevHalt.RECodePred.of_REPred_comp`, which turns an r.e. predicate `REPred P` on a `Primcodable` type
   into the exact `RECodePred (fun c => P (g c))` hypothesis used by the Gödel interfaces, given a
   computable map `g : Nat.Partrec.Code → α`.
+- **`REPred` closure under `∃ℕ` (search)**: `RevHalt/Theory/REPredExtras.lean` provides
+  `RevHalt.rePred_exists_nat_of_computable`, a small but very useful lemma for turning a computable
+  witness-checker `f : α → ℕ → Bool` into an r.e. predicate `a ↦ ∃ n, f a n = true` via `Nat.rfindOpt`.
+- **Proof-checker interface (C1 start)**: `RevHalt/Theory/ArithmeticProofSystem.lean` defines
+  `RevHalt.Arithmetic.ProofChecker` and derives `REPred` provability (`ProofChecker.rePred_Provable`)
+  from a computable checker.
 - **Gödel’s β-function lemma**: `Mathlib.Logic.Godel.GodelBetaFunction` proves the β-function lemma,
   the standard way to arithmetize finite sequences inside arithmetic.
 - **Partial recursive codes**: `Mathlib.Computability.PartrecCode` (which RevHalt already uses) gives
