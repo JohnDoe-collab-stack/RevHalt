@@ -1,4 +1,5 @@
 import RevHalt.Theory.ArithmeticLanguagePure
+import RevHalt.Theory.Arithmetization.BasicNat0
 import RevHalt.Theory.Arithmetization.HaltsSigma1Pure
 import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Fin.VecNotation
@@ -35,29 +36,9 @@ open scoped FirstOrder
 
 namespace Pure
 
-/-! ### Numerals as terms (pure language) -/
-
 private def emptyVal : Empty → ℕ := fun e => nomatch e
 
 private def fin0Val : Fin 0 → ℕ := fun i => Fin.elim0 i
-
-private def zeroTerm {α : Type} : Lang0.Term α :=
-  FirstOrder.Language.Term.func Func.zero (fun i => Fin.elim0 i)
-
-private def succTerm {α : Type} (t : Lang0.Term α) : Lang0.Term α :=
-  FirstOrder.Language.Term.func Func.succ (fun _ => t)
-
-private def numeralTerm {α : Type} : ℕ → Lang0.Term α
-  | 0 => zeroTerm
-  | m + 1 => succTerm (numeralTerm m)
-
-@[simp] private theorem numeralTerm_realize {α : Type} (m : ℕ) (v : α → ℕ) :
-    (numeralTerm (α := α) m).realize v = m := by
-  induction m with
-  | zero =>
-      simp [numeralTerm, zeroTerm]
-  | succ m ih =>
-      simp [numeralTerm, succTerm, ih]
 
 /-! ### The missing “full arithmetization” interface -/
 
