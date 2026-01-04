@@ -9,6 +9,7 @@ import RevHalt.Theory.Impossibility
 import RevHalt.Theory.GodelLens
 import RevHalt.Theory.GodelIStandard
 import RevHalt.Theory.ArithmeticLanguage
+import RevHalt.Theory.ArithmeticLanguagePure
 import RevHalt.Theory.ArithmeticEncoding
 import RevHalt.Theory.ArithmeticNumerals
 import RevHalt.Theory.ArithmeticProvability
@@ -25,6 +26,7 @@ import RevHalt.Theory.QuantifierSwap
 import RevHalt.Theory.ThreeBlocksArchitecture
 import RevHalt.Theory.ConvergenceSigma1
 import RevHalt.Theory.Arithmetization.HaltsSigma1
+import RevHalt.Theory.Arithmetization.HaltsSigma1Pure
 import RevHalt.Theory.AbstractDynamics
 import RevHalt.Theory.OrdinalBoundary
 import RevHalt.Theory.OrdinalMechanical

@@ -44,8 +44,12 @@ and (3) abstractly as `ImpossibleSystem` inside `Impossibility.lean`.
 
 As of now, the “sentence type + standard-model truth” part is also fixed:
 
-- `RevHalt/Theory/ArithmeticLanguage.lean` defines a minimal first-order arithmetic language (`0`, `succ`, `+`, `*`),
-  its standard structure on `ℕ`, and `Truth : Sentence → Prop` as satisfaction in `ℕ`.
+- `RevHalt/Theory/ArithmeticLanguage.lean` fixes the ambient first-order arithmetic language used by the Gödel track
+  (symbols `0`, `succ`, `+`, `*`), its standard structure on `ℕ`, and `Truth : Sentence → Prop` as satisfaction in `ℕ`.
+- `RevHalt/Theory/ArithmeticLanguagePure.lean` defines the **pure arithmetic sublanguage**
+  `RevHalt.Arithmetic.Pure.Lang0` (no extra relations) together with the inclusion map
+  `RevHalt.Arithmetic.Pure.toLang : Pure.Lang0 →ᴸ Arithmetic.Lang`. This is the starting point for the
+  “full arithmetization” direction: build `H0 : Code → Pure.Sentence0`, then lift via `Pure.liftSentence`.
 - `RevHalt/Theory/ArithmeticEncoding.lean` equips the arithmetic syntax (`Sentence`) with `Encodable` (via mathlib’s list encodings),
   which is a prerequisite for any r.e. (proof-checking / enumeration) approach to Gödel classical.
 - `RevHalt/Theory/ArithmeticProvability.lean` turns a provability predicate on arithmetic sentences into an
@@ -152,6 +156,8 @@ Already implemented:
 - **Σ₁ convergence witness**: `RevHalt/Theory/ConvergenceSigma1.lean` (`converges_iff_exists_evaln`, `rev0_K_machine_iff_exists_evaln`).
 - **Arithmetization staging (Σ₁ halting / `evaln`)**: `RevHalt/Theory/Arithmetization/HaltsSigma1.lean`
   (`HaltsSigma1`, `ArithmetizesEvaln`, `truth_H_of_arithmetizesEvaln`, `correct_of_correctSigma1`).
+- **Pure arithmetization staging (full arithmetization path)**: `RevHalt/Theory/Arithmetization/HaltsSigma1Pure.lean`
+  (`Pure.ArithmetizesEvaln0` and the transport lemma to `ArithmetizesEvaln`).
 - **Proof-checker → Gödel-I wiring (Σ₁/evaln convenience)**: `RevHalt/Theory/GodelIProofCheckerEvaln.lean`
   (`GodelIArithFromCheckerEvaln`), bridging `ArithmetizesEvaln` + Σ₁ correctness into `GodelIArithFromChecker`.
 - **Concrete end-to-end arithmetic instance (Σ₁ halting provability)**: `RevHalt/Theory/GodelIArithEvalnSigma1.lean`
