@@ -146,6 +146,10 @@ already exists in mathlib today (so you can reuse it rather than rebuilding from
   gives an explicit injection `ℕ → Sentence`, hence `Infinite Sentence`, and then installs
   `Denumerable Sentence` and `Primcodable Sentence`. This unlocks r.e. / partial-recursive interfaces
   over `Sentence` without waiting on upstream `Primcodable` instances for all first-order syntax.
+- **`REPred` → `RECodePred` glue**: `RevHalt/Theory/RECodePredExtras.lean` provides
+  `RevHalt.RECodePred.of_REPred_comp`, which turns an r.e. predicate `REPred P` on a `Primcodable` type
+  into the exact `RECodePred (fun c => P (g c))` hypothesis used by the Gödel interfaces, given a
+  computable map `g : Nat.Partrec.Code → α`.
 - **Gödel’s β-function lemma**: `Mathlib.Logic.Godel.GodelBetaFunction` proves the β-function lemma,
   the standard way to arithmetize finite sequences inside arithmetic.
 - **Partial recursive codes**: `Mathlib.Computability.PartrecCode` (which RevHalt already uses) gives
@@ -269,7 +273,8 @@ A dependency-correct order that keeps the repo green is:
 4. **Prove positive correctness**: from a concrete halting witness, build a proof of `H e` in Q
    (`Rev0_K K (Machine e) → Provable_Q (H e)`).
 5. **Derive r.e. refutability**: build `RECodePred (fun c => Provable_Q (¬(H c)))` from the general proof enumerator
-   plus the (computable) map `c ↦ (H c).not`.
+   plus the (computable) map `c ↦ (H c).not` (this is exactly `RevHalt.RECodePred.of_REPred_comp` once you have
+   `REPred Provable_Q` and `Computable (fun c => (H c).not)`).
 6. **Instantiate `GodelIArith`** and extract `exists_true_unprovable`.
 7. **Optional extensions**: generalize from Q to PA (or r.e. extensions), and/or connect the RevHalt diagonal to a fully internal
    arithmetical diagonal lemma.
