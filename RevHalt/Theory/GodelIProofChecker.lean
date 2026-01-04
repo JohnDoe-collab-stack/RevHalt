@@ -91,6 +91,67 @@ theorem exists_true_unprovable (I : GodelIArithFromChecker) :
 
 end GodelIArithFromChecker
 
+/--
+Variant staging bundle: Gödel-I from an effective checker **plus an explicit r.e. refutability
+semi-decider** for `Provable (¬(H c))`.
+
+This removes the extra “syntactic map computability” obligation `Computable (fun c => (H c).not)`.
+It is strictly weaker than `GodelIArithFromChecker`: the refutability semi-decider is provided as
+data (a `RECodePred`) rather than derived automatically.
+-/
+structure GodelIArithFromCheckerRE where
+  /-- Proof checker (C1 interface). -/
+  C : ProofChecker
+  /-- Consistency for the induced provability predicate. -/
+  consistent : ¬ C.Provable (⊥ : Sentence)
+  /-- Explosion for the induced provability predicate. -/
+  absurd : ∀ p : Sentence, C.Provable p → C.Provable p.not → C.Provable (⊥ : Sentence)
+
+  /-- Canonical kit and canonicity hypothesis (RevHalt core). -/
+  K : RHKit
+  hK : DetectsMonotone K
+
+  /-- Halting schema as an arithmetic sentence (C3). -/
+  H : Code → Sentence
+  /-- Standard-model reading of `H` as halting (C3). -/
+  truth_H : ∀ e, Truth (H e) ↔ Rev0_K K (Machine e)
+  /-- Positive correctness: halting implies provability of `H e` (C4). -/
+  correct : ∀ e, Rev0_K K (Machine e) → C.Provable (H e)
+
+  /-- r.e. refutability: semi-decider for `C.Provable (¬(H c))` (C5). -/
+  reNotH : RECodePred fun c => C.Provable (H c).not
+
+namespace GodelIArithFromCheckerRE
+
+/-- The induced `ProvabilitySystem`. -/
+def T (I : GodelIArithFromCheckerRE) : ProvabilitySystem :=
+  I.C.toProvabilitySystem I.consistent I.absurd
+
+/-- Build the `GodelIArith` package from the checker + explicit `RECodePred` refutability data. -/
+def toGodelIArith (I : GodelIArithFromCheckerRE) : GodelIArith := by
+  refine
+    { T := I.T
+      K := I.K
+      hK := I.hK
+      H := I.H
+      truth_H := I.truth_H
+      correct := fun e he => I.correct e he
+      f := I.reNotH.f
+      f_partrec := I.reNotH.f_partrec
+      semidec := ?_ }
+  intro c
+  -- `I.T.Provable` is definitionally `I.C.Provable`.
+  simpa [GodelIArithFromCheckerRE.T, ProofChecker.toProvabilitySystem] using (I.reNotH.spec c)
+
+/-- Gödel-I (standard): there exists an arithmetic sentence true in `ℕ` but not provable. -/
+theorem exists_true_unprovable (I : GodelIArithFromCheckerRE) :
+    ∃ p : Sentence, Truth p ∧ ¬ I.C.Provable p := by
+  have h := (GodelIArith.exists_true_unprovable (I := I.toGodelIArith))
+  simpa [GodelIArithFromCheckerRE.toGodelIArith, GodelIArithFromCheckerRE.T,
+    ProofChecker.toProvabilitySystem] using h
+
+end GodelIArithFromCheckerRE
+
 end Arithmetic
 
 end RevHalt
@@ -101,3 +162,7 @@ end RevHalt
 #print axioms RevHalt.Arithmetic.GodelIArithFromChecker.toGodelIArith
 #print axioms RevHalt.Arithmetic.GodelIArithFromChecker.exists_true_unprovable
 
+#print axioms RevHalt.Arithmetic.GodelIArithFromCheckerRE
+#print axioms RevHalt.Arithmetic.GodelIArithFromCheckerRE.T
+#print axioms RevHalt.Arithmetic.GodelIArithFromCheckerRE.toGodelIArith
+#print axioms RevHalt.Arithmetic.GodelIArithFromCheckerRE.exists_true_unprovable

@@ -147,8 +147,8 @@ Already implemented:
   - `RevHalt/Theory/RECodePredExtras.lean` (`RECodePred.of_REPred_comp`)
 - **Proof-checker interface (effective provability)**: `RevHalt/Theory/ArithmeticProofSystem.lean`
   (`ProofChecker`, `ProofChecker.rePred_Provable`).
-- **Proof-checker → Gödel-I wiring**: `RevHalt/Theory/GodelIProofChecker.lean`
-  (`GodelIArithFromChecker.exists_true_unprovable`), i.e. once `H/truth_H/correct` exist the final theorem is a corollary.
+- **Proof-checker → Gödel-I wiring**: `RevHalt/Theory/GodelIProofChecker.lean` (`GodelIArithFromChecker` / `GodelIArithFromCheckerRE`),
+  so once `H`/`truth_H`/`correct` exist the “true in ℕ but not provable” theorem is a corollary.
 
 ## 3.5) Exhaustive “Gödel I standard” implementation checklist (PA/Q target)
 
@@ -178,10 +178,10 @@ already exists in mathlib today (so you can reuse it rather than rebuilding from
 - **Proof-checker interface (C1 start)**: `RevHalt/Theory/ArithmeticProofSystem.lean` defines
   `RevHalt.Arithmetic.ProofChecker` and derives `REPred` provability (`ProofChecker.rePred_Provable`)
   from a computable checker.
-- **Proof-checker → Gödel-I packaging (C1/C5 wiring)**: `RevHalt/Theory/GodelIProofChecker.lean` connects
-  `ProofChecker.rePred_Provable` + a computable “negated halting” map `c ↦ (H c).not` to the existing
-  `GodelIArith` interface, so once `H`/`truth_H`/`correct` are provided the “true-but-unprovable” output
-  is a one-line corollary (`GodelIArithFromChecker.exists_true_unprovable`).
+- **Proof-checker → Gödel-I packaging (C1/C5 wiring)**: `RevHalt/Theory/GodelIProofChecker.lean` offers:
+  - `GodelIArithFromChecker`: derives (C5) from r.e. provability + a computable map `c ↦ (H c).not`;
+  - `GodelIArithFromCheckerRE`: avoids that extra computability obligation by taking (C5) as an explicit `RECodePred`.
+  In both cases, once `H`/`truth_H`/`correct` are provided the “true-but-unprovable” output is a one-line corollary.
 - **Gödel’s β-function lemma**: `Mathlib.Logic.Godel.GodelBetaFunction` proves the β-function lemma,
   the standard way to arithmetize finite sequences inside arithmetic.
 - **Partial recursive codes**: `Mathlib.Computability.PartrecCode` (which RevHalt already uses) gives
