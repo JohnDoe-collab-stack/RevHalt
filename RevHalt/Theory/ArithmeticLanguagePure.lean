@@ -44,6 +44,22 @@ def toLang : Lang0 →ᴸ Lang where
 instance : Lang0.Structure ℕ :=
   (toLang.reduct (M := ℕ))
 
+@[simp] theorem funMap_zero (x : Fin 0 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang0) (M := ℕ) Func.zero x = 0 := by
+  rfl
+
+@[simp] theorem funMap_succ (x : Fin 1 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang0) (M := ℕ) Func.succ x = Nat.succ (x 0) := by
+  rfl
+
+@[simp] theorem funMap_add (x : Fin 2 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang0) (M := ℕ) Func.add x = x 0 + x 1 := by
+  rfl
+
+@[simp] theorem funMap_mul (x : Fin 2 → ℕ) :
+    FirstOrder.Language.Structure.funMap (L := Lang0) (M := ℕ) Func.mul x = x 0 * x 1 := by
+  rfl
+
 abbrev Sentence0 : Type :=
   Lang0.Sentence
 
