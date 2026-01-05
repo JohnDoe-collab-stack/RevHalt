@@ -29,6 +29,9 @@ import RevHalt.Theory.Arithmetization.HaltsSigma1
 import RevHalt.Theory.Arithmetization.HaltsSigma1Pure
 import RevHalt.Theory.Arithmetization.BasicNat0
 import RevHalt.Theory.Arithmetization.NatPair0
+import RevHalt.Theory.Arithmetization.PartrecCodeEncoding0
+import RevHalt.Theory.Arithmetization.NatMod0
+import RevHalt.Theory.Arithmetization.GodelBeta0
 import RevHalt.Theory.Arithmetization.EvalnGraphPure
 import RevHalt.Theory.AbstractDynamics
 import RevHalt.Theory.OrdinalBoundary
