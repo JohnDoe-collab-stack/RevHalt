@@ -1,4 +1,4 @@
-import RevHalt.Theory.Splitter
+import RevHalt.Theory.Splitter.Core
 import RevHalt.Theory.Up2Gain
 
 /-!
@@ -89,7 +89,7 @@ theorem Splitter_implies_Win
 end RevHalt.Bridge
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- Axiom Checks
+-- Axiom Checks (Exhaustive)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 #print axioms RevHalt.Bridge.WinningCase

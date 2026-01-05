@@ -1,4 +1,4 @@
-import RevHalt.Theory.Splitter
+import RevHalt.Theory.Splitter.Core
 import RevHalt.Theory.Up2
 import Mathlib.Data.Set.Basic
 
@@ -71,3 +71,9 @@ theorem queue_splitter_subset_avoid2
   exact hSubset hX
 
 end RevHalt.Bridge
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Axiom Checks (Exhaustive)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+#print axioms RevHalt.Bridge.queue_splitter_subset_avoid2

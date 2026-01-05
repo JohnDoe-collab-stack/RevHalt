@@ -1,4 +1,4 @@
-import RevHalt.Theory.Splitter
+import RevHalt.Theory.Splitter.Core
 import Mathlib.Data.Nat.Prime.Defs
 import Mathlib.Data.Nat.GCD.Basic
 
@@ -143,11 +143,19 @@ theorem prime_iff_atomic (p : ℕ) (hp : p ≥ 2) :
 end RevHalt.Splitter.Arithmetic
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- Axiom Checks
+-- Axiom Checks (Exhaustive)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 #print axioms RevHalt.Splitter.Arithmetic.SplitMod
 #print axioms RevHalt.Splitter.Arithmetic.SplitFamily
 #print axioms RevHalt.Splitter.Arithmetic.Admissible
 #print axioms RevHalt.Splitter.Arithmetic.Prime_RH_Arith
+#print axioms RevHalt.Splitter.Arithmetic.equiv_refl
+#print axioms RevHalt.Splitter.Arithmetic.equiv_trans
+#print axioms RevHalt.Splitter.Arithmetic.admissible_equiv_mod
+#print axioms RevHalt.Splitter.Arithmetic.dvd_prime_options
+#print axioms RevHalt.Splitter.Arithmetic.axiom_mod_1_trivial
+#print axioms RevHalt.Splitter.Arithmetic.axiom_mod_nontrivial
+#print axioms RevHalt.Splitter.Arithmetic.axiom_lcm_eq_p
+#print axioms RevHalt.Splitter.Arithmetic.axiom_atomic_implies_prime
 #print axioms RevHalt.Splitter.Arithmetic.prime_iff_atomic

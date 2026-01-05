@@ -70,29 +70,73 @@ def compose (A B : Splitter Pos) : Splitter Pos where
     exact List.mem_flatMap.mpr ⟨K, hK_in_A, hJ_in_B⟩
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 3.5) Equivalence
+-- 3.5) Equivalence (Shallow: depth 1)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- Two splitters are equivalent if they induce the same satisfiability structure at depth 1. -/
+/-- Two splitters are equivalent at depth 1 if they induce the same satisfiability structure. -/
 def SplitterEquiv (A B : Splitter Pos) : Prop :=
   ∀ I n m,
     (∃ J ∈ A.split I, Sat Pos J n ∧ Sat Pos J m) ↔
     (∃ K ∈ B.split I, Sat Pos K n ∧ Sat Pos K m)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- 3.6) Identity Splitter
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- The identity splitter: Split(I) = {I}. -/
+def IdSplitter : Splitter Pos where
+  split I := [I]
+  refinement := by
+    intro I J hJ n hSatJ
+    simp only [List.mem_singleton] at hJ
+    subst hJ
+    exact hSatJ
+  cover := by
+    intro I n hSatI
+    use I
+    simp only [List.mem_singleton, true_and]
+    exact hSatI
+
+/-- Id ⊗ S ≈ S (left identity). -/
+theorem id_compose_left (S : Splitter Pos) : SplitterEquiv Pos (compose Pos (IdSplitter Pos) S) S := by
+  intro I n m
+  have h : (compose Pos (IdSplitter Pos) S).split I = S.split I := by
+    simp only [compose, IdSplitter, List.flatMap, List.map, List.flatten]
+    exact List.append_nil _
+  simp only [h]
+
+/-- S ⊗ Id ≈ S (right identity). -/
+theorem id_compose_right (S : Splitter Pos) : SplitterEquiv Pos (compose Pos S (IdSplitter Pos)) S := by
+  intro I n m
+  constructor
+  · intro ⟨J, hJ, hSat⟩
+    simp only [compose, IdSplitter, List.mem_flatMap, List.mem_singleton] at hJ
+    obtain ⟨K, hK_in, hJ_eq⟩ := hJ
+    use K
+    exact ⟨hK_in, by rw [← hJ_eq]; exact hSat⟩
+  · intro ⟨J, hJ, hSat⟩
+    use J
+    simp only [compose, IdSplitter, List.mem_flatMap, List.mem_singleton]
+    exact ⟨⟨J, hJ, rfl⟩, hSat⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- 4) Trivial and Atomic
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- A splitter is trivial if it never really distinguishes anything. -/
+/-- A splitter is trivial if Split(I) = {I} (or equivalent: never distinguishes). -/
 def isTrivial (S : Splitter Pos) : Prop :=
   ∀ I, ∀ J ∈ S.split I, (∀ n, Sat Pos I n ↔ Sat Pos J n)
 
 /-- A splitter is nontrivial if there exists a case that distinguishes. -/
 def isNontrivial (S : Splitter Pos) : Prop := ¬ isTrivial Pos S
 
-/-- A splitter is atomic relative to an admissible class if it is Irreducible.
-    i.e., if S ~ A ∘ B with A,B nontrivial, then A ~ S or B ~ S.
-    (This allows S ∘ S ~ S for idempotent splitters like Mod p). -/
+/-- A splitter is Atomic if every factorization S ~ A ⊗ B implies A or B is trivial.
+    This is the spec-compliant definition from §5. -/
+def Atomic (S : Splitter Pos) : Prop :=
+  ∀ A B : Splitter Pos, SplitterEquiv Pos S (compose Pos A B) →
+    isTrivial Pos A ∨ isTrivial Pos B
+
+/-- A splitter is atomic relative to an admissible class (original definition). -/
 def isAtomicRelative (S : Splitter Pos) (Adm : Splitter Pos → Prop) : Prop :=
   isNontrivial Pos S ∧
   Adm S ∧
@@ -207,6 +251,91 @@ theorem resEquiv_trans (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (n m k : Pos
   fun hnm hmk J hJ => (hnm J hJ).trans (hmk J hJ)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- 7.5) Observational Equivalence (Spec §5)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Two splitters are observationally equivalent if they induce the same ResEquiv for all depths.
+    This is the official equivalence from spec §5. -/
+def ObsEq (S T : Splitter Pos) : Prop :=
+  ∀ d I0 n m, ResEquiv Pos S d I0 n m ↔ ResEquiv Pos T d I0 n m
+
+/-- ObsEq is reflexive. -/
+theorem obsEq_refl (S : Splitter Pos) : ObsEq Pos S S := fun _ _ _ _ => Iff.rfl
+
+/-- ObsEq is symmetric. -/
+theorem obsEq_symm (S T : Splitter Pos) : ObsEq Pos S T → ObsEq Pos T S :=
+  fun h d I0 n m => (h d I0 n m).symm
+
+/-- ObsEq is transitive. -/
+theorem obsEq_trans (S T U : Splitter Pos) : ObsEq Pos S T → ObsEq Pos T U → ObsEq Pos S U :=
+  fun hST hTU d I0 n m => (hST d I0 n m).trans (hTU d I0 n m)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 7.6) Trivial via ObsEq (Spec §5)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Alternative Trivial definition: S is trivial if ObsEq to Id. -/
+def TrivialObs (S : Splitter Pos) : Prop :=
+  ∀ I, S.split I = [I]
+
+/-- Atomic per spec §5: if S ~ A ⊗ B then A or B is trivial. -/
+def AtomicObs (S : Splitter Pos) : Prop :=
+  ∀ A B : Splitter Pos, ObsEq Pos S (compose Pos A B) →
+    TrivialObs Pos A ∨ TrivialObs Pos B
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 7.7) Observable (Spec §8)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- A predicate P is Observable at depth d if it factors through residue classes.
+    i.e., if ResEquiv(n,m) then P(n) ↔ P(m). -/
+def Observable (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (P : Pos → Prop) : Prop :=
+  ∀ n m, ResEquiv Pos S d I0 n m → (P n ↔ P m)
+
+/-- All Case-derived predicates (membership in a case) are observable. -/
+theorem case_sat_observable (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (J : Info Pos)
+    (hJ : J ∈ Cases Pos S d I0) :
+    Observable Pos S d I0 (Sat Pos J) := by
+  intro n m hRes
+  exact hRes J hJ
+
+/-- Observable predicates are closed under conjunction. -/
+theorem observable_and (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (P Q : Pos → Prop)
+    (hP : Observable Pos S d I0 P) (hQ : Observable Pos S d I0 Q) :
+    Observable Pos S d I0 (fun n => P n ∧ Q n) := by
+  intro n m hRes
+  constructor
+  · intro ⟨hp, hq⟩
+    exact ⟨(hP n m hRes).mp hp, (hQ n m hRes).mp hq⟩
+  · intro ⟨hp, hq⟩
+    exact ⟨(hP n m hRes).mpr hp, (hQ n m hRes).mpr hq⟩
+
+/-- Observable predicates are closed under disjunction. -/
+theorem observable_or (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (P Q : Pos → Prop)
+    (hP : Observable Pos S d I0 P) (hQ : Observable Pos S d I0 Q) :
+    Observable Pos S d I0 (fun n => P n ∨ Q n) := by
+  intro n m hRes
+  constructor
+  · intro h
+    cases h with
+    | inl hp => left; exact (hP n m hRes).mp hp
+    | inr hq => right; exact (hQ n m hRes).mp hq
+  · intro h
+    cases h with
+    | inl hp => left; exact (hP n m hRes).mpr hp
+    | inr hq => right; exact (hQ n m hRes).mpr hq
+
+/-- Observable predicates are closed under negation. -/
+theorem observable_not (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (P : Pos → Prop)
+    (hP : Observable Pos S d I0 P) :
+    Observable Pos S d I0 (fun n => ¬ P n) := by
+  intro n m hRes
+  constructor
+  · intro hnp hp
+    exact hnp ((hP n m hRes).mpr hp)
+  · intro hmp hp
+    exact hmp ((hP n m hRes).mp hp)
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- 8) Queue: Persistent Residue Under Dynamics
 -- ═══════════════════════════════════════════════════════════════════════════════
 
@@ -252,12 +381,56 @@ theorem queue_orbit_closed (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (n : Pos
 end RevHalt.Splitter
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- Axiom Checks
+-- Axiom Checks (Exhaustive)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+-- Core types
+#print axioms RevHalt.Splitter.Splitter
+#print axioms RevHalt.Splitter.Sat
 #print axioms RevHalt.Splitter.compose
+
+-- Identity and equivalence
+#print axioms RevHalt.Splitter.IdSplitter
+#print axioms RevHalt.Splitter.id_compose_left
+#print axioms RevHalt.Splitter.id_compose_right
+#print axioms RevHalt.Splitter.SplitterEquiv
+
+-- Trivial and Atomic
+#print axioms RevHalt.Splitter.isTrivial
+#print axioms RevHalt.Splitter.isNontrivial
+#print axioms RevHalt.Splitter.Atomic
+#print axioms RevHalt.Splitter.isAtomicRelative
 #print axioms RevHalt.Splitter.isAtomic
 #print axioms RevHalt.Splitter.Prime_RH
+
+-- Cases
 #print axioms RevHalt.Splitter.Cases
+#print axioms RevHalt.Splitter.cases_card_bound
+#print axioms RevHalt.Splitter.cases_cover
+
+-- ResEquiv
 #print axioms RevHalt.Splitter.ResEquiv
+#print axioms RevHalt.Splitter.resEquiv_refl
+#print axioms RevHalt.Splitter.resEquiv_symm
+#print axioms RevHalt.Splitter.resEquiv_trans
+
+-- ObsEq
+#print axioms RevHalt.Splitter.ObsEq
+#print axioms RevHalt.Splitter.obsEq_refl
+#print axioms RevHalt.Splitter.obsEq_symm
+#print axioms RevHalt.Splitter.obsEq_trans
+#print axioms RevHalt.Splitter.TrivialObs
+#print axioms RevHalt.Splitter.AtomicObs
+
+-- Observable
+#print axioms RevHalt.Splitter.Observable
+#print axioms RevHalt.Splitter.case_sat_observable
+#print axioms RevHalt.Splitter.observable_and
+#print axioms RevHalt.Splitter.observable_or
+#print axioms RevHalt.Splitter.observable_not
+
+-- Queue
+#print axioms RevHalt.Splitter.iterate
 #print axioms RevHalt.Splitter.Queue
+#print axioms RevHalt.Splitter.iterate_add
+#print axioms RevHalt.Splitter.queue_orbit_closed
