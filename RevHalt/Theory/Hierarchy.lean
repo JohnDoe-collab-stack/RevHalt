@@ -132,51 +132,62 @@ theorem hierarchy_chain
 /--
 **Temporal Embedding**:
 Specializes the embedding to a time-evolution context.
-We assume the existence of a `Next` function on `Pos` representing time steps.
-The trace `T` is now understood as `T k` meaning "Halts at step k" (or state `Next^k n0`).
+Now includes structural constraints `hom` and `turnP`.
 -/
 structure TemporalEmbedding (Pos : Type) extends TraceGameEmbedding Pos where
   Next : Pos → Pos
-  /-- The Game moves match the State transitions. -/
-  homomorphism : ∀ p, G.moves (embed p) = {embed (Next p)}
-  /-- The trace property is stable if it holds for the trajectory starting at `start`. -/
+  hom : ∀ p, G.moves (embed p) = {embed (Next p)}
+  turnP : ∀ p, G.turn (embed p) = Turn.P
   start : Pos
 
 /--
-**Theorem: Splitter implies Full Stabilization.**
-If the starting position is covered by a valid Queue splitter,
-then the system *never* halts (Stabilizes).
-
-Proof:
-1. `Queue` is closed under `Next` (orbit stability).
-2. Thus, for all `k`, `Queue` holds at `Next^k start`.
-3. By `splitter_implies_avoid2`, every point in the trajectory is in `Avoid2Set`.
-4. By `avoid2_implies_not_target`, no point in the trajectory is in `Target`.
-5. By `target_spec`, `T` is false for every point in the trajectory.
+**TimeTrace**: The Trace seen as a function of time (along the orbit).
+`TimeTrace emb k` is true if the system halts at step k.
 -/
-theorem stabilization_chain
+def TimeTrace {Pos : Type} (emb : TemporalEmbedding Pos) : RevHalt.Trace :=
+  fun k => emb.T (iterate Pos emb.Next k emb.start)
+
+/--
+**Theorem: Stabilization Chain Orbit.**
+The orbital form of protection: nothing on the orbit halts.
+-/
+theorem stabilization_chain_orbit
     (Pos : Type)
-    (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (Next : Pos → Pos)
+    (S : Splitter Pos) (d : ℕ) (I0 : Info Pos)
     (emb : TemporalEmbedding Pos)
-    -- Hypotheses
-    (h_emb_hom : ∀ p, emb.G.moves (emb.embed p) = {emb.embed (Next p)})
-    (h_emb_turn : ∀ p, emb.G.turn (emb.embed p) = Turn.P)
-    (h_safe : ∀ p, Queue Pos Next S d I0 p → emb.embed p ∉ emb.Target)
-    -- Start condition
-    (hQ : Queue Pos Next S d I0 emb.start)
-    -- Matching the generic Next with embedding Next explicitely if needed (they are the same here)
-    : ∀ k, ¬ emb.T (iterate Pos Next k emb.start) := by
+    (h_safe : ∀ p, Queue Pos emb.Next S d I0 p → emb.embed p ∉ emb.Target)
+    (hQ : Queue Pos emb.Next S d I0 emb.start)
+    : ∀ k, ¬ emb.T (iterate Pos emb.Next k emb.start) := by
   intro k
-  -- 1. Orbit Closure of Queue
-  -- NOTE: iterate takes (Pos Next k start) in that order in Core.lean
-  have hQ_k : Queue Pos Next S d I0 (iterate Pos Next k emb.start) :=
-    queue_orbit_closed Pos Next S d I0 emb.start hQ k
+  -- 1. Orbit Closure of Queue (Queue is invariant)
+  have hQ_k : Queue Pos emb.Next S d I0 (iterate Pos emb.Next k emb.start) :=
+    queue_orbit_closed Pos emb.Next S d I0 emb.start hQ k
 
   -- 2. Apply Hierarchy Chain to the k-th point
-  let current_pos := iterate Pos Next k emb.start
+  apply hierarchy_chain
+      Pos S d I0 emb.Next
+      emb.toTraceGameEmbedding
+      emb.hom
+      emb.turnP
+      h_safe
+      (iterate Pos emb.Next k emb.start)
+      hQ_k
 
-  -- We reuse hierarchy_chain pointwise
-  apply hierarchy_chain Pos S d I0 Next emb.toTraceGameEmbedding h_emb_hom h_emb_turn h_safe current_pos hQ_k
+/--
+**Theorem: Full Stabilization (Up1).**
+If the start is covered by a Queue, then the TimeTrace Stabilizes.
+This is the final RevHalt statement: `Stabilizes (TimeTrace emb)`.
+-/
+theorem stabilization_chain_up1
+    (Pos : Type)
+    (S : Splitter Pos) (d : ℕ) (I0 : Info Pos)
+    (emb : TemporalEmbedding Pos)
+    (h_safe : ∀ p, Queue Pos emb.Next S d I0 p → emb.embed p ∉ emb.Target)
+    (hQ : Queue Pos emb.Next S d I0 emb.start)
+    : RevHalt.Stabilizes (TimeTrace emb) := by
+  -- Definition of Stabilizes is ∀ k, ¬ TimeTrace emb k
+  intro k
+  exact stabilization_chain_orbit Pos S d I0 emb h_safe hQ k
 
 end RevHalt.Hierarchy
 
@@ -189,5 +200,5 @@ namespace RevHalt.Hierarchy
 #print axioms up2_implies_up1_pointwise
 #print axioms splitter_implies_avoid2
 #print axioms hierarchy_chain
-#print axioms stabilization_chain
+#print axioms stabilization_chain_up1
 end RevHalt.Hierarchy
