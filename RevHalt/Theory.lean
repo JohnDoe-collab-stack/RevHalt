@@ -31,6 +31,7 @@ import RevHalt.Theory.Arithmetization.BasicNat0
 import RevHalt.Theory.Arithmetization.NatPair0
 import RevHalt.Theory.Arithmetization.NatUnpair0
 import RevHalt.Theory.Arithmetization.NatTuple0
+import RevHalt.Theory.Arithmetization.EvalnDeriv0
 import RevHalt.Theory.Arithmetization.PartrecCodeEncoding0
 import RevHalt.Theory.Arithmetization.NatMod0
 import RevHalt.Theory.Arithmetization.GodelBeta0
