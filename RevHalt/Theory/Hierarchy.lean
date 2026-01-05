@@ -44,7 +44,7 @@ structure TraceGameEmbedding (Pos : Type) where
   target_spec : ∀ n, embed n ∈ Target ↔ T n
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 2. Up2 → Up1 (Avoidance implies Stabilization)
+-- 2. Up2 → Up1 (Pointwise Safety)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 /--
@@ -100,19 +100,12 @@ theorem splitter_implies_avoid2
   exact queue_splitter_subset_avoid2 Pos S d I0 Next G embed Target h_hom h_turn h_safe n hQ
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 4. The Hierarchy Chain
+-- 4. The Hierarchy Chain (Pointwise)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 /--
-**The Grand Unification.**
-Splitter Safety (Arithmetic)
-  ⇒ Up2 Safety (Structural/Game)
-  ⇒ Up1 Safety (Temporal/Trace)
-
-Proof:
-1. Splitter/Queue guarantees membership in Avoid2Set (Infinite Safety).
-2. Avoid2Set guarantees membership in the complement of Target (Immediate Safety).
-3. Complement of Target corresponds to False in the Trace (No Halting).
+**The Grand Unification (Pointwise).**
+Splitter Safety guarantees Pointwise Safety via Up2.
 -/
 theorem hierarchy_chain
     (Pos : Type)
@@ -132,4 +125,69 @@ theorem hierarchy_chain
   -- 2. Up2 -> Up1 (Pointwise Stabilization)
   exact up2_implies_up1_pointwise emb n hAvoid
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 5. Temporal Stabilization (Full Up1)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+**Temporal Embedding**:
+Specializes the embedding to a time-evolution context.
+We assume the existence of a `Next` function on `Pos` representing time steps.
+The trace `T` is now understood as `T k` meaning "Halts at step k" (or state `Next^k n0`).
+-/
+structure TemporalEmbedding (Pos : Type) extends TraceGameEmbedding Pos where
+  Next : Pos → Pos
+  /-- The Game moves match the State transitions. -/
+  homomorphism : ∀ p, G.moves (embed p) = {embed (Next p)}
+  /-- The trace property is stable if it holds for the trajectory starting at `start`. -/
+  start : Pos
+
+/--
+**Theorem: Splitter implies Full Stabilization.**
+If the starting position is covered by a valid Queue splitter,
+then the system *never* halts (Stabilizes).
+
+Proof:
+1. `Queue` is closed under `Next` (orbit stability).
+2. Thus, for all `k`, `Queue` holds at `Next^k start`.
+3. By `splitter_implies_avoid2`, every point in the trajectory is in `Avoid2Set`.
+4. By `avoid2_implies_not_target`, no point in the trajectory is in `Target`.
+5. By `target_spec`, `T` is false for every point in the trajectory.
+-/
+theorem stabilization_chain
+    (Pos : Type)
+    (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (Next : Pos → Pos)
+    (emb : TemporalEmbedding Pos)
+    -- Hypotheses
+    (h_emb_hom : ∀ p, emb.G.moves (emb.embed p) = {emb.embed (Next p)})
+    (h_emb_turn : ∀ p, emb.G.turn (emb.embed p) = Turn.P)
+    (h_safe : ∀ p, Queue Pos Next S d I0 p → emb.embed p ∉ emb.Target)
+    -- Start condition
+    (hQ : Queue Pos Next S d I0 emb.start)
+    -- Matching the generic Next with embedding Next explicitely if needed (they are the same here)
+    : ∀ k, ¬ emb.T (iterate Pos Next k emb.start) := by
+  intro k
+  -- 1. Orbit Closure of Queue
+  -- NOTE: iterate takes (Pos Next k start) in that order in Core.lean
+  have hQ_k : Queue Pos Next S d I0 (iterate Pos Next k emb.start) :=
+    queue_orbit_closed Pos Next S d I0 emb.start hQ k
+
+  -- 2. Apply Hierarchy Chain to the k-th point
+  let current_pos := iterate Pos Next k emb.start
+
+  -- We reuse hierarchy_chain pointwise
+  apply hierarchy_chain Pos S d I0 Next emb.toTraceGameEmbedding h_emb_hom h_emb_turn h_safe current_pos hQ_k
+
+end RevHalt.Hierarchy
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6. Axiom Verification
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+namespace RevHalt.Hierarchy
+#print axioms avoid2_implies_not_target
+#print axioms up2_implies_up1_pointwise
+#print axioms splitter_implies_avoid2
+#print axioms hierarchy_chain
+#print axioms stabilization_chain
 end RevHalt.Hierarchy
