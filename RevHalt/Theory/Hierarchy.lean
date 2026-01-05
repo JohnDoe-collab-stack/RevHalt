@@ -8,8 +8,8 @@ import RevHalt.Theory.Splitter.Core
 
 This module serves as the **unification layer** for the RevHalt theory components:
 
-1.  **Up1 (Stabilization)**: Temporal safety ($\Pi_1$). "Never Halts".
-2.  **Up2 (Avoidance)**: Structural safety ($\Pi_2$). "Winning Strategy to avoid Halting".
+1.  **Up1 (Stabilization)**: Temporal safety (Pi-1). "Never Halts".
+2.  **Up2 (Avoidance)**: Structural safety (Pi-2). "Winning Strategy to avoid Halting".
 3.  **Splitter (Resolution)**: Arithmetic safety. "Resolvable into stable Prime components".
 
 ## The Hierarchy Theorem

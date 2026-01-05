@@ -22,6 +22,15 @@ open RevHalt.Splitter
 open RevHalt.Up2
 open RevHalt.Bridge
 
+-- Robust simp lemmas for iterate (Option B)
+@[simp] lemma iterate_zero {Pos : Type} (Next : Pos → Pos) (start : Pos) :
+  iterate Pos Next 0 start = start := by
+  rfl
+
+@[simp] lemma iterate_succ {Pos : Type} (Next : Pos → Pos) (k : ℕ) (start : Pos) :
+  iterate Pos Next (k+1) start = Next (iterate Pos Next k start) := by
+  rfl
+
 structure TemporalSystem (Pos : Type) where
   Next   : Pos → Pos
   start  : Pos
@@ -54,11 +63,11 @@ theorem temporal_stabilization_abstract
   have h_safe_k : Avoid2Mem sys.G sys.Target (sys.embed (orbit_pt k)) := by
     induction k with
     | zero =>
-        simpa [orbit_pt, iterate]
+        simpa [orbit_pt, iterate_zero]
           using h_start
     | succ k ih =>
-        -- robust: use the actual iterate unfolding
-        simpa [orbit_pt, iterate]
+        -- robust: use the local iterate_succ lemmas
+        simpa [orbit_pt, iterate_succ]
           using h_inv (orbit_pt k) ih
 
   have h_not_target := temporal_avoid2_safe sys (orbit_pt k) h_safe_k
