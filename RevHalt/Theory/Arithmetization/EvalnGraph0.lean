@@ -432,12 +432,7 @@ theorem evalnGraph0_spec (k codeNat inputNat outputNat : ℕ) :
         (show Lang0.BoundedFormula (Fin 4) 0 from EvalnGraph).Realize
           (Sum.elim (![codeNat, inputNat] : Fin 2 → ℕ) (![k, outputNat] : Fin 2 → ℕ) ∘ evalnRelabel)
           ((![k, outputNat] : Fin 2 → ℕ) ∘ Fin.natAdd 2) := by
-    simpa using
-      (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
-            (φ := (show Lang0.BoundedFormula (Fin 4) 0 from EvalnGraph))
-            (g := evalnRelabel)
-            (v := (![codeNat, inputNat] : Fin 2 → ℕ))
-            (xs := (![k, outputNat] : Fin 2 → ℕ)))
+    simp
   -- Drop the irrelevant `Fin 0` valuation, then apply `EvalnGraph_spec`.
   have h1 :
       (show Lang0.BoundedFormula (Fin 4) 0 from EvalnGraph).Realize
