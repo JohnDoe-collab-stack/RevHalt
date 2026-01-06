@@ -21,12 +21,15 @@ def CycleC : Set Nat := { n | n = 1 ∨ n = 2 ∨ n = 4 }
 def TargetOut : Set Nat := { n | n ∉ CycleC }
 
 -- Decidable instance for CycleC membership (avoids Classical.choice)
-instance decideCycleC (n : Nat) : Decidable (n ∈ CycleC) :=
+-- Local instance to avoid polluting global scope
+def decideCycleC (n : Nat) : Decidable (n ∈ CycleC) :=
   if h1 : n = 1 then isTrue (Or.inl h1)
   else if h2 : n = 2 then isTrue (Or.inr (Or.inl h2))
   else if h4 : n = 4 then isTrue (Or.inr (Or.inr h4))
   else isFalse (fun h => by
     rcases h with rfl | rfl | rfl <;> contradiction)
+
+scoped instance (n : Nat) : Decidable (n ∈ CycleC) := decideCycleC n
 
 lemma one_in_C : (1 : Nat) ∈ CycleC := by
   dsimp [CycleC]; exact Or.inl rfl
@@ -149,7 +152,8 @@ lemma hQ_start' : Queue Nat collatzStep Scycle d I0' 4 := by
   refine ⟨sat_I0'_start, ?_⟩
   intro t J hJ
   -- Cases 1 I0' = split I0' = [I0'++[InCycle], I0'++[NotInCycle]]
-  -- Explicit step-by-step reduction to avoid toolchain issues
+  -- Explicit step-by-step reduction:
+  -- Unfold Cases at depth 1: Cases S 1 I0 = S.split I0
   have h_cases : Cases Nat Scycle 1 I0' = Scycle.split I0' := by
     rw [RevHalt.Splitter.Cases] -- Unfold Cases at 1 (succ 0)
     rw [RevHalt.Splitter.Cases] -- Unfold Cases at 0
@@ -202,37 +206,7 @@ theorem cycle_factory_stabilizes :
 end RevHalt.Examples
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- Axiom Verification (Exhaustive)
--- ═══════════════════════════════════════════════════════════════════════════════
-
--- Core definitions
-#print axioms RevHalt.Examples.collatzStep
-#print axioms RevHalt.Examples.CycleC
-#print axioms RevHalt.Examples.TargetOut
-#print axioms RevHalt.Examples.decideCycleC
-
--- Basic lemmas
-#print axioms RevHalt.Examples.one_in_C
-#print axioms RevHalt.Examples.two_in_C
-#print axioms RevHalt.Examples.four_in_C
-#print axioms RevHalt.Examples.cycle_closed_step
-#print axioms RevHalt.Examples.orbit_in_cycle
-
--- Game and TemporalSystem
-#print axioms RevHalt.Examples.GCollatz
-#print axioms RevHalt.Examples.Sys
-
-
-
--- Scycle splitter (cycle/non-cycle)
-#print axioms RevHalt.Examples.InCycle
-#print axioms RevHalt.Examples.NotInCycle
-#print axioms RevHalt.Examples.Scycle
-#print axioms RevHalt.Examples.d
-#print axioms RevHalt.Examples.I0'
-#print axioms RevHalt.Examples.sat_I0'_start
-
--- Factory chain
+-- Factory chain (Pipeline Core Certification)
 #print axioms RevHalt.Examples.hQ_start'
 #print axioms RevHalt.Examples.h_bridge'
 #print axioms RevHalt.Examples.cycle_factory_stabilizes
