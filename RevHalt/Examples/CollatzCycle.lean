@@ -236,7 +236,121 @@ theorem factorization_refines (a b : Nat) (ha : a > 0) (hb : b > 0)
     exact ((sat_composed_ModEq _ _ _ _ _).mp (hIff.mp hSat_n)).2.symm
   exact mod_eq_of_coprime_mod_eq a b n k ha hb hCoprime hModA hModB
 
--- Splitter "cycle vs non-cycle" : deux cas
+-- ============================================================================
+-- 3.3) Collatz-Specific Splitters (Examples/collatz.md)
+-- ============================================================================
+
+/-- 2-adic valuation: highest power of 2 dividing n. v2(0) := 0. -/
+def v2 : Nat → Nat
+  | 0 => 0
+  | n + 1 =>
+    if (n + 1) % 2 = 1 then 0
+    else 1 + v2 ((n + 1) / 2)
+
+/-- Constraint: n has exactly k trailing zeros (v2(n) = k). -/
+def HasV2 (k : Nat) : Nat → Prop := fun n => v2 n = k
+
+/-- Constraint: n has at least k trailing zeros (v2(n) ≥ k). -/
+def HasV2Ge (k : Nat) : Nat → Prop := fun n => v2 n ≥ k
+
+/-- Split_v2 k: splits by 2-adic valuation up to depth k. -/
+def Split_v2 (k : Nat) (_hk : k > 0) : Splitter Nat where
+  split I := (List.range k).map (fun v => I ++ [HasV2 v]) ++ [I ++ [HasV2Ge k]]
+  refinement := by
+    intro I J hJ n hSatJ
+    simp only [List.mem_append, List.mem_map, List.mem_singleton] at hJ
+    intro c hcI
+    apply hSatJ c
+    rcases hJ with ⟨v, _, rfl⟩ | rfl
+    · exact List.mem_append_left _ hcI
+    · exact List.mem_append_left _ hcI
+  cover := by
+    intro I n hSatI
+    by_cases hLt : v2 n < k
+    · refine ⟨I ++ [HasV2 (v2 n)], ?_, ?_⟩
+      · simp only [List.mem_append, List.mem_map, List.mem_singleton]
+        left
+        exact ⟨v2 n, List.mem_range.mpr hLt, rfl⟩
+      · intro c hc
+        rcases List.mem_append.mp hc with hcI | hcLast
+        · exact hSatI c hcI
+        · simp only [List.mem_singleton] at hcLast
+          simp only [hcLast, HasV2]
+    · refine ⟨I ++ [HasV2Ge k], ?_, ?_⟩
+      · simp only [List.mem_append, List.mem_map, List.mem_singleton]
+        right; trivial
+      · intro c hc
+        rcases List.mem_append.mp hc with hcI | hcLast
+        · exact hSatI c hcI
+        · simp only [List.mem_singleton] at hcLast
+          simp only [hcLast, HasV2Ge]
+          omega
+
+/-- Affine constraint: (a*n + b) ≡ r (mod p).
+    This is the general form: checks if (a*n + b) % p = r. -/
+def AffineEq (p a b r : Nat) : Nat → Prop := fun n => (a * n + b) % p = r
+
+/-- Split_affine p a b: splits by affine constraint (a*n+b) mod p.
+    Produces p cases: one for each residue class of (a*n+b) modulo p.
+    Spec: Examples/collatz.md §7.A "split par contraintes de forme a*n+b divisible par p" -/
+def Split_affine (p a b : Nat) (hp : p > 0) : Splitter Nat where
+  split I := (List.range p).map (fun r => I ++ [AffineEq p a b r])
+  refinement := by
+    intro I J hJ n hSatJ
+    simp only [List.mem_map] at hJ
+    obtain ⟨r, _, rfl⟩ := hJ
+    intro c hcI
+    apply hSatJ c
+    exact List.mem_append_left _ hcI
+  cover := by
+    intro I n hSatI
+    let r := (a * n + b) % p
+    have hr : r < p := Nat.mod_lt (a * n + b) hp
+    refine ⟨I ++ [AffineEq p a b r], ?_, ?_⟩
+    · apply List.mem_map.mpr
+      exact ⟨r, List.mem_range.mpr hr, rfl⟩
+    · intro c hc
+      rcases List.mem_append.mp hc with hcI | hcLast
+      · exact hSatI c hcI
+      · simp only [List.mem_singleton] at hcLast
+        simp only [hcLast, AffineEq]
+        rfl
+
+/-- Parity tag: even (0) or odd (1). -/
+def ParityTag : Nat → Nat := fun n => n % 2
+
+/-- Tagged constraint: n has parity p and next step has parity q. -/
+def HasTag (p q : Nat) : Nat → Prop := fun n =>
+  ParityTag n = p ∧ ParityTag (collatzStep n) = q
+
+/-- Split_tag: splits by (parity, next_parity) pairs. -/
+def Split_tag : Splitter Nat where
+  split I := [(0,0), (0,1), (1,0), (1,1)].map (fun ⟨p, q⟩ => I ++ [HasTag p q])
+  refinement := by
+    intro I J hJ n hSatJ
+    simp only [List.mem_map] at hJ
+    obtain ⟨⟨p, q⟩, _, rfl⟩ := hJ
+    intro c hcI
+    apply hSatJ c
+    exact List.mem_append_left _ hcI
+  cover := by
+    intro I n hSatI
+    let p := ParityTag n
+    let q := ParityTag (collatzStep n)
+    have hp_lt : p < 2 := Nat.mod_lt n (by decide)
+    have hq_lt : q < 2 := Nat.mod_lt (collatzStep n) (by decide)
+    have hpq_in : (p, q) ∈ [(0,0), (0,1), (1,0), (1,1)] := by
+      simp only [List.mem_cons, Prod.mk.injEq]
+      omega
+    refine ⟨I ++ [HasTag p q], ?_, ?_⟩
+    · apply List.mem_map.mpr
+      exact ⟨(p, q), hpq_in, rfl⟩
+    · intro c hc
+      rcases List.mem_append.mp hc with hcI | hcLast
+      · exact hSatI c hcI
+      · simp only [List.mem_singleton] at hcLast
+        simp only [hcLast, HasTag, ParityTag]
+        constructor <;> rfl
 def InCycle : Nat → Prop := fun n => n ∈ CycleC
 def NotInCycle : Nat → Prop := fun n => n ∉ CycleC
 
@@ -378,6 +492,17 @@ end RevHalt.Examples
 #print axioms RevHalt.Examples.mod_eq_of_coprime_mod_eq
 #print axioms RevHalt.Examples.sat_composed_ModEq
 #print axioms RevHalt.Examples.factorization_refines
+
+-- Collatz-specific splitters (Examples/collatz.md)
+#print axioms RevHalt.Examples.v2
+#print axioms RevHalt.Examples.HasV2
+#print axioms RevHalt.Examples.HasV2Ge
+#print axioms RevHalt.Examples.Split_v2
+#print axioms RevHalt.Examples.AffineEq
+#print axioms RevHalt.Examples.Split_affine
+#print axioms RevHalt.Examples.ParityTag
+#print axioms RevHalt.Examples.HasTag
+#print axioms RevHalt.Examples.Split_tag
 
 -- Scycle splitter (cycle/non-cycle)
 #print axioms RevHalt.Examples.InCycle
