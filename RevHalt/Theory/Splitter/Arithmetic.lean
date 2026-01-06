@@ -1,10 +1,12 @@
 import RevHalt.Theory.Splitter.Core
+import RevHalt.Theory.Splitter.SplitterAux
 import Mathlib.Data.Nat.Prime.Defs
 import Mathlib.Data.Nat.GCD.Basic
 
 namespace RevHalt.Splitter.Arithmetic
 
 open RevHalt.Splitter
+open RevHalt.Splitter.SplitterAux
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 1) Standard SplitMod

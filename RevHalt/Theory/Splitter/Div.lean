@@ -1,4 +1,5 @@
 import RevHalt.Theory.Splitter.Core
+import RevHalt.Theory.Splitter.SplitterAux
 
 /-!
 # RevHalt.Theory.Splitter.Div
@@ -14,6 +15,7 @@ This is the canonical arithmetic splitter for prime detection.
 namespace RevHalt.Splitter.Div
 
 open RevHalt.Splitter
+open RevHalt.Splitter.SplitterAux
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 1) Divisibility Constraints
