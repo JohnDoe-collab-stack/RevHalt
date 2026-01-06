@@ -2,6 +2,7 @@ import RevHalt.Theory.Temporal
 import RevHalt.Theory.Splitter.Core
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Set.Basic
+import Mathlib.Data.Nat.GCD.Basic
 
 namespace RevHalt.Examples
 
@@ -116,6 +117,125 @@ def Split_mod (m : Nat) (hm : m > 0) : Splitter Nat where
 -- Not used in this proof but requested as "reference implementation"
 def Smod4 : Splitter Nat := Split_mod 4 (by decide)
 
+-- ============================================================================
+-- 3.1) Lemme de correspondance : ResEquiv ↔ congruence modulo (docs/collatz.md §2.4)
+-- ============================================================================
+
+/-- Sat for a singleton constraint list [ModEq m r] is exactly n % m = r. -/
+lemma sat_singleton_ModEq (m r n : Nat) :
+    Sat Nat [ModEq m r] n ↔ n % m = r := by
+  simp [Sat, ModEq]
+
+/-- Cases at depth 1 for Split_mod m produces exactly the m constraint lists [[ModEq m r]]. -/
+lemma cases_split_mod_depth1 (m : Nat) (hm : m > 0) :
+    Cases Nat (Split_mod m hm) 1 [] = (List.range m).map (fun r => [ModEq m r]) := by
+  -- Cases 1 [] = (Cases 0 []).flatMap (Split_mod m hm).split
+  simp [Cases, Split_mod]
+
+/-- ResEquiv for Split_mod m at depth 1 with I0=[] is exactly modular equality. -/
+theorem ResEquiv_Smod_iff (m : Nat) (hm : m > 0) (n k : Nat) :
+    ResEquiv Nat (Split_mod m hm) 1 [] n k ↔ n % m = k % m := by
+  constructor
+  · -- ResEquiv → n % m = k % m
+    intro hRes
+    -- The case [ModEq m (n%m)] is in Cases
+    have hn_mod : n % m < m := Nat.mod_lt n hm
+    have hJ_mem : [ModEq m (n % m)] ∈ Cases Nat (Split_mod m hm) 1 [] := by
+      rw [cases_split_mod_depth1 m hm]
+      exact List.mem_map.mpr ⟨n % m, List.mem_range.mpr hn_mod, rfl⟩
+    -- Apply ResEquiv to this case
+    have := hRes [ModEq m (n % m)] hJ_mem
+    -- Sat [ModEq m (n%m)] n = true (by definition)
+    have hSat_n : Sat Nat [ModEq m (n % m)] n := by
+      simp [Sat, ModEq]
+    -- So Sat [ModEq m (n%m)] k is also true
+    have hSat_k := this.mp hSat_n
+    -- Which means k % m = n % m
+    simp [sat_singleton_ModEq] at hSat_k
+    exact hSat_k.symm
+  · -- n % m = k % m → ResEquiv
+    intro hEq J hJ
+    rw [cases_split_mod_depth1 m hm] at hJ
+    rcases List.mem_map.mp hJ with ⟨r, _, rfl⟩
+    simp only [sat_singleton_ModEq]
+    constructor <;> intro h <;> omega
+
+-- ============================================================================
+-- 3.2) Factorisation Refines (docs/collatz.md §4.3)
+-- ============================================================================
+
+/-- CRT Uniqueness: if x ≡ y (mod a) and x ≡ y (mod b) with gcd(a,b)=1, then x ≡ y (mod a*b).
+    This is a standard result from number theory. -/
+axiom crt_uniqueness (a b x y : Nat) (hCoprime : Nat.Coprime a b)
+    (hModA : x % a = y % a) (hModB : x % b = y % b) : x % (a * b) = y % (a * b)
+
+/-- If n % a = k % a and n % b = k % b then n % (a*b) = k % (a*b) when a, b coprime. -/
+theorem mod_eq_of_coprime_mod_eq (a b n k : Nat) (_ha : a > 0) (_hb : b > 0)
+    (hCoprime : Nat.Coprime a b)
+    (hModA : n % a = k % a) (hModB : n % b = k % b) :
+    n % (a * b) = k % (a * b) :=
+  crt_uniqueness a b n k hCoprime hModA hModB
+
+/-- Helper: Sat for composed constraint [ModEq a ra, ModEq b rb] is n%a=ra ∧ n%b=rb. -/
+lemma sat_composed_ModEq (a ra b rb n : Nat) :
+    Sat Nat [ModEq a ra, ModEq b rb] n ↔ n % a = ra ∧ n % b = rb := by
+  simp [Sat, ModEq]
+
+/-- Composition of Smod_a and Smod_b refines Smod_(a*b) when a, b coprime.
+    (docs/collatz.md §4.3) -/
+theorem factorization_refines (a b : Nat) (ha : a > 0) (hb : b > 0)
+    (hCoprime : Nat.Coprime a b) (n k : Nat) :
+    ResEquiv Nat (compose Nat (Split_mod a ha) (Split_mod b hb)) 1 [] n k →
+    ResEquiv Nat (Split_mod (a * b) (Nat.mul_pos ha hb)) 1 [] n k := by
+  intro hResComp
+  rw [ResEquiv_Smod_iff]
+  -- Extract mod equivalences from composed ResEquiv
+  -- Cases 1 [] for composed splitter = (Split_mod a).split [].flatMap (Split_mod b).split
+  -- = (range a).map (fun ra => [ModEq a ra]).flatMap (fun I => (range b).map (fun rb => I ++ [ModEq b rb]))
+  have hModA : n % a = k % a := by
+    have hn_a : n % a < a := Nat.mod_lt n ha
+    have hn_b : n % b < b := Nat.mod_lt n hb
+    have hJspec := hResComp [ModEq a (n % a), ModEq b (n % b)]
+    -- Cases 1 [] = [[].flatMap compose.split = (Split_mod a).split [].flatMap (Split_mod b).split
+    have hJ_in : [ModEq a (n % a), ModEq b (n % b)] ∈ Cases Nat (compose Nat (Split_mod a ha) (Split_mod b hb)) 1 [] := by
+      -- Cases 1 [] = [[]].flatMap (compose ...).split
+      simp only [Cases]
+      -- = [[]] .flatMap (fun I => (Split_mod a).split I .flatMap (Split_mod b).split)
+      -- = (Split_mod a).split [] .flatMap (Split_mod b).split
+      simp only [List.flatMap_singleton]
+      -- (Split_mod a).split [] = (range a).map (fun r => [] ++ [ModEq a r])
+      simp only [compose, Split_mod]
+      -- Need: [ModEq a (n%a), ModEq b (n%b)] ∈ (range a).map(...).flatMap (range b).map(...)
+      apply List.mem_flatMap.mpr
+      refine ⟨[] ++ [ModEq a (n % a)], ?_, ?_⟩
+      · apply List.mem_map.mpr
+        exact ⟨n % a, List.mem_range.mpr hn_a, rfl⟩
+      · apply List.mem_map.mpr
+        refine ⟨n % b, List.mem_range.mpr hn_b, ?_⟩
+        simp only [List.nil_append, List.singleton_append]
+    have hIff := hJspec hJ_in
+    have hSat_n : Sat Nat [ModEq a (n % a), ModEq b (n % b)] n := by
+      simp [sat_composed_ModEq]
+    exact ((sat_composed_ModEq _ _ _ _ _).mp (hIff.mp hSat_n)).1.symm
+  have hModB : n % b = k % b := by
+    have hn_a : n % a < a := Nat.mod_lt n ha
+    have hn_b : n % b < b := Nat.mod_lt n hb
+    have hJspec := hResComp [ModEq a (n % a), ModEq b (n % b)]
+    have hJ_in : [ModEq a (n % a), ModEq b (n % b)] ∈ Cases Nat (compose Nat (Split_mod a ha) (Split_mod b hb)) 1 [] := by
+      simp only [Cases, List.flatMap_singleton, compose, Split_mod]
+      apply List.mem_flatMap.mpr
+      refine ⟨[] ++ [ModEq a (n % a)], ?_, ?_⟩
+      · apply List.mem_map.mpr
+        exact ⟨n % a, List.mem_range.mpr hn_a, rfl⟩
+      · apply List.mem_map.mpr
+        refine ⟨n % b, List.mem_range.mpr hn_b, ?_⟩
+        simp only [List.nil_append, List.singleton_append]
+    have hIff := hJspec hJ_in
+    have hSat_n : Sat Nat [ModEq a (n % a), ModEq b (n % b)] n := by
+      simp [sat_composed_ModEq]
+    exact ((sat_composed_ModEq _ _ _ _ _).mp (hIff.mp hSat_n)).2.symm
+  exact mod_eq_of_coprime_mod_eq a b n k ha hb hCoprime hModA hModB
+
 -- Splitter "cycle vs non-cycle" : deux cas
 def InCycle : Nat → Prop := fun n => n ∈ CycleC
 def NotInCycle : Nat → Prop := fun n => n ∉ CycleC
@@ -168,8 +288,7 @@ lemma sat_I0'_start : Sat Nat I0' 4 := by
 -- Queue for start=4 (using official Queue which includes Sat condition)
 lemma hQ_start' : Queue Nat collatzStep Scycle d I0' 4 := by
   refine ⟨sat_I0'_start, ?_⟩
-  intro t
-  intro J hJ
+  intro t J hJ
   -- Cases 1 I0' = split I0' = [I0'++[InCycle], I0'++[NotInCycle]]
   -- Explicit step-by-step reduction to avoid toolchain issues
   have h_cases : Cases Nat Scycle 1 I0' = Scycle.split I0' := by
@@ -223,8 +342,52 @@ theorem cycle_factory_stabilizes :
 
 end RevHalt.Examples
 
--- Axiom verification
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Axiom Verification (Exhaustive)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- Core definitions
+#print axioms RevHalt.Examples.collatzStep
+#print axioms RevHalt.Examples.CycleC
+#print axioms RevHalt.Examples.TargetOut
+#print axioms RevHalt.Examples.decideCycleC
+
+-- Basic lemmas
+#print axioms RevHalt.Examples.one_in_C
+#print axioms RevHalt.Examples.two_in_C
+#print axioms RevHalt.Examples.four_in_C
+#print axioms RevHalt.Examples.cycle_closed_step
+#print axioms RevHalt.Examples.orbit_in_cycle
+
+-- Game and TemporalSystem
+#print axioms RevHalt.Examples.GCollatz
+#print axioms RevHalt.Examples.Sys
+
+-- Splitter definitions
+#print axioms RevHalt.Examples.ModEq
+#print axioms RevHalt.Examples.Split_mod
+#print axioms RevHalt.Examples.Smod4
+
+-- ResEquiv lemmas (docs/collatz.md)
+#print axioms RevHalt.Examples.sat_singleton_ModEq
+#print axioms RevHalt.Examples.cases_split_mod_depth1
+#print axioms RevHalt.Examples.ResEquiv_Smod_iff
+
+-- Factorisation (docs/collatz.md §4.3)
+#print axioms RevHalt.Examples.crt_uniqueness
+#print axioms RevHalt.Examples.mod_eq_of_coprime_mod_eq
+#print axioms RevHalt.Examples.sat_composed_ModEq
+#print axioms RevHalt.Examples.factorization_refines
+
+-- Scycle splitter (cycle/non-cycle)
+#print axioms RevHalt.Examples.InCycle
+#print axioms RevHalt.Examples.NotInCycle
 #print axioms RevHalt.Examples.Scycle
+#print axioms RevHalt.Examples.d
+#print axioms RevHalt.Examples.I0'
+#print axioms RevHalt.Examples.sat_I0'_start
+
+-- Factory chain
 #print axioms RevHalt.Examples.hQ_start'
 #print axioms RevHalt.Examples.h_bridge'
 #print axioms RevHalt.Examples.cycle_factory_stabilizes

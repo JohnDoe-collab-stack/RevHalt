@@ -1,249 +1,294 @@
-# Note RevHalt : Smodp, “premiers” RevHalt, et composition de splitters (autocontenu, sans latex)
+# Plan d’attaque Collatz dans RevHalt (strict, autocontenu, sans latex)
 
-Cette note fixe une spécification **RevHalt-native** pour :
-
-1. un splitter “congruence-like” `Smod p` (qui sépare réellement les classes modulo p),
-2. une notion **opérationnelle** de “premier” (pas ontologique) via l’atomicité / non-factorisation de splitters,
-3. une notion propre de **composition** de splitters et les obligations associées (refinement, cover, associativité).
-
-Tout est formulé au niveau `Splitter`, `Info`, `Sat`, `Cases`, `ResEquiv`.
+Objectif : formuler une stratégie complète “RevHalt-native” pour attaquer Collatz, sans invoquer de théorie externe. Tout est exprimé en termes d’objets RevHalt et de contrats entre modules.
 
 ---
 
-## 0) Rappel des objets (ce que l’implémentation impose)
+## 0) Le format de la preuve RevHalt (ce qu’il faut produire)
 
-* `Info Pos := List (Pos → Prop)` (liste finie de contraintes)
+Dans RevHalt, “résoudre Collatz” ne veut pas dire “prouver une phrase globale directement”.
+Ça veut dire :
 
-* `Sat Pos I n := ∀ c ∈ I, c n` (n satisfait toutes les contraintes)
+1. choisir une observabilité finitaire (un Splitter S, une profondeur d, une base I0)
+2. prouver une invariance de résidu (Queue) pour les entiers ciblés
+3. transporter ce certificat vers la sécurité structurelle (Avoid2Set)
+4. conclure une stabilisation temporelle (Stabilizes) via l’interface temporelle canonique
 
-* `Splitter Pos` :
-
-  * `split : Info Pos → List (Info Pos)`
-  * `refinement : ∀ I J, J ∈ split I → (∀ n, Sat J n → Sat I n)`
-  * `cover : ∀ I n, Sat I n → ∃ J ∈ split I, Sat J n`
-
-* `Cases S d I0` : déroulé de split jusqu’à profondeur d (flatMap itératif)
-
-* `ResEquiv S d I0 n m` : indistinguabilité par tous les cas de profondeur d
+Le produit final n’est pas une preuve ad hoc : c’est un certificat + une vérification mécanique via les théorèmes génériques.
 
 ---
 
-## 1) Pourquoi `Split_div p` n’est pas `Smod p`
+## 1) Instanciation minimale “système temporel” (TemporalSystem)
 
-`Split_div p` construit deux branches :
+On fixe le système Collatz comme un objet de type TemporalSystem Nat :
 
-* “p divise n”
-* “p ne divise pas n”
+* Pos := Nat
+* Next := collatzStep
+* embed := id
+* Game G déterministe :
 
-Donc il sépare en 2 classes : résidu 0 contre “non 0”, pas en p classes.
+  * turn = P partout
+  * moves(embed n) = { embed (Next n) }
+* Target := l’ensemble des états “halt” que l’on veut éviter
 
-Conclusion : `Split_div p` est un splitter de **divisibilité**, pas un splitter de **congruence**.
+Point important : le Target dans RevHalt est un choix d’interface.
+Selon le but, vous pouvez prendre par exemple :
 
-C’est utile (Collatz, facteurs, v2), mais ce n’est pas l’outil qui isole finement les classes modulo p.
+* Target = {1} (si vous codez “hit 1” comme événement)
+* ou Target = “sortie d’une zone sûre” (si vous certifiez une région)
 
----
+La trace canonique est :
 
-## 2) Spécification RevHalt de `Smod p`
+* TimeTrace sys : Nat -> Prop
+* TimeTrace(k) := (iterate Next k start) ∈ Target
 
-### 2.1 Les contraintes élémentaires
+Et la notion “ne jamais atteindre Target” est exactement :
 
-On travaille sur `Pos := Nat`.
-
-Définir une famille de contraintes :
-
-* `Congr(p, r) : Nat → Prop := fun n => n % p = r`
-
-Hypothèse de base requise :
-
-* `p > 0` (pour que `% p` soit défini et les classes couvrent)
-
-### 2.2 Définition de `Smod p` comme Splitter
-
-Intention : pour une info `I`, `split I` renvoie p cas :
-
-* `I ++ [Congr(p, 0)]`
-* `I ++ [Congr(p, 1)]`
-* ...
-* `I ++ [Congr(p, p-1)]`
-
-Donc :
-
-* `split(I)` est une liste de longueur p
-* chaque branche ajoute **une** contrainte “résidu = r”
-
-### 2.3 Obligations de preuve (refinement / cover)
-
-**Refinement** (facile) :
-si `J = I ++ [Congr(p,r)]` alors `Sat(J,n) -> Sat(I,n)` parce que `Sat` est monotone par retrait de contraintes.
-
-**Cover** (le cœur) :
-si `Sat(I,n)` alors prendre `r := n % p` et montrer :
-
-* `Sat(I ++ [Congr(p,r)], n)`
-
-Cela demande seulement :
-
-* `n % p = n % p` (réflexivité)
-* et `Sat(I,n)` déjà acquis
-
-Il n’y a pas de choix non-constructif : `r` est calculable.
-
-### 2.4 Propriété attendue sur la relation de résidu (sanity check)
-
-Avec `I0 := []` et `d := 1` :
-
-* `ResEquiv(Smod p, 1, [], n, m)` doit être équivalent à :
-
-  * `(n % p = m % p)`
-
-Pourquoi :
-
-* `Cases(1,[])` liste exactement les p infos `[Congr(p,r)]`
-* `Sat([Congr(p,r)], n)` équivaut à `n%p=r`
-* donc l’indistinguabilité par toutes ces contraintes est exactement l’égalité des résidus
-
-Ceci est le **lemme de correspondance** “RevHalt residue = congruence modulo p” pour `Smod p`.
+* Stabilizes (TimeTrace sys)
+* ce qui est définitionnellement : forall k, not TimeTrace(k)
 
 ---
 
-## 3) Composition de splitters (le produit opérationnel)
+## 2) La brique arithmétique RevHalt : Splitter, Cases, Résidu
 
-### 3.1 Définition canonique
+### 2.1 Splitter (observabilité finitaire)
 
-Pour deux splitters `A` et `B` sur le même `Pos`, définir la composition `A ⊗ B` par :
+Un Splitter S : Splitter Nat est un objet qui prend une Info (liste finie de contraintes) et la raffine en une liste finie d’Info, avec deux axiomes :
 
-* `split_{A⊗B}(I) := (A.split I).flatMap B.split`
+* refinement :
+  si J ∈ split(I) alors Sat(J,n) -> Sat(I,n)
+
+* cover :
+  si Sat(I,n) alors existe J ∈ split(I) tel que Sat(J,n)
+
+Interprétation RevHalt : “split” est une partition finitaire par contraintes, sans ontologie.
+
+### 2.2 Cases (déroulé à profondeur d)
+
+Cases(S,d,I0) : List (Info Nat) est la liste finie des cas obtenus après d raffinements.
+
+Borne de taille (utile pour l’ingénierie) :
+
+* si split produit au plus k sous-cas, alors |Cases(d,I0)| <= k^d
+
+### 2.3 Résidu (définition officielle RevHalt)
+
+Il n’y a pas de type “Residue”. Le résidu est le quotient induit par ResEquiv :
+
+ResEquiv(S,d,I0,n,m) :=
+forall J ∈ Cases(S,d,I0), (Sat(J,n) <-> Sat(J,m))
 
 Interprétation :
 
-* on split d’abord par A, puis chaque branche est raffinée par B
-* cela encode exactement une “résolution à deux étages”
+* deux entiers ont le même “résidu RevHalt” si le Splitter (à profondeur d depuis I0) ne peut pas les distinguer.
 
-### 3.2 Obligations : refinement et cover pour la composition
+C’est la généralisation “modulo” RevHalt :
 
-**Refinement** :
-
-* si `K ∈ split_{A⊗B}(I)`, alors `K` provient d’un `J ∈ A.split(I)` et `K ∈ B.split(J)`
-* on a `Sat(K,n) -> Sat(J,n)` par refinement de B
-* puis `Sat(J,n) -> Sat(I,n)` par refinement de A
-* donc `Sat(K,n) -> Sat(I,n)`
-
-**Cover** :
-
-* si `Sat(I,n)`, alors par cover de A il existe `J ∈ A.split(I)` avec `Sat(J,n)`
-* puis par cover de B il existe `K ∈ B.split(J)` avec `Sat(K,n)`
-* donc `K ∈ split_{A⊗B}(I)` et `Sat(K,n)`
-
-Conclusion : `A ⊗ B` est un Splitter sans axiomes supplémentaires.
-
-### 3.3 Associativité (à vérifier et à formaliser)
-
-On veut : `(A ⊗ B) ⊗ C` et `A ⊗ (B ⊗ C)` produisent les mêmes cas “à permutation près”.
-
-Point clé RevHalt :
-
-* `split` renvoie une `List`, donc l’égalité stricte est fragile (ordre).
-* la propriété pertinente est l’**équivalence d’ensemble** des cas, ou l’équivalence de `ResEquiv` induite.
-
-Forme recommandée :
-
-* prouver que `ResEquiv` induit par `(A⊗B)⊗C` est équivalent à celui induit par `A⊗(B⊗C)` (même observabilité à profondeur 1), plutôt qu’une égalité de listes.
+* “modulo classique” = un cas particulier où les contraintes Sat codent une congruence
+* “modulo RevHalt” = indistinguabilité par observabilité finitaire choisie
 
 ---
 
-## 4) “Premiers” dans RevHalt : définition opérationnelle
+## 3) La “Queue” (l’invariant dynamique dans RevHalt)
 
-### 4.1 Principe (ce qu’on veut capturer)
+Queue(Pos,Next,S,d,I0,n) est l’invariant central :
 
-Dans RevHalt, un “premier” ne doit pas être :
+Queue(n) :=
+forall t, ResEquiv(S,d,I0,n, iterate Next t n)
 
-* “p est premier” comme propriété ontologique dans Nat,
+Interprétation :
 
-mais :
+* “la trajectoire entière reste dans la même classe d’observabilité”
+* donc : le comportement dynamique est stable relativement au splitter
 
-* “le splitter associé à p est atomique / irréductible” dans la grammaire de résolution finitaire.
+Important :
 
-Autrement dit : p est premier si **sa résolution** ne se décompose pas en résolutions plus petites sans perte.
-
-### 4.2 Notion 1 : atomicité de résolution (factorisation de splitters)
-
-Fixer une famille de splitters `Smod p`.
-
-Définir :
-
-* `Factorizes(p, a, b)` si `Smod p` est équivalent (au niveau `ResEquiv` à profondeur 1, ou au niveau `Cases`) à `Smod a ⊗ Smod b`.
-
-Alors définir un “prime_RH” :
-
-* `Prime_RH(p)` : “il n’existe pas de factorisation non triviale p = a*b avec 1<a<p, 1<b<p telle que `Smod p` équivaille à `Smod a ⊗ Smod b`”
-
-C’est une définition **dynamique/observatoire** :
-
-* elle parle de la capacité de résolution, pas de la nature de p.
-
-### 4.3 Relation attendue avec les premiers classiques
-
-Objectif de théorème (pas un axiome) :
-
-* si p est premier au sens classique, alors `Prime_RH(p)` pour la famille `Smod`.
-* si p est composé, alors `Smod p` “factorise” selon la structure de la congruence (via CRT ou via propriétés de `%`), donc `¬Prime_RH(p)`.
-
-Vous n’êtes pas obligé de prouver CRT globalement pour obtenir un résultat utile :
-
-* vous pouvez viser un résultat plus faible mais exploitable :
-
-  * “si p = a*b, alors l’observabilité de `Smod a ⊗ Smod b` raffine celle de `Smod p`” (inclusion de `ResEquiv`), ce qui suffit déjà pour une hiérarchie.
+* Queue n’est pas une propriété “de la vérité arithmétique”
+* c’est une propriété “de stabilité sous une résolution finitaire donnée”
 
 ---
 
-## 5) Pourquoi c’est plus général que “modulo premier”
+## 4) Le transport arithmétique -> structurel (AvoidanceBridge)
 
-Point clef : **RevHalt ne fige pas l’arithmétique en congruence**.
-`ResEquiv` est défini à partir de `Cases` et `Sat`, donc :
+C’est la pièce qui donne la puissance : vous avez un contrat prouvé du type :
 
-* modulo classique est une instanciation (`Smod p`)
-* divisibilité est une autre instanciation (`Split_div p`)
-* valuation v2, tags, contraintes affines, etc., sont des instanciations du même format
+Si
 
-Ce qui change par rapport au classique :
+* la dynamique est correctement représentée (moves = singleton Next, turn = P)
+* et si vous avez un prédicat de sécurité locale h_bridge :
+  Queue(p) -> embed(p) ∉ Target
 
-* l’objet fondamental n’est pas “Z/pZ”
-* c’est “la capacité de distinguer des classes finies par contraintes”
-* et cette capacité se compose mécaniquement (`⊗`) et se transporte vers Up2/Avoid2/Temporal
+Alors vous obtenez mécaniquement :
 
-C’est exactement la “couverture finitaire par contrainte”.
+* Avoid2Mem G Target (embed p)
 
----
+C’est “Queue -> Avoid2” : le certificat finitaire produit une appartenance au noyau structurel.
 
-## 6) Lien direct avec l’attaque Collatz (sans refaire Collatz ici)
+Ce pont est le point où RevHalt “contrôle l’arithmétique” au sens RevHalt :
 
-Même sans parler de Collatz, la conséquence opérationnelle est :
-
-* vous pouvez choisir une base d’observabilité mixte :
-
-  * `S := Split_v2(k) ⊗ Split_affine(p, a, b) ⊗ Smod q ⊗ ...`
-* puis la notion de “résidu RevHalt” devient :
-
-  * “indistinguabilité par toutes les contraintes générées par ce pipeline”
-* et `Queue` devient :
-
-  * “la dynamique ne sort jamais de son résidu (au sens de cette observabilité)”
-
-Ce cadre permet d’exprimer “modulo” de façon plus générale que la congruence :
-
-* modulo comme “résolution finitaire”,
-* pas comme quotient a priori.
+* l’arithmétique (Splitter/Queue) donne un droit d’entrée dans une fermeture Π2 (Avoid2Set)
 
 ---
 
-## 7) Deliverables concrets (ce qu’il faut coder/prover)
+## 5) Le transport structurel -> temporel (Temporal.lean)
 
-1. Implémenter `Smod p` (split en p branches Congr(p,r))
-2. Lemme : `ResEquiv(Smod p, 1, [], n, m) <-> (n%p = m%p)`
-3. Implémenter `⊗` et prouver que c’est un Splitter (refinement/cover)
-4. Lemme d’associativité “à ResEquiv près”
-5. Définir `Prime_RH` via non-factorisation observatoire
-6. Prover des implications de hiérarchie : si p factorise, alors observabilité se factorise (au moins un sens)
+Dans l’interface canonique :
+
+* Avoid2Mem G Target (embed p) -> embed p ∉ Target
+
+Et sur une orbite, si chaque point est certifié Avoid2, alors :
+
+* forall k, iterate Next k start ∉ Target
+* donc Stabilizes(TimeTrace)
+
+C’est exactement ce que formalise splitter_stabilizes :
+
+* si Queue couvre l’orbite et garantit “pas Target”, alors Stabilizes
 
 ---
+
+## 6) La hiérarchie comme “factory”
+
+Vous avez maintenant une usine en trois étages (exactement votre Hierarchy/Temporal) :
+
+1. Splitter/Queue (arithmétique finitaire)
+2. Avoid2Set (structure Π2)
+3. Stabilizes (temps Π1)
+
+Donc pour Collatz, il n’y a qu’une seule question concrète :
+
+Peut-on construire un Splitter S et des paramètres (d,I0) tels que :
+
+* Queue(start) soit prouvable (ou généralisable)
+* et que Queue(p) implique “p n’est jamais Target” pour tout p sur l’orbite
+
+---
+
+## 7) Le plan de recherche concret (sans folklore “mod p”)
+
+### Étape A — Définir une famille de splitters “observables”
+
+On construit des splitters qui capturent des invariants de la dynamique Collatz, pas des congruences imposées.
+
+Exemples de familles RevHalt-native (à formaliser ensuite) :
+
+* Split_v2(k) : split par classes de valuation 2-adique (observabilité finitaire sur v2)
+* Split_tag(k) : split par schémas finis de “parité puis division”
+* Split_affine(p, a, b) : split par contraintes de forme “a*n+b divisible par p” (divisibilité, pas congruence prédéfinie)
+* Split_composed : composition par profondeur (le “modulo RevHalt” émerge via Cases)
+
+Point clé :
+
+* on ne présuppose pas “modulo premier”
+* on fabrique une observabilité finitaire adaptée au Next
+
+### Étape B — Mesurer la stabilité : produire des Queue
+
+Pour un splitter S donné, on cherche à prouver Queue(n).
+
+Deux modes possibles :
+
+1. Mode local (certificat pour une classe) :
+
+* prouver Queue sur un sous-ensemble défini par des contraintes Sat(I0,n)
+* typiquement : un cas J dans Cases(d,I0)
+
+2. Mode global (hiérarchie / chaîne de raffinement) :
+
+* montrer qu’à mesure que d augmente, les cas deviennent “stables” au sens où
+
+  * soit ils forcent l’entrée dans Target (succès)
+  * soit ils deviennent Queue-stables et donc Avoid2-stables
+
+Ce deuxième mode correspond à votre “couverture finitaire par contrainte”.
+
+### Étape C — La sécurité locale h_bridge
+
+Le bridge exige un lemme de forme :
+
+Queue(p) -> embed(p) ∉ Target
+
+Donc il faut choisir Target de sorte que :
+
+* “éviter Target” soit une conséquence mécanique de la stabilité de résidu
+* sans réclamer une compréhension globale de l’orbite
+
+C’est ici qu’on encode l’intention :
+
+* soit Target = “contradiction à l’invariant”
+* soit Target = “sortie de la région certifiée”
+* soit Target = “état interdit par le résidu”
+
+RevHalt ne vous impose pas Target : c’est votre interface de certification.
+
+---
+
+## 8) Où interviennent les nombres premiers (dans votre cadre, pas en classique)
+
+Dans RevHalt, “premier” ne doit pas être défini comme un fait ontologique, mais comme une propriété d’un dispositif de split.
+
+Forme RevHalt-compatible (principe) :
+
+* un “prime-like” est un paramètre p tel que le splitter associé Split_p est atomique ou irréductible au sens de votre hiérarchie de splitters
+* ou tel que sa composition avec d’autres splitters ne se simplifie pas (il apporte une résolution structurelle indispensable)
+
+Deux points importants :
+
+1. Les premiers classiques doivent être retrouvés comme une instanciation :
+
+* si vous instanciez Split_p via divisibilité (DivConstraint / NotDivConstraint) et une construction plus fine (Smodp), alors l’atomicité “émerge” exactement quand p est premier (cible de théorème, pas axiome)
+
+2. Pourquoi c’est utile pour Collatz :
+
+* Collatz introduit des facteurs via (3n+1) puis divisions par 2
+* la structure factorielle (notamment la distribution des facteurs premiers dans 3n+1) est exactement le type de chose que RevHalt capture via splitters de divisibilité et de valuation, mais sans exiger de raisonner “globalement” : seulement via Cases finitaires
+
+Donc le rôle des “premiers” est opérationnel :
+
+* ce sont des paramètres de résolution qui, combinés, génèrent une couverture finitaire exploitable
+
+---
+
+## 9) Ce que vous savez déjà “in fine” (ce qui rend Collatz attaquable)
+
+Vous avez déjà établi, dans la théorie :
+
+* une notion générale de résidu (ResEquiv)
+* une notion d’invariant dynamique (Queue)
+* un noyau Π2 structurel axiom-free (Avoid2Set)
+* un bridge prouvé (Queue -> Avoid2Mem, sous conditions)
+* une interface temporelle canonique (TimeTrace / splitter_stabilizes)
+
+Donc Collatz est attaquable parce que :
+
+* l’algorithme Collatz devient un TemporalSystem
+* la preuve devient “trouver une couverture finitaire stable”
+* et toute découverte locale (Queue sur une zone) se transporte automatiquement
+
+Ce n’est pas “prouver Collatz” immédiatement.
+C’est “réduire Collatz à la synthèse d’un certificat finitaire vérifiable”.
+
+---
+
+## 10) Checklist de livraison (ce qu’il faut coder / prouver ensuite)
+
+1. Définir une famille S_family de splitters pertinents pour Collatz (RevHalt-native)
+2. Définir I0 et un d (ou une stratégie de montée en d)
+3. Prouver des lemmes de type :
+
+   * Queue_orbit_closed (déjà dans Core)
+   * Queue(p) -> p ∉ Target (votre h_bridge)
+4. Appliquer splitter_stabilizes pour obtenir Stabilizes(TimeTrace sys)
+
+---
+
+## Positionnement “nouveauté en maths ?”
+
+* La logique sous-jacente (lfp/gfp, invariants, jeux de reachability) existe dans la littérature.
+* Ce qui est nouveau dans votre approche, si elle aboutit sur Collatz, est l’assemblage strict “certificat finitaire -> fermeture Π2 -> stabilisation Π1” avec une définition de “résidu” purement par observabilité (ResEquiv) et un bridge formalisé qui transforme ce résidu en sécurité dynamique.
+
+Le caractère “non packaging” se joue sur un seul point vérifiable :
+
+* réussir à construire une famille de splitters qui donne une couverture finitaire stable assez forte pour le système Collatz.
+
 

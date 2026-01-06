@@ -119,6 +119,23 @@ theorem id_compose_right (S : Splitter Pos) : SplitterEquiv Pos (compose Pos S (
     simp only [compose, IdSplitter, List.mem_flatMap, List.mem_singleton]
     exact ⟨⟨J, hJ, rfl⟩, hSat⟩
 
+/-- Composition is associative: (A ⊗ B) ⊗ C ≈ A ⊗ (B ⊗ C).
+    This follows from List.flatMap associativity. (docs/collatz.md §3.3) -/
+theorem compose_assoc (A B C : Splitter Pos) :
+    SplitterEquiv Pos (compose Pos (compose Pos A B) C) (compose Pos A (compose Pos B C)) := by
+  intro I n m
+  -- Both sides have the same split result due to flatMap associativity
+  have h_eq : (compose Pos (compose Pos A B) C).split I = (compose Pos A (compose Pos B C)).split I := by
+    -- Unfold compose definitions
+    show ((A.split I).flatMap B.split).flatMap C.split = (A.split I).flatMap (fun K => (B.split K).flatMap C.split)
+    -- Prove by induction on A.split I
+    induction A.split I with
+    | nil => simp [List.flatMap]
+    | cons head tail ih =>
+      simp only [List.flatMap_cons, List.flatMap_append]
+      rw [ih]
+  simp only [h_eq]
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 4) Trivial and Atomic
 -- ═══════════════════════════════════════════════════════════════════════════════
