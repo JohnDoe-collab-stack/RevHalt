@@ -1,28 +1,22 @@
-import RevHalt.Theory.Up2
 import RevHalt.Theory.Temporal
+import RevHalt.Theory.Splitter.Core
+import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Set.Basic
 
 namespace RevHalt.Examples
 
-open RevHalt.Up2
 open RevHalt.Theory
-open RevHalt.Splitter -- Added for iterate access if needed
+open RevHalt.Splitter
+open RevHalt.Up2
 
 -- ============================================================================
--- 1) Collatz step (standard)
+-- 1) Collatz step (standard) + cycle C = {1,2,4}
 -- ============================================================================
 
 def collatzStep (n : Nat) : Nat :=
   if n % 2 = 0 then n / 2 else 3*n + 1
 
--- ============================================================================
--- 2) The trivial cycle set C = {1,2,4}
---    We will prove: starting from 4, the orbit never leaves C.
---    So: Target := complement(C).
--- ============================================================================
-
 def CycleC : Set Nat := { n | n = 1 ∨ n = 2 ∨ n = 4 }
-
 def TargetOut : Set Nat := { n | n ∉ CycleC }
 
 lemma one_in_C : (1 : Nat) ∈ CycleC := by
@@ -34,33 +28,32 @@ lemma two_in_C : (2 : Nat) ∈ CycleC := by
 lemma four_in_C : (4 : Nat) ∈ CycleC := by
   dsimp [CycleC]; exact Or.inr (Or.inr rfl)
 
--- Closure of the cycle under collatzStep:
--- collatzStep 1 = 4, collatzStep 2 = 1, collatzStep 4 = 2
 lemma cycle_closed_step : ∀ {n : Nat}, n ∈ CycleC → collatzStep n ∈ CycleC := by
   intro n hn
   dsimp [CycleC] at hn
   rcases hn with h1 | h2 | h4
-  · -- n = 1
-    subst h1
-    -- 1 is odd, so 3*1+1 = 4
-    dsimp [collatzStep]
-    exact four_in_C
-  · -- n = 2
-    subst h2
-    -- 2 is even, so 2/2 = 1
-    dsimp [collatzStep]
-    exact one_in_C
-  · -- n = 4
-    subst h4
-    -- 4 is even, so 4/2 = 2
-    dsimp [collatzStep]
-    exact two_in_C
+  · subst h1
+    -- 1 odd -> 3*1+1=4
+    dsimp [collatzStep]; exact four_in_C
+  · subst h2
+    -- 2 even -> 2/2=1
+    dsimp [collatzStep]; exact one_in_C
+  · subst h4
+    -- 4 even -> 4/2=2
+    dsimp [collatzStep]; exact two_in_C
+
+-- Orbit closure in CycleC from start=4
+lemma orbit_in_cycle : ∀ t : ℕ, iterate Nat collatzStep t 4 ∈ CycleC := by
+  intro t
+  induction t with
+  | zero =>
+      simpa [RevHalt.Splitter.iterate] using four_in_C
+  | succ t ih =>
+      -- iterate (t+1) 4 = collatzStep (iterate t 4)
+      simpa [RevHalt.Splitter.iterate] using cycle_closed_step (n := iterate Nat collatzStep t 4) ih
 
 -- ============================================================================
--- 3) Build the deterministic Game instance G for the dynamical system
---    - Pos := Nat
---    - turn := P everywhere
---    - moves p := { collatzStep p }
+-- 2) Game + TemporalSystem (canonique)
 -- ============================================================================
 
 def GCollatz : Game where
@@ -69,70 +62,7 @@ def GCollatz : Game where
   turn  := fun _ => Turn.P
   moves := fun p => { q | q = collatzStep p }
 
--- Convenience: membership in moves is equality to collatzStep
-lemma mem_moves_iff (p q : Nat) :
-    q ∈ (GCollatz.moves p) ↔ q = collatzStep p := by
-  rfl
-
--- ============================================================================
--- 4) Prove Avoid2Mem for all points in CycleC wrt TargetOut
---    We exhibit X := CycleC as a post-fixed point of AvoidStep(TargetOut, X).
--- ============================================================================
-
-def X : Set Nat := CycleC
-
--- Post-fixedness: X ⊆ AvoidStep(TargetOut, X)
-lemma X_postfixed :
-    AvoidClosed GCollatz TargetOut X := by
-  intro p hpX
-  -- Need: p ∈ AvoidStep G TargetOut X
-  -- AvoidStep requires:
-  --   p ∉ TargetOut  (i.e., p ∈ CycleC)
-  --   P-turn implies all moves stay in X
-  --   O-part irrelevant (vacuous: turn != O)
-  refine ?_
-  dsimp [AvoidStep, TargetOut, X]
-  refine And.intro ?h_notTarget (And.intro ?hP ?hO)
-
-  · -- p ∉ TargetOut
-    -- TargetOut p := p ∉ CycleC, so not(TargetOut p) means p ∈ CycleC
-    -- hpX : p ∈ CycleC
-    intro hpOut
-    exact hpOut hpX
-
-  · -- P case: if turn=P, all moves stay in X
-    intro hTurn q hqMove
-    -- moves are singleton: q = collatzStep p
-    have hq : q = collatzStep p := (mem_moves_iff p q).1 hqMove
-    subst hq
-    -- show collatzStep p ∈ CycleC using closure lemma
-    exact cycle_closed_step (n := p) hpX
-
-  · -- O case: if turn=O, hasMove -> ∃ move staying in X
-    -- Here turn is always P, so this is trivially satisfied.
-    intro hTurn
-    -- contradiction since turn p = P
-    have : GCollatz.turn p = Turn.P := rfl
-    rw [this] at hTurn
-    contradiction
-
--- Therefore any p ∈ X is in Avoid2Set(TargetOut)
-lemma cycle_points_in_Avoid2 :
-    ∀ {p : Nat}, p ∈ CycleC → Avoid2Mem GCollatz TargetOut p := by
-  intro p hpC
-  -- Avoid2Mem means p ∈ Avoid2Set = ∃X, AvoidClosed X ∧ p∈X
-  dsimp [Avoid2Mem, Avoid2Set]
-  exact ⟨X, X_postfixed, hpC⟩
-
--- In particular, start=4 is in Avoid2Mem
-lemma start_in_Avoid2 : Avoid2Mem GCollatz TargetOut (4 : Nat) := by
-  exact cycle_points_in_Avoid2 (p := 4) four_in_C
-
--- ============================================================================
--- 5) Instantiate the canonical TemporalSystem and conclude Stabilizes
--- ============================================================================
-
-def SysCycle : TemporalSystem Nat where
+def Sys : TemporalSystem Nat where
   Next   := collatzStep
   start  := (4 : Nat)
   G      := GCollatz
@@ -140,45 +70,147 @@ def SysCycle : TemporalSystem Nat where
   Target := TargetOut
   hom    := by
     intro p
-    -- moves (embed p) = { embed (Next p) }
-    -- moves p := {q | q = collatzStep p}
     ext q
-    constructor <;> intro h
-    · exact h
-    · exact h
+    rfl
   turnP  := by
     intro p
     rfl
 
--- Local iterate to bypass type inference issues with Splitter.iterate
-def iterate_nat (f : Nat → Nat) (k : Nat) (n : Nat) : Nat :=
-  match k with
-  | 0 => n
-  | k+1 => f (iterate_nat f k n)
+-- ============================================================================
+-- 3) Splitters : Smod4 (Reference) + Scycle (Used for Proof)
+-- ============================================================================
 
-@[simp] lemma iterate_nat_zero (f : Nat → Nat) (n : Nat) :
-  iterate_nat f 0 n = n := rfl
+def ModEq (m r : Nat) : Nat → Prop := fun n => n % m = r
 
-@[simp] lemma iterate_nat_succ (f : Nat → Nat) (k : Nat) (n : Nat) :
-  iterate_nat f (k+1) n = f (iterate_nat f k n) := rfl
+/-- Splitter "mod m": split en m classes. -/
+def Split_mod (m : Nat) (hm : m > 0) : Splitter Nat where
+  split I := (List.range m).map (fun r => I ++ [ModEq m r])
+  refinement := by
+    intro I J hJ n hSatJ c hc
+    rcases List.mem_map.1 hJ with ⟨r, hrIn, rfl⟩
+    have : c ∈ (I ++ [ModEq m r]) := List.mem_append_left _ hc
+    exact hSatJ c this
+  cover := by
+    intro I n hSatI
+    let r := n % m
+    have hr : r < m := Nat.mod_lt n hm
+    have hrIn : r ∈ List.range m := by
+      simpa [List.mem_range] using hr
+    refine ⟨I ++ [ModEq m r], ?_, ?_⟩
+    · exact List.mem_map.2 ⟨r, hrIn, rfl⟩
+    · intro c hcJ
+      rcases List.mem_append.1 hcJ with hcI | hcLast
+      · exact hSatI c hcI
+      · have : c = ModEq m r := by simpa using (List.mem_singleton.1 hcLast)
+        subst this
+        dsimp [ModEq, r]
 
-theorem cycle_never_leaves :
-    RevHalt.Stabilizes (fun k => (iterate_nat collatzStep k 4) ∈ TargetOut) := by
-  -- Use the generic temporal theorem: membership in Avoid2Set yields not Target at each time.
-  intro k
-  -- show orbit point is in CycleC, hence not in TargetOut, hence TimeTrace false.
-  -- orbit_pt using iterate_nat
-  let pt := iterate_nat collatzStep k (4 : Nat)
-  have hptC : pt ∈ CycleC := by
-    -- Induction
-    induction k with
-    | zero =>
-        simp [pt, iterate_nat_zero, four_in_C]
-    | succ k ih =>
-        simpa [pt, iterate_nat_succ] using cycle_closed_step ih
-  -- TimeTrace logic
-  dsimp [TargetOut]
-  intro hOut
-  exact hOut hptC
+-- Not used in this proof but requested as "reference implementation"
+def Smod4 : Splitter Nat := Split_mod 4 (by decide)
+
+-- Splitter "cycle vs non-cycle" : deux cas
+def InCycle : Nat → Prop := fun n => n ∈ CycleC
+def NotInCycle : Nat → Prop := fun n => n ∉ CycleC
+
+def Scycle : Splitter Nat where
+  split I := [I ++ [InCycle], I ++ [NotInCycle]]
+  refinement := by
+    intro I J hJ n hSatJ c hc
+    simp only [List.mem_cons] at hJ
+    rcases hJ with rfl | rfl | hFalse
+    · have : c ∈ (I ++ [InCycle]) := List.mem_append_left _ hc
+      exact hSatJ c this
+    · have : c ∈ (I ++ [NotInCycle]) := List.mem_append_left _ hc
+      exact hSatJ c this
+    · contradiction
+  cover := by
+    intro I n hSatI
+    by_cases hC : n ∈ CycleC
+    · refine ⟨I ++ [InCycle], ?_, ?_⟩
+      · simp
+      · intro c hcJ
+        rcases List.mem_append.1 hcJ with hcI | hcLast
+        · exact hSatI c hcI
+        · have : c = InCycle := by simpa using (List.mem_singleton.1 hcLast)
+          subst this
+          exact hC
+    · refine ⟨I ++ [NotInCycle], ?_, ?_⟩
+      · simp
+      · intro c hcJ
+        rcases List.mem_append.1 hcJ with hcI | hcLast
+        · exact hSatI c hcI
+        · have : c = NotInCycle := by simpa using (List.mem_singleton.1 hcLast)
+          subst this
+          exact hC
+
+-- ============================================================================
+-- 4) Certificat Factory : Queue (Official)
+-- ============================================================================
+
+def d : ℕ := 1
+-- I0 includes InCycle to enforce validity as per Factory requirement
+def I0' : Info Nat := [InCycle]
+
+lemma sat_I0'_start : Sat Nat I0' 4 := by
+  intro c hc
+  have : c = InCycle := by simpa using (List.mem_singleton.1 hc)
+  subst this
+  exact four_in_C
+
+-- Queue for start=4 (using official Queue which includes Sat condition)
+lemma hQ_start' : Queue Nat collatzStep Scycle d I0' 4 := by
+  refine ⟨sat_I0'_start, ?_⟩
+  intro t
+  intro J hJ
+  -- Cases 1 I0' = split I0' = [I0'++[InCycle], I0'++[NotInCycle]]
+  -- Explicit step-by-step reduction to avoid toolchain issues
+  have h_cases : Cases Nat Scycle 1 I0' = Scycle.split I0' := by
+    rw [RevHalt.Splitter.Cases] -- Unfold Cases at 1 (succ 0)
+    rw [RevHalt.Splitter.Cases] -- Unfold Cases at 0
+    simp -- flatMap of single list
+  change J ∈ Cases Nat Scycle 1 I0' at hJ
+  rw [h_cases] at hJ
+  have h_split : Scycle.split I0' = [I0' ++ [InCycle], I0' ++ [NotInCycle]] := rfl
+  rw [h_split] at hJ
+  -- Now hJ is explicit membership
+  simp only [List.mem_cons] at hJ
+  have hJ' : J = (I0' ++ [InCycle]) ∨ J = (I0' ++ [NotInCycle]) := by
+    rcases hJ with rfl | rfl | hFalse
+    · left; rfl
+    · right; rfl
+    · contradiction
+
+  have h4C : (4 : Nat) ∈ CycleC := four_in_C
+  have htC : iterate Nat collatzStep t 4 ∈ CycleC := orbit_in_cycle t
+  rcases hJ' with rfl | rfl
+  · -- I0'++[InCycle] : toutes contraintes vraies sur l'orbite
+    simp [Sat, I0', InCycle, h4C, htC]
+  · -- I0'++[NotInCycle] : impossible car InCycle ∧ NotInCycle
+    simp [Sat, I0', InCycle, NotInCycle, h4C, htC]
+
+-- Bridge requis par splitter_stabilizes : Queue -> not Target
+lemma h_bridge' :
+    ∀ p, Queue Nat collatzStep Scycle d I0' p → (Sys.embed p) ∉ TargetOut := by
+  intro p hQ
+  -- TargetOut p := p ∉ CycleC
+  dsimp [TargetOut, Sys]
+  -- Sat I0' p => InCycle p => p∈CycleC
+  have hpC : p ∈ CycleC := by
+    have hSat : Sat Nat I0' p := hQ.1
+    -- I0' = [InCycle]
+    have : InCycle p := by
+      have := hSat InCycle (by simp [I0'])
+      exact this
+    exact this
+  intro hpOut
+  exact hpOut hpC
+
+-- ============================================================================
+-- 5) Conclusion Factory : Stabilizes (TimeTrace Sys)
+-- ============================================================================
+
+theorem cycle_factory_stabilizes :
+    RevHalt.Stabilizes (TimeTrace Sys) := by
+  exact splitter_stabilizes Sys Scycle d I0' hQ_start' h_bridge'
 
 end RevHalt.Examples

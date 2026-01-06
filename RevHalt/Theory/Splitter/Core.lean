@@ -347,9 +347,9 @@ def iterate (t : ℕ) (n : Pos) : Pos :=
   | 0 => n
   | t + 1 => Next (iterate t n)
 
-/-- Queue(d, n) holds iff residue is invariant along the orbit of n. -/
+/-- Queue(d, n) holds iff residue is invariant along the orbit of n AND n satisfies I0. -/
 def Queue (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (n : Pos) : Prop :=
-  ∀ t : ℕ, ResEquiv Pos S d I0 n (iterate Pos Next t n)
+  Sat Pos I0 n ∧ ∀ t : ℕ, ResEquiv Pos S d I0 n (iterate Pos Next t n)
 
 /-- Additive property of iterate. -/
 theorem iterate_add (t s : ℕ) (n : Pos) :
@@ -358,25 +358,52 @@ theorem iterate_add (t s : ℕ) (n : Pos) :
   | zero => simp [iterate]
   | succ s ih => simp [iterate, ih]
 
+/-- Cases refinement property: Sat J implies Sat I0. -/
+theorem cases_refinement (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (J : Info Pos)
+    (hJ : J ∈ Cases Pos S d I0) (n : Pos) (hSatJ : Sat Pos J n) :
+    Sat Pos I0 n := by
+  induction d generalizing I0 J with
+  | zero =>
+    simp [Cases] at hJ
+    subst hJ
+    exact hSatJ
+  | succ d ih =>
+    simp [Cases, List.mem_flatMap] at hJ
+    obtain ⟨K, hK, hSplit⟩ := hJ
+    -- K in Cases d I0, J in split K
+    -- Sat J -> Sat K (split refinement) -> Sat I0 (IH)
+    have hSatK : Sat Pos K n := S.refinement K J hSplit n hSatJ
+    exact ih I0 K hK hSatK
+
 /-- Queue is closed under dynamics (orbit stability). -/
 theorem queue_orbit_closed (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (n : Pos)
     (hQ : Queue Pos Next S d I0 n) (t : ℕ) :
     Queue Pos Next S d I0 (iterate Pos Next t n) := by
-  intro s
-  -- Transitivity: n ~ (t+s) and n ~ t implies t ~ (t+s)
-  -- Symm: n ~ t -> t ~ n
-  have h_tn : ResEquiv Pos S d I0 (iterate Pos Next t n) n :=
-    resEquiv_symm Pos S d I0 n (iterate Pos Next t n) (hQ t)
-  have h_n_ts : ResEquiv Pos S d I0 n (iterate Pos Next (t + s) n) :=
-    hQ (t + s)
+  constructor
+  · -- Sat I0 (iterate t n)
+    -- n satisfies I0 (from hQ)
+    -- n ~ iterate t n (from hQ)
+    -- Cases cover n, so exists J covering n. ResEquiv -> J covers iterate. Refinement -> I0.
+    obtain ⟨hSatI0, hResAll⟩ := hQ
+    -- Find J covering n
+    have hCover := cases_cover Pos S d I0 n hSatI0
+    obtain ⟨J, hJ, hSatJ_n⟩ := hCover
+    -- ResEquiv implies J covers iterate
+    have hSatJ_iter : Sat Pos J (iterate Pos Next t n) := (hResAll t J hJ).mp hSatJ_n
+    -- Refinement
+    exact cases_refinement Pos S d I0 J hJ (iterate Pos Next t n) hSatJ_iter
 
-  -- Rewrite (t+s) to s + t (composition)
-  rw [iterate_add Pos Next t s n] at h_n_ts
-
-  -- Composition: t ~ n ~ (s after t)
-  apply resEquiv_trans Pos S d I0 (iterate Pos Next t n) n
-  · exact h_tn
-  · exact h_n_ts
+  · -- ∀ s, ResEquiv ...
+    intro s
+    obtain ⟨_, hResAll⟩ := hQ
+    have h_tn : ResEquiv Pos S d I0 (iterate Pos Next t n) n :=
+      resEquiv_symm Pos S d I0 n (iterate Pos Next t n) (hResAll t)
+    have h_n_ts : ResEquiv Pos S d I0 n (iterate Pos Next (t + s) n) :=
+      hResAll (t + s)
+    rw [iterate_add Pos Next t s n] at h_n_ts
+    apply resEquiv_trans Pos S d I0 (iterate Pos Next t n) n
+    · exact h_tn
+    · exact h_n_ts
 
 end RevHalt.Splitter
 
