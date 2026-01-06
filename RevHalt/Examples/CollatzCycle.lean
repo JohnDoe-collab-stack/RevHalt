@@ -19,6 +19,14 @@ def collatzStep (n : Nat) : Nat :=
 def CycleC : Set Nat := { n | n = 1 ∨ n = 2 ∨ n = 4 }
 def TargetOut : Set Nat := { n | n ∉ CycleC }
 
+-- Decidable instance for CycleC membership (avoids Classical.choice)
+instance decideCycleC (n : Nat) : Decidable (n ∈ CycleC) :=
+  if h1 : n = 1 then isTrue (Or.inl h1)
+  else if h2 : n = 2 then isTrue (Or.inr (Or.inl h2))
+  else if h4 : n = 4 then isTrue (Or.inr (Or.inr h4))
+  else isFalse (fun h => by
+    rcases h with rfl | rfl | rfl <;> contradiction)
+
 lemma one_in_C : (1 : Nat) ∈ CycleC := by
   dsimp [CycleC]; exact Or.inl rfl
 
@@ -214,3 +222,9 @@ theorem cycle_factory_stabilizes :
   exact splitter_stabilizes Sys Scycle d I0' hQ_start' h_bridge'
 
 end RevHalt.Examples
+
+-- Axiom verification
+#print axioms RevHalt.Examples.Scycle
+#print axioms RevHalt.Examples.hQ_start'
+#print axioms RevHalt.Examples.h_bridge'
+#print axioms RevHalt.Examples.cycle_factory_stabilizes
