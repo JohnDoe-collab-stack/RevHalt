@@ -35,7 +35,6 @@ def Sat (I : Info Pos) (n : Pos) : Prop := ∀ c ∈ I, c n
 -- 2) Splitter Interface
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-set_option linter.dupNamespace false
 /-- A Splitter is a finite cover operator on information states. -/
 structure Splitter where
   /-- Split produces a finite list of refined information states. -/
@@ -70,17 +69,7 @@ def compose (A B : Splitter Pos) : Splitter Pos where
     exact List.mem_flatMap.mpr ⟨K, hK_in_A, hJ_in_B⟩
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 3.5) Equivalence (Shallow: depth 1)
--- ═══════════════════════════════════════════════════════════════════════════════
-
-/-- Two splitters are equivalent at depth 1 if they induce the same satisfiability structure. -/
-def SplitterEquiv (A B : Splitter Pos) : Prop :=
-  ∀ I n m,
-    (∃ J ∈ A.split I, Sat Pos J n ∧ Sat Pos J m) ↔
-    (∃ K ∈ B.split I, Sat Pos K n ∧ Sat Pos K m)
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 3.6) Identity Splitter
+-- 3.5) Identity Splitter
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 /-- The identity splitter: Split(I) = {I}. -/
@@ -97,86 +86,15 @@ def IdSplitter : Splitter Pos where
     simp only [List.mem_singleton, true_and]
     exact hSatI
 
-/-- Id ⊗ S ≈ S (left identity). -/
-theorem id_compose_left (S : Splitter Pos) : SplitterEquiv Pos (compose Pos (IdSplitter Pos) S) S := by
-  intro I n m
-  have h : (compose Pos (IdSplitter Pos) S).split I = S.split I := by
-    simp only [compose, IdSplitter, List.flatMap, List.map, List.flatten]
-    exact List.append_nil _
-  simp only [h]
-
-/-- S ⊗ Id ≈ S (right identity). -/
-theorem id_compose_right (S : Splitter Pos) : SplitterEquiv Pos (compose Pos S (IdSplitter Pos)) S := by
-  intro I n m
-  constructor
-  · intro ⟨J, hJ, hSat⟩
-    simp only [compose, IdSplitter, List.mem_flatMap, List.mem_singleton] at hJ
-    obtain ⟨K, hK_in, hJ_eq⟩ := hJ
-    use K
-    exact ⟨hK_in, by rw [← hJ_eq]; exact hSat⟩
-  · intro ⟨J, hJ, hSat⟩
-    use J
-    simp only [compose, IdSplitter, List.mem_flatMap, List.mem_singleton]
-    exact ⟨⟨J, hJ, rfl⟩, hSat⟩
-
-/-- Composition is associative: (A ⊗ B) ⊗ C ≈ A ⊗ (B ⊗ C).
-    This follows from List.flatMap associativity. (docs/collatz.md §3.3) -/
-theorem compose_assoc (A B C : Splitter Pos) :
-    SplitterEquiv Pos (compose Pos (compose Pos A B) C) (compose Pos A (compose Pos B C)) := by
-  intro I n m
-  -- Both sides have the same split result due to flatMap associativity
-  have h_eq : (compose Pos (compose Pos A B) C).split I = (compose Pos A (compose Pos B C)).split I := by
-    -- Unfold compose definitions
-    show ((A.split I).flatMap B.split).flatMap C.split = (A.split I).flatMap (fun K => (B.split K).flatMap C.split)
-    -- Prove by induction on A.split I
-    induction A.split I with
-    | nil => simp [List.flatMap]
-    | cons head tail ih =>
-      simp only [List.flatMap_cons, List.flatMap_append]
-      rw [ih]
-  simp only [h_eq]
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 4) Trivial and Atomic
--- ═══════════════════════════════════════════════════════════════════════════════
-
-/-- A splitter is trivial if Split(I) = {I} (or equivalent: never distinguishes). -/
-def isTrivial (S : Splitter Pos) : Prop :=
-  ∀ I, ∀ J ∈ S.split I, (∀ n, Sat Pos I n ↔ Sat Pos J n)
-
-/-- A splitter is nontrivial if there exists a case that distinguishes. -/
-def isNontrivial (S : Splitter Pos) : Prop := ¬ isTrivial Pos S
-
-/-- A splitter is Atomic if every factorization S ~ A ⊗ B implies A or B is trivial.
-    This is the spec-compliant definition from §5. -/
-def Atomic (S : Splitter Pos) : Prop :=
-  ∀ A B : Splitter Pos, SplitterEquiv Pos S (compose Pos A B) →
-    isTrivial Pos A ∨ isTrivial Pos B
-
-/-- A splitter is atomic relative to an admissible class (original definition). -/
-def isAtomicRelative (S : Splitter Pos) (Adm : Splitter Pos → Prop) : Prop :=
-  isNontrivial Pos S ∧
-  Adm S ∧
-  ∀ A B : Splitter Pos, Adm A → Adm B → isNontrivial Pos A → isNontrivial Pos B →
-    SplitterEquiv Pos (compose Pos A B) S →
-    (SplitterEquiv Pos A S ∨ SplitterEquiv Pos B S)
-
-/-- A splitter is atomic (absolute) if atomic relative to all splitters. -/
-def isAtomic (S : Splitter Pos) : Prop := isAtomicRelative Pos S (fun _ => True)
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- 5) Prime as Atomic Index
--- ═══════════════════════════════════════════════════════════════════════════════
-
-variable (SplitFamily : ℕ → Splitter ℕ)
-variable (Adm : Splitter ℕ → Prop)
-
-/-- Prime_RH(p) holds iff Split_p is atomic in Adm. -/
-def Prime_RH (p : ℕ) : Prop := isAtomicRelative ℕ (SplitFamily p) Adm
+-- See Aux.lean for non-spec auxiliary definitions (optional, internal use only)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 6) Depth-Bounded Cases
 -- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Local lemma for stability: [x].flatMap f = f x. -/
+theorem flatMap_singleton {α β : Type} (f : α → List β) (x : α) :
+    [x].flatMap f = f x := by simp [List.flatMap]
 
 /-- Cases reachable at depth d from initial info I. -/
 def Cases (S : Splitter Pos) : ℕ → Info Pos → List (Info Pos)
@@ -226,6 +144,16 @@ theorem cases_card_bound (S : Splitter Pos) (k : ℕ)
         ≤ (Cases Pos S d I).length * k := h1
       _ ≤ k ^ d * k := Nat.mul_le_mul_right k h2
       _ = k ^ (d + 1) := (Nat.pow_succ k d).symm
+
+/-- A splitter with bounded branching factor. -/
+structure BoundedSplitter extends Splitter Pos where
+  bound : ℕ
+  bounded : ∀ I, (toSplitter.split I).length ≤ bound
+
+/-- Cases are exponentially bounded for bounded splitters. -/
+theorem BoundedSplitter.cases_card (S : BoundedSplitter Pos) (d : ℕ) (I : Info Pos) :
+    (Cases Pos S.toSplitter d I).length ≤ S.bound ^ d :=
+  cases_card_bound Pos S.toSplitter S.bound S.bounded d I
 
 /-- Cases Cover Property: Every position satisfying I is covered by some case in Cases(d, I). -/
 theorem cases_cover (S : Splitter Pos) (d : ℕ) (I : Info Pos) (n : Pos)
@@ -291,11 +219,73 @@ theorem obsEq_trans (S T U : Splitter Pos) : ObsEq Pos S T → ObsEq Pos T U →
 -- 7.6) Trivial via ObsEq (Spec §5)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- Alternative Trivial definition: S is trivial if ObsEq to Id. -/
-def TrivialObs (S : Splitter Pos) : Prop :=
+/-- [Spec §5] Syntactically trivial: S.split I = [I] for all I. -/
+def SyntaxTrivial (S : Splitter Pos) : Prop :=
   ∀ I, S.split I = [I]
 
-/-- Atomic per spec §5: if S ~ A ⊗ B then A or B is trivial. -/
+/-- When S is syntactically trivial, Cases(d, I) = [I] for all depths. -/
+theorem SyntaxTrivial_cases (S : Splitter Pos) (hS : SyntaxTrivial Pos S) :
+    ∀ d I, Cases Pos S d I = [I] := by
+  intro d I
+  induction d generalizing I with
+  | zero => simp [Cases]
+  | succ d ih =>
+    simp only [Cases, ih I]
+    rw [flatMap_singleton S.split I, hS I]
+
+/-- IdSplitter is syntactically trivial. -/
+theorem IdSplitter_SyntaxTrivial : SyntaxTrivial Pos (IdSplitter Pos) := by
+  intro I
+  simp [IdSplitter]
+
+/-- Cases for IdSplitter. -/
+theorem IdSplitter_cases (d : ℕ) (I0 : Info Pos) :
+    Cases Pos (IdSplitter Pos) d I0 = [I0] :=
+  SyntaxTrivial_cases Pos (IdSplitter Pos) (IdSplitter_SyntaxTrivial Pos) d I0
+
+/-- [Spec §5] Semantically trivial: ObsEq to IdSplitter. This is the official definition. -/
+def TrivialObs (S : Splitter Pos) : Prop :=
+  ObsEq Pos S (IdSplitter Pos)
+
+/-- Syntactic triviality implies semantic triviality.
+    Proof: If S is syntactically trivial, then Cases(S,d,I0) = [I0] for all d.
+    Hence ResEquiv(S) and ResEquiv(Id) both reduce to (Sat I0 n ↔ Sat I0 m). -/
+theorem SyntaxTrivial_imp_TrivialObs (S : Splitter Pos) :
+    SyntaxTrivial Pos S → TrivialObs Pos S := by
+  intro hSyn
+  -- TrivialObs = ObsEq S (IdSplitter)
+  -- ObsEq = ∀ d I0 n m, ResEquiv S d I0 n m ↔ ResEquiv Id d I0 n m
+  intro d I0 n m
+  -- ResEquiv S d I0 n m = ∀ J ∈ Cases S d I0, (Sat J n ↔ Sat J m)
+  have hCasesS : Cases Pos S d I0 = [I0] := SyntaxTrivial_cases Pos S hSyn d I0
+  have hCasesId : Cases Pos (IdSplitter Pos) d I0 = [I0] := IdSplitter_cases Pos d I0
+  constructor
+  · -- → direction: assume ResEquiv S, show ResEquiv Id
+    intro hResS
+    -- Take J ∈ Cases Id d I0, show Sat J n ↔ Sat J m
+    intro J hJ_in_CasesId
+    -- Since Cases Id d I0 = [I0], we have J = I0
+    rw [hCasesId] at hJ_in_CasesId
+    have hJ_eq : J = I0 := List.mem_singleton.mp hJ_in_CasesId
+    -- Use hResS with I0 ∈ Cases S d I0
+    have hI0_in_CasesS : I0 ∈ Cases Pos S d I0 := by rw [hCasesS]; exact List.mem_singleton.mpr rfl
+    have hSat_I0 : Sat Pos I0 n ↔ Sat Pos I0 m := hResS I0 hI0_in_CasesS
+    rw [hJ_eq]
+    exact hSat_I0
+  · -- ← direction: assume ResEquiv Id, show ResEquiv S
+    intro hResId
+    -- Take J ∈ Cases S d I0, show Sat J n ↔ Sat J m
+    intro J hJ_in_CasesS
+    -- Since Cases S d I0 = [I0], we have J = I0
+    rw [hCasesS] at hJ_in_CasesS
+    have hJ_eq : J = I0 := List.mem_singleton.mp hJ_in_CasesS
+    -- Use hResId with I0 ∈ Cases Id d I0
+    have hI0_in_CasesId : I0 ∈ Cases Pos (IdSplitter Pos) d I0 := by rw [hCasesId]; exact List.mem_singleton.mpr rfl
+    have hSat_I0 : Sat Pos I0 n ↔ Sat Pos I0 m := hResId I0 hI0_in_CasesId
+    rw [hJ_eq]
+    exact hSat_I0
+
+/-- [Spec §5] Atomic via ObsEq: if S ~ A ⊗ B then A or B is trivial. -/
 def AtomicObs (S : Splitter Pos) : Prop :=
   ∀ A B : Splitter Pos, ObsEq Pos S (compose Pos A B) →
     TrivialObs Pos A ∨ TrivialObs Pos B
@@ -364,7 +354,9 @@ def iterate (t : ℕ) (n : Pos) : Pos :=
   | 0 => n
   | t + 1 => Next (iterate t n)
 
-/-- Queue(d, n) holds iff residue is invariant along the orbit of n AND n satisfies I0. -/
+/-- [Splitter Queue] Residue-stable under dynamics.
+    Distinct from `Up2Gain.Queue` which uses game-theoretic avoidance.
+    This Queue is for arithmetic/residue stability along orbits. -/
 def Queue (S : Splitter Pos) (d : ℕ) (I0 : Info Pos) (n : Pos) : Prop :=
   Sat Pos I0 n ∧ ∀ t : ℕ, ResEquiv Pos S d I0 n (iterate Pos Next t n)
 
@@ -433,21 +425,11 @@ end RevHalt.Splitter
 #print axioms RevHalt.Splitter.Sat
 #print axioms RevHalt.Splitter.compose
 
--- Identity and equivalence
+-- Identity
 #print axioms RevHalt.Splitter.IdSplitter
-#print axioms RevHalt.Splitter.id_compose_left
-#print axioms RevHalt.Splitter.id_compose_right
-#print axioms RevHalt.Splitter.SplitterEquiv
-
--- Trivial and Atomic
-#print axioms RevHalt.Splitter.isTrivial
-#print axioms RevHalt.Splitter.isNontrivial
-#print axioms RevHalt.Splitter.Atomic
-#print axioms RevHalt.Splitter.isAtomicRelative
-#print axioms RevHalt.Splitter.isAtomic
-#print axioms RevHalt.Splitter.Prime_RH
 
 -- Cases
+#print axioms RevHalt.Splitter.flatMap_singleton
 #print axioms RevHalt.Splitter.Cases
 #print axioms RevHalt.Splitter.cases_card_bound
 #print axioms RevHalt.Splitter.cases_cover
@@ -458,12 +440,16 @@ end RevHalt.Splitter
 #print axioms RevHalt.Splitter.resEquiv_symm
 #print axioms RevHalt.Splitter.resEquiv_trans
 
--- ObsEq
+-- ObsEq (Spec §5)
 #print axioms RevHalt.Splitter.ObsEq
 #print axioms RevHalt.Splitter.obsEq_refl
 #print axioms RevHalt.Splitter.obsEq_symm
 #print axioms RevHalt.Splitter.obsEq_trans
+
+-- Triviality (Spec §5)
+#print axioms RevHalt.Splitter.SyntaxTrivial
 #print axioms RevHalt.Splitter.TrivialObs
+#print axioms RevHalt.Splitter.SyntaxTrivial_imp_TrivialObs
 #print axioms RevHalt.Splitter.AtomicObs
 
 -- Observable

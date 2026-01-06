@@ -1,7 +1,7 @@
 import RevHalt.Theory.Splitter.Core
 
 /-!
-# RevHalt.Theory.Splitter.SplitterAux
+# RevHalt.Theory.Splitter.Auxi
 
 **Auxiliary definitions for internal/demo use only.**
 
@@ -18,7 +18,7 @@ For spec-compliant code, use the definitions in Core.lean:
 These aux definitions are kept only for compositional proofs and demos.
 -/
 
-namespace RevHalt.Splitter.SplitterAux
+namespace RevHalt.Splitter.Auxi
 
 open RevHalt.Splitter
 
@@ -115,13 +115,13 @@ theorem compose_assoc (A B C : Splitter Pos) :
       rw [ih]
   simp only [h_eq]
 
-end RevHalt.Splitter.SplitterAux
+end RevHalt.Splitter.Auxi
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- Axiom Checks
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-#print axioms RevHalt.Splitter.SplitterAux.SplitterEquiv
-#print axioms RevHalt.Splitter.SplitterAux.isTrivial
-#print axioms RevHalt.Splitter.SplitterAux.Atomic
-#print axioms RevHalt.Splitter.SplitterAux.Prime_RH_aux
+#print axioms RevHalt.Splitter.Auxi.SplitterEquiv
+#print axioms RevHalt.Splitter.Auxi.isTrivial
+#print axioms RevHalt.Splitter.Auxi.Atomic
+#print axioms RevHalt.Splitter.Auxi.Prime_RH_aux

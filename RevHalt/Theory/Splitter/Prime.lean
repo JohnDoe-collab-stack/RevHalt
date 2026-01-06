@@ -26,15 +26,31 @@ def Prime_RH_Div (p : ℕ) (hp : p > 0) : Prop :=
 -- 2) Split_div properties
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- Split_div(p) is nontrivial for p > 1, so it's not TrivialObs. -/
-theorem split_div_not_trivial (p : ℕ) (hp : p > 1) :
-    ¬ TrivialObs ℕ (Split_div p (Nat.lt_trans Nat.zero_lt_one hp)) := by
-  intro hTriv
-  have h := hTriv []
+/-- Split_div(p) is not syntactically trivial for p > 1. -/
+theorem split_div_not_SyntaxTrivial (p : ℕ) (hp : p > 1) :
+    ¬ SyntaxTrivial ℕ (Split_div p (Nat.lt_trans Nat.zero_lt_one hp)) := by
+  intro hSyn
+  have h := hSyn []
   simp only [Split_div] at h
   have hlen : ([[] ++ [DivConstraint p], [] ++ [NotDivConstraint p]] : List (Info ℕ)).length = 2 := by rfl
   rw [h] at hlen
   simp at hlen
+
+/-- Split_div(p) is not trivial (TrivialObs) for p > 1. -/
+theorem split_div_not_trivial (p : ℕ) (hp : p > 1) :
+    ¬ TrivialObs ℕ (Split_div p (Nat.lt_trans Nat.zero_lt_one hp)) := by
+  intro hTriv
+  -- TrivialObs = ObsEq S IdSplitter
+  -- Use split_div_not_SyntaxTrivial and show TrivialObs → SyntaxTrivial for Split_div
+  -- Actually, we show contradiction via ResEquiv at depth 0
+  have h0 := hTriv 0 [] 0 1
+  simp only [ResEquiv, Cases] at h0
+  -- Cases 0 [] = [[]], so membership is for []
+  have hMem : ([] : Info ℕ) ∈ [[]] := List.mem_singleton.mpr rfl
+  have hSat0 : Sat ℕ [] 0 := fun _ hc => by simp at hc
+  have hSat1 : Sat ℕ [] 1 := fun _ hc => by simp at hc
+  -- But Split_div distinguishes 0 and 1 for p > 1
+  sorry -- TODO: Complete proof via ResEquiv distinguishing
 
 /-- If p = a * b, then Split_div(p) ~ Split_div(a) ⊗ Split_div(b).
     TODO: Prove from residue equivalence structure. -/

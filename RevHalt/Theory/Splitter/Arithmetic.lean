@@ -1,12 +1,12 @@
 import RevHalt.Theory.Splitter.Core
-import RevHalt.Theory.Splitter.SplitterAux
+import RevHalt.Theory.Splitter.Auxi
 import Mathlib.Data.Nat.Prime.Defs
 import Mathlib.Data.Nat.GCD.Basic
 
 namespace RevHalt.Splitter.Arithmetic
 
 open RevHalt.Splitter
-open RevHalt.Splitter.SplitterAux
+open RevHalt.Splitter.Auxi
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- 1) Standard SplitMod
@@ -97,7 +97,7 @@ axiom dvd_prime_options (a p : ℕ) (hp : Nat.Prime p) (h : a ∣ p) : a = 1 ∨
 -- 4) Prime_iff_Atomic Theorem
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-def Prime_RH_Arith (p : ℕ) : Prop := Prime_RH SplitFamily Admissible p
+def Prime_RH_Arith (p : ℕ) : Prop := Prime_RH_aux SplitFamily Admissible p
 
 -- Axiom for the hard direction
 axiom axiom_atomic_implies_prime (p : ℕ) (hp : p ≥ 2) : Prime_RH_Arith p → Nat.Prime p
@@ -107,7 +107,7 @@ theorem prime_iff_atomic (p : ℕ) (hp : p ≥ 2) :
   constructor
   · exact axiom_atomic_implies_prime p hp
   · intro hPrime
-    unfold Prime_RH_Arith Prime_RH isAtomicRelative
+    unfold Prime_RH_Arith Prime_RH_aux isAtomicRelative
     simp [SplitFamily]
     have h_p_pos : p > 0 := Nat.Prime.pos hPrime
     rw [dif_pos h_p_pos]

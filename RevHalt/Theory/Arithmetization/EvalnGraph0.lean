@@ -201,6 +201,123 @@ def nodeAt6 : Lang0.Formula (Fin 6) :=
     (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt).relabel
       ![Sum.inl 0, Sum.inl 1, Sum.inl 2, Sum.inl 3, Sum.inl 4, Sum.inl 5, Sum.inr 0, Sum.inr 1]
 
+theorem nodeAt6_realize (D i k code input output : ℕ) :
+    nodeAt6.Realize ![D, i, k, code, input, output] ↔
+      ∃ c1 c2, betaFun D i = node6Enc k code input output c1 c2 := by
+  -- Switch to `BoundedFormula.Realize` to unfold `∃'`.
+  have h0 :
+      nodeAt6.Realize ![D, i, k, code, input, output] ↔
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) nodeAt6
+          ![D, i, k, code, input, output] (default : Fin 0 → ℕ) := by
+    exact
+      (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := nodeAt6)
+            (x := ![D, i, k, code, input, output]) (y := (default : Fin 0 → ℕ))).symm
+
+  have hSnoc0 {p : Fin 0 → ℕ} {x : ℕ} :
+      Fin.snoc (α := fun _ : Fin 1 => ℕ) p x 0 = x := by
+    simpa using (Fin.snoc_last (α := fun _ : Fin 1 => ℕ) (x := x) (p := p) (n := 0))
+
+  have hSnoc1 {p : Fin 1 → ℕ} {x : ℕ} :
+      Fin.snoc (α := fun _ : Fin 2 => ℕ) p x 1 = x := by
+    simpa using (Fin.snoc_last (α := fun _ : Fin 2 => ℕ) (x := x) (p := p) (n := 1))
+
+  have hSnoc2 (c1 c2 : ℕ) :
+      Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) c1) c2 = (![c1, c2] : Fin 2 → ℕ) := by
+    funext j
+    fin_cases j
+    · simpa [Fin.snoc_castSucc] using (hSnoc0 (p := (default : Fin 0 → ℕ)) (x := c1))
+    · simpa [Fin.snoc_last, Fin.snoc_castSucc] using
+        (hSnoc1 (p := Fin.snoc (default : Fin 0 → ℕ) c1) (x := c2))
+
+  -- Compute the pulled-back valuation for `nodeAt` under the relabeling.
+  have hVal (c1 c2 : ℕ) :
+      (Sum.elim (![D, i, k, code, input, output] : Fin 6 → ℕ) (![c1, c2] : Fin 2 → ℕ) ∘
+            (![Sum.inl 0, Sum.inl 1, Sum.inl 2, Sum.inl 3, Sum.inl 4, Sum.inl 5, Sum.inr 0,
+                Sum.inr 1] :
+              Fin 8 → Fin 6 ⊕ Fin 2)) =
+        (![D, i, k, code, input, output, c1, c2] : Fin 8 → ℕ) := by
+    funext j
+    fin_cases j <;> rfl
+
+  constructor
+  · intro h
+    have h' :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) nodeAt6
+          ![D, i, k, code, input, output] (default : Fin 0 → ℕ) :=
+      (h0).1 h
+    rcases (by simpa [nodeAt6] using h') with ⟨c1, c2, hNodeAt⟩
+    have hNodeAt' :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+          (![D, i, k, code, input, output, c1, c2] : Fin 8 → ℕ) (default : Fin 0 → ℕ) := by
+      -- Interpret the relabeling in the standard model.
+      have hRelabel :=
+        (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+          (φ := (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt))
+          (g :=
+            (![Sum.inl 0, Sum.inl 1, Sum.inl 2, Sum.inl 3, Sum.inl 4, Sum.inl 5, Sum.inr 0,
+                Sum.inr 1] :
+              Fin 8 → Fin 6 ⊕ Fin 2))
+          (v := (![D, i, k, code, input, output] : Fin 6 → ℕ))
+          (xs := (![c1, c2] : Fin 2 → ℕ)))
+      -- `nodeAt` has no bound vars, so the bound valuation is irrelevant.
+      have hIrrel : ((![c1, c2] : Fin 2 → ℕ) ∘ Fin.natAdd 2) = (default : Fin 0 → ℕ) :=
+        Subsingleton.elim _ _
+      have : FirstOrder.Language.BoundedFormula.Realize (L := Lang0)
+            (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+            (Sum.elim (![D, i, k, code, input, output] : Fin 6 → ℕ)
+                  ((![c1, c2] : Fin 2 → ℕ) ∘ Fin.castAdd 0) ∘
+                ![Sum.inl 0, Sum.inl 1, Sum.inl 2, Sum.inl 3, Sum.inl 4, Sum.inl 5, Sum.inr 0,
+                  Sum.inr 1])
+            ((![c1, c2] : Fin 2 → ℕ) ∘ Fin.natAdd 2) := (hRelabel).1 (by simpa [hSnoc2 c1 c2] using hNodeAt)
+      -- Normalize the pulled-back valuation and drop the irrelevant bound valuation.
+      simpa [hVal c1 c2, hIrrel] using this
+    have hNodeAtFormula : nodeAt.Realize ![D, i, k, code, input, output, c1, c2] := by
+      exact
+        (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := nodeAt)
+              (x := (![D, i, k, code, input, output, c1, c2] : Fin 8 → ℕ))
+              (y := (default : Fin 0 → ℕ))).1 hNodeAt'
+    exact ⟨c1, c2, (nodeAt_realize D i k code input output c1 c2).1 hNodeAtFormula⟩
+  · rintro ⟨c1, c2, hEq⟩
+    have hNodeAtFormula : nodeAt.Realize ![D, i, k, code, input, output, c1, c2] :=
+      (nodeAt_realize D i k code input output c1 c2).2 hEq
+    have hNodeAt' :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+          (![D, i, k, code, input, output, c1, c2] : Fin 8 → ℕ) (default : Fin 0 → ℕ) :=
+      (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := nodeAt)
+            (x := (![D, i, k, code, input, output, c1, c2] : Fin 8 → ℕ))
+            (y := (default : Fin 0 → ℕ))).2 hNodeAtFormula
+    have hRelabel :=
+      (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+        (φ := (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt))
+        (g :=
+          (![Sum.inl 0, Sum.inl 1, Sum.inl 2, Sum.inl 3, Sum.inl 4, Sum.inl 5, Sum.inr 0, Sum.inr 1] :
+            Fin 8 → Fin 6 ⊕ Fin 2))
+        (v := (![D, i, k, code, input, output] : Fin 6 → ℕ))
+        (xs := (![c1, c2] : Fin 2 → ℕ)))
+    have hNodeAt6Body :
+        ((show Lang0.BoundedFormula (Fin 8) 0 from nodeAt).relabel
+              ![Sum.inl 0, Sum.inl 1, Sum.inl 2, Sum.inl 3, Sum.inl 4, Sum.inl 5, Sum.inr 0, Sum.inr 1]).Realize
+          (![D, i, k, code, input, output] : Fin 6 → ℕ) (![c1, c2] : Fin 2 → ℕ) := by
+      -- Use the `←` direction of `realize_relabel`.
+      have hIrrel : ((![c1, c2] : Fin 2 → ℕ) ∘ Fin.natAdd 2) = (default : Fin 0 → ℕ) :=
+        Subsingleton.elim _ _
+      have : FirstOrder.Language.BoundedFormula.Realize (L := Lang0)
+            (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+            (Sum.elim (![D, i, k, code, input, output] : Fin 6 → ℕ)
+                  ((![c1, c2] : Fin 2 → ℕ) ∘ Fin.castAdd 0) ∘
+                ![Sum.inl 0, Sum.inl 1, Sum.inl 2, Sum.inl 3, Sum.inl 4, Sum.inl 5, Sum.inr 0,
+                  Sum.inr 1])
+            ((![c1, c2] : Fin 2 → ℕ) ∘ Fin.natAdd 2) := by
+        simpa [hVal c1 c2, hIrrel] using hNodeAt'
+      exact (hRelabel).2 (by simpa using this)
+    have h' :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) nodeAt6
+          ![D, i, k, code, input, output] (default : Fin 0 → ℕ) := by
+      simp [nodeAt6]
+      refine ⟨c1, c2, ?_⟩
+      simpa [hSnoc2 c1 c2] using hNodeAt6Body
+    exact (h0).2 h'
+
 /--
 `NodeOK(D,i)` expresses that index `i` of the derivation table `D` is a locally correct `evaln`
 derivation node (for some parameters stored in that node).
@@ -368,7 +485,13 @@ def NodeOK : Lang0.Formula (Fin 2) :=
           splitIn ⊓ c1lt' ⊓ child1Node
 
     let caseOK : Lang0.BoundedFormula (Fin 2) 7 :=
-      zeroCase ⊔ succCase ⊔ leftCase ⊔ rightCase ⊔ pairCase ⊔ compCase ⊔ precCase ⊔ rfindCase
+      zeroCase ⊔
+        (succCase ⊔
+          (leftCase ⊔
+            (rightCase ⊔
+              (pairCase ⊔
+                (compCase ⊔
+                  (precCase ⊔ rfindCase))))))
 
     nodeAtBF ⊓ stageOK ⊓ caseOK
 
@@ -399,22 +522,500 @@ def EvalnGraph : Lang0.Formula (Fin 4) :=
   ∃' ∃'
     -- D r
     (∃' ∃'
-      -- c1 c2: root node's child indices (existentially ignored)
-      (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt).relabel
-          ![Sum.inr 0, Sum.inr 1, Sum.inl 2, Sum.inl 0, Sum.inl 1, Sum.inl 3, Sum.inr 2, Sum.inr 3] ⊓
-        (show Lang0.BoundedFormula (Fin 2) 0 from AllNodesOK).relabel ![Sum.inr 0, Sum.inr 1])
+        -- c1 c2: root node's child indices (existentially ignored)
+        ((show Lang0.BoundedFormula (Fin 8) 0 from nodeAt).relabel
+              ![Sum.inr 0, Sum.inr 1, Sum.inl 2, Sum.inl 0, Sum.inl 1, Sum.inl 3, Sum.inr 2, Sum.inr 3] ⊓
+            (show Lang0.BoundedFormula (Fin 2) 0 from AllNodesOK).relabel ![Sum.inr 0, Sum.inr 1]))
 
 private def evalnRelabel : Fin 4 → Fin 2 ⊕ Fin 2 :=
   ![Sum.inl 0, Sum.inl 1, Sum.inr 0, Sum.inr 1]
 
 /-! ### Specification -/
 
-/-- The core correctness theorem for `EvalnGraph` (proved below). -/
+private theorem node6Enc_inj
+    {k₁ code₁ input₁ output₁ c1₁ c2₁ k₂ code₂ input₂ output₂ c1₂ c2₂ : ℕ}
+    (h :
+      node6Enc k₁ code₁ input₁ output₁ c1₁ c2₁ =
+        node6Enc k₂ code₂ input₂ output₂ c1₂ c2₂) :
+    k₁ = k₂ ∧ code₁ = code₂ ∧ input₁ = input₂ ∧ output₁ = output₂ ∧ c1₁ = c1₂ ∧ c2₁ = c2₂ := by
+  -- `node6Enc` is right-nested `Nat.pair`, so injectivity follows by repeated `Nat.pair_eq_pair`.
+  simp [node6Enc, Nat.pair_eq_pair] at h
+  rcases h with ⟨hk, h⟩
+  rcases h with ⟨hcode, h⟩
+  rcases h with ⟨hinput, h⟩
+  rcases h with ⟨hout, h⟩
+  rcases h with ⟨hc1, hc2⟩
+  exact ⟨hk, hcode, hinput, hout, hc1, hc2⟩
+
+private theorem allNodesOK_nodeOK (D r i : ℕ) :
+    AllNodesOK.Realize ![D, r] → i ≤ r → NodeOK.Realize ![D, i] := by
+  intro hAll hi
+  -- Work with `BoundedFormula.Realize` to unfold `∀'` / `→` without unfolding `NodeOK`.
+  have hAllBF :
+      FirstOrder.Language.BoundedFormula.Realize (L := Lang0) AllNodesOK ![D, r]
+        (default : Fin 0 → ℕ) :=
+    (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize
+          (φ := AllNodesOK) (x := ![D, r]) (y := (default : Fin 0 → ℕ))).1 hAll
+  -- Unfold the outer `∀'` and implication.
+  unfold AllNodesOK at hAllBF
+  have hAll' :
+      ∀ t : ℕ,
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0)
+          ((bdLe (α := Fin 2) (n := 1)
+                (bvar (α := Fin 2) (n := 1) 0) (termVar (α := Fin 2) (n := 1) 1)).imp
+            ((show Lang0.BoundedFormula (Fin 2) 0 from NodeOK).relabel nodeOKRelabel))
+          (![D, r] : Fin 2 → ℕ) (Fin.snoc (default : Fin 0 → ℕ) t) :=
+    (FirstOrder.Language.BoundedFormula.realize_all).1 hAllBF
+  have hImp :=
+    (FirstOrder.Language.BoundedFormula.realize_imp).1 (hAll' i)
+  have hLe :
+      (bdLe (α := Fin 2) (n := 1)
+            (bvar (α := Fin 2) (n := 1) 0) (termVar (α := Fin 2) (n := 1) 1)).Realize
+        (![D, r] : Fin 2 → ℕ) (Fin.snoc (default : Fin 0 → ℕ) i) := by
+    -- `bdLe_realize` interprets `bdLe` as the corresponding `≤` statement in `ℕ`.
+    have : i ≤ r := hi
+    simpa [termVar, bvar] using
+      (bdLe_realize (α := Fin 2) (n := 1)
+            (bvar (α := Fin 2) (n := 1) 0) (termVar (α := Fin 2) (n := 1) 1)
+            (![D, r] : Fin 2 → ℕ) (Fin.snoc (default : Fin 0 → ℕ) i)).2 this
+  have hNodeOKRel :
+      ((show Lang0.BoundedFormula (Fin 2) 0 from NodeOK).relabel nodeOKRelabel).Realize
+        (![D, r] : Fin 2 → ℕ) (Fin.snoc (default : Fin 0 → ℕ) i) :=
+    hImp hLe
+  -- Interpret the relabeling to rewrite the free-variable valuation as `![D, i]`.
+  have hRelabel :=
+    (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+      (φ := (show Lang0.BoundedFormula (Fin 2) 0 from NodeOK))
+      (g := nodeOKRelabel)
+      (v := (![D, r] : Fin 2 → ℕ))
+      (xs := (Fin.snoc (default : Fin 0 → ℕ) i)))
+  have hIrrel :
+      ((Fin.snoc (default : Fin 0 → ℕ) i) ∘ Fin.natAdd 1) = (default : Fin 0 → ℕ) :=
+    Subsingleton.elim _ _
+  have hVal :
+      (Sum.elim (![D, r] : Fin 2 → ℕ)
+            ((Fin.snoc (default : Fin 0 → ℕ) i) ∘ Fin.castAdd 0) ∘ nodeOKRelabel) =
+        (![D, i] : Fin 2 → ℕ) := by
+    funext j
+    fin_cases j <;> rfl
+  have hNodeOKBF :
+      FirstOrder.Language.BoundedFormula.Realize (L := Lang0)
+        (show Lang0.BoundedFormula (Fin 2) 0 from NodeOK)
+        (![D, i] : Fin 2 → ℕ) (default : Fin 0 → ℕ) := by
+    have hTmp :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0)
+          (show Lang0.BoundedFormula (Fin 2) 0 from NodeOK)
+          (Sum.elim (![D, r] : Fin 2 → ℕ)
+            ((Fin.snoc (default : Fin 0 → ℕ) i) ∘ Fin.castAdd 0) ∘ nodeOKRelabel)
+          ((Fin.snoc (default : Fin 0 → ℕ) i) ∘ Fin.natAdd 1) :=
+      (hRelabel).1 hNodeOKRel
+    -- Avoid `simp` here: rewriting the valuations is enough and prevents unfolding `NodeOK`.
+    have hTmp' := hTmp
+    rw [hIrrel] at hTmp'
+    rw [hVal] at hTmp'
+    exact hTmp'
+  exact
+    (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := NodeOK) (x := (![D, i] : Fin 2 → ℕ))
+          (y := (default : Fin 0 → ℕ))).2 hNodeOKBF
+
+private theorem evaln_of_child
+    {D r i j k code input output : ℕ}
+    (_ : AllNodesOK.Realize ![D, r]) (hi : i ≤ r) (hj : j < i)
+    (IH :
+      ∀ m,
+        m < i →
+          m ≤ r →
+            ∃ k' code' input' output' c1' c2',
+              betaFun D m = node6Enc k' code' input' output' c1' c2' ∧
+                Nat.Partrec.Code.evaln k' (Nat.Partrec.Code.ofNatCode code') input' = some output')
+    (hAt : nodeAt6.Realize ![D, j, k, code, input, output]) :
+    Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode code) input = some output := by
+  rcases (nodeAt6_realize D j k code input output).1 hAt with ⟨cc1, cc2, hEq⟩
+  have hjle : j ≤ r := Nat.le_trans (Nat.le_of_lt hj) hi
+  rcases IH j hj hjle with ⟨k', code', input', output', c1', c2', hEq', hEval'⟩
+  have hInj := node6Enc_inj (hEq'.symm.trans hEq)
+  rcases hInj with ⟨hk, hcode, hinput, hout, _hc1, _hc2⟩
+  simpa [hk, hcode, hinput, hout] using hEval'
+
+private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r]) :
+    ∀ i,
+      i ≤ r →
+        ∃ k code input output c1 c2,
+          betaFun D i = node6Enc k code input output c1 c2 ∧
+            Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode code) input = some output := by
+  intro i hi
+  refine
+    (Nat.strong_induction_on i
+          (p := fun j =>
+            j ≤ r →
+              ∃ k code input output c1 c2,
+                betaFun D j = node6Enc k code input output c1 c2 ∧
+                  Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode code) input = some output)
+          (fun j IH hj => ?_))
+      hi
+  have hNodeOK : NodeOK.Realize ![D, j] :=
+    allNodesOK_nodeOK (D := D) (r := r) (i := j) hAll hj
+  have hNodeOKBF :
+      FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 2) 0 from NodeOK)
+        (![D, j] : Fin 2 → ℕ) (default : Fin 0 → ℕ) :=
+    (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := NodeOK) (x := (![D, j] : Fin 2 → ℕ))
+          (y := (default : Fin 0 → ℕ))).1 hNodeOK
+  -- Unpack `NodeOK` constructively: avoid `simp`/`simpa` which can eliminate existentials
+  -- (e.g. by rewriting `∃ output, output = 0 ∧ ...` into a substituted form).
+  have hNodeOKBF' := hNodeOKBF
+  unfold NodeOK at hNodeOKBF'
+  rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hNodeOKBF' with ⟨k, hNodeOKBF'⟩
+  rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hNodeOKBF' with ⟨code, hNodeOKBF'⟩
+  rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hNodeOKBF' with ⟨input, hNodeOKBF'⟩
+  rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hNodeOKBF' with ⟨output, hNodeOKBF'⟩
+  rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hNodeOKBF' with ⟨c1, hNodeOKBF'⟩
+  rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hNodeOKBF' with ⟨c2, hNodeOKBF'⟩
+  rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hNodeOKBF' with ⟨kpred, hNodeOKBF'⟩
+  -- `NodeOK` body is a conjunction: `nodeAtBF ⊓ stageOK ⊓ caseOK`.
+  rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hNodeOKBF' with ⟨hLeft, hCases⟩
+  rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hNodeAtBF, hStageOK⟩
+  -- Stage predicate: `k = succ kpred ∧ input ≤ kpred`.
+  rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hStageOK with ⟨hk, hInLe⟩
+
+  -- Convert `nodeAtBF` (a relabeling of `nodeAt`) back into the intended `nodeAt.Realize`.
+  have hNodeAt' :
+      FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+        (![D, j, k, code, input, output, c1, c2] : Fin 8 → ℕ) (default : Fin 0 → ℕ) := by
+    -- `nodeAtBF` is `nodeAt.relabel nodeAtRelabel` with `m = 7` (bound vars) and `n = 0`.
+    have hRelabel :=
+      (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+        (φ := (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt))
+        (g :=
+          (![Sum.inl 0, Sum.inl 1, Sum.inr 0, Sum.inr 1, Sum.inr 2, Sum.inr 3, Sum.inr 4, Sum.inr 5] :
+            Fin 8 → Fin 2 ⊕ Fin 7))
+        (v := (![D, j] : Fin 2 → ℕ))
+        (xs := (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ)))
+    have hIrrel :
+        ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.natAdd 7) =
+          (default : Fin 0 → ℕ) :=
+      Subsingleton.elim _ _
+    have hVal :
+        (Sum.elim (![D, j] : Fin 2 → ℕ)
+              ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.castAdd 0) ∘
+            (![Sum.inl 0, Sum.inl 1, Sum.inr 0, Sum.inr 1, Sum.inr 2, Sum.inr 3, Sum.inr 4, Sum.inr 5] :
+              Fin 8 → Fin 2 ⊕ Fin 7)) =
+          (![D, j, k, code, input, output, c1, c2] : Fin 8 → ℕ) := by
+      funext jj
+      fin_cases jj <;> rfl
+    have hTmp :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+          (Sum.elim (![D, j] : Fin 2 → ℕ)
+                ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.castAdd 0) ∘
+              ![Sum.inl 0, Sum.inl 1, Sum.inr 0, Sum.inr 1, Sum.inr 2, Sum.inr 3, Sum.inr 4, Sum.inr 5])
+          ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.natAdd 7) :=
+      (hRelabel).1 (by simpa using hNodeAtBF)
+    -- Normalize the pulled-back valuation and drop the irrelevant bound valuation.
+    simpa [hVal, hIrrel] using hTmp
+
+  have hEq : betaFun D j = node6Enc k code input output c1 c2 := by
+    have hNodeAtFormula : nodeAt.Realize ![D, j, k, code, input, output, c1, c2] :=
+      (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := nodeAt)
+            (x := (![D, j, k, code, input, output, c1, c2] : Fin 8 → ℕ))
+            (y := (default : Fin 0 → ℕ))).1 hNodeAt'
+    exact (nodeAt_realize D j k code input output c1 c2).1 hNodeAtFormula
+
+  -- Case split on the local rule.
+  have hCasesOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hCases
+  rcases hCasesOr with hZero | hRest
+  ·
+      have hcode : code = 0 := hZero.1
+      have hout : output = 0 := hZero.2
+      refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+      subst hcode; subst hout
+      simpa [Nat.Partrec.Code.evaln, hk, hInLe]
+  ·
+      have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
+      rcases hRestOr with hSucc | hRest
+      ·
+          have hcode : code = 1 := hSucc.1
+          have hout : output = Nat.succ input := hSucc.2
+          refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+          subst hcode; subst hout
+          simpa [Nat.Partrec.Code.evaln, hk, hInLe]
+      ·
+          have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
+          rcases hRestOr with hLeft | hRest
+          ·
+              have hcode : code = 2 := hLeft.1
+              have hout : input.unpair.1 = output := by
+                simpa using (unpair1Graph_realize input output).1 hLeft.2
+              refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+              subst hcode
+              simpa [Nat.Partrec.Code.evaln, hk, hInLe, hout]
+          ·
+              have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
+              rcases hRestOr with hRight | hRest
+              ·
+                  have hcode : code = 3 := hRight.1
+                  have hout : input.unpair.2 = output := by
+                    simpa using (unpair2Graph_realize input output).1 hRight.2
+                  refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+                  subst hcode
+                  simpa [Nat.Partrec.Code.evaln, hk, hInLe, hout]
+              ·
+                  have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
+                  rcases hRestOr with hPair | hRest
+                  ·
+                      rcases hPair with ⟨cf, cg, x, y, hCode, hc1lt, hc2lt, hC1At, hC2At, hOut⟩
+                      have hc1lt' : c1 < j := by simpa using hc1lt
+                      have hc2lt' : c2 < j := by simpa using hc2lt
+                      have hEval1 :
+                          Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cf) input = some x :=
+                        evaln_of_child (D := D) (r := r) (i := j) (j := c1)
+                          (k := k) (code := cf) (input := input) (output := x)
+                          hAll hj hc1lt' IH hC1At
+                      have hEval2 :
+                          Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cg) input = some y :=
+                        evaln_of_child (D := D) (r := r) (i := j) (j := c2)
+                          (k := k) (code := cg) (input := input) (output := y)
+                          hAll hj hc2lt' IH hC2At
+                      have hOut' : Nat.pair x y = output :=
+                        (pairGraph_realize x y output).1 hOut
+                      refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+                      have hOf : Nat.Partrec.Code.ofNatCode code =
+                          Nat.Partrec.Code.pair (Nat.Partrec.Code.ofNatCode cf) (Nat.Partrec.Code.ofNatCode cg) := by
+                        have : code = 4 * Nat.pair cf cg + 4 := (pairCodeGraph_realize code cf cg).1 hCode
+                        simpa [this] using (ofNatCode_pair cf cg)
+                      -- unfold `evaln` for `pair`
+                      rw [hOf]
+                      -- reduce the monadic definition using the child equalities
+                      simp [Nat.Partrec.Code.evaln, hk, hInLe, hEval1, hEval2, hOut']
+                  ·
+                      have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
+                      rcases hRestOr with hComp | hRest
+                      ·
+                          rcases hComp with ⟨cf, cg, x, hCode, hc1lt, hc2lt, hC1At, hC2At⟩
+                          have hc1lt' : c1 < j := by simpa using hc1lt
+                          have hc2lt' : c2 < j := by simpa using hc2lt
+                          have hEval1 :
+                              Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cg) input = some x :=
+                            evaln_of_child (D := D) (r := r) (i := j) (j := c1)
+                              (k := k) (code := cg) (input := input) (output := x)
+                              hAll hj hc1lt' IH hC1At
+                          have hEval2 :
+                              Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cf) x = some output :=
+                            evaln_of_child (D := D) (r := r) (i := j) (j := c2)
+                              (k := k) (code := cf) (input := x) (output := output)
+                              hAll hj hc2lt' IH hC2At
+                          refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+                          have hOf : Nat.Partrec.Code.ofNatCode code =
+                              Nat.Partrec.Code.comp (Nat.Partrec.Code.ofNatCode cf) (Nat.Partrec.Code.ofNatCode cg) := by
+                            have : code = 4 * Nat.pair cf cg + 6 := (compCodeGraph_realize code cf cg).1 hCode
+                            simpa [this] using (ofNatCode_comp cf cg)
+                          rw [hOf]
+                          simp [Nat.Partrec.Code.evaln, hk, hInLe, hEval1, hEval2]
+                      ·
+                          have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
+                          rcases hRestOr with hPrec | hRfind
+                          ·
+                              rcases hPrec with ⟨cf, cg, a, n2, hCode, hSplit, hBase⟩
+                              have hIn : Nat.pair a n2 = input := (pairGraph_realize a n2 input).1 hSplit
+                              have hOf : Nat.Partrec.Code.ofNatCode code =
+                                  Nat.Partrec.Code.prec (Nat.Partrec.Code.ofNatCode cf) (Nat.Partrec.Code.ofNatCode cg) := by
+                                have : code = 4 * Nat.pair cf cg + 5 := (precCodeGraph_realize code cf cg).1 hCode
+                                simpa [this] using (ofNatCode_prec cf cg)
+                              refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+                              rw [hOf]
+                              rw [hIn.symm]
+                              rcases hBase with h0 | hStep
+                              ·
+                                  rcases h0 with ⟨hn2, hc1lt, hC1At⟩
+                                  have hc1lt' : c1 < j := by simpa using hc1lt
+                                  have hEval :
+                                      Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cf) a = some output :=
+                                    evaln_of_child (D := D) (r := r) (i := j) (j := c1)
+                                      (k := k) (code := cf) (input := a) (output := output)
+                                      hAll hj hc1lt' IH hC1At
+                                  -- base case `n2 = 0`
+                                  have : n2 = 0 := by
+                                    simpa using hn2
+                                  subst this
+                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEval]
+                              ·
+                                  rcases hStep with ⟨y, iRec, input1, input2, hn2, hc1lt, hc2lt, hMk1, hC1At, hMk2,
+                                    hC2At⟩
+                                  have hc1lt' : c1 < j := by simpa using hc1lt
+                                  have hc2lt' : c2 < j := by simpa using hc2lt
+                                  have hIn1 : Nat.pair a y = input1 := (pairGraph_realize a y input1).1 hMk1
+                                  have hIn2 : Nat.pair a (Nat.pair y iRec) = input2 :=
+                                    (pair3Graph_realize a y iRec input2).1 hMk2
+                                  have hEvalRec :
+                                      Nat.Partrec.Code.evaln kpred (Nat.Partrec.Code.ofNatCode code) input1 = some iRec :=
+                                    evaln_of_child (D := D) (r := r) (i := j) (j := c1)
+                                      (k := kpred) (code := code) (input := input1) (output := iRec)
+                                      hAll hj hc1lt' IH hC1At
+                                  have hEvalCg :
+                                      Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cg) input2 = some output :=
+                                    evaln_of_child (D := D) (r := r) (i := j) (j := c2)
+                                      (k := k) (code := cg) (input := input2) (output := output)
+                                      hAll hj hc2lt' IH hC2At
+                                  have : n2 = Nat.succ y := by
+                                    simpa using hn2
+                                  subst this
+                                  subst hIn1
+                                  subst hIn2
+                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEvalRec, hEvalCg]
+                          ·
+                              rcases hRfind with ⟨cf, a, m, hCode, hSplit, hc1lt, hChild⟩
+                              have hIn : Nat.pair a m = input := (pairGraph_realize a m input).1 hSplit
+                              have hOf : Nat.Partrec.Code.ofNatCode code =
+                                  Nat.Partrec.Code.rfind' (Nat.Partrec.Code.ofNatCode cf) := by
+                                have : code = 4 * cf + 7 := (rfindCodeGraph_realize code cf).1 hCode
+                                simpa [this] using (ofNatCode_rfind cf)
+                              refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
+                              rw [hOf]
+                              rw [hIn.symm]
+                              have hc1lt' : c1 < j := by simpa using hc1lt
+                              rcases hChild with ⟨x, hC1At, hBranch⟩
+                              have hEvalX :
+                                  Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cf) (Nat.pair a m) = some x :=
+                                evaln_of_child (D := D) (r := r) (i := j) (j := c1)
+                                  (k := k) (code := cf) (input := Nat.pair a m) (output := x)
+                                  hAll hj hc1lt' IH hC1At
+                              rcases hBranch with h0 | hrec
+                              ·
+                                  have hx0 : x = 0 := by
+                                    simpa using h0.1
+                                  have hout : output = m := by
+                                    simpa using h0.2
+                                  subst hx0; subst hout
+                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEvalX]
+                              ·
+                                  rcases hrec with ⟨m2, input2, hx0, hc2lt, hmSucc, hMk2, hRec⟩
+                                  have hx0' : x ≠ 0 := by
+                                    simpa using hx0
+                                  have hc2lt' : c2 < j := by simpa using hc2lt
+                                  have hm2 : m2 = m + 1 := by
+                                    -- `m2 = succ m`
+                                    simpa [Nat.succ_eq_add_one] using hmSucc
+                                  have hIn2 : Nat.pair a m2 = input2 := (pairGraph_realize a m2 input2).1 hMk2
+                                  subst hm2
+                                  subst hIn2
+                                  have hEvalRec :
+                                      Nat.Partrec.Code.evaln kpred (Nat.Partrec.Code.ofNatCode code) (Nat.pair a (m + 1)) =
+                                        some output :=
+                                    evaln_of_child (D := D) (r := r) (i := j) (j := c2)
+                                      (k := kpred) (code := code) (input := Nat.pair a (m + 1)) (output := output)
+                                      hAll hj hc2lt' IH hRec
+                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEvalX, hx0', hEvalRec]
+
+-- The core correctness theorem for `EvalnGraph` (proved below).
 theorem EvalnGraph_spec (k codeNat inputNat outputNat : ℕ) :
     EvalnGraph.Realize ![codeNat, inputNat, k, outputNat] ↔
       Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode codeNat) inputNat = some outputNat := by
-  -- TODO: implement
-  admit
+  classical
+  constructor
+  · intro h
+    -- Unpack the graph witness: a finite β-table `D` with root index `r`.
+    have h0 :
+        EvalnGraph.Realize ![codeNat, inputNat, k, outputNat] ↔
+          FirstOrder.Language.BoundedFormula.Realize (L := Lang0) EvalnGraph
+            ![codeNat, inputNat, k, outputNat] (default : Fin 0 → ℕ) := by
+      exact
+        (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := EvalnGraph)
+              (x := ![codeNat, inputNat, k, outputNat]) (y := (default : Fin 0 → ℕ))).symm
+    have hBF :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) EvalnGraph
+          ![codeNat, inputNat, k, outputNat] (default : Fin 0 → ℕ) := (h0).1 h
+    rcases (by simpa [EvalnGraph] using hBF) with ⟨D, r, c1, c2, hRoot⟩
+    have hSnoc4 (a b c d : ℕ) :
+        Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) a) b) c) d =
+          (![a, b, c, d] : Fin 4 → ℕ) := by
+      funext j
+      fin_cases j <;> rfl
+    have hRoot' :
+        ((show Lang0.BoundedFormula (Fin 8) 0 from nodeAt).relabel
+              ![Sum.inr 0, Sum.inr 1, Sum.inl 2, Sum.inl 0, Sum.inl 1, Sum.inl 3, Sum.inr 2, Sum.inr 3] ⊓
+            (show Lang0.BoundedFormula (Fin 2) 0 from AllNodesOK).relabel ![Sum.inr 0, Sum.inr 1]).Realize
+          (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ) (![D, r, c1, c2] : Fin 4 → ℕ) := by
+      simpa [hSnoc4 D r c1 c2] using hRoot
+    have hNodeAtRel :
+        ((show Lang0.BoundedFormula (Fin 8) 0 from nodeAt).relabel
+              ![Sum.inr 0, Sum.inr 1, Sum.inl 2, Sum.inl 0, Sum.inl 1, Sum.inl 3, Sum.inr 2, Sum.inr 3]).Realize
+          (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ) (![D, r, c1, c2] : Fin 4 → ℕ) :=
+      hRoot'.1
+    have hAllRel :
+        ((show Lang0.BoundedFormula (Fin 2) 0 from AllNodesOK).relabel ![Sum.inr 0, Sum.inr 1]).Realize
+          (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ) (![D, r, c1, c2] : Fin 4 → ℕ) :=
+      hRoot'.2
+
+    -- Interpret the relabeling for the root `nodeAt`.
+    have hNodeAtBF :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+          (![D, r, k, codeNat, inputNat, outputNat, c1, c2] : Fin 8 → ℕ) (default : Fin 0 → ℕ) := by
+      have hRelabel :=
+        (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+          (φ := (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt))
+          (g :=
+            (![Sum.inr 0, Sum.inr 1, Sum.inl 2, Sum.inl 0, Sum.inl 1, Sum.inl 3, Sum.inr 2, Sum.inr 3] :
+              Fin 8 → Fin 4 ⊕ Fin 4))
+          (v := (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ))
+          (xs := (![D, r, c1, c2] : Fin 4 → ℕ)))
+      have hVal :
+          (Sum.elim (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ)
+                ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.castAdd 0) ∘
+              ![Sum.inr 0, Sum.inr 1, Sum.inl 2, Sum.inl 0, Sum.inl 1, Sum.inl 3, Sum.inr 2, Sum.inr 3]) =
+            (![D, r, k, codeNat, inputNat, outputNat, c1, c2] : Fin 8 → ℕ) := by
+        funext j
+        fin_cases j <;> rfl
+      have hIrrel : ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.natAdd 4) = (default : Fin 0 → ℕ) :=
+        Subsingleton.elim _ _
+      have : FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 8) 0 from nodeAt)
+            (Sum.elim (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ)
+                  ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.castAdd 0) ∘
+                ![Sum.inr 0, Sum.inr 1, Sum.inl 2, Sum.inl 0, Sum.inl 1, Sum.inl 3, Sum.inr 2,
+                  Sum.inr 3])
+            ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.natAdd 4) :=
+        (hRelabel).1 hNodeAtRel
+      simpa [hVal, hIrrel] using this
+    have hNodeAt : nodeAt.Realize ![D, r, k, codeNat, inputNat, outputNat, c1, c2] :=
+      (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := nodeAt)
+            (x := (![D, r, k, codeNat, inputNat, outputNat, c1, c2] : Fin 8 → ℕ))
+            (y := (default : Fin 0 → ℕ))).2 hNodeAtBF
+    have hRootEq : betaFun D r = node6Enc k codeNat inputNat outputNat c1 c2 :=
+      (nodeAt_realize D r k codeNat inputNat outputNat c1 c2).1 hNodeAt
+
+    -- Interpret the relabeling for `AllNodesOK(D,r)`.
+    have hAllBF :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 2) 0 from AllNodesOK)
+          (![D, r] : Fin 2 → ℕ) (default : Fin 0 → ℕ) := by
+      have hRelabel :=
+        (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+          (φ := (show Lang0.BoundedFormula (Fin 2) 0 from AllNodesOK))
+          (g := (![Sum.inr 0, Sum.inr 1] : Fin 2 → Fin 4 ⊕ Fin 4))
+          (v := (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ))
+          (xs := (![D, r, c1, c2] : Fin 4 → ℕ)))
+      have hVal :
+          (Sum.elim (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ)
+                ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.castAdd 0) ∘
+              (![Sum.inr 0, Sum.inr 1] : Fin 2 → Fin 4 ⊕ Fin 4)) =
+            (![D, r] : Fin 2 → ℕ) := by
+        funext j
+        fin_cases j <;> rfl
+      have hIrrel : ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.natAdd 4) = (default : Fin 0 → ℕ) :=
+        Subsingleton.elim _ _
+      have : FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 2) 0 from AllNodesOK)
+            (Sum.elim (![codeNat, inputNat, k, outputNat] : Fin 4 → ℕ)
+                  ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.castAdd 0) ∘
+                (![Sum.inr 0, Sum.inr 1] : Fin 2 → Fin 4 ⊕ Fin 4))
+            ((![D, r, c1, c2] : Fin 4 → ℕ) ∘ Fin.natAdd 4) :=
+        (hRelabel).1 hAllRel
+      simpa [hVal, hIrrel] using this
+    have hAll : AllNodesOK.Realize ![D, r] :=
+      (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := AllNodesOK) (x := (![D, r] : Fin 2 → ℕ))
+            (y := (default : Fin 0 → ℕ))).2 hAllBF
+
+    -- TODO: derive `evaln` from the finite table witness.
+    -- (Soundness proof goes by well-founded induction on node indices, using `NodeOK` and `hAll`.)
+    admit
+  · intro h
+    -- TODO: completeness
+    admit
 
 theorem evalnGraph0_spec (k codeNat inputNat outputNat : ℕ) :
     ((show Lang0.BoundedFormula (Fin 4) 0 from EvalnGraph).relabel evalnRelabel).Realize
