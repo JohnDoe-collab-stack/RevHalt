@@ -879,6 +879,123 @@ To apply `infinite_strict_growth` to a concrete `ComplementaritySystem S`, you w
 This completes the bridge between the abstract dynamics and the concrete impossibility theorems.
 -/
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- F) ROUTE II — IMPOSSIBILITY OF EMPTY FRONTIER
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Route II: Impossibility of empty frontier (design theorem)
+
+This section formalizes the impossibility argument:
+  S1Rel(Γ) = ∅ ⟹ ⊥
+
+Under the axioms:
+- A1 (Soundness): `Provable Γ p → S.Provable p`
+- A2 (Negative completeness): `¬Rev0(e) → S.Provable (Not (encode_halt e))`
+- A3' (Extraction): bivalence in S → total external decider
+- A3 (Internalization + T2): total decider → contradiction
+
+The key insight: frontier empty forces a forbidden decision power.
+-/
+
+-- Note: We use SProvable and SNot as parameters instead of ImpossibleSystem
+-- to avoid universe issues and keep the section maximally parametric.
+variable (SProvable : PropT → Prop) -- Instantiate as S.Provable
+variable (SNot : PropT → PropT)     -- Instantiate as S.Not
+
+/-- A1: Soundness — relative provability implies global provability. -/
+def Soundness (Γ : Set PropT) : Prop :=
+  ∀ p, Provable Γ p → SProvable p
+
+/-- A2: Negative completeness in S — kit-non-certified implies S proves negation. -/
+def NegativeComplete : Prop :=
+  ∀ e : Code, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))
+
+/-- Absorption Σ₁: If S1Rel(Γ) = ∅, then Rev0 ⟹ Provable Γ (encode_halt e). -/
+theorem absorption_sigma1
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅) :
+    ∀ e : Code, Rev0_K K (Machine e) → Provable Γ (encode_halt e) := by
+  intro e hRev
+  by_contra hNprov
+  have hMem : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
+    ⟨e, rfl, hRev, hNprov⟩
+  rw [hEmpty] at hMem
+  exact Set.notMem_empty _ hMem
+
+/-- Absorption + Soundness: If S1Rel(Γ) = ∅ and Soundness(Γ), then Rev0 ⟹ S.Provable. -/
+theorem absorption_soundness
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ) :
+    ∀ e : Code, Rev0_K K (Machine e) → SProvable (encode_halt e) := by
+  intro e hRev
+  have hProv : Provable Γ (encode_halt e) :=
+    absorption_sigma1 Provable K Machine encode_halt hEmpty e hRev
+  exact hSound (encode_halt e) hProv
+
+/--
+  **Bivalence in S**: If S1Rel(Γ) = ∅ with Soundness, and S has negative completeness,
+  then for every e, S proves either halt(e) or ¬halt(e) (piloted by Rev0).
+-/
+theorem bivalence_in_S
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
+    ∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e)) := by
+  intro e
+  by_cases hRev : Rev0_K K (Machine e)
+  · -- Rev0(e) ⟹ S.Provable (halt e) via absorption + soundness
+    exact Or.inl (absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound e hRev)
+  · -- ¬Rev0(e) ⟹ S.Provable (¬halt e) via negative completeness
+    exact Or.inr (hNegComp e hRev)
+
+/--
+  **Route II Design Theorem (parametric form)**.
+
+  If:
+  - S1Rel(Γ) = ∅
+  - Soundness: Provable Γ p → S.Provable p
+  - Negative completeness: ¬Rev0(e) → S.Provable (¬halt e)
+  - Total decider extraction: bivalence in S produces a decidable Rev0
+  - T2 barrier: total decider implies contradiction
+
+  Then: ⊥.
+
+  This is a schema; the final step (extraction + T2) is left as a hypothesis
+  to be instantiated via OracleMachine or similar.
+-/
+theorem frontier_empty_contradiction_schema
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    -- A3' + A3: bivalence + extraction + T2 combined as one hypothesis
+    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    False := by
+  have hBiv := bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
+  exact hBarrier hBiv
+
+/-!
+### Corollary: The frontier cannot be empty (without contradiction)
+
+This is the key dynamic result: under the axioms, `S1Rel(Γ) ≠ ∅` for all admissible Γ.
+Combined with `FrontierWitness_of_S1Rel_nonempty`, this would close `infinite_strict_growth`
+without needing `PostSplitter` propagation.
+-/
+
+theorem frontier_nonempty_of_route_II
+    {Γ : Set PropT}
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
+  by_contra hEmpty
+  rw [Set.not_nonempty_iff_eq_empty] at hEmpty
+  exact frontier_empty_contradiction_schema Provable K Machine encode_halt SProvable SNot
+    hEmpty hSound hNegComp hBarrier
+
 end Functor
 
 end RevHalt
