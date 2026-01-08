@@ -1,0 +1,713 @@
+import Mathlib.Data.Set.Basic
+import Mathlib.CategoryTheory.Thin
+
+import RevHalt.Theory.Complementarity
+import RevHalt.Theory.Stabilization
+import RevHalt.Theory.Categorical
+
+/-!
+# RevHalt.Theory.TheoryDynamics
+
+Formalizes the dynamic theory functor:
+
+  F(S) := Cn(S ∪ S1(S))
+
+where:
+- S = current theory state (post-splitter / corpus)
+- S1(S) = frontier relative to S (kit-detection + non-provable in S)
+- The iteration S_{n+1} = F(S_n) encodes the interdependent dynamics
+
+## Key Insight
+
+The frontier S1(Γ) depends on `¬Provable Γ`, so as Γ grows, S1(Γ) shrinks.
+This is the "conservation law": the gap persists because extending the theory
+regenerates the frontier at each step.
+
+## Structure
+
+1. Thin category of theories (ThObj, ThHom)
+2. Relative provability (Provable : Set PropT → PropT → Prop)
+3. Dynamic frontier S1Rel(Γ)
+4. Step function F0, F
+5. Iteration chain and ω-limit
+6. Conservation law: MissingFrom = S1Rel
+-/
+
+namespace RevHalt
+
+open Set
+open CategoryTheory
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 1) THIN CATEGORY OF THEORIES (CORPUS)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+universe u
+
+variable {PropT : Type u}
+
+/-- A theory object is a corpus Γ : Set PropT. -/
+abbrev ThObj (PropT : Type u) := Set PropT
+
+/-- Morphisms between theory objects are inclusions. -/
+def ThHom (Γ Δ : ThObj PropT) : Prop := Γ ⊆ Δ
+
+theorem ThHom.refl (Γ : ThObj PropT) : ThHom Γ Γ := Subset.refl Γ
+
+theorem ThHom.trans {Γ Δ Ξ : ThObj PropT} (h1 : ThHom Γ Δ) (h2 : ThHom Δ Ξ) :
+    ThHom Γ Ξ := Subset.trans h1 h2
+
+-- Category instance (thin category via ULift/PLift pattern)
+instance : CategoryStruct (ThObj PropT) where
+  Hom Γ Δ := ULift (PLift (ThHom (PropT := PropT) Γ Δ))
+  id Γ := ⟨⟨ThHom.refl Γ⟩⟩
+  comp f g := ⟨⟨ThHom.trans f.down.down g.down.down⟩⟩
+
+instance (Γ Δ : ThObj PropT) : Subsingleton (Γ ⟶ Δ) :=
+  ⟨fun _ _ => ULift.ext _ _ (Subsingleton.elim _ _)⟩
+
+instance : Quiver.IsThin (ThObj PropT) := fun _ _ => by infer_instance
+
+instance : Category (ThObj PropT) := CategoryTheory.thin_category
+
+/-- Convert a Prop-level inclusion into a categorical morphism. -/
+def homOfThHom {Γ Δ : ThObj PropT} (h : ThHom Γ Δ) : Γ ⟶ Δ :=
+  ULift.up (PLift.up h)
+
+/-- Extract the underlying inclusion from a categorical morphism. -/
+def thHomOfHom {Γ Δ : ThObj PropT} (f : Γ ⟶ Δ) : ThHom Γ Δ :=
+  f.down.down
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 2) RELATIVE PROVABILITY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+variable (Provable : Set PropT → PropT → Prop)
+
+/-- Provability is monotone: extending the corpus preserves provability. -/
+def ProvRelMonotone : Prop :=
+  ∀ Γ Δ : Set PropT, Γ ⊆ Δ → ∀ p : PropT, Provable Γ p → Provable Δ p
+
+/--
+  **ProvClosed**: A corpus is closed under its own provability.
+  This is the key hypothesis for F0_monotone: provable ⇒ membership.
+-/
+def ProvClosed (Γ : Set PropT) : Prop :=
+  ∀ p : PropT, Provable Γ p → p ∈ Γ
+
+/--
+  **PostSplitter**: A corpus where membership ⇔ provability.
+  This is the strong form: S = S2(S).
+-/
+def PostSplitter (Γ : Set PropT) : Prop :=
+  ∀ p : PropT, p ∈ Γ ↔ Provable Γ p
+
+/-- Deductive closure operator axioms. -/
+def CnExtensive (Cn : Set PropT → Set PropT) : Prop := ∀ Γ, Γ ⊆ Cn Γ
+def CnMonotone  (Cn : Set PropT → Set PropT) : Prop := ∀ {Γ Δ}, Γ ⊆ Δ → Cn Γ ⊆ Cn Δ
+def CnIdem      (Cn : Set PropT → Set PropT) : Prop := ∀ Γ, Cn (Cn Γ) = Cn Γ
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 3) DYNAMIC FRONTIER S1(Γ) — THE KEY DEFINITION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+variable {Code : Type u}
+variable (K : RHKit)
+variable (Machine : Code → Trace)
+variable (encode_halt : Code → PropT)
+
+/--
+  **Dynamic Frontier S1(Γ)**:
+  The set of kit-certified halting sentences that are NOT provable in Γ.
+
+  This is the core of the interdependent dynamics:
+  - S1 depends on Γ via `¬ Provable Γ (encode_halt e)`
+  - As Γ grows, S1(Γ) shrinks (anti-monotone)
+-/
+def S1Rel (Γ : Set PropT) : Set PropT :=
+  { p | ∃ e : Code,
+      p = encode_halt e ∧
+      Rev0_K K (Machine e) ∧
+      ¬ Provable Γ (encode_halt e) }
+
+/-- Membership lemma for S1Rel. -/
+lemma mem_S1Rel_of_witness
+    (Γ : Set PropT) (e : Code)
+    (hKit : Rev0_K K (Machine e))
+    (hNprov : ¬ Provable Γ (encode_halt e)) :
+    encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ := by
+  exact ⟨e, rfl, hKit, hNprov⟩
+
+/--
+  **S1 is Anti-Monotone**:
+  If Provable is monotone, then S1 is anti-monotone:
+  Γ ⊆ Δ → S1(Δ) ⊆ S1(Γ)
+
+  More provable ⟹ smaller frontier.
+-/
+theorem S1Rel_anti_monotone
+    (hMono : ProvRelMonotone Provable)
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ) :
+    S1Rel Provable K Machine encode_halt Δ ⊆
+    S1Rel Provable K Machine encode_halt Γ := by
+  intro p hp
+  obtain ⟨e, hpEq, hKit, hNprovΔ⟩ := hp
+  refine ⟨e, hpEq, hKit, ?_⟩
+  intro hProvΓ
+  have hProvΔ : Provable Δ (encode_halt e) := hMono Γ Δ hSub (encode_halt e) hProvΓ
+  exact hNprovΔ hProvΔ
+
+/-- Post-splitter S2(Γ): what is provable in Γ. -/
+def S2Rel (Γ : Set PropT) : Set PropT := { p | Provable Γ p }
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 4) DYNAMIC STEP F — THE ENDO-FUNCTOR
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  **Minimal Step F0**: Γ ↦ Γ ∪ S1(Γ)
+
+  This is the simplest form of the dynamic step.
+-/
+def F0 (Γ : Set PropT) : Set PropT :=
+  Γ ∪ S1Rel Provable K Machine encode_halt Γ
+
+/--
+  **Full Step F**: Γ ↦ Cn(Γ ∪ S1(Γ))
+
+  Includes deductive closure.
+-/
+def F (Cn : Set PropT → Set PropT) (Γ : Set PropT) : Set PropT :=
+  Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ)
+
+/-- F0 is extensive: Γ ⊆ F0(Γ). -/
+theorem F0_extensive (Γ : Set PropT) :
+    Γ ⊆ F0 Provable K Machine encode_halt Γ := by
+  intro p hp
+  exact Or.inl hp
+
+/--
+  **F0 is Monotone under ProvClosed hypothesis**.
+
+  The key insight: if p ∈ S1(Γ) becomes provable in Δ, then by ProvClosed
+  it must be in Δ, so p ∈ F0(Δ) via the left branch.
+
+  This is the correct formulation that makes F0 an endo-functor.
+-/
+theorem F0_monotone_of_provClosed
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ) :
+    F0 Provable K Machine encode_halt Γ ⊆
+    F0 Provable K Machine encode_halt Δ := by
+  intro p hp
+  cases hp with
+  | inl hpΓ =>
+      -- p ∈ Γ, so p ∈ Δ by inclusion
+      exact Or.inl (hSub hpΓ)
+  | inr hpS1Γ =>
+      -- p ∈ S1(Γ): p = encode_halt e, kit ok, ¬Provable Γ (encode_halt e)
+      obtain ⟨e, hpEq, hKit, hNprovΓ⟩ := hpS1Γ
+      -- Two cases: either p becomes provable in Δ, or it stays unprovable
+      by_cases hProvΔ : Provable Δ (encode_halt e)
+      · -- Provable in Δ: by ProvClosed, encode_halt e ∈ Δ
+        have hMemΔ : encode_halt e ∈ Δ := hClosedΔ (encode_halt e) hProvΔ
+        rw [hpEq]
+        exact Or.inl hMemΔ
+      · -- Not provable in Δ: stays in S1(Δ)
+        right
+        exact ⟨e, hpEq, hKit, hProvΔ⟩
+
+/-- F is monotone (assuming Cn is monotone). -/
+theorem F_monotone
+    (Cn : Set PropT → Set PropT)
+    (hCnMono : CnMonotone Cn)
+    {Γ Δ : Set PropT}
+    (hF0Mono : F0 Provable K Machine encode_halt Γ ⊆ F0 Provable K Machine encode_halt Δ) :
+    F Provable K Machine encode_halt Cn Γ ⊆
+    F Provable K Machine encode_halt Cn Δ := by
+  unfold F
+  exact hCnMono hF0Mono
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 5) ITERATION CHAIN AND ω-LIMIT
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Iteration of F0 starting from Γ0. -/
+def chain0 (Γ0 : Set PropT) : ℕ → Set PropT
+  | 0     => Γ0
+  | n + 1 => F0 Provable K Machine encode_halt (chain0 Γ0 n)
+
+/-- Iteration of F starting from Γ0. -/
+def chain (Cn : Set PropT → Set PropT) (Γ0 : Set PropT) : ℕ → Set PropT
+  | 0     => Γ0
+  | n + 1 => F Provable K Machine encode_halt Cn (chain Cn Γ0 n)
+
+/-- The chain is monotonically increasing (each step extends). -/
+theorem chain0_mono_step (Γ0 : Set PropT) :
+    ∀ n, chain0 Provable K Machine encode_halt Γ0 n ⊆
+         chain0 Provable K Machine encode_halt Γ0 (n + 1) := by
+  intro n
+  -- chain0 Γ0 (n+1) = F0 (chain0 Γ0 n) = (chain0 Γ0 n) ∪ S1(chain0 Γ0 n)
+  -- So chain0 Γ0 n ⊆ chain0 Γ0 n ∪ ... is trivial
+  exact F0_extensive Provable K Machine encode_halt (chain0 Provable K Machine encode_halt Γ0 n)
+
+/-- Transitivity: n ≤ m → chain0 Γ0 n ⊆ chain0 Γ0 m. -/
+theorem chain0_mono (Γ0 : Set PropT) :
+    ∀ n m, n ≤ m → chain0 Provable K Machine encode_halt Γ0 n ⊆
+                   chain0 Provable K Machine encode_halt Γ0 m := by
+  intro n m hnm
+  induction hnm with
+  | refl => exact Subset.refl _
+  | step _ ih =>
+      exact Subset.trans ih (chain0_mono_step Provable K Machine encode_halt Γ0 _)
+
+/-- The ω-limit: union of all stages. -/
+def omega0 (Γ0 : Set PropT) : Set PropT :=
+  { p | ∃ n, p ∈ chain0 Provable K Machine encode_halt Γ0 n }
+
+/-- Each stage embeds into the ω-limit. -/
+theorem chain0_le_omega0 (Γ0 : Set PropT) (n : ℕ) :
+    chain0 Provable K Machine encode_halt Γ0 n ⊆
+    omega0 Provable K Machine encode_halt Γ0 := by
+  intro p hp
+  exact ⟨n, hp⟩
+
+/-- Universal property of ω-limit. -/
+theorem omega0_universal (Γ0 : Set PropT) (T : Set PropT)
+    (h : ∀ n, chain0 Provable K Machine encode_halt Γ0 n ⊆ T) :
+    omega0 Provable K Machine encode_halt Γ0 ⊆ T := by
+  intro p hp
+  obtain ⟨n, hn⟩ := hp
+  exact h n hn
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6) CONSERVATION LAW — "MISSING = S1"
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- What the step adds but is not provable in Γ. -/
+def MissingFrom (Γ Δ : Set PropT) : Set PropT :=
+  { p | p ∈ Δ ∧ ¬ Provable Γ p }
+
+/-- Absorbable: every member of Γ is already provable in Γ. -/
+def Absorbable (Γ : Set PropT) : Prop := ∀ p, p ∈ Γ → Provable Γ p
+
+/--
+  **Conservation Law (Subtraction Property)**:
+  If Γ is absorbable (post-splitter), then:
+    MissingFrom Γ (F0 Γ) = S1(Γ)
+
+  This is the dynamic version of `missing_equals_S1` from Complementarity.lean.
+-/
+theorem missing_F0_eq_S1_of_absorbable
+    (Γ : Set PropT)
+    (hAbs : Absorbable Provable Γ) :
+    MissingFrom Provable Γ (F0 Provable K Machine encode_halt Γ) =
+    S1Rel Provable K Machine encode_halt Γ := by
+  ext p
+  constructor
+  · -- MissingFrom → S1
+    intro hp
+    obtain ⟨hpF0, hNprov⟩ := hp
+    cases hpF0 with
+    | inl hpΓ =>
+        -- p ∈ Γ but ¬Provable Γ p, contradicts Absorbable
+        have hProv : Provable Γ p := hAbs p hpΓ
+        exact False.elim (hNprov hProv)
+    | inr hpS1 =>
+        exact hpS1
+  · -- S1 → MissingFrom
+    intro hpS1
+    constructor
+    · exact Or.inr hpS1
+    · obtain ⟨e, hpEq, _hKit, hNprov⟩ := hpS1
+      rw [hpEq]
+      exact hNprov
+
+
+/--
+  **Strict Extension (with Absorbable hypothesis)**:
+  Under absorbability, a witness gives strict extension.
+-/
+theorem strict_step_of_witness_absorbable
+    (Γ : Set PropT)
+    (hAbs : Absorbable Provable Γ)
+    (e : Code)
+    (hKit : Rev0_K K (Machine e))
+    (hNprov : ¬ Provable Γ (encode_halt e)) :
+    Γ ⊂ F0 Provable K Machine encode_halt Γ := by
+  constructor
+  · exact F0_extensive Provable K Machine encode_halt Γ
+  · intro hContra
+    have hMem : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
+      ⟨e, rfl, hKit, hNprov⟩
+    have hMemF0 : encode_halt e ∈ F0 Provable K Machine encode_halt Γ :=
+      Or.inr hMem
+    have hMemΓ : encode_halt e ∈ Γ := hContra hMemF0
+    have hProv : Provable Γ (encode_halt e) := hAbs (encode_halt e) hMemΓ
+    exact hNprov hProv
+
+/--
+  **Frontier Non-Annihilation**:
+  If at every stage there exists a witness, then the frontier is non-empty at all stages.
+-/
+theorem frontier_nonempty_all_stages
+    (Γ0 : Set PropT)
+    (H : ∀ Γ : Set PropT, (S1Rel Provable K Machine encode_halt Γ).Nonempty) :
+    ∀ n, (S1Rel Provable K Machine encode_halt
+            (chain0 Provable K Machine encode_halt Γ0 n)).Nonempty := by
+  intro n
+  exact H _
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 7) BRIDGE TO TRACE KERNEL
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  **S1Rel witness implies trace not in kernel (witness-based)**.
+
+  If p ∈ S1Rel Γ, we get a witness e with Kit-certified halting.
+  Thus Machine e cannot be in upKernel (stabilization).
+
+  This is the correct formulation without requiring encode_halt injectivity.
+-/
+theorem S1Rel_witness_not_in_kernel
+    (hK : DetectsMonotone K)
+    {Γ : Set PropT} {p : PropT}
+    (hp : p ∈ S1Rel Provable K Machine encode_halt Γ) :
+    ∃ e : Code,
+      p = encode_halt e ∧
+      Rev0_K K (Machine e) ∧
+      Machine e ∉ Categorical.upKernel := by
+  obtain ⟨e, hpEq, hKit, _hNprov⟩ := hp
+  refine ⟨e, hpEq, hKit, ?_⟩
+  -- Machine e ∉ upKernel because Kit certifies halting
+  intro hContra
+  have hHalts : Halts (Machine e) := (T1_traces K hK (Machine e)).mp hKit
+  have hStab : ∀ n, ¬ (Machine e) n :=
+    (RevHalt.Categorical.mem_upKernel_iff (T := Machine e)).mp hContra
+  obtain ⟨n, hn⟩ := hHalts
+  exact hStab n hn
+
+/--
+  **Connection**: Kit-certified halting means NOT in kernel.
+-/
+theorem kit_certified_not_in_kernel
+    (hK : DetectsMonotone K)
+    (e : Code)
+    (hKit : Rev0_K K (Machine e)) :
+    Machine e ∉ Categorical.upKernel := by
+  intro hContra
+  have hHalts : Halts (Machine e) := (T1_traces K hK (Machine e)).mp hKit
+  have hStab : ∀ n, ¬ (Machine e) n :=
+    (RevHalt.Categorical.mem_upKernel_iff (T := Machine e)).mp hContra
+  obtain ⟨n, hn⟩ := hHalts
+  exact hStab n hn
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 8) THE TRUE DYNAMIC FUNCTOR (Complete Formalization)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The Dynamic Functor on Admissible Theory States
+
+To make F a true endo-functor, the target must remain in the category.
+This requires theory states that are:
+1. **Cn-closed**: Cn Γ = Γ (fixed point of deductive closure)
+2. **ProvClosed**: Provable Γ p → p ∈ Γ (membership captures provability)
+
+The key axiom `ProvClosedCn` states that Cn produces ProvClosed sets.
+This makes FState an endo-functor without external hypotheses.
+-/
+
+section Functor
+
+variable (Cn : Set PropT → Set PropT)
+
+/-- Cn produces ProvClosed sets (key structural axiom). -/
+def ProvClosedCn : Prop := ∀ Γ, ProvClosed Provable (Cn Γ)
+
+/--
+  **ThState**: An admissible theory state.
+  - Cn-closed: fixed point of deductive closure
+  - ProvClosed: provability implies membership
+-/
+structure ThState where
+  Γ : Set PropT
+  cn_closed : Cn Γ = Γ
+  prov_closed : ProvClosed Provable Γ
+
+/-- Morphisms between ThState objects are inclusions of carriers. -/
+def ThStateHom (A B : ThState Provable Cn) : Prop := A.Γ ⊆ B.Γ
+
+theorem ThStateHom.refl (A : ThState Provable Cn) : ThStateHom Provable Cn A A :=
+  Subset.refl A.Γ
+
+theorem ThStateHom.trans {A B C : ThState Provable Cn}
+    (h1 : ThStateHom Provable Cn A B) (h2 : ThStateHom Provable Cn B C) :
+    ThStateHom Provable Cn A C :=
+  Subset.trans h1 h2
+
+-- Category instance for ThState
+instance : CategoryStruct (ThState (PropT := PropT) Provable Cn) where
+  Hom A B := ULift (PLift (ThStateHom Provable Cn A B))
+  id A := ⟨⟨ThStateHom.refl Provable Cn A⟩⟩
+  comp f g := ⟨⟨ThStateHom.trans Provable Cn f.down.down g.down.down⟩⟩
+
+instance (A B : ThState (PropT := PropT) Provable Cn) : Subsingleton (A ⟶ B) :=
+  ⟨fun _ _ => ULift.ext _ _ (Subsingleton.elim _ _)⟩
+
+instance : Quiver.IsThin (ThState (PropT := PropT) Provable Cn) := fun _ _ => by infer_instance
+
+instance : Category (ThState (PropT := PropT) Provable Cn) := CategoryTheory.thin_category
+
+/--
+  **FState**: The dynamic step applied to an admissible theory state.
+  - Result is Cn-closed via CnIdem
+  - Result is ProvClosed via ProvClosedCn
+-/
+def FState
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn) : ThState (PropT := PropT) Provable Cn where
+  Γ := F Provable K Machine encode_halt Cn A.Γ
+  cn_closed := by
+    unfold F
+    exact hIdem (A.Γ ∪ S1Rel Provable K Machine encode_halt A.Γ)
+  prov_closed := by
+    unfold F
+    exact hProvCn (A.Γ ∪ S1Rel Provable K Machine encode_halt A.Γ)
+
+/--
+  **FState preserves morphisms (functoriality)**:
+  If A.Γ ⊆ B.Γ, then FState(A).Γ ⊆ FState(B).Γ.
+  Uses B.prov_closed from the structure (no external argument).
+-/
+theorem FState_map
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hCnMono : CnMonotone Cn)
+    {A B : ThState (PropT := PropT) Provable Cn}
+    (hAB : ThStateHom Provable Cn A B) :
+    ThStateHom Provable Cn
+      (FState Provable K Machine encode_halt Cn hIdem hProvCn A)
+      (FState Provable K Machine encode_halt Cn hIdem hProvCn B) := by
+  unfold FState ThStateHom
+  apply F_monotone Provable K Machine encode_halt Cn hCnMono
+  exact F0_monotone_of_provClosed Provable K Machine encode_halt hAB B.prov_closed
+
+/--
+  **TheoryStepFunctor**: The endo-functor `F : ThState ⥤ ThState`.
+  In a thin category, `map_id` and `map_comp` are trivial.
+-/
+def TheoryStepFunctor
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hCnMono : CnMonotone Cn) :
+    ThState (PropT := PropT) Provable Cn ⥤
+    ThState (PropT := PropT) Provable Cn where
+  obj := FState Provable K Machine encode_halt Cn hIdem hProvCn
+  map f := ⟨⟨FState_map Provable K Machine encode_halt Cn hIdem hProvCn hCnMono f.down.down⟩⟩
+  map_id := fun _ => Subsingleton.elim _ _
+  map_comp := fun _ _ => Subsingleton.elim _ _
+
+/--
+  **The chain on ThState**: iteration of the functor.
+-/
+def chainState
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) : ℕ → ThState (PropT := PropT) Provable Cn
+  | 0     => A0
+  | n + 1 => FState Provable K Machine encode_halt Cn hIdem hProvCn (chainState hIdem hProvCn A0 n)
+
+/--
+  **Chain step morphism**: Each stage embeds into the next.
+  Uses CnExtensive to show Γ_n ⊆ Γ_{n+1}.
+-/
+theorem chainState_step_hom
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hCnExt : CnExtensive Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ) :
+    ThStateHom Provable Cn
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n)
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)) := by
+  intro p hp
+  -- Force the form of the goal: step n+1 = FState (step n)
+  change p ∈
+    (FState Provable K Machine encode_halt Cn hIdem hProvCn
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n)).Γ
+  -- Unfold only FState then F (not chainState) for stability
+  simp only [FState, F]
+  -- Goal: p ∈ Cn ((Γn) ∪ S1Rel(Γn))
+  apply hCnExt
+  exact Or.inl hp
+
+-- Simp lemmas for stability
+@[simp] lemma FState_Γ
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn) :
+    (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ
+      = F Provable K Machine encode_halt Cn A.Γ := rfl
+
+@[simp] lemma chainState_succ
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) (n : ℕ) :
+    chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n+1)
+      = FState Provable K Machine encode_halt Cn hIdem hProvCn
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n) := rfl
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- A) WITNESS => S1Rel NONEMPTY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- A concrete RevHalt-style witness that the frontier is nonempty at Γ. -/
+def FrontierWitness (Γ : Set PropT) : Prop :=
+  ∃ e : Code, Rev0_K K (Machine e) ∧ ¬ Provable Γ (encode_halt e)
+
+/-- A witness produces a nonempty dynamic frontier. -/
+theorem S1Rel_nonempty_of_witness
+    {Γ : Set PropT}
+    (hW : FrontierWitness Provable K Machine encode_halt Γ) :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
+  rcases hW with ⟨e, hKit, hNprov⟩
+  refine ⟨encode_halt e, ?_⟩
+  exact mem_S1Rel_of_witness Provable K Machine encode_halt Γ e hKit hNprov
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B) NO FIXED POINT + STRICT GROWTH (core dynamics)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- If Γ is absorbable and has a frontier witness, Γ cannot be a fixed point of F. -/
+theorem not_fixpoint_F_of_absorbable
+    (hCnExt : CnExtensive Cn)
+    {Γ : Set PropT}
+    (hAbs : Absorbable Provable Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt Γ)
+    (hFix : F Provable K Machine encode_halt Cn Γ = Γ) :
+    False := by
+  -- From hFix and CnExtensive: Γ ∪ S1Rel Γ ⊆ Γ, hence S1Rel Γ ⊆ Γ
+  have hS1Sub : S1Rel Provable K Machine encode_halt Γ ⊆ Γ := by
+    intro p hp
+    have hUnion : p ∈ Γ ∪ S1Rel Provable K Machine encode_halt Γ := Or.inr hp
+    have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := hCnExt _ hUnion
+    rw [← hFix]
+    exact hCn
+  -- Take the witness e: encode_halt e ∈ S1Rel Γ, hence in Γ, hence provable by absorbable, contradiction.
+  rcases hW with ⟨e, hKit, hNprov⟩
+  have hMemS1 : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
+    mem_S1Rel_of_witness Provable K Machine encode_halt Γ e hKit hNprov
+  have hMemΓ : encode_halt e ∈ Γ := hS1Sub hMemS1
+  have hProv : Provable Γ (encode_halt e) := hAbs (encode_halt e) hMemΓ
+  exact hNprov hProv
+
+/-- Under absorbability + witness, the dynamic step strictly extends Γ. -/
+theorem strict_F_of_absorbable
+    (hCnExt : CnExtensive Cn)
+    {Γ : Set PropT}
+    (hAbs : Absorbable Provable Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt Γ) :
+    Γ ⊂ F Provable K Machine encode_halt Cn Γ := by
+  refine ⟨?subset, ?not_subset⟩
+  case subset =>
+    -- Γ ⊆ F Γ
+    intro p hp
+    have hUnion : p ∈ Γ ∪ S1Rel Provable K Machine encode_halt Γ := Or.inl hp
+    exact hCnExt _ hUnion
+  case not_subset =>
+    -- ¬ (F Γ ⊆ Γ)
+    intro hContra
+    -- From Γ ⊆ F Γ and hContra, we get equality, contradiction with not_fixpoint
+    have hEq : F Provable K Machine encode_halt Cn Γ = Γ := by
+      ext p
+      constructor
+      · exact fun hpF => hContra hpF
+      · intro hpΓ
+        have hUnion : p ∈ Γ ∪ S1Rel Provable K Machine encode_halt Γ := Or.inl hpΓ
+        exact hCnExt _ hUnion
+    exact not_fixpoint_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW hEq
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- C) LIFT TO chainState (dynamic consequences along the orbit)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- If each stage admits a witness, then the frontier is nonempty at all stages. -/
+theorem frontier_nonempty_chainState_of_witnesses
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (HW : ∀ n, FrontierWitness Provable K Machine encode_halt
+              (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ) :
+    ∀ n, (S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ).Nonempty := by
+  intro n
+  exact S1Rel_nonempty_of_witness Provable K Machine encode_halt (HW n)
+
+
+/--
+  **Conservation at ThState level**: The frontier is non-empty at each stage
+  if it is non-empty for every corpus.
+-/
+theorem conservation_nonempty_state
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (H : ∀ Γ : Set PropT, (S1Rel Provable K Machine encode_halt Γ).Nonempty) :
+    ∀ n, (S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ).Nonempty := by
+  intro n
+  exact H _
+
+/--
+  **ω-limit of the chain**: Union of all stages (at the carrier level).
+-/
+def omegaΓ
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) : Set PropT :=
+  { p | ∃ n, p ∈ (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ }
+
+/--
+  **Each stage embeds into the ω-limit**.
+-/
+theorem chainState_le_omegaΓ
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ) :
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ ⊆
+    omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 := by
+  intro p hp
+  exact ⟨n, hp⟩
+
+end Functor
+
+end RevHalt
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- AXIOM CHECKS
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+#print axioms RevHalt.ThHom.refl
+#print axioms RevHalt.ThHom.trans
+#print axioms RevHalt.S1Rel
+#print axioms RevHalt.S1Rel_anti_monotone
+#print axioms RevHalt.F0_extensive
+#print axioms RevHalt.chain0_mono_step
+#print axioms RevHalt.chain0_mono
+#print axioms RevHalt.omega0_universal
+#print axioms RevHalt.missing_F0_eq_S1_of_absorbable
+#print axioms RevHalt.strict_step_of_witness_absorbable
+#print axioms RevHalt.frontier_nonempty_all_stages
+#print axioms RevHalt.kit_certified_not_in_kernel
+
+-- Functor section axioms
+#print axioms RevHalt.TheoryStepFunctor
+#print axioms RevHalt.FState
+#print axioms RevHalt.FState_map
+#print axioms RevHalt.chainState
+#print axioms RevHalt.chainState_step_hom
+#print axioms RevHalt.conservation_nonempty_state
+#print axioms RevHalt.omegaΓ
+#print axioms RevHalt.chainState_le_omegaΓ

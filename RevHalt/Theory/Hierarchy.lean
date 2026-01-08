@@ -2,15 +2,19 @@ import RevHalt.Theory.Stabilization
 import RevHalt.Theory.Up2
 import RevHalt.Theory.Splitter.AvoidanceBridge
 import RevHalt.Theory.Splitter.Core
+import RevHalt.Theory.Categorical
+import RevHalt.Theory.Temporal
 
 /-!
 # RevHalt.Theory.Hierarchy
 
 This module serves as the **unification layer** for the RevHalt theory components:
 
-1.  **Up1 (Stabilization)**: Temporal safety (Pi-1). "Never Halts".
-2.  **Up2 (Avoidance)**: Structural safety (Pi-2). "Winning Strategy to avoid Halting".
-3.  **Splitter (Resolution)**: Arithmetic safety. "Resolvable into stable Prime components".
+10:
+11: 1.  **Up1 (Stabilization)**: Temporal safety (Pi-1). "Never Halts".
+12:         Up1 is exported both as Pi-1 (`Stabilizes`) and as the kernel condition `up(TimeTrace)=bot` (equivalently membership in `upKernel`).
+13: 2.  **Up2 (Avoidance)**: Structural safety (Pi-2). "Winning Strategy to avoid Halting".
+14: 3.  **Splitter (Resolution)**: Arithmetic safety. "Resolvable into stable Prime components".
 
 ## The Hierarchy Theorem
 
@@ -148,6 +152,67 @@ def TimeTrace {Pos : Type} (emb : TemporalEmbedding Pos) : RevHalt.Trace :=
   fun k => emb.T (iterate Pos emb.Next k emb.start)
 
 /--
+Up2 (along the orbit) implies Up1 (logical form).
+
+If every state on the deterministic orbit belongs to the Avoid2-kernel,
+then the induced TimeTrace stabilizes (never hits the target).
+-/
+theorem up2_orbit_implies_stabilizes
+    (Pos : Type)
+    (emb : TemporalEmbedding Pos)
+    (hAvoid_orbit :
+      ∀ k, Avoid2Mem emb.G emb.Target
+            (emb.embed (iterate Pos emb.Next k emb.start)))
+    : RevHalt.Stabilizes (TimeTrace emb) := by
+  intro k
+  have hpoint :
+      ¬ emb.toTraceGameEmbedding.T (iterate Pos emb.Next k emb.start) :=
+    up2_implies_up1_pointwise
+      (emb := emb.toTraceGameEmbedding)
+      (n := iterate Pos emb.Next k emb.start)
+      (hAvoid := hAvoid_orbit k)
+  simpa [TimeTrace] using hpoint
+
+/--
+Up2 (along the orbit) implies Up1 (operative/kernel form).
+
+Same as `up2_orbit_implies_stabilizes`, but exported as `up (TimeTrace emb) = ⊥`.
+-/
+theorem up2_orbit_implies_upEqBot
+    (Pos : Type)
+    (emb : TemporalEmbedding Pos)
+    (hAvoid_orbit :
+      ∀ k, Avoid2Mem emb.G emb.Target
+            (emb.embed (iterate Pos emb.Next k emb.start)))
+    : RevHalt.up (TimeTrace emb) = (⊥ : RevHalt.Trace) := by
+  have hstab : RevHalt.Stabilizes (TimeTrace emb) :=
+    up2_orbit_implies_stabilizes (Pos := Pos) emb hAvoid_orbit
+  exact (RevHalt.Stabilizes_iff_up_eq_bot (T := TimeTrace emb)).1 hstab
+
+/--
+Queue/Splitter (with local safety) implies Up2 along the deterministic orbit.
+-/
+theorem queue_implies_up2_orbit
+    (Pos : Type)
+    (S : Splitter Pos) (d : ℕ) (I0 : Info Pos)
+    (emb : TemporalEmbedding Pos)
+    (h_safe : ∀ p, Queue Pos emb.Next S d I0 p → emb.embed p ∉ emb.Target)
+    (hQ : Queue Pos emb.Next S d I0 emb.start)
+    : ∀ k, Avoid2Mem emb.G emb.Target
+            (emb.embed (iterate Pos emb.Next k emb.start)) := by
+  intro k
+  have hQ_k : Queue Pos emb.Next S d I0 (iterate Pos emb.Next k emb.start) :=
+    queue_orbit_closed Pos emb.Next S d I0 emb.start hQ k
+  -- apply the bridge at the k-th point
+  exact splitter_implies_avoid2
+    Pos S d I0 emb.Next
+    emb.G emb.embed emb.Target
+    emb.hom emb.turnP
+    h_safe
+    (iterate Pos emb.Next k emb.start)
+    hQ_k
+
+/--
 **Theorem: Stabilization Chain Orbit.**
 The orbital form of protection: nothing on the orbit halts.
 -/
@@ -158,20 +223,11 @@ theorem stabilization_chain_orbit
     (h_safe : ∀ p, Queue Pos emb.Next S d I0 p → emb.embed p ∉ emb.Target)
     (hQ : Queue Pos emb.Next S d I0 emb.start)
     : ∀ k, ¬ emb.T (iterate Pos emb.Next k emb.start) := by
+  -- Composition: Queue -> Up2 (orbit) -> Up1 (Trace) -> Pointwise
+  have hAvoidOrbit := queue_implies_up2_orbit Pos S d I0 emb h_safe hQ
+  have hStab := up2_orbit_implies_stabilizes Pos emb hAvoidOrbit
   intro k
-  -- 1. Orbit Closure of Queue (Queue is invariant)
-  have hQ_k : Queue Pos emb.Next S d I0 (iterate Pos emb.Next k emb.start) :=
-    queue_orbit_closed Pos emb.Next S d I0 emb.start hQ k
-
-  -- 2. Apply Hierarchy Chain to the k-th point
-  apply hierarchy_chain
-      Pos S d I0 emb.Next
-      emb.toTraceGameEmbedding
-      emb.hom
-      emb.turnP
-      h_safe
-      (iterate Pos emb.Next k emb.start)
-      hQ_k
+  exact (Theory.verification_stabilizes_def _).mp hStab k
 
 /--
 **Theorem: Full Stabilization (Up1).**
@@ -184,10 +240,35 @@ theorem stabilization_chain_up1
     (emb : TemporalEmbedding Pos)
     (h_safe : ∀ p, Queue Pos emb.Next S d I0 p → emb.embed p ∉ emb.Target)
     (hQ : Queue Pos emb.Next S d I0 emb.start)
-    : RevHalt.Stabilizes (TimeTrace emb) := by
-  -- Definition of Stabilizes is ∀ k, ¬ TimeTrace emb k
-  intro k
-  exact stabilization_chain_orbit Pos S d I0 emb h_safe hQ k
+    : RevHalt.Stabilizes (TimeTrace emb) :=
+  -- Direct composition: Queue -> Up2 (orbit) -> Up1
+  up2_orbit_implies_stabilizes (Pos := Pos) emb
+    (queue_implies_up2_orbit Pos S d I0 emb h_safe hQ)
+
+/-- Up1 (operative form): the TimeTrace lies in the kernel of `up`. -/
+theorem stabilization_chain_up1_upEqBot
+    (Pos : Type)
+    (S : Splitter Pos) (d : ℕ) (I0 : Info Pos)
+    (emb : TemporalEmbedding Pos)
+    (h_safe : ∀ p, Queue Pos emb.Next S d I0 p → emb.embed p ∉ emb.Target)
+    (hQ : Queue Pos emb.Next S d I0 emb.start)
+    : RevHalt.up (TimeTrace emb) = (⊥ : RevHalt.Trace) := by
+  have hstab : RevHalt.Stabilizes (TimeTrace emb) :=
+    stabilization_chain_up1 Pos S d I0 emb h_safe hQ
+  -- Stabilizes T -> up T = ⊥
+  exact (RevHalt.Stabilizes_iff_up_eq_bot (T := TimeTrace emb)).mp hstab
+
+/-- Same statement, as kernel membership (categorical view). -/
+theorem stabilization_chain_up1_mem_upKernel
+    (Pos : Type)
+    (S : Splitter Pos) (d : ℕ) (I0 : Info Pos)
+    (emb : TemporalEmbedding Pos)
+    (h_safe : ∀ p, Queue Pos emb.Next S d I0 p → emb.embed p ∉ emb.Target)
+    (hQ : Queue Pos emb.Next S d I0 emb.start)
+    : (TimeTrace emb) ∈ RevHalt.Categorical.upKernel := by
+  -- upKernel := {T | upOp T = ⊥}
+  simpa [RevHalt.Categorical.upKernel, RevHalt.Categorical.upOp] using
+    (stabilization_chain_up1_upEqBot Pos S d I0 emb h_safe hQ)
 
 end RevHalt.Hierarchy
 
@@ -200,5 +281,10 @@ namespace RevHalt.Hierarchy
 #print axioms up2_implies_up1_pointwise
 #print axioms splitter_implies_avoid2
 #print axioms hierarchy_chain
+#print axioms queue_implies_up2_orbit
 #print axioms stabilization_chain_up1
+#print axioms stabilization_chain_up1_upEqBot
+#print axioms stabilization_chain_up1_mem_upKernel
+#print axioms up2_orbit_implies_upEqBot
+#print axioms up2_orbit_implies_stabilizes
 end RevHalt.Hierarchy

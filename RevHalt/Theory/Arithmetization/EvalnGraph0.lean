@@ -8,6 +8,12 @@ import Mathlib.Computability.PartrecCode
 import Mathlib.Logic.Godel.GodelBetaFunction
 import Mathlib.Tactic.FinCases
 
+-- This file contains complex arithmetization proofs requiring elevated heartbeat limits.
+-- The proofs involve repeated expansion of Fin.snoc chains and complex first-order formula rewriting.
+set_option maxHeartbeats 2000000
+
+
+
 /-!
 # RevHalt.Theory.Arithmetization.EvalnGraph0
 
@@ -530,6 +536,115 @@ def EvalnGraph : Lang0.Formula (Fin 4) :=
 private def evalnRelabel : Fin 4 → Fin 2 ⊕ Fin 2 :=
   ![Sum.inl 0, Sum.inl 1, Sum.inr 0, Sum.inr 1]
 
+/-! ### Precomputed Fin.snoc → matrix lemmas for performance
+
+These lemmas are computed once and cached, avoiding repeated fin_cases evaluations.
+The elevated heartbeat limit is scoped to this section only.
+-/
+
+section FinMatrixLemmas
+
+set_option maxHeartbeats 400000 in
+/-- Helper: converts 10-element Fin.snoc chain to matrix notation for compCase -/
+private theorem snoc_to_matrix10 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 : ℕ) :
+    Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+      (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) a0) a1) a2) a3) a4) a5) a6) a7) a8) a9 =
+    (![a0, a1, a2, a3, a4, a5, a6, a7, a8, a9] : Fin 10 → ℕ) := by
+  funext i; fin_cases i <;> rfl
+
+set_option maxHeartbeats 400000 in
+/-- Helper: converts 11-element Fin.snoc chain to matrix notation for pairCase -/
+private theorem snoc_to_matrix11 (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : ℕ) :
+    Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+      (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) a0) a1) a2) a3) a4) a5) a6) a7) a8) a9) a10 =
+    (![a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] : Fin 11 → ℕ) := by
+  funext i; fin_cases i <;> rfl
+
+set_option maxHeartbeats 400000 in
+/-- Helper: converts 7-element Fin.snoc chain to matrix notation -/
+private theorem snoc_to_matrix7 (a0 a1 a2 a3 a4 a5 a6 : ℕ) :
+    Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+      (Fin.snoc (default : Fin 0 → ℕ) a0) a1) a2) a3) a4) a5) a6 =
+    (![a0, a1, a2, a3, a4, a5, a6] : Fin 7 → ℕ) := by
+  funext i; fin_cases i <;> rfl
+
+set_option maxHeartbeats 800000 in
+/-- Helper: converts child1 in compCase from relabel+snoc format to nodeAt6 matrix format.
+    child1 uses relabel ![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 9]
+    So the bound vars [k,code,input,output,c1,c2,kpred,cf,cg,x] (indices 0-9) map to:
+    nodeAt6 args: D=free[0], c1=bound[4], k=bound[0], cf=bound[8], input=bound[2], x=bound[9] -/
+private theorem nodeAt6_child1_comp_convert
+    (D j k code input output c1 c2 kpred cf cg x : ℕ)
+    (h : ((show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6).relabel
+            ![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 9]).Realize
+          (![D, j] : Fin 2 → ℕ)
+          (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+            (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) k) code) input) output) c1) c2)
+              kpred) cf) cg) x)) :
+    nodeAt6.Realize ![D, c1, k, cf, input, x] := by
+  have hMat : (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+            (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) k) code) input) output) c1) c2)
+              kpred) cf) cg) x) =
+    (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) :=
+    snoc_to_matrix10 k code input output c1 c2 kpred cf cg x
+  rw [hMat] at h
+  have hRel :=
+    (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+      (φ := (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6))
+      (g := (![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 9] : Fin 6 → Fin 2 ⊕ Fin 10))
+      (v := (![D, j] : Fin 2 → ℕ))
+      (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ))).1 h
+  have hIrrel : ((![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) ∘ Fin.natAdd 6) =
+      (default : Fin 0 → ℕ) := Subsingleton.elim _ _
+  have hVal :
+      (Sum.elim (![D, j] : Fin 2 → ℕ)
+        ((![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) ∘ Fin.castAdd 0) ∘
+          ![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 9]) =
+      (![D, c1, k, cf, input, x] : Fin 6 → ℕ) := by
+    funext i; fin_cases i <;> rfl
+  simp only [Fin.natAdd_zero, hIrrel] at hRel
+  convert hRel using 1
+  exact hVal.symm
+
+set_option maxHeartbeats 800000 in
+/-- Helper: converts child2 in compCase from relabel+snoc format to nodeAt6 matrix format.
+    child2 uses relabel ![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 7, Sum.inr 9, Sum.inr 3]
+    So: D=free[0], c2=bound[5], k=bound[0], cg=bound[7], x=bound[9], output=bound[3] -/
+private theorem nodeAt6_child2_comp_convert
+    (D j k code input output c1 c2 kpred cf cg x : ℕ)
+    (h : ((show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6).relabel
+            ![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 7, Sum.inr 9, Sum.inr 3]).Realize
+          (![D, j] : Fin 2 → ℕ)
+          (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+            (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) k) code) input) output) c1) c2)
+              kpred) cf) cg) x)) :
+    nodeAt6.Realize ![D, c2, k, cg, x, output] := by
+  have hMat : (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+            (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) k) code) input) output) c1) c2)
+              kpred) cf) cg) x) =
+    (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) :=
+    snoc_to_matrix10 k code input output c1 c2 kpred cf cg x
+  rw [hMat] at h
+  have hRel :=
+    (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+      (φ := (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6))
+      (g := (![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 7, Sum.inr 9, Sum.inr 3] : Fin 6 → Fin 2 ⊕ Fin 10))
+      (v := (![D, j] : Fin 2 → ℕ))
+      (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ))).1 h
+  have hIrrel : ((![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) ∘ Fin.natAdd 6) =
+      (default : Fin 0 → ℕ) := Subsingleton.elim _ _
+  have hVal :
+      (Sum.elim (![D, j] : Fin 2 → ℕ)
+        ((![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) ∘ Fin.castAdd 0) ∘
+          ![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 7, Sum.inr 9, Sum.inr 3]) =
+      (![D, c2, k, cg, x, output] : Fin 6 → ℕ) := by
+    funext i; fin_cases i <;> rfl
+  simp only [Fin.natAdd_zero, hIrrel] at hRel
+  convert hRel using 1
+  exact hVal.symm
+
+end FinMatrixLemmas
+
 /-! ### Specification -/
 
 private theorem node6Enc_inj
@@ -676,6 +791,10 @@ private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r
   rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hNodeAtBF, hStageOK⟩
   -- Stage predicate: `k = succ kpred ∧ input ≤ kpred`.
   rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hStageOK with ⟨hk, hInLe⟩
+  have hkEq : k = Nat.succ kpred := by
+    simpa [eqTerm, termVar, bvar] using hk
+  have hInLeNat : input ≤ kpred := by
+    simpa [termVar, bvar] using hInLe
 
   -- Convert `nodeAtBF` (a relabeling of `nodeAt`) back into the intended `nodeAt.Realize`.
   have hNodeAt' :
@@ -719,79 +838,504 @@ private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r
             (y := (default : Fin 0 → ℕ))).1 hNodeAt'
     exact (nodeAt_realize D j k code input output c1 c2).1 hNodeAtFormula
 
+  -- Normalize the bound valuation once, for reuse in all cases.
+  have hSnoc :
+      (Fin.snoc
+          (Fin.snoc
+            (Fin.snoc
+              (Fin.snoc
+                (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) k) code) input) output) c1) c2)
+          kpred) =
+        (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) := by
+    funext jj
+    fin_cases jj <;> rfl
+
+  -- Helper: decode a 1-variable tag formula pulled back to the `code` bound variable.
+  have tagRealize {φ : Lang0.Formula (Fin 1)}
+      (hφ :
+        ((show Lang0.BoundedFormula (Fin 1) 0 from φ).relabel
+              (![Sum.inr 1] : Fin 1 → Fin 2 ⊕ Fin 7)).Realize
+            (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ)) :
+      φ.Realize (![code] : Fin 1 → ℕ) := by
+    have hRel :=
+      (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+        (φ := (show Lang0.BoundedFormula (Fin 1) 0 from φ))
+        (g := (![Sum.inr 1] : Fin 1 → Fin 2 ⊕ Fin 7))
+        (v := (![D, j] : Fin 2 → ℕ))
+        (xs := (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ)))
+    have h' :
+        (show Lang0.BoundedFormula (Fin 1) 0 from φ).Realize
+            (Sum.elim (![D, j] : Fin 2 → ℕ)
+                ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.castAdd 0) ∘
+              (![Sum.inr 1] : Fin 1 → Fin 2 ⊕ Fin 7))
+            ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.natAdd 7) :=
+      (hRel).1 hφ
+    have hVal :
+        (Sum.elim (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘
+              (![Sum.inr 1] : Fin 1 → Fin 2 ⊕ Fin 7)) =
+          (![code] : Fin 1 → ℕ) := by
+      funext t
+      fin_cases t
+      rfl
+    have hIrrel :
+        ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.natAdd 7) =
+          (default : Fin 0 → ℕ) :=
+      Subsingleton.elim _ _
+    have h0 :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 1) 0 from φ)
+          (![code] : Fin 1 → ℕ) (default : Fin 0 → ℕ) := by
+      simpa [Fin.castAdd_zero, hVal, hIrrel] using h'
+    exact
+      (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := φ)
+          (x := (![code] : Fin 1 → ℕ)) (y := (default : Fin 0 → ℕ))).1 h0
+
+  -- Helper: decode a 2-variable graph formula pulled back to the `(input, output)` bound variables.
+  have ioRealize {φ : Lang0.Formula (Fin 2)}
+      (hφ :
+        ((show Lang0.BoundedFormula (Fin 2) 0 from φ).relabel
+              (![Sum.inr 2, Sum.inr 3] : Fin 2 → Fin 2 ⊕ Fin 7)).Realize
+            (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ)) :
+      φ.Realize (![input, output] : Fin 2 → ℕ) := by
+    have hRel :=
+      (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+        (φ := (show Lang0.BoundedFormula (Fin 2) 0 from φ))
+        (g := (![Sum.inr 2, Sum.inr 3] : Fin 2 → Fin 2 ⊕ Fin 7))
+        (v := (![D, j] : Fin 2 → ℕ))
+        (xs := (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ)))
+    have h' :
+        (show Lang0.BoundedFormula (Fin 2) 0 from φ).Realize
+            (Sum.elim (![D, j] : Fin 2 → ℕ)
+                ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.castAdd 0) ∘
+              (![Sum.inr 2, Sum.inr 3] : Fin 2 → Fin 2 ⊕ Fin 7))
+            ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.natAdd 7) :=
+      (hRel).1 hφ
+    have hVal :
+        (Sum.elim (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘
+              (![Sum.inr 2, Sum.inr 3] : Fin 2 → Fin 2 ⊕ Fin 7)) =
+          (![input, output] : Fin 2 → ℕ) := by
+      funext t
+      fin_cases t <;> rfl
+    have hIrrel :
+        ((![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) ∘ Fin.natAdd 7) =
+          (default : Fin 0 → ℕ) :=
+      Subsingleton.elim _ _
+    have h0 :
+        FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 2) 0 from φ)
+          (![input, output] : Fin 2 → ℕ) (default : Fin 0 → ℕ) := by
+      simpa [Fin.castAdd_zero, hVal, hIrrel] using h'
+    exact
+      (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := φ)
+          (x := (![input, output] : Fin 2 → ℕ)) (y := (default : Fin 0 → ℕ))).1 h0
+
   -- Case split on the local rule.
   have hCasesOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hCases
   rcases hCasesOr with hZero | hRest
   ·
-      have hcode : code = 0 := hZero.1
-      have hout : output = 0 := hZero.2
+      have hZeroAnd := (FirstOrder.Language.BoundedFormula.realize_inf).1 hZero
+      have hcode : code = 0 := by
+        have h0 :
+            ((show Lang0.BoundedFormula (Fin 1) 0 from isZeroCode).relabel ![Sum.inr 1]).Realize
+              (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) := by
+          simpa [hSnoc] using hZeroAnd.1
+        exact (isZeroCode_realize code).1 (tagRealize (φ := isZeroCode) h0)
+      have hout : output = 0 := by
+        simpa [eqTerm, termVar, bvar] using hZeroAnd.2
       refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
       subst hcode; subst hout
-      simpa [Nat.Partrec.Code.evaln, hk, hInLe]
+      rw [hkEq]
+      simp [Nat.Partrec.Code.evaln, Nat.Partrec.Code.ofNatCode, hInLeNat]
   ·
       have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
       rcases hRestOr with hSucc | hRest
       ·
-          have hcode : code = 1 := hSucc.1
-          have hout : output = Nat.succ input := hSucc.2
+          have hSuccAnd := (FirstOrder.Language.BoundedFormula.realize_inf).1 hSucc
+          have hcode : code = 1 := by
+            have h0 :
+                ((show Lang0.BoundedFormula (Fin 1) 0 from isSuccCode).relabel ![Sum.inr 1]).Realize
+                  (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) := by
+              simpa [hSnoc] using hSuccAnd.1
+            exact (isSuccCode_realize code).1 (tagRealize (φ := isSuccCode) h0)
+          have hout : output = Nat.succ input := by
+            simpa [eqTerm, termVar, bvar] using hSuccAnd.2
           refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
           subst hcode; subst hout
-          simpa [Nat.Partrec.Code.evaln, hk, hInLe]
+          rw [hkEq]
+          simp [Nat.Partrec.Code.evaln, Nat.Partrec.Code.ofNatCode, hInLeNat]
       ·
           have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
           rcases hRestOr with hLeft | hRest
           ·
-              have hcode : code = 2 := hLeft.1
-              have hout : input.unpair.1 = output := by
-                simpa using (unpair1Graph_realize input output).1 hLeft.2
+              have hLeftAnd := (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft
+              have hcode : code = 2 := by
+                have h0 :
+                    ((show Lang0.BoundedFormula (Fin 1) 0 from isLeftCode).relabel ![Sum.inr 1]).Realize
+                      (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) := by
+                  simpa [hSnoc] using hLeftAnd.1
+                exact (isLeftCode_realize code).1 (tagRealize (φ := isLeftCode) h0)
+              have hUnpair : unpair1Graph.Realize ![input, output] := by
+                have h0 :
+                    ((show Lang0.BoundedFormula (Fin 2) 0 from unpair1Graph).relabel ![Sum.inr 2, Sum.inr 3]).Realize
+                      (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) := by
+                  simpa [hSnoc] using hLeftAnd.2
+                exact ioRealize (φ := unpair1Graph) h0
+              have hout : input.unpair.1 = output :=
+                (unpair1Graph_realize input output).1 hUnpair
               refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
               subst hcode
-              simpa [Nat.Partrec.Code.evaln, hk, hInLe, hout]
+              rw [hkEq]
+              simp [Nat.Partrec.Code.evaln, Nat.Partrec.Code.ofNatCode, hInLeNat, hout]
           ·
               have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
               rcases hRestOr with hRight | hRest
               ·
-                  have hcode : code = 3 := hRight.1
-                  have hout : input.unpair.2 = output := by
-                    simpa using (unpair2Graph_realize input output).1 hRight.2
+                  have hRightAnd := (FirstOrder.Language.BoundedFormula.realize_inf).1 hRight
+                  have hcode : code = 3 := by
+                    have h0 :
+                        ((show Lang0.BoundedFormula (Fin 1) 0 from isRightCode).relabel ![Sum.inr 1]).Realize
+                          (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) := by
+                      simpa [hSnoc] using hRightAnd.1
+                    exact (isRightCode_realize code).1 (tagRealize (φ := isRightCode) h0)
+                  have hUnpair : unpair2Graph.Realize ![input, output] := by
+                    have h0 :
+                        ((show Lang0.BoundedFormula (Fin 2) 0 from unpair2Graph).relabel ![Sum.inr 2, Sum.inr 3]).Realize
+                          (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred] : Fin 7 → ℕ) := by
+                      simpa [hSnoc] using hRightAnd.2
+                    exact ioRealize (φ := unpair2Graph) h0
+                  have hout : input.unpair.2 = output :=
+                    (unpair2Graph_realize input output).1 hUnpair
                   refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
                   subst hcode
-                  simpa [Nat.Partrec.Code.evaln, hk, hInLe, hout]
+                  rw [hkEq]
+                  simp [Nat.Partrec.Code.evaln, Nat.Partrec.Code.ofNatCode, hInLeNat, hout]
               ·
                   have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
                   rcases hRestOr with hPair | hRest
                   ·
-                      rcases hPair with ⟨cf, cg, x, y, hCode, hc1lt, hc2lt, hC1At, hC2At, hOut⟩
-                      have hc1lt' : c1 < j := by simpa using hc1lt
-                      have hc2lt' : c2 < j := by simpa using hc2lt
+                      -- Unpack the `pair` case: `∃ cf cg x y, ...`.
+                      rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hPair with ⟨cf, hPair⟩
+                      rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hPair with ⟨cg, hPair⟩
+                      rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hPair with ⟨x, hPair⟩
+                      rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hPair with ⟨y, hPair⟩
+
+                      -- Normalize the extended bound valuation once:
+                      -- `Fin 11` variables are `[k, code, input, output, c1, c2, kpred, cf, cg, x, y]`.
+                      have hSnoc11 :
+                          (Fin.snoc
+                              (Fin.snoc
+                                (Fin.snoc
+                                  (Fin.snoc
+                                    (Fin.snoc
+                                      (Fin.snoc
+                                        (Fin.snoc
+                                          (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) k) code) input)
+                                              output)
+                                            c1)
+                                          c2)
+                                        kpred)
+                                      cf)
+                                    cg)
+                                  x)
+                                y) =
+                            (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) :=
+                        snoc_to_matrix11 k code input output c1 c2 kpred cf cg x y
+
+                      -- Split the conjunction chain.
+                      rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hPair with ⟨hLeft, hPairOut⟩
+                      rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hLeft, hC2At⟩
+                      rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hLeft, hC1At⟩
+                      rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hLeft, hc2lt⟩
+                      rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hCode, hc1lt⟩
+
+                      have hc1lt' : c1 < j := by
+                        have hc1lt11 :
+                            (bdLt (α := Fin 2) (n := 11)
+                                  (bvar (α := Fin 2) (n := 11) 4) (termVar (α := Fin 2) (n := 11) 1)).Realize
+                              (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) := by
+                          -- hc1lt: ((bdLt (bvar 4) (termVar 1)).liftAt 4 7).Realize ... (Fin.snoc chain)
+                          -- First normalize the snoc chain to matrix notation
+                          have hVal : (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) =
+                              Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+                              (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc default k) code) input) output) c1) c2) kpred) cf) cg) x) y :=
+                            (snoc_to_matrix11 k code input output c1 c2 kpred cf cg x y).symm
+                          rw [hVal]
+                          exact hc1lt
+                        have hlt :=
+                          (bdLt_realize (α := Fin 2) (n := 11)
+                                (t := bvar (α := Fin 2) (n := 11) 4) (u := termVar (α := Fin 2) (n := 11) 1)
+                                (v := (![D, j] : Fin 2 → ℕ))
+                                (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ))).1 hc1lt11
+                        simpa [termVar, bvar] using hlt
+                      have hc2lt' : c2 < j := by
+                        have hc2lt11 :
+                            (bdLt (α := Fin 2) (n := 11)
+                                  (bvar (α := Fin 2) (n := 11) 5) (termVar (α := Fin 2) (n := 11) 1)).Realize
+                              (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) := by
+                          have hVal : (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) =
+                              Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+                              (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc default k) code) input) output) c1) c2) kpred) cf) cg) x) y :=
+                            (snoc_to_matrix11 k code input output c1 c2 kpred cf cg x y).symm
+                          rw [hVal]
+                          exact hc2lt
+                        have hlt :=
+                          (bdLt_realize (α := Fin 2) (n := 11)
+                                (t := bvar (α := Fin 2) (n := 11) 5) (u := termVar (α := Fin 2) (n := 11) 1)
+                                (v := (![D, j] : Fin 2 → ℕ))
+                                (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ))).1 hc2lt11
+                        simpa [termVar, bvar] using hlt
+
+                      -- Decode the relabeled proof obligations into the intended formulas.
+                      have hCode' : pairCodeGraph.Realize ![code, cf, cg] := by
+                        have h0 :
+                            ((show Lang0.BoundedFormula (Fin 3) 0 from pairCodeGraph).relabel
+                                  ![Sum.inr 1, Sum.inr 7, Sum.inr 8]).Realize
+                                (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) := by
+                          rw [← hSnoc11]; exact hCode
+                        -- Pull back along the relabeling to a 3-var formula.
+                        have hRel :=
+                          (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+                            (φ := (show Lang0.BoundedFormula (Fin 3) 0 from pairCodeGraph))
+                            (g := (![Sum.inr 1, Sum.inr 7, Sum.inr 8] : Fin 3 → Fin 2 ⊕ Fin 11))
+                            (v := (![D, j] : Fin 2 → ℕ))
+                            (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ)))
+                        have h' :
+                            (show Lang0.BoundedFormula (Fin 3) 0 from pairCodeGraph).Realize
+                                (Sum.elim (![D, j] : Fin 2 → ℕ)
+                                      ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                            Fin.castAdd 0) ∘
+                                    (![Sum.inr 1, Sum.inr 7, Sum.inr 8] : Fin 3 → Fin 2 ⊕ Fin 11))
+                                ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                      Fin.natAdd 11) :=
+                          (hRel).1 h0
+                        have hVal :
+                            (Sum.elim (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                  (![Sum.inr 1, Sum.inr 7, Sum.inr 8] : Fin 3 → Fin 2 ⊕ Fin 11)) =
+                              (![code, cf, cg] : Fin 3 → ℕ) := by
+                          funext t
+                          fin_cases t <;> rfl
+                        have hIrrel :
+                            ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘ Fin.natAdd 11) =
+                              (default : Fin 0 → ℕ) :=
+                          Subsingleton.elim _ _
+                        have hBF :
+                            FirstOrder.Language.BoundedFormula.Realize (L := Lang0)
+                              (show Lang0.BoundedFormula (Fin 3) 0 from pairCodeGraph)
+                              (![code, cf, cg] : Fin 3 → ℕ) (default : Fin 0 → ℕ) := by
+                          simpa [Fin.castAdd_zero, hVal, hIrrel] using h'
+                        exact
+                          (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := pairCodeGraph)
+                                (x := (![code, cf, cg] : Fin 3 → ℕ)) (y := (default : Fin 0 → ℕ))).1 hBF
+
+                      have hC1At' : nodeAt6.Realize ![D, c1, k, cf, input, x] := by
+                        have h0 :
+                            ((show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6).relabel
+                                  ![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 7, Sum.inr 2, Sum.inr 9]).Realize
+                                (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) := by
+                          have hVal : (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) =
+                              Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+                              (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc default k) code) input) output) c1) c2) kpred) cf) cg) x) y :=
+                            (snoc_to_matrix11 k code input output c1 c2 kpred cf cg x y).symm
+                          rw [hVal]
+                          exact hC1At
+                        have hRel :=
+                          (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+                            (φ := (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6))
+                            (g :=
+                              (![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 7, Sum.inr 2, Sum.inr 9] :
+                                Fin 6 → Fin 2 ⊕ Fin 11))
+                            (v := (![D, j] : Fin 2 → ℕ))
+                            (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ)))
+                        have h' :
+                            (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6).Realize
+                                (Sum.elim (![D, j] : Fin 2 → ℕ)
+                                      ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                            Fin.castAdd 0) ∘
+                                    (![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 7, Sum.inr 2, Sum.inr 9] :
+                                      Fin 6 → Fin 2 ⊕ Fin 11))
+                                ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘ Fin.natAdd 11) :=
+                          (hRel).1 h0
+                        have hVal :
+                            (Sum.elim (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                  (![Sum.inl 0, Sum.inr 4, Sum.inr 0, Sum.inr 7, Sum.inr 2, Sum.inr 9] :
+                                    Fin 6 → Fin 2 ⊕ Fin 11)) =
+                              (![D, c1, k, cf, input, x] : Fin 6 → ℕ) := by
+                          funext t
+                          fin_cases t <;> rfl
+                        have hIrrel :
+                            ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘ Fin.natAdd 11) =
+                              (default : Fin 0 → ℕ) :=
+                          Subsingleton.elim _ _
+                        have hBF :
+                            FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6)
+                              (![D, c1, k, cf, input, x] : Fin 6 → ℕ) (default : Fin 0 → ℕ) := by
+                          simpa [Fin.castAdd_zero, hVal, hIrrel] using h'
+                        exact
+                          (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := nodeAt6)
+                                (x := (![D, c1, k, cf, input, x] : Fin 6 → ℕ)) (y := (default : Fin 0 → ℕ))).1 hBF
+
+                      have hC2At' : nodeAt6.Realize ![D, c2, k, cg, input, y] := by
+                        have h0 :
+                            ((show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6).relabel
+                                  ![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 10]).Realize
+                                (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) := by
+                          rw [← hSnoc11]; exact hC2At
+                        have hRel :=
+                          (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+                            (φ := (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6))
+                            (g :=
+                              (![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 10] :
+                                Fin 6 → Fin 2 ⊕ Fin 11))
+                            (v := (![D, j] : Fin 2 → ℕ))
+                            (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ)))
+                        have h' :
+                            (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6).Realize
+                                (Sum.elim (![D, j] : Fin 2 → ℕ)
+                                      ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                            Fin.castAdd 0) ∘
+                                    (![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 10] :
+                                      Fin 6 → Fin 2 ⊕ Fin 11))
+                                ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘ Fin.natAdd 11) :=
+                          (hRel).1 h0
+                        have hVal :
+                            (Sum.elim (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                  (![Sum.inl 0, Sum.inr 5, Sum.inr 0, Sum.inr 8, Sum.inr 2, Sum.inr 10] :
+                                    Fin 6 → Fin 2 ⊕ Fin 11)) =
+                              (![D, c2, k, cg, input, y] : Fin 6 → ℕ) := by
+                          funext t
+                          fin_cases t <;> rfl
+                        have hIrrel :
+                            ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘ Fin.natAdd 11) =
+                              (default : Fin 0 → ℕ) :=
+                          Subsingleton.elim _ _
+                        have hBF :
+                            FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 6) 0 from nodeAt6)
+                              (![D, c2, k, cg, input, y] : Fin 6 → ℕ) (default : Fin 0 → ℕ) := by
+                          simpa [Fin.castAdd_zero, hVal, hIrrel] using h'
+                        exact
+                          (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := nodeAt6)
+                                (x := (![D, c2, k, cg, input, y] : Fin 6 → ℕ)) (y := (default : Fin 0 → ℕ))).1 hBF
+
+                      have hOut : pairGraph.Realize ![x, y, output] := by
+                        have h0 :
+                            ((show Lang0.BoundedFormula (Fin 3) 0 from pairGraph).relabel
+                                  ![Sum.inr 9, Sum.inr 10, Sum.inr 3]).Realize
+                                (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) := by
+                          rw [← hSnoc11]; exact hPairOut
+                        have hRel :=
+                          (FirstOrder.Language.BoundedFormula.realize_relabel (L := Lang0)
+                            (φ := (show Lang0.BoundedFormula (Fin 3) 0 from pairGraph))
+                            (g := (![Sum.inr 9, Sum.inr 10, Sum.inr 3] : Fin 3 → Fin 2 ⊕ Fin 11))
+                            (v := (![D, j] : Fin 2 → ℕ))
+                            (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ)))
+                        have h' :
+                            (show Lang0.BoundedFormula (Fin 3) 0 from pairGraph).Realize
+                                (Sum.elim (![D, j] : Fin 2 → ℕ)
+                                      ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                            Fin.castAdd 0) ∘ (![Sum.inr 9, Sum.inr 10, Sum.inr 3] : Fin 3 → Fin 2 ⊕ Fin 11))
+                                ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘ Fin.natAdd 11) :=
+                          (hRel).1 h0
+                        have hVal :
+                            (Sum.elim (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘
+                                  (![Sum.inr 9, Sum.inr 10, Sum.inr 3] : Fin 3 → Fin 2 ⊕ Fin 11)) =
+                              (![x, y, output] : Fin 3 → ℕ) := by
+                          funext t
+                          fin_cases t <;> rfl
+                        have hIrrel :
+                            ((![k, code, input, output, c1, c2, kpred, cf, cg, x, y] : Fin 11 → ℕ) ∘ Fin.natAdd 11) =
+                              (default : Fin 0 → ℕ) :=
+                          Subsingleton.elim _ _
+                        have hBF :
+                            FirstOrder.Language.BoundedFormula.Realize (L := Lang0) (show Lang0.BoundedFormula (Fin 3) 0 from pairGraph)
+                              (![x, y, output] : Fin 3 → ℕ) (default : Fin 0 → ℕ) := by
+                          simpa [Fin.castAdd_zero, hVal, hIrrel] using h'
+                        exact
+                          (FirstOrder.Language.Formula.boundedFormula_realize_eq_realize (φ := pairGraph)
+                                (x := (![x, y, output] : Fin 3 → ℕ)) (y := (default : Fin 0 → ℕ))).1 hBF
+
+                      -- Now run the inductive hypotheses on both children.
                       have hEval1 :
                           Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cf) input = some x :=
                         evaln_of_child (D := D) (r := r) (i := j) (j := c1)
                           (k := k) (code := cf) (input := input) (output := x)
-                          hAll hj hc1lt' IH hC1At
+                          hAll hj hc1lt' IH hC1At'
                       have hEval2 :
                           Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cg) input = some y :=
                         evaln_of_child (D := D) (r := r) (i := j) (j := c2)
                           (k := k) (code := cg) (input := input) (output := y)
-                          hAll hj hc2lt' IH hC2At
+                          hAll hj hc2lt' IH hC2At'
                       have hOut' : Nat.pair x y = output :=
                         (pairGraph_realize x y output).1 hOut
                       refine ⟨k, code, input, output, c1, c2, hEq, ?_⟩
                       have hOf : Nat.Partrec.Code.ofNatCode code =
                           Nat.Partrec.Code.pair (Nat.Partrec.Code.ofNatCode cf) (Nat.Partrec.Code.ofNatCode cg) := by
-                        have : code = 4 * Nat.pair cf cg + 4 := (pairCodeGraph_realize code cf cg).1 hCode
+                        have : code = 4 * Nat.pair cf cg + 4 := (pairCodeGraph_realize code cf cg).1 hCode'
                         simpa [this] using (ofNatCode_pair cf cg)
-                      -- unfold `evaln` for `pair`
                       rw [hOf]
-                      -- reduce the monadic definition using the child equalities
-                      simp [Nat.Partrec.Code.evaln, hk, hInLe, hEval1, hEval2, hOut']
+                      -- hkEq : k = kpred.succ means k = kpred + 1
+                      -- hEval1 : Code.evaln k (Code.ofNatCode cf) input = some x
+                      -- hEval2 : Code.evaln k (Code.ofNatCode cg) input = some y
+                      -- Goal: Option.map Nat.pair (Code.evaln (kpred + 1) ...) <*> ... = some output
+                      subst hkEq
+                      simp only [Nat.Partrec.Code.evaln, Nat.succ_eq_add_one, hInLeNat,
+                        hEval1, hEval2, ← hOut']
+                      rfl
                   ·
                       have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
                       rcases hRestOr with hComp | hRest
                       ·
-                          rcases hComp with ⟨cf, cg, x, hCode, hc1lt, hc2lt, hC1At, hC2At⟩
-                          have hc1lt' : c1 < j := by simpa using hc1lt
-                          have hc2lt' : c2 < j := by simpa using hc2lt
+                          -- Unpack the `comp` case: `∃ cf cg x, ...`.
+                          rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hComp with ⟨cf, hComp⟩
+                          rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hComp with ⟨cg, hComp⟩
+                          rcases (FirstOrder.Language.BoundedFormula.realize_ex).1 hComp with ⟨x, hComp⟩
+                          -- Split the conjunction chain: hCode ⊓ hc1lt ⊓ hc2lt ⊓ hC1At ⊓ hC2At
+                          rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hComp with ⟨hLeft, hC2At⟩
+                          rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hLeft, hC1At⟩
+                          rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hLeft, hc2lt⟩
+                          rcases (FirstOrder.Language.BoundedFormula.realize_inf).1 hLeft with ⟨hCode, hc1lt⟩
+
+                          -- Normalize the extended bound valuation once:
+                          -- `Fin 10` variables are `[k, code, input, output, c1, c2, kpred, cf, cg, x]`.
+                          have hSnoc10 :
+                              (Fin.snoc (Fin.snoc (Fin.snoc
+                                (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+                                  (Fin.snoc (Fin.snoc (Fin.snoc (default : Fin 0 → ℕ) k) code) input)
+                                    output) c1) c2) kpred) cf) cg) x) =
+                                (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) :=
+                            snoc_to_matrix10 k code input output c1 c2 kpred cf cg x
+
+                          have hc1lt' : c1 < j := by
+                            have hc1lt10 :
+                                (bdLt (α := Fin 2) (n := 10)
+                                      (bvar (α := Fin 2) (n := 10) 4) (termVar (α := Fin 2) (n := 10) 1)).Realize
+                                  (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) := by
+                              have hVal : (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) =
+                                  Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+                                  (Fin.snoc (Fin.snoc (Fin.snoc default k) code) input) output) c1) c2) kpred) cf) cg) x :=
+                                (snoc_to_matrix10 k code input output c1 c2 kpred cf cg x).symm
+                              rw [hVal]
+                              exact hc1lt
+                            have hlt :=
+                              (bdLt_realize (α := Fin 2) (n := 10)
+                                    (t := bvar (α := Fin 2) (n := 10) 4) (u := termVar (α := Fin 2) (n := 10) 1)
+                                    (v := (![D, j] : Fin 2 → ℕ))
+                                    (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ))).1 hc1lt10
+                            simpa [termVar, bvar] using hlt
+                          have hc2lt' : c2 < j := by
+                            have hc2lt10 :
+                                (bdLt (α := Fin 2) (n := 10)
+                                      (bvar (α := Fin 2) (n := 10) 5) (termVar (α := Fin 2) (n := 10) 1)).Realize
+                                  (![D, j] : Fin 2 → ℕ) (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) := by
+                              have hVal : (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ) =
+                                  Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc (Fin.snoc
+                                  (Fin.snoc (Fin.snoc (Fin.snoc default k) code) input) output) c1) c2) kpred) cf) cg) x :=
+                                (snoc_to_matrix10 k code input output c1 c2 kpred cf cg x).symm
+                              rw [hVal]
+                              exact hc2lt
+                            have hlt :=
+                              (bdLt_realize (α := Fin 2) (n := 10)
+                                    (t := bvar (α := Fin 2) (n := 10) 5) (u := termVar (α := Fin 2) (n := 10) 1)
+                                    (v := (![D, j] : Fin 2 → ℕ))
+                                    (xs := (![k, code, input, output, c1, c2, kpred, cf, cg, x] : Fin 10 → ℕ))).1 hc2lt10
+                            simpa [termVar, bvar] using hlt
                           have hEval1 :
                               Nat.Partrec.Code.evaln k (Nat.Partrec.Code.ofNatCode cg) input = some x :=
                             evaln_of_child (D := D) (r := r) (i := j) (j := c1)
@@ -808,7 +1352,7 @@ private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r
                             have : code = 4 * Nat.pair cf cg + 6 := (compCodeGraph_realize code cf cg).1 hCode
                             simpa [this] using (ofNatCode_comp cf cg)
                           rw [hOf]
-                          simp [Nat.Partrec.Code.evaln, hk, hInLe, hEval1, hEval2]
+                          simp [Nat.Partrec.Code.evaln, hkEq, hInLeNat, hEval1, hEval2]
                       ·
                           have hRestOr := (FirstOrder.Language.BoundedFormula.realize_sup).1 hRest
                           rcases hRestOr with hPrec | hRfind
@@ -835,7 +1379,7 @@ private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r
                                   have : n2 = 0 := by
                                     simpa using hn2
                                   subst this
-                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEval]
+                                  simp [Nat.Partrec.Code.evaln, hkEq, hInLeNat, hEval]
                               ·
                                   rcases hStep with ⟨y, iRec, input1, input2, hn2, hc1lt, hc2lt, hMk1, hC1At, hMk2,
                                     hC2At⟩
@@ -859,7 +1403,7 @@ private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r
                                   subst this
                                   subst hIn1
                                   subst hIn2
-                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEvalRec, hEvalCg]
+                                  simp [Nat.Partrec.Code.evaln, hkEq, hInLeNat, hEvalRec, hEvalCg]
                           ·
                               rcases hRfind with ⟨cf, a, m, hCode, hSplit, hc1lt, hChild⟩
                               have hIn : Nat.pair a m = input := (pairGraph_realize a m input).1 hSplit
@@ -884,7 +1428,7 @@ private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r
                                   have hout : output = m := by
                                     simpa using h0.2
                                   subst hx0; subst hout
-                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEvalX]
+                                  simp [Nat.Partrec.Code.evaln, hkEq, hInLeNat, hEvalX]
                               ·
                                   rcases hrec with ⟨m2, input2, hx0, hc2lt, hmSucc, hMk2, hRec⟩
                                   have hx0' : x ≠ 0 := by
@@ -897,12 +1441,12 @@ private theorem evaln_of_nodeIndex (D r : ℕ) (hAll : AllNodesOK.Realize ![D, r
                                   subst hm2
                                   subst hIn2
                                   have hEvalRec :
-                                      Nat.Partrec.Code.evaln kpred (Nat.Partrec.Code.ofNatCode code) (Nat.pair a (m + 1)) =
-                                        some output :=
-                                    evaln_of_child (D := D) (r := r) (i := j) (j := c2)
-                                      (k := kpred) (code := code) (input := Nat.pair a (m + 1)) (output := output)
-                                      hAll hj hc2lt' IH hRec
-                                  simp [Nat.Partrec.Code.evaln, hk, hInLe, hEvalX, hx0', hEvalRec]
+                                        Nat.Partrec.Code.evaln kpred (Nat.Partrec.Code.ofNatCode code) (Nat.pair a (m + 1)) =
+                                          some output :=
+                                      evaln_of_child (D := D) (r := r) (i := j) (j := c2)
+                                        (k := kpred) (code := code) (input := Nat.pair a (m + 1)) (output := output)
+                                        hAll hj hc2lt' IH hRec
+                                  simp [Nat.Partrec.Code.evaln, hkEq, hInLeNat, hEvalX, hx0', hEvalRec]
 
 -- The core correctness theorem for `EvalnGraph` (proved below).
 theorem EvalnGraph_spec (k codeNat inputNat outputNat : ℕ) :

@@ -9,7 +9,6 @@ Abstract finite observation framework: Splitters, Atomicity, Residue, Queue.
 ## Contents
 - `Splitter` structure with Refinement and Cover axioms
 - Composition and atomicity
-- `Prime_RH` as atomic index
 - `ResEquiv` (residue equivalence at depth d)
 - `Queue` (persistent residue under dynamics)
 -/
