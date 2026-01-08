@@ -978,6 +978,47 @@ theorem frontier_empty_contradiction_schema
   exact hBarrier hBiv
 
 /-!
+### Connection to T2: InternalHaltingPredicate components
+
+The bivalence produced by `frontier_empty` provides exactly the components needed
+for `InternalHaltingPredicate`:
+
+- `total` : ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
+  → Given by `bivalence_in_S` with `H e = encode_halt e`
+
+- `correct` : ∀ e, Rev0_K K (Machine e) → S.Provable (H e)
+  → Given by `absorption_soundness` (from frontier empty + Soundness)
+
+- `complete` : ∀ e, ¬ Rev0_K K (Machine e) → S.Provable (S.Not (H e))
+  → Given by `NegativeComplete`
+
+The remaining piece for full T2 connection is the semi-decidability witness
+`f : Code → (Nat →. Nat)` for `S.Provable (S.Not (encode_halt e))`.
+This typically comes from your architecture (OracleMachine/ComplementaritySystem).
+-/
+
+/--
+  **T2 Components from Frontier Empty**.
+  If the frontier is empty, we can construct all the logical components
+  needed for InternalHaltingPredicate, except the semi-decidability witness.
+-/
+theorem frontier_empty_T2_components
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
+    -- total
+    (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) ∧
+    -- correct
+    (∀ e, Rev0_K K (Machine e) → SProvable (encode_halt e)) ∧
+    -- complete
+    (∀ e, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
+  · exact absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound
+  · exact hNegComp
+
+/-!
 ### Corollary: The frontier cannot be empty (without contradiction)
 
 This is the key dynamic result: under the axioms, `S1Rel(Γ) ≠ ∅` for all admissible Γ.
