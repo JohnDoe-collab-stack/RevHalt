@@ -683,10 +683,89 @@ theorem strict_chainState_step
     strict_step_state Provable K Machine encode_halt Cn hCnExt hIdem hProvCn
       (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n) hPS hW
 
-
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- D) GLOBAL DYNAMICS
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- If each stage admits a witness, then the frontier is nonempty at all stages. -/
+/-!
+## Global strict growth along the orbit
+
+This block isolates the *two genuinely load-bearing open obligations*:
+
+1) **PostSplitter is preserved by one step**:
+   PostSplitter(Γ) → PostSplitter(FState(Γ)).
+
+2) **FrontierWitness is produced automatically at each stage** (from whatever
+   "frontier_necessary"/incompleteness hypothesis you use in Complementarity).
+
+Once these two are available, strict growth follows for *all* steps of chainState.
+-/
+
+/-- Hypothesis: one-step preservation of PostSplitter along FState. -/
+def FState_preserves_PostSplitter
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn) : Prop :=
+  ∀ (A : ThState (PropT := PropT) Provable Cn),
+    PostSplitter Provable A.Γ →
+    PostSplitter Provable (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ
+
+/-- Hypothesis: automatic production of a frontier witness at each stage. -/
+def FrontierWitness_along_chainState : Prop :=
+  ∀ (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn),
+    PostSplitter Provable A0.Γ →
+    ∀ n, FrontierWitness Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
+
+/-- PostSplitter propagates along the chain if it is preserved by FState. -/
+theorem PostSplitter_chainState
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hPSstep : FState_preserves_PostSplitter Provable K Machine encode_halt Cn hIdem hProvCn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hPS0 : PostSplitter Provable A0.Γ) :
+    ∀ n, PostSplitter Provable (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ := by
+  intro n
+  induction n with
+  | zero =>
+      simpa [chainState] using hPS0
+  | succ n ih =>
+      have : PostSplitter Provable
+          (FState Provable K Machine encode_halt Cn hIdem hProvCn
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n)).Γ :=
+        hPSstep _ ih
+      simpa [chainState_succ] using this
+
+/--
+**Infinite strict growth**: if
+- PostSplitter is preserved by FState, and
+- FrontierWitness exists at every stage,
+
+then every step is a strict extension: Γ_n ⊂ Γ_{n+1}.
+-/
+theorem infinite_strict_growth
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hPSstep : FState_preserves_PostSplitter Provable K Machine encode_halt Cn hIdem hProvCn)
+    (hWchain : FrontierWitness_along_chainState Provable K Machine encode_halt Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hPS0 : PostSplitter Provable A0.Γ) :
+    ∀ n,
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
+        ⊂
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n+1)).Γ := by
+  intro n
+  have hPSn : PostSplitter Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ :=
+    PostSplitter_chainState Provable K Machine encode_halt Cn hIdem hProvCn hPSstep A0 hPS0 n
+  have hWn : FrontierWitness Provable K Machine encode_halt
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ :=
+    hWchain hIdem hProvCn A0 hPS0 n
+  exact strict_chainState_step Provable K Machine encode_halt Cn hCnExt hIdem hProvCn A0 n hPSn hWn
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- C) LIFT TO chainState (dynamic consequences along the orbit)
 theorem frontier_nonempty_chainState_of_witnesses
     (hIdem : CnIdem Cn)
     (hProvCn : ProvClosedCn Provable Cn)
@@ -734,6 +813,70 @@ theorem chainState_le_omegaΓ
     omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 := by
   intro p hp
   exact ⟨n, hp⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- E) BRIDGE TO COMPLEMENTARITY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Connecting to frontier_necessary from Complementarity
+
+The abstract hypotheses `FState_preserves_PostSplitter` and `FrontierWitness_along_chainState`
+can be instantiated using theorems from `Complementarity.lean`, specifically:
+
+1. **frontier_necessary** proves `(S1Eff S encode_halt).Nonempty` under negative completeness
+   and semi-decidability assumptions.
+
+2. `S1Eff.Nonempty` implies `FrontierWitness` because both capture the same concept:
+   ∃ e, Rev0_K K (Machine e) ∧ ¬ Provable Γ (encode_halt e).
+
+The following theorem makes this connection explicit.
+-/
+
+/--
+  **S1Rel.Nonempty implies FrontierWitness** (definitional equivalence).
+  This shows that `S1Rel Γ ≠ ∅` is the same as having a `FrontierWitness` for Γ.
+-/
+theorem FrontierWitness_of_S1Rel_nonempty
+    {Γ : Set PropT}
+    (h : (S1Rel Provable K Machine encode_halt Γ).Nonempty) :
+    FrontierWitness Provable K Machine encode_halt Γ := by
+  rcases h with ⟨p, hp⟩
+  rcases hp with ⟨e, hpEq, hKit, hNprov⟩
+  exact ⟨e, hKit, hNprov⟩
+
+/--
+  **FrontierWitness implies S1Rel.Nonempty** (converse direction).
+-/
+theorem S1Rel_nonempty_of_FrontierWitness
+    {Γ : Set PropT}
+    (h : FrontierWitness Provable K Machine encode_halt Γ) :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
+  rcases h with ⟨e, hKit, hNprov⟩
+  exact ⟨encode_halt e, e, rfl, hKit, hNprov⟩
+
+/--
+  **S1Rel.Nonempty ↔ FrontierWitness** (definitional equivalence).
+-/
+theorem S1Rel_nonempty_iff_FrontierWitness
+    {Γ : Set PropT} :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty ↔
+    FrontierWitness Provable K Machine encode_halt Γ :=
+  ⟨FrontierWitness_of_S1Rel_nonempty Provable K Machine encode_halt,
+   S1Rel_nonempty_of_FrontierWitness Provable K Machine encode_halt⟩
+
+/-!
+### How to instantiate the global dynamics
+
+To apply `infinite_strict_growth` to a concrete `ComplementaritySystem S`, you would:
+
+1. Set `Provable := S.Provable`, `K := S.K`, `Machine := S.Machine ∘ S.dec`, `encode_halt := your_encoding`
+2. Prove `FState_preserves_PostSplitter` for your specific `Cn` (usually `Cn = id` or a sound closure)
+3. Use `frontier_necessary` to derive `S1Rel.Nonempty` for each stage, then convert to `FrontierWitness`
+   via `FrontierWitness_of_S1Rel_nonempty`
+
+This completes the bridge between the abstract dynamics and the concrete impossibility theorems.
+-/
 
 end Functor
 
