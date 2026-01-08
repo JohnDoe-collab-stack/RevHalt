@@ -628,7 +628,62 @@ theorem strict_F_of_absorbable
     exact not_fixpoint_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW hEq
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- C) LIFT TO chainState (dynamic consequences along the orbit)
+-- B') LIFT TO ThState (clean minimal version)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- PostSplitter implies Absorbable (trivial direction). -/
+lemma PostSplitter.imp_Absorbable
+    {Γ : Set PropT}
+    (hPS : PostSplitter Provable Γ) :
+    Absorbable Provable Γ := by
+  intro p hp
+  exact (hPS p).mp hp
+
+/-- Strict step at ThState level. -/
+theorem strict_step_state
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn)
+    (hPS : PostSplitter Provable A.Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt A.Γ) :
+    A.Γ ⊂ (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ := by
+  have hAbs : Absorbable Provable A.Γ := PostSplitter.imp_Absorbable Provable hPS
+  simpa [FState] using strict_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW
+
+/-- No fixed point at ThState level. -/
+theorem no_fixpoint_state
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn)
+    (hPS : PostSplitter Provable A.Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt A.Γ) :
+    (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ ≠ A.Γ := by
+  intro hEq
+  have hAbs : Absorbable Provable A.Γ := PostSplitter.imp_Absorbable Provable hPS
+  exact not_fixpoint_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW
+    (by simpa [FState] using hEq)
+
+/-- Strict growth along chainState. -/
+theorem strict_chainState_step
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ)
+    (hPS : PostSplitter Provable
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ) :
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
+      ⊂
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n+1)).Γ := by
+  simpa [chainState_succ] using
+    strict_step_state Provable K Machine encode_halt Cn hCnExt hIdem hProvCn
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n) hPS hW
+
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 /-- If each stage admits a witness, then the frontier is nonempty at all stages. -/
