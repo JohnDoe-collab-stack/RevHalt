@@ -853,7 +853,8 @@ theorem S1Rel_nonempty_of_FrontierWitness
     (h : FrontierWitness Provable K Machine encode_halt Γ) :
     (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
   rcases h with ⟨e, hKit, hNprov⟩
-  exact ⟨encode_halt e, e, rfl, hKit, hNprov⟩
+  refine ⟨encode_halt e, ?_⟩
+  exact ⟨e, rfl, hKit, hNprov⟩
 
 /--
   **S1Rel.Nonempty ↔ FrontierWitness** (definitional equivalence).
