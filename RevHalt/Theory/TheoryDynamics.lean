@@ -587,19 +587,19 @@ theorem not_fixpoint_F_of_absorbable
     (hW : FrontierWitness Provable K Machine encode_halt Γ)
     (hFix : F Provable K Machine encode_halt Cn Γ = Γ) :
     False := by
-  -- From hFix and CnExtensive: Γ ∪ S1Rel Γ ⊆ Γ, hence S1Rel Γ ⊆ Γ
   have hS1Sub : S1Rel Provable K Machine encode_halt Γ ⊆ Γ := by
-    intro p hp
-    have hUnion : p ∈ Γ ∪ S1Rel Provable K Machine encode_halt Γ := Or.inr hp
-    have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := hCnExt _ hUnion
-    rw [← hFix]
-    exact hCn
-  -- Take the witness e: encode_halt e ∈ S1Rel Γ, hence in Γ, hence provable by absorbable, contradiction.
+    intro p hpS1
+    have hUnion : p ∈ (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := Or.inr hpS1
+    have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) :=
+      (hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) hUnion
+    have hF : p ∈ F Provable K Machine encode_halt Cn Γ := by
+      simpa [F] using hCn
+    simpa [hFix] using hF
   rcases hW with ⟨e, hKit, hNprov⟩
   have hMemS1 : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
     mem_S1Rel_of_witness Provable K Machine encode_halt Γ e hKit hNprov
   have hMemΓ : encode_halt e ∈ Γ := hS1Sub hMemS1
-  have hProv : Provable Γ (encode_halt e) := hAbs (encode_halt e) hMemΓ
+  have hProv : Provable Γ (encode_halt e) := hAbs _ hMemΓ
   exact hNprov hProv
 
 /-- Under absorbability + witness, the dynamic step strictly extends Γ. -/
@@ -609,23 +609,22 @@ theorem strict_F_of_absorbable
     (hAbs : Absorbable Provable Γ)
     (hW : FrontierWitness Provable K Machine encode_halt Γ) :
     Γ ⊂ F Provable K Machine encode_halt Cn Γ := by
-  refine ⟨?subset, ?not_subset⟩
-  case subset =>
-    -- Γ ⊆ F Γ
-    intro p hp
-    have hUnion : p ∈ Γ ∪ S1Rel Provable K Machine encode_halt Γ := Or.inl hp
-    exact hCnExt _ hUnion
-  case not_subset =>
-    -- ¬ (F Γ ⊆ Γ)
-    intro hContra
-    -- From Γ ⊆ F Γ and hContra, we get equality, contradiction with not_fixpoint
+  refine ⟨?_, ?_⟩
+  · intro p hp
+    have hUnion : p ∈ (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := Or.inl hp
+    have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) :=
+      (hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) hUnion
+    simpa [F] using hCn
+  · intro hContra
     have hEq : F Provable K Machine encode_halt Cn Γ = Γ := by
       ext p
       constructor
       · exact fun hpF => hContra hpF
       · intro hpΓ
-        have hUnion : p ∈ Γ ∪ S1Rel Provable K Machine encode_halt Γ := Or.inl hpΓ
-        exact hCnExt _ hUnion
+        have hUnion : p ∈ (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := Or.inl hpΓ
+        have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) :=
+          (hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) hUnion
+        simpa [F] using hCn
     exact not_fixpoint_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW hEq
 
 -- ═══════════════════════════════════════════════════════════════════════════════
