@@ -4,6 +4,7 @@ import Mathlib.CategoryTheory.Thin
 import RevHalt.Theory.Complementarity
 import RevHalt.Theory.Stabilization
 import RevHalt.Theory.Categorical
+import RevHalt.Theory.Impossibility
 
 /-!
 # RevHalt.Theory.TheoryDynamics
@@ -921,7 +922,7 @@ theorem absorption_sigma1
   have hMem : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
     ⟨e, rfl, hRev, hNprov⟩
   rw [hEmpty] at hMem
-  exact Set.notMem_empty _ hMem
+  simp at hMem
 
 /-- Absorption + Soundness: If S1Rel(Γ) = ∅ and Soundness(Γ), then Rev0 ⟹ S.Provable. -/
 theorem absorption_soundness
@@ -1038,6 +1039,129 @@ theorem frontier_nonempty_of_route_II
     hEmpty hSound hNegComp hBarrier
 
 end Functor
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- G) FULL T2 CONNECTION (Route II → T2_impossibility)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Complete T2 Integration
+
+This section completes Route II by connecting to `T2_impossibility`.
+
+NOTE: This section uses concrete types from `Impossibility.lean`:
+- `RevHalt.Code = Nat.Partrec.Code`
+- `RevHalt.Machine : RevHalt.Code → Trace`
+- `ImpossibleSystem PropT` for `PropT : Type`
+
+Given:
+- `S1Rel(Γ) = ∅` (frontier empty)
+- `Soundness`: `Provable Γ p → S.Provable p`
+- `NegativeComplete`: `¬Rev0(e) → S.Provable (S.Not (encode_halt e))`
+- Semi-decidability witness `(f, hf, h_semidec)`
+
+We construct an `InternalHaltingPredicate S K` and derive a contradiction via T2.
+-/
+
+section T2_Connection
+
+variable {PropT : Type}
+variable (Provable : Set PropT → PropT → Prop)
+variable (K : RHKit)
+variable (encode_halt : RevHalt.Code → PropT)
+
+open Nat.Partrec in
+/--
+  **Constructor for InternalHaltingPredicate** from Route II components.
+  Given (total, correct, complete) from `frontier_empty_T2_components`
+  plus the semi-decidability witness `(f, hf, hsemidec)`,
+  this constructs the `InternalHaltingPredicate` needed for T2.
+-/
+def mk_InternalHaltingPredicate_RouteII
+    (S : ImpossibleSystem PropT)
+    (hTotal    : ∀ e, S.Provable (encode_halt e) ∨ S.Provable (S.Not (encode_halt e)))
+    (hCorrect  : ∀ e, Rev0_K K (RevHalt.Machine e) → S.Provable (encode_halt e))
+    (hComplete : ∀ e, ¬ Rev0_K K (RevHalt.Machine e) → S.Provable (S.Not (encode_halt e)))
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    InternalHaltingPredicate S K where
+  H := encode_halt
+  total := hTotal
+  correct := hCorrect
+  complete := hComplete
+  f := f
+  f_partrec := hf
+  semidec := hsemidec
+
+open Nat.Partrec in
+/--
+  **Route II → T2 Contradiction (Full Theorem)**.
+
+  If:
+  - `S1Rel(Γ) = ∅`
+  - `Soundness Γ` (relative provability implies S.Provable)
+  - `NegativeComplete` (¬Rev0 ⟹ S proves negation)
+  - Semi-decidability witness `(f, hf, hsemidec)`
+  - `DetectsMonotone K`
+
+  Then: **False** (via T2_impossibility).
+
+  This is the complete formalization of Route II.
+-/
+theorem frontier_empty_T2_full
+    (S : ImpossibleSystem PropT)
+    (hK : DetectsMonotone K)
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K RevHalt.Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable S.Provable Γ)
+    (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    -- Semi-decidability witness (from OracleMachine/ComplementaritySystem)
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    False := by
+  -- 1) Extract the T2 components from frontier empty
+  have hTriple :=
+    frontier_empty_T2_components Provable K RevHalt.Machine encode_halt S.Provable S.Not
+      hEmpty hSound hNegComp
+  obtain ⟨hTotal, hCorrect, hComplete⟩ := hTriple
+
+  -- 2) Package into InternalHaltingPredicate
+  let IH : InternalHaltingPredicate S K :=
+    { H := encode_halt
+      total := hTotal
+      correct := hCorrect
+      complete := hComplete
+      f := f
+      f_partrec := hf
+      semidec := hsemidec }
+
+  -- 3) Apply T2_impossibility
+  exact T2_impossibility S K hK ⟨IH, trivial⟩
+
+open Nat.Partrec in
+/--
+  **Corollary: Frontier Never Empty (Route II + T2)**.
+
+  Under the T2 hypotheses, the frontier is always non-empty.
+  This provides `FrontierWitness` for all admissible states.
+-/
+theorem frontier_nonempty_T2
+    (S : ImpossibleSystem PropT)
+    (hK : DetectsMonotone K)
+    {Γ : Set PropT}
+    (hSound : Soundness Provable S.Provable Γ)
+    (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    (S1Rel Provable K RevHalt.Machine encode_halt Γ).Nonempty := by
+  by_contra hEmpty
+  rw [Set.not_nonempty_iff_eq_empty] at hEmpty
+  exact frontier_empty_T2_full Provable K encode_halt S hK hEmpty hSound hNegComp f hf hsemidec
+
+end T2_Connection
 
 end RevHalt
 
