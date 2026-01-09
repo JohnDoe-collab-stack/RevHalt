@@ -816,6 +816,221 @@ theorem chainState_le_omegaΓ
   exact ⟨n, hp⟩
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- D') OMEGA LIMIT ANALYSIS: The ω-Collapse Phenomenon
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The ω-Collapse Theorem
+
+This section formalizes a key ordinal phenomenon:
+
+**If stage 1 is absorbable, then S1Rel(omegaΓ) = ∅**.
+
+This is the "ω-collapse" effect:
+- At finite stages, S1Rel can remain nonempty (frontiers are generated and added).
+- But at the limit ω, if absorption holds, *everything that was ever a frontier*
+  has been pushed into a successor stage and became provable.
+- Hence nothing can remain "kit-certified but unprovable" at ω.
+
+Combined with Route II/T2 (which says S1 must be nonempty for admissible Γ),
+this forces a **trilemma**:
+1. Absorbable/PostSplitter does NOT propagate along the chain, OR
+2. ωΓ is NOT an admissible state (exits ThState or Route II hypotheses), OR
+3. The colimit/union is NOT the right limit object (F is not ω-continuous).
+-/
+
+/--
+  **ω-Collapse Theorem**: If stage 1 along the chain is absorbable, then the
+  dynamic frontier at the ω-limit is forced empty.
+
+  This is a fundamental ordinal phenomenon: what "remains unprovable at ω"
+  has already been absorbed at a finite stage (hence provable at ω by monotonicity).
+
+  NOTE: This requires only `Absorbable` at stage 1, not at all stages.
+-/
+theorem S1Rel_omegaΓ_eq_empty_of_absorbable_succ
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hAbs1 :
+      Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ) :
+    S1Rel Provable K Machine encode_halt
+      (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) = ∅ := by
+  apply Set.eq_empty_iff_forall_not_mem.mpr
+  intro p hp
+  rcases hp with ⟨e, rfl, hKit, hNprovω⟩
+
+  -- inclusions into ω
+  have hIncl0 :
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ ⊆
+      omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 :=
+    chainState_le_omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 0
+
+  have hIncl1 :
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ ⊆
+      omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 :=
+    chainState_le_omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 1
+
+  -- ¬Provable ω ⟹ ¬Provable Γ₀ (contrapositive of monotonicity)
+  have hNprov0 :
+      ¬ Provable
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ
+          (encode_halt e) := by
+    intro hP0
+    have hPω := hMono _ _ hIncl0 _ hP0
+    exact hNprovω hPω
+
+  -- So encode_halt e ∈ S1Rel(Γ₀)
+  have hpS1_0 :
+      encode_halt e ∈
+        S1Rel Provable K Machine encode_halt
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ :=
+    ⟨e, rfl, hKit, hNprov0⟩
+
+  -- p ∈ Γ₁ via CnExtensive on the union Γ₀ ∪ S1Rel(Γ₀)
+  have hpIn1 :
+      encode_halt e ∈
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ := by
+    have hUnion : encode_halt e ∈
+        ((chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ ∪
+          S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ) :=
+      Or.inr hpS1_0
+    have hCnMem : encode_halt e ∈
+        Cn ((chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ ∪
+          S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ) :=
+      (hCnExt _) hUnion
+    -- chainState 1 = FState (chainState 0), and (FState A).Γ = Cn(A.Γ ∪ S1Rel A.Γ)
+    simpa [chainState, FState, F] using hCnMem
+
+  -- Absorbable at stage 1: membership ⟹ provability
+  have hP1 :
+      Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+        (encode_halt e) :=
+    hAbs1 _ hpIn1
+
+  -- Monotonicity: Provable Γ₁ ⟹ Provable ωΓ
+  have hPω := hMono _ _ hIncl1 _ hP1
+
+  -- Contradiction with ¬Provable ωΓ
+  exact hNprovω hPω
+
+/--
+  **Trilemma at ω**: If the ω-limit is admissible AND Route II applies,
+  then Absorbable cannot hold at stage 1.
+
+  This formalizes the structural constraint:
+  - Route II says S1 must be nonempty for admissible Γ.
+  - The ω-collapse says Absorbable at stage 1 forces S1(ωΓ) = ∅.
+  - Therefore, under Route II, Absorbable cannot hold at stage 1.
+-/
+theorem omega_trilemma
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    -- Route II hypothesis: S1 is nonempty at ω (the limit is admissible)
+    (hRouteII : (S1Rel Provable K Machine encode_halt
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)).Nonempty) :
+    ¬ Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ := by
+  intro hAbs1
+  have hEmpty :=
+    S1Rel_omegaΓ_eq_empty_of_absorbable_succ Provable K Machine encode_halt Cn
+      hMono hCnExt hIdem hProvCn A0 hAbs1
+  rw [hEmpty] at hRouteII
+  exact Set.not_nonempty_empty hRouteII
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- D'') TRILEMMA IN DISJUNCTION FORM
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The ω-Trilemma: Explicit Disjunction
+
+We now define intrinsic notions of admissibility and Route II at ω,
+then express the trilemma as an explicit disjunction:
+
+    ¬Absorbable(Γ₁) ∨ ¬OmegaAdmissible(ωΓ) ∨ ¬RouteIIAt(ωΓ)
+
+This says: you cannot have all three simultaneously.
+At least one must fail for the dynamics to be consistent.
+-/
+
+/-- Option 2: ω-admissibility = Cn-closed + ProvClosed.
+    This is the intrinsic notion matching `ThState` requirements. -/
+def OmegaAdmissible (ωΓ : Set PropT) : Prop :=
+  Cn ωΓ = ωΓ ∧ ProvClosed Provable ωΓ
+
+/-- Minimal "Route II at ω" predicate: frontier nonempty.
+    This is the condition that Route II/T2 would enforce for admissible states. -/
+def RouteIIAt (ωΓ : Set PropT) : Prop :=
+  (S1Rel Provable K Machine encode_halt ωΓ).Nonempty
+
+/--
+  **Trilemma in Disjunction Form**: At least one of the three conditions must fail.
+
+  - Absorbable at stage 1
+  - OmegaAdmissible at ω
+  - RouteIIAt at ω (frontier nonempty)
+
+  This is the explicit form of "you cannot have all three".
+-/
+theorem omega_trilemma_disjunction
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+    ∨ ¬ OmegaAdmissible Provable Cn
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+    ∨ ¬ RouteIIAt Provable K Machine encode_halt
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := by
+  classical
+  by_cases hR :
+      RouteIIAt Provable K Machine encode_halt
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+  · -- If Route II holds at ω, absorption at stage 1 is impossible.
+    left
+    exact omega_trilemma Provable K Machine encode_halt Cn
+      hMono hCnExt hIdem hProvCn A0 hR
+  · -- Otherwise Route II fails at ω.
+    right; right; exact hR
+
+/--
+  **Trilemma (Conjunction Form)**: It is impossible to have all three conditions.
+
+  This is often more exploitable: given any two, you can derive the negation of the third.
+-/
+theorem omega_trilemma_not_all
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ (Absorbable Provable
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+       ∧ OmegaAdmissible Provable Cn
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+       ∧ RouteIIAt Provable K Machine encode_halt
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) := by
+  intro h
+  have hR : RouteIIAt Provable K Machine encode_halt
+      (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := h.2.2
+  have hNAbs :=
+    omega_trilemma Provable K Machine encode_halt Cn
+      hMono hCnExt hIdem hProvCn A0 hR
+  exact hNAbs h.1
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- E) BRIDGE TO COMPLEMENTARITY
 -- ═══════════════════════════════════════════════════════════════════════════════
 
