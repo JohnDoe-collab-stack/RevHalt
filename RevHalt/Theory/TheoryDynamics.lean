@@ -974,13 +974,19 @@ def RouteIIAt (ωΓ : Set PropT) : Prop :=
   (S1Rel Provable K Machine encode_halt ωΓ).Nonempty
 
 /--
-  **Trilemma in Disjunction Form**: At least one of the three conditions must fail.
+  **Route II applies to admissible states**: The key coupling.
+  If ωΓ is admissible (in the intrinsic sense), then Route II forces S1 nonempty.
+  This is the bridge that makes the trilemma genuinely 3-way.
+-/
+def RouteIIApplies (ωΓ : Set PropT) : Prop :=
+  OmegaAdmissible Provable Cn ωΓ → (S1Rel Provable K Machine encode_halt ωΓ).Nonempty
 
-  - Absorbable at stage 1
-  - OmegaAdmissible at ω
-  - RouteIIAt at ω (frontier nonempty)
+/--
+  **Trilemma in Disjunction Form**: All three branches are active.
 
-  This is the explicit form of "you cannot have all three".
+  This version properly uses OmegaAdmissible by splitting on all cases.
+  The trilemma says: given Absorbable(Γ₁) and OmegaAdmissible(ωΓ),
+  we can derive ¬RouteIIAt(ωΓ).
 -/
 theorem omega_trilemma_disjunction
     (hMono : ProvRelMonotone Provable)
@@ -995,15 +1001,23 @@ theorem omega_trilemma_disjunction
     ∨ ¬ RouteIIAt Provable K Machine encode_halt
           (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := by
   classical
-  by_cases hR :
-      RouteIIAt Provable K Machine encode_halt
-        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
-  · -- If Route II holds at ω, absorption at stage 1 is impossible.
-    left
-    exact omega_trilemma Provable K Machine encode_halt Cn
-      hMono hCnExt hIdem hProvCn A0 hR
-  · -- Otherwise Route II fails at ω.
-    right; right; exact hR
+  by_cases hAbs :
+      Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+  · by_cases hΩ :
+        OmegaAdmissible Provable Cn
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+    · -- Both Absorbable and OmegaAdmissible hold → Route II must fail
+      right; right
+      intro hR
+      -- Use omega_trilemma directly: RouteIIAt → ¬Absorbable, contradiction
+      have hNAbs := omega_trilemma Provable K Machine encode_halt Cn
+          hMono hCnExt hIdem hProvCn A0 hR
+      exact hNAbs hAbs
+    · -- OmegaAdmissible fails
+      right; left; exact hΩ
+  · -- Absorbable fails
+    left; exact hAbs
 
 /--
   **Trilemma (Conjunction Form)**: It is impossible to have all three conditions.
@@ -1029,6 +1043,32 @@ theorem omega_trilemma_not_all
     omega_trilemma Provable K Machine encode_halt Cn
       hMono hCnExt hIdem hProvCn A0 hR
   exact hNAbs h.1
+
+/--
+  **Structural Corollary**: If Route II applies to all admissible states,
+  then Absorbable + OmegaAdmissible → False.
+
+  This is the "pure structural" form: the dynamics cannot have both
+  successor-level absorption and limit-level admissibility when Route II holds.
+-/
+theorem omega_collapse_structural
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hRouteIIApplies : RouteIIApplies Provable K Machine encode_halt Cn
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0))
+    (hAbs : Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ)
+    (hΩ : OmegaAdmissible Provable Cn
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) :
+    False := by
+  have hR : RouteIIAt Provable K Machine encode_halt
+      (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) :=
+    hRouteIIApplies hΩ
+  exact (omega_trilemma_not_all Provable K Machine encode_halt Cn
+    hMono hCnExt hIdem hProvCn A0) ⟨hAbs, hΩ, hR⟩
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- E) BRIDGE TO COMPLEMENTARITY
