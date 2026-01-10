@@ -1564,6 +1564,8 @@ At α*, the **transfinite trilemma** states:
 This generalizes the ω-trilemma to arbitrary ordinals.
 -/
 
+
+-- BORDEL
 /-- The ordinal of closure: first stabilization point of the transfinite chain. -/
 noncomputable def closureOrdinal
     (chain : Ordinal → Set PropT) : Ordinal :=
