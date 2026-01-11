@@ -1,3 +1,36 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+
+\newtheorem{theoreme}{Théorème}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemme}{Lemme}
+\newtheorem{definition}{Définition}
+
+% Macros specific to RevHalt
+\newcommand{\Prop}{\mathsf{Prop}}
+\newcommand{\PropT}{\mathsf{PropT}}
+\newcommand{\Provable}{\vdash} 
+\newcommand{\Code}{\mathsf{Code}}
+\newcommand{\Trace}{\mathsf{Trace}}
+\newcommand{\Machine}{\mathsf{Machine}}
+\newcommand{\Rev}{\mathsf{Rev}}
+\newcommand{\encodehalt}{\mathsf{encode\_halt}}
+\newcommand{\ProvClosed}{\mathsf{ProvClosed}}
+\newcommand{\Absorbable}{\mathsf{Absorbable}}
+\newcommand{\ThState}{\mathsf{ThState}}
+\newcommand{\Step}{\mathsf{Step}}
+\newcommand{\TheoryStepFunctor}{\mathsf{TheoryStepFunctor}}
+\newcommand{\MissingFrom}{\mathsf{MissingFrom}}
+\newcommand{\FrontierWitness}{\mathsf{FrontierWitness}}
+\newcommand{\OmegaAdmissible}{\Omega\mathsf{Admissible}}
+\newcommand{\RouteIIAt}{\mathsf{RouteIIAt}}
+
+\begin{document}
+
 \section{Endofoncteur dynamique : version compacte}
 
 \subsection{Cadre}
@@ -196,3 +229,5 @@ Le pas
 couple une clôture statique $Cn$ à une frontière dynamique $S_1$ définie via $\neg\Provable(\Gamma,\cdot)$.
 La restriction aux états admissibles (où la prouvabilité s’absorbe en appartenance) rend ce pas \emph{fonctoriel}.
 Cette fonctorialité rend ensuite accessibles des phénomènes intrinsèquement dynamiques (croissance stricte, collapse à $\omega$, trilemme) qui n’apparaissent pas dans une lecture purement statique des théories.
+
+\end{document}

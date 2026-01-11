@@ -1,3 +1,36 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+
+\newtheorem{theoreme}{Théorème}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemme}{Lemme}
+\newtheorem{definition}{Définition}
+
+% Macros specific to RevHalt
+\newcommand{\Prop}{\mathsf{Prop}}
+\newcommand{\PropT}{\mathsf{PropT}}
+\newcommand{\Provable}{\vdash} 
+\newcommand{\Code}{\mathsf{Code}}
+\newcommand{\Trace}{\mathsf{Trace}}
+\newcommand{\Machine}{\mathsf{Machine}}
+\newcommand{\Rev}{\mathsf{Rev}}
+\newcommand{\encodehalt}{\mathsf{encode\_halt}}
+\newcommand{\ProvClosed}{\mathsf{ProvClosed}}
+\newcommand{\Absorbable}{\mathsf{Absorbable}}
+\newcommand{\ThState}{\mathsf{ThState}}
+\newcommand{\Step}{\mathsf{Step}}
+\newcommand{\TheoryStepFunctor}{\mathsf{TheoryStepFunctor}}
+\newcommand{\MissingFrom}{\mathsf{MissingFrom}}
+\newcommand{\FrontierWitness}{\mathsf{FrontierWitness}}
+\newcommand{\OmegaAdmissible}{\Omega\mathsf{Admissible}}
+\newcommand{\RouteIIAt}{\mathsf{RouteIIAt}}
+
+\begin{document}
+
 \section{Endofoncteur dynamique sur les états admissibles}
 
 \subsection{Données et notations}
@@ -223,3 +256,5 @@ La nouveauté n’est pas la clôture $Cn$ (statique), mais le couplage dynamiqu
 \]
 où $S_1$ dépend de $\neg\Provable(\Gamma,\cdot)$.
 La restriction aux états admissibles rend ce pas \emph{fonctoriel}, et permet ensuite d’obtenir des phénomènes intrinsèquement dynamiques (croissance stricte, collapse à $\omega$, trilemmes structuraux) invisibles dans une présentation purement statique.
+
+\end{document}
