@@ -599,6 +599,111 @@ theorem drift_not_OmegaAdmissible_ωΓ_of_progressive_asks (Γ0 : Set Pos)
 def WinFrontierAt (Γ : Set Pos) (n : ℕ) : Prop :=
   ∃ L g m : ℕ, Pos.ProvideWin L n g m ∈ S1 Γ
 
+/--
+  Fundamental lemma: in a Cn-closed set,
+  not provable is exactly not member.
+
+  This is valid because Cn Γ = { p | Provable Γ p }.
+-/
+@[simp] lemma mem_Cn_iff (Γ : Set Pos) (p : Pos) : p ∈ Cn Γ ↔ Provable Γ p := Iff.rfl
+
+lemma notProvable_iff_not_mem_of_cn_closed
+    (Γ : Set Pos) (hClosed : Cn Γ = Γ) (p : Pos) :
+    (¬ Provable Γ p) ↔ p ∉ Γ := by
+  constructor
+  · intro hNprov hpMem
+    -- hpMem : p ∈ Γ
+    -- hClosed : Cn Γ = Γ.
+    -- We want Provable Γ p, which means p ∈ Cn Γ.
+    have hpCn : p ∈ Cn Γ := by
+      rw [hClosed]
+      exact hpMem
+    -- p ∈ Cn Γ means Provable Γ p
+    have hpProv : Provable Γ p := (mem_Cn_iff _ _).1 hpCn
+    exact hNprov hpProv
+  · intro hNotMem hpProv
+    -- hpProv : Provable Γ p means p ∈ Cn Γ
+    have hpCn : p ∈ Cn Γ := (mem_Cn_iff _ _).2 hpProv
+    -- We want p ∈ Γ. Since Cn Γ = Γ, we rewrite Γ to Cn Γ.
+    have hpMem : p ∈ Γ := by
+      rw [← hClosed]
+      exact hpCn
+    exact hNotMem hpMem
+
+/--
+  Arithmetic Win with Freshness:
+  There is a valid arithmetic window with sufficient gain,
+  and the corresponding ProvideWin statement is NOT yet in Γ.
+
+  Note: This is "Arithmetic + Structural Freshness".
+  The freshness condition (∉ Γ) depends on the dynamic stage Γ.
+-/
+def ArithWinFreshAt (Γ : Set Pos) (n : ℕ) : Prop :=
+  ∃ L g m : ℕ,
+    Window L n g m ∧ g ≥ 2 * L + 1 ∧
+    Pos.ProvideWin L n g m ∉ Γ
+
+/--
+  Bridging Lemma:
+  WinFrontierAt (structural) <-> ArithWinFreshAt (arithmetic)
+  given closure.
+-/
+lemma winFrontierAt_iff_arithWinFreshAt
+    (Γ : Set Pos) (hClosed : Cn Γ = Γ) (n : ℕ) :
+    WinFrontierAt Γ n ↔ ArithWinFreshAt Γ n := by
+  -- WinFrontierAt Γ n := ∃ L g m, ProvideWin L n g m ∈ S1 Γ
+  -- S1 Γ = {p | isGood p ∧ ¬Provable Γ p}
+  -- isGood(ProvideWin ...) ↔ Window ... ∧ g ≥ 2L+1
+  -- ¬Provable ↔ not_mem via hClosed
+  constructor
+  · rintro ⟨L, g, m, hS1⟩
+    have : isGood (Pos.ProvideWin L n g m) ∧ ¬ Provable Γ (Pos.ProvideWin L n g m) := by
+      -- unfold S1 via lemma
+      simpa [S1_eq_good_notProvable] using hS1
+    rcases this with ⟨hGood, hNprov⟩
+    -- hGood simplifies to Window ∧ threshold
+    -- hNprov converts to "∉ Γ" via closure
+    have hNotMem : Pos.ProvideWin L n g m ∉ Γ :=
+      (notProvable_iff_not_mem_of_cn_closed Γ hClosed _).1 hNprov
+    -- extract Window + threshold from isGood
+    have hWin : Window L n g m ∧ g ≥ 2 * L + 1 := by
+      simpa [isGood] using hGood
+    exact ⟨L, g, m, hWin.1, hWin.2, hNotMem⟩
+  · rintro ⟨L, g, m, hW, hThresh, hNotMem⟩
+    -- construct proof of ∈ S1 Γ
+    have hGood : isGood (Pos.ProvideWin L n g m) := by
+      simpa [isGood] using And.intro hW hThresh
+    have hNprov : ¬ Provable Γ (Pos.ProvideWin L n g m) :=
+      (notProvable_iff_not_mem_of_cn_closed Γ hClosed _).2 hNotMem
+    -- lift to S1
+    refine ⟨L, g, m, ?_⟩
+    simpa [S1_eq_good_notProvable] using And.intro hGood hNprov
+
+/--
+  Direct API: Produce an S1 element from Arithmetic Freshness.
+  Useful for injecting witnesses directly without unfolding existentials.
+-/
+lemma provideWin_mem_S1_of_arithWinFreshAt
+    (Γ : Set Pos) (hClosed : Cn Γ = Γ)
+    (L n g m : ℕ)
+    (hWin : Window L n g m)
+    (hThresh : g ≥ 2 * L + 1)
+    (hFresh : Pos.ProvideWin L n g m ∉ Γ) :
+    Pos.ProvideWin L n g m ∈ S1 Γ := by
+  have : ArithWinFreshAt Γ n := ⟨L, g, m, hWin, hThresh, hFresh⟩
+  rw [← winFrontierAt_iff_arithWinFreshAt Γ hClosed n] at this
+  rcases this with ⟨L', g', m', hS1⟩
+  -- Note: WinFrontierAt implies there exists *some* witness.
+  -- Here we want to prove *this specific* witness is in S1.
+  -- We can prove it directly:
+  have hGood : isGood (Pos.ProvideWin L n g m) := by
+    simpa [isGood] using And.intro hWin hThresh
+  have hNprov : ¬ Provable Γ (Pos.ProvideWin L n g m) :=
+    (notProvable_iff_not_mem_of_cn_closed Γ hClosed _).2 hFresh
+  simpa [S1_eq_good_notProvable] using And.intro hGood hNprov
+
+
+
 /-- (A) Si un `ProvideWin L n g m` est axiome, alors `Ask n` est dans `Cn`. -/
 lemma ask_mem_Cn_of_provideWin_mem (Γ : Set Pos) (L n g m : ℕ)
     (h : Pos.ProvideWin L n g m ∈ Γ) :
@@ -727,18 +832,40 @@ lemma standardSchedule_fair : FairSchedule StandardSchedule := by
   rfl
 
 /--
-  **Canonical Drift Theorem**:
-  If the system provides a win for `n` at step `n` (Diagonal Wins),
-  then it drifts into Option B.
+  **Diagonal Arithmetic Wins**:
+  For every step `n`, there exists a valid, fresh arithmetic window targeting `n`.
+-/
+def DiagonalArithWins (Γ0 : Set Pos) : Prop :=
+  ∀ n : ℕ, ArithWinFreshAt ((A Γ0 n).Γ) n
 
-  This removes the existential quantifier on `schedule` in favor of a concrete instance.
+/-- DiagonalArithWins implies StepwiseWins (on StandardSchedule). -/
+lemma stepwiseWins_of_diagonalArithWins (Γ0 : Set Pos)
+    (hDiag : DiagonalArithWins Γ0) :
+    StepwiseWins Γ0 StandardSchedule := by
+  intro n
+  -- StandardSchedule n = n
+  unfold StandardSchedule; simp
+  have hClosed : Cn ((A Γ0 n).Γ) = (A Γ0 n).Γ := (A Γ0 n).cn_closed
+  -- convert arithmetic win to structural win
+  rw [winFrontierAt_iff_arithWinFreshAt ((A Γ0 n).Γ) hClosed n]
+  exact hDiag n
+
+/--
+  **Canonical Drift Theorem** (Arithmetic Version):
+  If we can produce a fresh arithmetic window for every `n` at step `n` (Diagonal Wins),
+  then the system drifts into Option B (structural incompleteness at ω).
+
+  This is the fully constructive target for the Collatz analysis.
 -/
 theorem canonical_drift_counterexample
     (Γ0 : Set Pos)
-    (hDiagWins : StepwiseWins Γ0 StandardSchedule)
+    (hDiagWins : DiagonalArithWins Γ0)
     (hRoot : ∀ k : ℕ, Pos.Root ∉ (chain Γ0 k).Γ) :
-    ¬ RevHalt.OmegaAdmissible (PropT := Pos) (Provable := Provable) (Cn := Cn) (ωΓ Γ0) :=
-  optionB_drift_counterexample_stepwise Γ0 StandardSchedule hDiagWins standardSchedule_fair hRoot
+    ¬ RevHalt.OmegaAdmissible (PropT := Pos) (Provable := Provable) (Cn := Cn) (ωΓ Γ0) := by
+  apply optionB_drift_counterexample_stepwise Γ0 StandardSchedule
+  · exact stepwiseWins_of_diagonalArithWins Γ0 hDiagWins
+  · exact standardSchedule_fair
+  · exact hRoot
 
 
 end Up2GainDynamics
