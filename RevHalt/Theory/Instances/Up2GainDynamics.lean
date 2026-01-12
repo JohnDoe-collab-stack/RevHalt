@@ -704,5 +704,42 @@ theorem optionB_drift_counterexample_stepwise (Γ0 : Set Pos) (schedule : ℕ �
   -- 3) appliquer le drift générique
   exact drift_not_OmegaAdmissible_ωΓ_of_progressive_asks Γ0 hAsk hRoot
 
+-- ==============================================================================================
+-- CANONICAL POLICY (Standard Verification Strategy)
+-- ==============================================================================================
+
+/-!
+  ## Canonical Policy
+  We define a concrete, constructive schedule to demonstrate that `FairSchedule` is inhabited
+  and easily realizable.
+
+  The "Standard Schedule" simply targets integer `k` at step `k`.
+  Use case: The verifier systematically checks n=0, n=1, n=2...
+-/
+
+/-- Standard Schedule: at step k, we target n = k. -/
+def StandardSchedule : ℕ → ℕ := id
+
+/-- The Standard Schedule is fair (it covers every integer). -/
+lemma standardSchedule_fair : FairSchedule StandardSchedule := by
+  intro n
+  use n
+  rfl
+
+/--
+  **Canonical Drift Theorem**:
+  If the system provides a win for `n` at step `n` (Diagonal Wins),
+  then it drifts into Option B.
+
+  This removes the existential quantifier on `schedule` in favor of a concrete instance.
+-/
+theorem canonical_drift_counterexample
+    (Γ0 : Set Pos)
+    (hDiagWins : StepwiseWins Γ0 StandardSchedule)
+    (hRoot : ∀ k : ℕ, Pos.Root ∉ (chain Γ0 k).Γ) :
+    ¬ RevHalt.OmegaAdmissible (PropT := Pos) (Provable := Provable) (Cn := Cn) (ωΓ Γ0) :=
+  optionB_drift_counterexample_stepwise Γ0 StandardSchedule hDiagWins standardSchedule_fair hRoot
+
+
 end Up2GainDynamics
 end RevHalt
