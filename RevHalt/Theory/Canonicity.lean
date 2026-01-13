@@ -20,36 +20,39 @@ namespace RevHalt
 
 /--
   **Theorem T1 (Traces)**:
-  Under the assumption that K detects monotone properties, `Rev0_K` is extensionally equivalent
-  to standard Halting for *all* traces (even non-monotone ones).
+  Under the assumption that K detects *closed* (fixed-point) properties, `Rev0_K` is extensionally equivalent
+  to standard Halting for *all* traces (even non-closed ones).
 -/
-theorem T1_traces (K : RHKit) (hK : DetectsMonotone K) :
+theorem T1_traces (K : RHKit) (hK : DetectsUpFixed K) :
     ∀ T : Trace, Rev0_K K T ↔ Halts T := by
   intro T
-  unfold Rev0_K Rev_K
-  -- 1. Apply DetectsMonotone to the trace (up T), which is monotone.
-  have h_mono : Monotone (up T) := up_mono T
-  have h_equiv := hK (up T) h_mono
-  rw [h_equiv]
+  -- 1. Apply DetectsUpFixed to the trace (up T), which is closed (fixed point).
+  have h_fix : UpFixed (up T) := up_fixed T
+  -- h_equiv : K.Proj (up T) ↔ ∃ n, up T n
+  have h_equiv := hK (up T) h_fix
   -- 2. Use the fact that ∃ n, up T n ↔ ∃ n, T n
-  -- 2. Use the fact that ∃ n, up T n ↔ ∃ n, T n
-  exact exists_up_iff T
+  have h_ex := exists_up_iff T
+  -- Rev0_K K T is definitionally K.Proj (up T)
+  -- So we just transitivity chain them: Rev0_K K T ↔ ∃ n, up T n ↔ hal T
+  exact h_equiv.trans h_ex
 
 /--
   **Corollary (Stabilization)**:
   The negative verdict of a valid Kit captures exactly the stabilization property (never halting).
   `¬ Rev0_K K T ↔ ∀ n, ¬ T n` (classically equivalent to ¬Halts, constructively defined as Stabilizes).
 -/
-theorem T1_neg_traces (K : RHKit) (hK : DetectsMonotone K) :
+theorem T1_neg_traces (K : RHKit) (hK : DetectsUpFixed K) :
     ∀ T : Trace, ¬ Rev0_K K T ↔ ¬ Halts T := by
   intro T
-  rw [T1_traces K hK T]
+  -- Direct negation congruence to avoid propext from rw
+  exact not_congr (T1_traces K hK T)
 
 /-- Corollary: Independence of the specific Kit. Any two valid Kits yield the same verdict. -/
-theorem T1_uniqueness (K1 K2 : RHKit) (hK1 : DetectsMonotone K1) (hK2 : DetectsMonotone K2) :
+theorem T1_uniqueness (K1 K2 : RHKit) (hK1 : DetectsUpFixed K1) (hK2 : DetectsUpFixed K2) :
     ∀ T : Trace, Rev0_K K1 T ↔ Rev0_K K2 T := by
   intro T
-  rw [T1_traces K1 hK1, T1_traces K2 hK2]
+  -- Transitivity via Halts T: Rev K1 T ↔ Halts T ↔ Rev K2 T
+  exact (T1_traces K1 hK1 T).trans (T1_traces K2 hK2 T).symm
 
 -- -----------------------------------------------------------------------
 -- Dynamic Bridge to Semantics
@@ -99,17 +102,20 @@ def DynamicBridge : Prop :=
   If the Kit is valid and the Bridge holds, then semantic consequence is equivalent
   to the Kit's verdict.
 -/
-theorem T1_semantics (K : RHKit) (hK : DetectsMonotone K)
+theorem T1_semantics (K : RHKit) (hK : DetectsUpFixed K)
     (hBridge : DynamicBridge Sat LR) :
     ∀ Γ φ, SemConsequences Sat Γ φ ↔ verdict_K LR K Γ φ := by
   intro Γ φ
-  unfold verdict_K
-  rw [hBridge Γ φ]
-  rw [T1_traces K hK]
+  -- verdict_K is Rev0_K ...
+  -- hBridge : Sem ... ↔ Halts ...
+  -- T1_traces : Rev0_K ... ↔ Halts ...
+  -- Goal: Sem ... ↔ Rev0_K ...
+  -- Sem ↔ Halts ↔ Rev0_K
+  exact (hBridge Γ φ).trans (T1_traces K hK (LR Γ φ)).symm
 
 end RevHalt
 
--- Axiom checks (auto):
+-- Axiom checks:
 #print axioms RevHalt.T1_traces
 #print axioms RevHalt.T1_neg_traces
 #print axioms RevHalt.T1_uniqueness
@@ -118,4 +124,3 @@ end RevHalt
 #print axioms RevHalt.SemConsequences_iff
 #print axioms RevHalt.CloE_eq
 #print axioms RevHalt.T1_semantics
-

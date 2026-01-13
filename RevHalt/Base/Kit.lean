@@ -49,7 +49,10 @@ lemma revK_iff_halts (K : RHKit) (hK : DetectsUpFixed K) (T : Trace) :
 /-- The “negative verdict” form: failure of `Rev_K` is equivalent to never halting. -/
 lemma not_revK_iff_forall_not (K : RHKit) (hK : DetectsUpFixed K) (T : Trace) :
     ¬ Rev_K K T ↔ ∀ n, ¬ T n := by
-  have h1 : Rev_K K T ↔ ∃ n, T n := revK_iff_halts K hK T
+  have h1 : Rev_K K T ↔ ∃ n, T n := by
+    have h := revK_iff_halts K hK T
+    unfold Halts at h
+    exact h
   have h2 : ¬ Rev_K K T ↔ ¬ ∃ n, T n := not_congr h1
   -- Robust constructive proof for (¬ ∃ n, T n) ↔ ∀ n, ¬ T n
   have h3 : (¬ ∃ n, T n) ↔ ∀ n, ¬ T n := by
