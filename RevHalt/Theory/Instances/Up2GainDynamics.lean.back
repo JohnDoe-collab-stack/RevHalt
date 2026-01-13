@@ -135,7 +135,7 @@ theorem CnIdem : (∀ Γ, Cn (Cn Γ) = Cn Γ) := by
 /-- ProvClosedCn required by TheoryDynamics.ThState: Provable (Cn Γ) p → p ∈ Cn Γ. -/
 theorem ProvClosedCn_int : ∀ Γ, (∀ p, Provable (Cn Γ) p → p ∈ Cn Γ) := by
   intro Γ p hp
-  -- membership in Cn = Provable Γ p
+  -- membership in Cn Γ = Provable Γ p
   exact cut Γ p hp
 
 /-
@@ -502,20 +502,371 @@ theorem omega_trilemma_not_all_up2gain (Γ0 : Set Pos) :
       (hProvCn := hProvCn)
       (A0 := mkState Γ0)
 
+end Up2GainDynamics
+end RevHalt
+
+/-!
+  ============================
+  Drift counterexample (Option B)
+  ============================
+
+  Key idea:
+  If Γ contains every `Ask n`, then `Root` is internally provable from Γ
+  by the O-rule (infinitary branching at Root).
+
+  Therefore, if at the ω-union we have all `Ask n` but still `Root ∉ ωΓ`,
+  then `Cn (ωΓ) ≠ ωΓ`, hence `ωΓ` is not OmegaAdmissible.
+-/
+
+namespace RevHalt
+namespace Up2GainDynamics
+
+open Set
+open RevHalt.Up2Gain
+
+/-- If Γ contains all `Ask n`, then `Root` is internally provable from Γ. -/
+lemma root_mem_Cn_of_allAsk (Γ : Set Pos)
+    (hAsk : ∀ n : ℕ, Pos.Ask n ∈ Γ) :
+    Pos.Root ∈ Cn Γ := by
+  -- membership in Cn is Provable
+  show Provable Γ Pos.Root
+  intro S hS
+  -- all Ask n are in S because they are Γ-axioms
+  have hAskS : ∀ n : ℕ, S (Pos.Ask n) := by
+    intro n
+    exact hS.1 (Pos.Ask n) (hAsk n)
+
+  -- Root has moves
+  have hMoves : hasMoves Pos.Root := by
+    refine ⟨Pos.Ask 0, ?_⟩
+    -- canMove Root (Ask 0) reduces to oCanMove Root (Ask 0)
+    simp [canMove, turnFn, oCanMove]
+
+  -- all O-moves from Root land in S (because they are all Ask n)
+  have hAll : ∀ q : Pos, oCanMove Pos.Root q → S q := by
+    intro q hq
+    rcases hq with ⟨n, rfl⟩
+    exact hAskS n
+
+  -- apply the O-closure clause at Root
+  exact hS.2.2 Pos.Root (by simp [turnFn]) hMoves hAll
+
+/-- “Pure drift” criterion: if Γ has all Ask n but not Root, then Γ is not ω-admissible. -/
+theorem not_OmegaAdmissible_of_allAsk_rootNot (Γ : Set Pos)
+    (hAsk : ∀ n : ℕ, Pos.Ask n ∈ Γ)
+    (hRoot : Pos.Root ∉ Γ) :
+    ¬ RevHalt.OmegaAdmissible (PropT := Pos) (Provable := Provable) (Cn := Cn) Γ := by
+  intro hOA
+  have hEq : Cn Γ = Γ := hOA.1
+  have hRootCn : Pos.Root ∈ Cn Γ := root_mem_Cn_of_allAsk (Γ := Γ) hAsk
+  have : Pos.Root ∈ Γ := by simpa [hEq] using hRootCn
+  exact hRoot this
+
+/--
+Drift specialized to your ω-union `ωΓ Γ0`:
+
+If every Ask n appears somewhere along the orbit (hence in ωΓ),
+and Root never appears at any finite stage (hence not in ωΓ),
+then ωΓ is not OmegaAdmissible.
+-/
+theorem drift_not_OmegaAdmissible_ωΓ_of_progressive_asks (Γ0 : Set Pos)
+    (hAsk : ∀ n : ℕ, ∃ k : ℕ, Pos.Ask n ∈ (chain Γ0 k).Γ)
+    (hRoot : ∀ k : ℕ, Pos.Root ∉ (chain Γ0 k).Γ) :
+    ¬ RevHalt.OmegaAdmissible (PropT := Pos) (Provable := Provable) (Cn := Cn) (ωΓ Γ0) := by
+  -- derive: all Ask n are in ωΓ
+  have hAskω : ∀ n : ℕ, Pos.Ask n ∈ ωΓ Γ0 := by
+    intro n
+    rcases hAsk n with ⟨k, hk⟩
+    -- ωΓ Γ0 = {p | ∃ k, p ∈ (chain Γ0 k).Γ}
+    exact ⟨k, hk⟩
+
+  -- derive: Root is not in ωΓ
+  have hRootω : Pos.Root ∉ ωΓ Γ0 := by
+    intro h
+    rcases h with ⟨k, hk⟩
+    exact hRoot k hk
+
+  -- conclude by the pure drift criterion
+  exact not_OmegaAdmissible_of_allAsk_rootNot (Γ := ωΓ Γ0) hAskω hRootω
+
 /-
   ============================
-  Definitional Bridges
+  Arithmetic Bridge for Drift (Ask n entry mechanism)
   ============================
 -/
 
-lemma omegaCarrier_eq_omegaΓ (Γ0 : Set Pos) :
-    omegaCarrier Γ0 = ωΓ Γ0 := by
-  ext p; constructor
-  · intro hp
-    rcases Set.mem_iUnion.1 hp with ⟨n, hn⟩
-    exact ⟨n, by simpa [ωΓ, RevHalt.omegaΓ, chain, A] using hn⟩
-  · rintro ⟨n, hn⟩
-    exact Set.mem_iUnion.2 ⟨n, by simpa [ωΓ, RevHalt.omegaΓ, chain, A] using hn⟩
+/-- Il existe un certificat de victoire “externe” pour l’index n, présent dans la frontière S1. -/
+def WinFrontierAt (Γ : Set Pos) (n : ℕ) : Prop :=
+  ∃ L g m : ℕ, Pos.ProvideWin L n g m ∈ S1 Γ
+
+/--
+  Fundamental lemma: in a Cn-closed set,
+  not provable is exactly not member.
+
+  This is valid because Cn Γ = { p | Provable Γ p }.
+-/
+@[simp] lemma mem_Cn_iff (Γ : Set Pos) (p : Pos) : p ∈ Cn Γ ↔ Provable Γ p := Iff.rfl
+
+lemma notProvable_iff_not_mem_of_cn_closed
+    (Γ : Set Pos) (hClosed : Cn Γ = Γ) (p : Pos) :
+    (¬ Provable Γ p) ↔ p ∉ Γ := by
+  constructor
+  · intro hNprov hpMem
+    -- hpMem : p ∈ Γ
+    -- hClosed : Cn Γ = Γ.
+    -- We want Provable Γ p, which means p ∈ Cn Γ.
+    have hpCn : p ∈ Cn Γ := by
+      rw [hClosed]
+      exact hpMem
+    -- p ∈ Cn Γ means Provable Γ p
+    have hpProv : Provable Γ p := (mem_Cn_iff _ _).1 hpCn
+    exact hNprov hpProv
+  · intro hNotMem hpProv
+    -- hpProv : Provable Γ p means p ∈ Cn Γ
+    have hpCn : p ∈ Cn Γ := (mem_Cn_iff _ _).2 hpProv
+    -- We want p ∈ Γ. Since Cn Γ = Γ, we rewrite Γ to Cn Γ.
+    have hpMem : p ∈ Γ := by
+      rw [← hClosed]
+      exact hpCn
+    exact hNotMem hpMem
+
+/--
+  Arithmetic Win with Freshness:
+  There is a valid arithmetic window with sufficient gain,
+  and the corresponding ProvideWin statement is NOT yet in Γ.
+
+  Note: This is "Arithmetic + Structural Freshness".
+  The freshness condition (∉ Γ) depends on the dynamic stage Γ.
+-/
+def ArithWinFreshAt (Γ : Set Pos) (n : ℕ) : Prop :=
+  ∃ L g m : ℕ,
+    Window L n g m ∧ g ≥ 2 * L + 1 ∧
+    Pos.ProvideWin L n g m ∉ Γ
+
+/--
+  Bridging Lemma:
+  WinFrontierAt (structural) <-> ArithWinFreshAt (arithmetic)
+  given closure.
+-/
+lemma winFrontierAt_iff_arithWinFreshAt
+    (Γ : Set Pos) (hClosed : Cn Γ = Γ) (n : ℕ) :
+    WinFrontierAt Γ n ↔ ArithWinFreshAt Γ n := by
+  -- WinFrontierAt Γ n := ∃ L g m, ProvideWin L n g m ∈ S1 Γ
+  -- S1 Γ = {p | isGood p ∧ ¬Provable Γ p}
+  -- isGood(ProvideWin ...) ↔ Window ... ∧ g ≥ 2L+1
+  -- ¬Provable ↔ not_mem via hClosed
+  constructor
+  · rintro ⟨L, g, m, hS1⟩
+    have : isGood (Pos.ProvideWin L n g m) ∧ ¬ Provable Γ (Pos.ProvideWin L n g m) := by
+      -- unfold S1 via lemma
+      simpa [S1_eq_good_notProvable] using hS1
+    rcases this with ⟨hGood, hNprov⟩
+    -- hGood simplifies to Window ∧ threshold
+    -- hNprov converts to "∉ Γ" via closure
+    have hNotMem : Pos.ProvideWin L n g m ∉ Γ :=
+      (notProvable_iff_not_mem_of_cn_closed Γ hClosed _).1 hNprov
+    -- extract Window + threshold from isGood
+    have hWin : Window L n g m ∧ g ≥ 2 * L + 1 := by
+      simpa [isGood] using hGood
+    exact ⟨L, g, m, hWin.1, hWin.2, hNotMem⟩
+  · rintro ⟨L, g, m, hW, hThresh, hNotMem⟩
+    -- construct proof of ∈ S1 Γ
+    have hGood : isGood (Pos.ProvideWin L n g m) := by
+      simpa [isGood] using And.intro hW hThresh
+    have hNprov : ¬ Provable Γ (Pos.ProvideWin L n g m) :=
+      (notProvable_iff_not_mem_of_cn_closed Γ hClosed _).2 hNotMem
+    -- lift to S1
+    refine ⟨L, g, m, ?_⟩
+    simpa [S1_eq_good_notProvable] using And.intro hGood hNprov
+
+/--
+  Direct API: Produce an S1 element from Arithmetic Freshness.
+  Useful for injecting witnesses directly without unfolding existentials.
+-/
+lemma provideWin_mem_S1_of_arithWinFreshAt
+    (Γ : Set Pos) (hClosed : Cn Γ = Γ)
+    (L n g m : ℕ)
+    (hWin : Window L n g m)
+    (hThresh : g ≥ 2 * L + 1)
+    (hFresh : Pos.ProvideWin L n g m ∉ Γ) :
+    Pos.ProvideWin L n g m ∈ S1 Γ := by
+  have : ArithWinFreshAt Γ n := ⟨L, g, m, hWin, hThresh, hFresh⟩
+  rw [← winFrontierAt_iff_arithWinFreshAt Γ hClosed n] at this
+  rcases this with ⟨L', g', m', hS1⟩
+  -- Note: WinFrontierAt implies there exists *some* witness.
+  -- Here we want to prove *this specific* witness is in S1.
+  -- We can prove it directly:
+  have hGood : isGood (Pos.ProvideWin L n g m) := by
+    simpa [isGood] using And.intro hWin hThresh
+  have hNprov : ¬ Provable Γ (Pos.ProvideWin L n g m) :=
+    (notProvable_iff_not_mem_of_cn_closed Γ hClosed _).2 hFresh
+  simpa [S1_eq_good_notProvable] using And.intro hGood hNprov
+
+
+
+/-- (A) Si un `ProvideWin L n g m` est axiome, alors `Ask n` est dans `Cn`. -/
+lemma ask_mem_Cn_of_provideWin_mem (Γ : Set Pos) (L n g m : ℕ)
+    (h : Pos.ProvideWin L n g m ∈ Γ) :
+    Pos.Ask n ∈ Cn Γ := by
+  -- membership in Cn = Provable
+  show Provable Γ (Pos.Ask n)
+  intro S hS
+  have hWin : S (Pos.ProvideWin L n g m) := hS.1 _ h
+
+  -- Step n est prouvé via le coup P vers ProvideWin L n g m
+  have hStep : S (Pos.Step n) := by
+    have hMove : (∃ q, pCanMove (Pos.Step n) q ∧ S q) := by
+      refine ⟨Pos.ProvideWin L n g m, ?_, hWin⟩
+      -- pCanMove (Step n) (ProvideWin L n g m)
+      -- se prouve par la branche ∃ L g m, q = ProvideWin L n g m
+      dsimp [pCanMove]
+      exact Or.inr ⟨L, g, m, rfl⟩
+    exact hS.2.1 (Pos.Step n) (by simp [turnFn]) hMove
+
+  -- Ask n est prouvé via le coup P vers Step n
+  have hMoveAsk : (∃ q, pCanMove (Pos.Ask n) q ∧ S q) := by
+    refine ⟨Pos.Step n, ?_, hStep⟩
+    -- pCanMove (Ask n) (Step n)
+    simp [pCanMove]
+  exact hS.2.1 (Pos.Ask n) (by simp [turnFn]) hMoveAsk
+
+/-- (B) Si `WinFrontierAt (Γ_k) n` est vrai, alors `Ask n` est vrai au stade k+1/step. -/
+lemma ask_mem_stage_succ_of_winFrontier (Γ0 : Set Pos) (k n : ℕ)
+    (hW : WinFrontierAt ((A Γ0 k).Γ) n) :
+    Pos.Ask n ∈ (A Γ0 (k+1)).Γ := by
+  rcases hW with ⟨L, g, m, hS1⟩
+  -- réécrire A_{k+1}
+  rw [A_succ (Γ0 := Γ0) (n := k)]
+  -- exposer la définition : Γ(step A_k) = Cn (Γ_k ∪ S1 Γ_k)
+  simp only [step, RevHalt.FState, RevHalt.F]
+
+  -- il suffit de prouver Ask n ∈ Cn (Γ_k ∪ S1 Γ_k)
+  -- en utilisant que ProvideWin L n g m est dans S1 Γ_k donc dans l’union
+  have hUnion : Pos.ProvideWin L n g m ∈ ((A Γ0 k).Γ ∪ S1 ((A Γ0 k).Γ)) :=
+    Or.inr hS1
+
+  exact ask_mem_Cn_of_provideWin_mem
+    (Γ := (A Γ0 k).Γ ∪ S1 ((A Γ0 k).Γ)) (L := L) (n := n) (g := g) (m := m) hUnion
+
+/-- (C) Propriété de "couverture progressive" par des gains. -/
+def ProgressiveWins (Γ0 : Set Pos) : Prop :=
+  ∀ n : ℕ, ∃ k : ℕ, WinFrontierAt ((A Γ0 k).Γ) n
+
+/-- Hypothèse séquentielle : à chaque étape k, on obtient un win pour `schedule k`. -/
+def StepwiseWins (Γ0 : Set Pos) (schedule : ℕ → ℕ) : Prop :=
+  ∀ k : ℕ, WinFrontierAt ((A Γ0 k).Γ) (schedule k)
+
+/-- Fairness (couverture) : chaque n apparaît à un certain rang dans `schedule`. -/
+def FairSchedule (schedule : ℕ → ℕ) : Prop :=
+  ∀ n : ℕ, ∃ k : ℕ, schedule k = n
+
+/-- StepwiseWins + fairness ⇒ ProgressiveWins. -/
+lemma progressiveWins_of_stepwiseWins (Γ0 : Set Pos) (schedule : ℕ → ℕ)
+    (hStep : StepwiseWins Γ0 schedule)
+    (hFair : FairSchedule schedule) :
+    ProgressiveWins Γ0 := by
+  intro n
+  rcases hFair n with ⟨k, hk⟩
+  refine ⟨k, ?_⟩
+  -- hStep k : WinFrontierAt ((A Γ0 k).Γ) (schedule k)
+  simpa [hk] using hStep k
+
+/-- ProgressiveWins implies eventually finding Ask n. -/
+lemma progressive_asks_of_progressiveWins (Γ0 : Set Pos)
+    (hProg : ProgressiveWins Γ0) :
+    ∀ n : ℕ, ∃ k : ℕ, Pos.Ask n ∈ (A Γ0 k).Γ := by
+  intro n
+  rcases hProg n with ⟨k, hW⟩
+  refine ⟨k+1, ?_⟩
+  exact ask_mem_stage_succ_of_winFrontier Γ0 k n hW
+
+/-- Version robuste de `progressive_asks` : dérivée d’un win par étape + fairness. -/
+lemma progressive_asks_of_stepwiseWins (Γ0 : Set Pos) (schedule : ℕ → ℕ)
+    (hStep : StepwiseWins Γ0 schedule)
+    (hFair : FairSchedule schedule) :
+    ∀ n : ℕ, ∃ k : ℕ, Pos.Ask n ∈ (A Γ0 k).Γ := by
+  -- recycle ton lemme existant
+  exact progressive_asks_of_progressiveWins Γ0
+    (progressiveWins_of_stepwiseWins (Γ0 := Γ0) (schedule := schedule) hStep hFair)
+
+/-- Conséquence finale : Option B (Drift) sans axiome global, via stepwise + fairness. -/
+theorem optionB_drift_counterexample_stepwise (Γ0 : Set Pos) (schedule : ℕ → ℕ)
+    (hStep : StepwiseWins Γ0 schedule)
+    (hFair : FairSchedule schedule)
+    (hRoot : ∀ k : ℕ, Pos.Root ∉ (chain Γ0 k).Γ) :
+    ¬ RevHalt.OmegaAdmissible (PropT := Pos) (Provable := Provable) (Cn := Cn) (ωΓ Γ0) := by
+  -- 1) tous les Ask n entrent (à des temps éventuellement différents)
+  have hAskA : ∀ n : ℕ, ∃ k : ℕ, Pos.Ask n ∈ (A Γ0 k).Γ :=
+    progressive_asks_of_stepwiseWins (Γ0 := Γ0) (schedule := schedule) hStep hFair
+
+  -- 2) réexprimer en termes de `chain` pour utiliser le lemme drift déjà prouvé
+  have hAsk : ∀ n : ℕ, ∃ k : ℕ, Pos.Ask n ∈ (chain Γ0 k).Γ := by
+    intro n
+    rcases hAskA n with ⟨k, hk⟩
+    refine ⟨k, ?_⟩
+    simpa [chain, A] using hk
+
+  -- 3) appliquer le drift générique
+  exact drift_not_OmegaAdmissible_ωΓ_of_progressive_asks Γ0 hAsk hRoot
+
+-- ==============================================================================================
+-- CANONICAL POLICY (Standard Verification Strategy)
+-- ==============================================================================================
+
+/-!
+  ## Canonical Policy
+  We define a concrete, constructive schedule to demonstrate that `FairSchedule` is inhabited
+  and easily realizable.
+
+  The "Standard Schedule" simply targets integer `k` at step `k`.
+  Use case: The verifier systematically checks n=0, n=1, n=2...
+-/
+
+/-- Standard Schedule: at step k, we target n = k. -/
+def StandardSchedule : ℕ → ℕ := id
+
+/-- The Standard Schedule is fair (it covers every integer). -/
+lemma standardSchedule_fair : FairSchedule StandardSchedule := by
+  intro n
+  use n
+  rfl
+
+/--
+  **Diagonal Arithmetic Wins**:
+  For every step `n`, there exists a valid, fresh arithmetic window targeting `n`.
+-/
+def DiagonalArithWins (Γ0 : Set Pos) : Prop :=
+  ∀ n : ℕ, ArithWinFreshAt ((A Γ0 n).Γ) n
+
+/-- DiagonalArithWins implies StepwiseWins (on StandardSchedule). -/
+lemma stepwiseWins_of_diagonalArithWins (Γ0 : Set Pos)
+    (hDiag : DiagonalArithWins Γ0) :
+    StepwiseWins Γ0 StandardSchedule := by
+  intro n
+  -- StandardSchedule n = n
+  unfold StandardSchedule; simp
+  have hClosed : Cn ((A Γ0 n).Γ) = (A Γ0 n).Γ := (A Γ0 n).cn_closed
+  -- convert arithmetic win to structural win
+  rw [winFrontierAt_iff_arithWinFreshAt ((A Γ0 n).Γ) hClosed n]
+  exact hDiag n
+
+/--
+  **Canonical Drift Theorem** (Arithmetic Version):
+  If we can produce a fresh arithmetic window for every `n` at step `n` (Diagonal Wins),
+  then the system drifts into Option B (structural incompleteness at ω).
+
+  This is the fully constructive target for the Collatz analysis.
+-/
+theorem canonical_drift_counterexample
+    (Γ0 : Set Pos)
+    (hDiagWins : DiagonalArithWins Γ0)
+    (hRoot : ∀ k : ℕ, Pos.Root ∉ (chain Γ0 k).Γ) :
+    ¬ RevHalt.OmegaAdmissible (PropT := Pos) (Provable := Provable) (Cn := Cn) (ωΓ Γ0) := by
+  apply optionB_drift_counterexample_stepwise Γ0 StandardSchedule
+  · exact stepwiseWins_of_diagonalArithWins Γ0 hDiagWins
+  · exact standardSchedule_fair
+  · exact hRoot
+
 
 end Up2GainDynamics
 end RevHalt
