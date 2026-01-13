@@ -189,16 +189,17 @@ theorem F0_extensive (Γ : Set PropT) :
   exact Or.inl hp
 
 /--
-  **F0 is Monotone under ProvClosed hypothesis**.
+  **F0 is Monotone under ProvClosed hypothesis** (Constructive).
 
   The key insight: if p ∈ S1(Γ) becomes provable in Δ, then by ProvClosed
   it must be in Δ, so p ∈ F0(Δ) via the left branch.
 
-  This is the correct formulation that makes F0 an endo-functor.
+  Requires `DecidablePred` for constructivity.
 -/
 theorem F0_monotone_of_provClosed
     {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
-    (hClosedΔ : ProvClosed Provable Δ) :
+    (hClosedΔ : ProvClosed Provable Δ)
+    (hDecΔ : DecidablePred (fun p => Provable Δ p)) :
     F0 Provable K Machine encode_halt Γ ⊆
     F0 Provable K Machine encode_halt Δ := by
   intro p hp
@@ -209,15 +210,15 @@ theorem F0_monotone_of_provClosed
   | inr hpS1Γ =>
       -- p ∈ S1(Γ): p = encode_halt e, kit ok, ¬Provable Γ (encode_halt e)
       obtain ⟨e, hpEq, hKit, hNprovΓ⟩ := hpS1Γ
-      -- Two cases: either p becomes provable in Δ, or it stays unprovable
-      by_cases hProvΔ : Provable Δ (encode_halt e)
-      · -- Provable in Δ: by ProvClosed, encode_halt e ∈ Δ
-        have hMemΔ : encode_halt e ∈ Δ := hClosedΔ (encode_halt e) hProvΔ
-        rw [hpEq]
-        exact Or.inl hMemΔ
-      · -- Not provable in Δ: stays in S1(Δ)
-        right
-        exact ⟨e, hpEq, hKit, hProvΔ⟩
+      -- Constructive split
+      cases hDecΔ (encode_halt e) with
+      | isTrue hProvΔ =>
+          have hMemΔ : encode_halt e ∈ Δ := hClosedΔ (encode_halt e) hProvΔ
+          rw [hpEq]
+          exact Or.inl hMemΔ
+      | isFalse hProvΔ =>
+          right
+          exact ⟨e, hpEq, hKit, hProvΔ⟩
 
 /-- F is monotone (assuming Cn is monotone). -/
 theorem F_monotone
@@ -495,7 +496,9 @@ theorem FState_map
       (FState Provable K Machine encode_halt Cn hIdem hProvCn B) := by
   unfold FState ThStateHom
   apply F_monotone Provable K Machine encode_halt Cn hCnMono
-  exact F0_monotone_of_provClosed Provable K Machine encode_halt hAB B.prov_closed
+  -- Use classical decidability for the functor map existence
+  classical
+  exact F0_monotone_of_provClosed Provable K Machine encode_halt hAB B.prov_closed (Classical.decPred _)
 
 /--
   **TheoryStepFunctor**: The endo-functor `F : ThState ⥤ ThState`.
@@ -1212,6 +1215,7 @@ theorem bivalence_in_S
     (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
     ∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e)) := by
   intro e
+  classical -- Rev0_K is undecidable
   by_cases hRev : Rev0_K K (Machine e)
   · -- Rev0(e) ⟹ S.Provable (halt e) via absorption + soundness
     exact Or.inl (absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound e hRev)
@@ -1527,7 +1531,7 @@ theorem transfinite_chain_mono
     (hSucc : ∀ α, chain α ⊆ chain (Order.succ α))
     -- Limit property: stages embed into limit
     (hLim : ∀ lim, (lim ≠ 0 ∧ ¬∃ β, lim = Order.succ β) → ∀ α, α < lim → chain α ⊆ chain lim)
-    {α β : Ordinal} (hαβ : α ≤ β) :
+      {α β : Ordinal} (hαβ : α ≤ β) :
     chain α ⊆ chain β := by
   -- Induction on β using well-founded transfinite induction
   induction β using Ordinal.induction with
@@ -1535,7 +1539,8 @@ theorem transfinite_chain_mono
     intro p hp
     rcases eq_or_lt_of_le hαβ with rfl | hαγ
     · exact hp
-    · by_cases hγ0 : γ = 0
+    · classical -- Ordinal case analysis is classical
+      by_cases hγ0 : γ = 0
       · simp [hγ0] at hαγ
       · by_cases hγSucc : ∃ δ, γ = Order.succ δ
         · obtain ⟨δ, rfl⟩ := hγSucc
@@ -1647,6 +1652,210 @@ theorem transfinite_trilemma_disjunction
   sorry
 
 end TransfiniteIteration
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- TWO-SIDED DYNAMICS (Generative Complementarity)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+section TwoSidedDynamics
+
+variable {Code : Type u}
+variable (K : RHKit)
+variable (Machine : Code → Trace)
+variable (encode_halt encode_not_halt : Code → PropT)
+
+/--
+  **Two-Sided Pick**: A sentence p paired with a certificate.
+
+  The certificate ties p to either:
+  - `Rev0` (halting witness) -> p = encode_halt e
+  - `KitStabilizes` (non-halting witness) -> p = encode_not_halt e
+
+  Crucially, this structure carries the certificate *without deciding* which case holds.
+  It acts as a "candidate generator" for the theory.
+-/
+structure TwoPick (Γ : Set PropT) (e : Code) where
+  p : PropT
+  cert :
+    (Rev0_K K (Machine e) ∧ p = encode_halt e) ∨
+    (KitStabilizes K (Machine e) ∧ p = encode_not_halt e)
+  unprov : ¬ Provable Γ p
+
+/--
+  **S1Rel±(Γ)**: The two-sided dynamic frontier.
+
+  This set contains all sentences backed by a TwoPick certificate that are NOT
+  currently provable in Γ. It acts as a bidirectional source of new axioms.
+-/
+def S1Rel_pm (Γ : Set PropT) : Set PropT :=
+  { p | ∃ e : Code,
+      ∃ pk : TwoPick Provable K Machine encode_halt encode_not_halt Γ e,
+        p = pk.p }
+
+/--
+  **F0±(Γ)**: The two-sided expansion step.
+-/
+def F0_pm (Γ : Set PropT) : Set PropT :=
+  Γ ∪ S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ
+
+/--
+  **S1± is Anti-Monotone**:
+  As the theory grows (Γ ⊆ Δ), the set of unprovable certified sentences shrinks.
+-/
+theorem S1Rel_pm_anti_monotone
+    (hMono : ProvRelMonotone Provable)
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ) :
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Δ ⊆
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  intro p hp
+  rcases hp with ⟨e, pk, hpEq⟩
+  -- Explicitly construct the witness for Δ (target is Γ)
+  -- pk is in Δ (so unprovable in Δ). We want pk in Γ (unprovable in Γ).
+  exact ⟨e, {
+    p := pk.p
+    cert := pk.cert
+    unprov := fun hProvΓ => pk.unprov (hMono Γ Δ hSub pk.p hProvΓ)
+  }, hpEq⟩
+
+/--
+  **Conservation Law (Two-Sided)**:
+  Under Absorbable (membership => provability), the frontier is exactly
+  what is "missing" from the expansion.
+-/
+theorem missing_F0_pm_eq_S1Rel_pm_of_absorbable
+    (Γ : Set PropT)
+    (hAbs : Absorbable Provable Γ) :
+    MissingFrom Provable Γ
+        (F0_pm Provable K Machine encode_halt encode_not_halt Γ)
+      =
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  ext p
+  constructor
+  · intro hp
+    rcases hp with ⟨hpF0, hNprov⟩
+    cases hpF0 with
+    | inl hpΓ =>
+        have hProv : Provable Γ p := hAbs p hpΓ
+        exact False.elim (hNprov hProv)
+    | inr hpS1 =>
+        exact hpS1
+  · intro hpS1
+    refine And.intro ?_ ?_
+    · exact Or.inr hpS1
+    · -- Extract unprovability from the witness
+      rcases hpS1 with ⟨e, pk, hpEq⟩
+      intro hProvp
+      have hProvpk : Provable Γ pk.p := by
+        rw [hpEq] at hProvp
+        exact hProvp
+      exact pk.unprov hProvpk
+
+/--
+  **F0± is Monotone** (Constructive).
+
+  Requires `DecidablePred` to decide if a frontier element has been absorbed.
+-/
+theorem F0_pm_monotone_of_provClosed
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ)
+    (hDecΔ : DecidablePred (fun p => Provable Δ p)) :
+    F0_pm Provable K Machine encode_halt encode_not_halt Γ ⊆
+    F0_pm Provable K Machine encode_halt encode_not_halt Δ := by
+  intro p hp
+  cases hp with
+  | inl hpΓ =>
+      exact Or.inl (hSub hpΓ)
+  | inr hpS1Γ =>
+      rcases hpS1Γ with ⟨e, pk, hpEq⟩
+      -- Constructive split on absorption
+      cases hDecΔ pk.p with
+      | isTrue hProvΔ =>
+          -- Absorbed in Δ
+          have hMemΔ : pk.p ∈ Δ := hClosedΔ pk.p hProvΔ
+          have : p ∈ Δ := by
+            rw [hpEq]
+            exact hMemΔ
+          exact Or.inl this
+      | isFalse hNprovΔ =>
+          -- Remains in frontier S1Rel_pm(Δ)
+          refine Or.inr ?_
+          exact ⟨e, {
+            p := pk.p
+            cert := pk.cert
+            unprov := hNprovΔ
+          }, hpEq⟩
+
+/--
+  **F0± is Monotone** (Classical).
+
+  Used for the functor instance where decidability is not guaranteed.
+-/
+theorem F0_pm_monotone_classical
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ) :
+    F0_pm Provable K Machine encode_halt encode_not_halt Γ ⊆
+    F0_pm Provable K Machine encode_halt encode_not_halt Δ := by
+  classical -- Essential for the axiom-free check to report 'classical'
+  apply F0_pm_monotone_of_provClosed Provable K Machine encode_halt encode_not_halt hSub hClosedΔ (Classical.decPred _)
+
+-- -----------------------------------------------------------------------------
+-- Two-Sided Functor
+-- -----------------------------------------------------------------------------
+
+variable (Cn : Set PropT → Set PropT)
+
+/-- **F±(S)**: The two-sided dynamic step (closed). -/
+def F_pm (Γ : Set PropT) : Set PropT :=
+  Cn (F0_pm Provable K Machine encode_halt encode_not_halt Γ)
+
+/--
+  **FState±**: Lifts the two-sided step to the category of Theory States.
+-/
+def FState_pm
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn) :
+    ThState (PropT := PropT) Provable Cn where
+  Γ := F_pm Provable K Machine encode_halt encode_not_halt Cn A.Γ
+  cn_closed := by
+    dsimp [F_pm]
+    rw [hIdem]
+  prov_closed := by
+    dsimp [F_pm]
+    apply hProvCn
+
+/--
+  **FState± Map**: Functorial mapping for FState±.
+-/
+def FState_pm_map
+    (hCnMono : CnMonotone Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    {A B : ThState (PropT := PropT) Provable Cn}
+    (f : A ⟶ B) :
+    FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn A ⟶
+    FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn B := by
+  have hAB : A.Γ ⊆ B.Γ := f.down.down
+  refine ULift.up (PLift.up ?_)
+  dsimp [FState_pm, F_pm]
+  apply hCnMono
+  apply F0_pm_monotone_classical Provable K Machine encode_halt encode_not_halt hAB B.prov_closed
+
+/--
+  **TheoryStepFunctor±**: The two-sided dynamic endofunctor.
+-/
+def TheoryStepFunctor_pm
+    (hCnMono : CnMonotone Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn) :
+    ThState (PropT := PropT) Provable Cn ⥤ ThState (PropT := PropT) Provable Cn where
+  obj := FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn
+  map := FState_pm_map Provable K Machine encode_halt encode_not_halt Cn hCnMono hIdem hProvCn
+  map_id := fun _ => Subsingleton.elim _ _
+  map_comp := fun _ _ => Subsingleton.elim _ _
+
+end TwoSidedDynamics
 
 end RevHalt
 
