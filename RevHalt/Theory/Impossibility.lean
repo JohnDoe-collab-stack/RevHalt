@@ -1,5 +1,4 @@
 import RevHalt.Base
-import RevHalt.Theory.Canonicity
 import RevHalt.Theory.RECodePred
 import Mathlib.Computability.PartrecCode
 
@@ -45,7 +44,7 @@ Diagonal bridge (derived, no axioms):
 from a semi-decider `f` for `target`, build `e` such that `Rev0_K K (Machine e) ↔ target e`.
 -/
 theorem diagonal_bridge
-    (K : RHKit) (hK : DetectsMonotone K)
+    (K : RHKit) (hK : DetectsUpFixed K)
     (f : Code → (Nat →. Nat)) (hf : Partrec₂ f)
     (target : Code → Prop)
     (htarget : ∀ c, target c ↔ (∃ x : Nat, x ∈ (f c) 0)) :
@@ -53,8 +52,8 @@ theorem diagonal_bridge
   rcases Nat.Partrec.Code.fixed_point₂ (f := f) hf with ⟨e, he⟩
   refine ⟨e, ?_⟩
 
-  have hT1 : Rev0_K K (Machine e) ↔ Halts (Machine e) :=
-    T1_traces K hK (Machine e)
+  have hT1 : Rev0_K K (Machine e) ↔ Halts (Machine e) := by
+    simpa [Rev0_K] using (revK_iff_halts (K := K) hK (T := Machine e))
 
   have hTerm : Halts (Machine e) ↔ (∃ x : Nat, x ∈ e.eval 0) :=
     Halts_Machine_iff e
@@ -68,7 +67,7 @@ theorem diagonal_bridge
 
 /-- `diagonal_bridge`, with the semi-decidability hypothesis bundled as an `RECodePred`. -/
 theorem diagonal_bridge_re
-    (K : RHKit) (hK : DetectsMonotone K)
+    (K : RHKit) (hK : DetectsUpFixed K)
     (target : Code → Prop)
     (re : RECodePred target) :
     ∃ e : Code, Rev0_K K (Machine e) ↔ target e := by
@@ -106,7 +105,7 @@ and the axiom audit currently reports `Classical.choice` for this theorem.
 -/
 theorem T2_impossibility {PropT : Type}
     (S : ImpossibleSystem PropT)
-    (K : RHKit) (hK : DetectsMonotone K) :
+    (K : RHKit) (hK : DetectsUpFixed K) :
     ¬ ∃ _: InternalHaltingPredicate S K, True := by
   intro h
   rcases h with ⟨I, _⟩
@@ -139,4 +138,3 @@ end RevHalt
 #print axioms RevHalt.diagonal_bridge
 #print axioms RevHalt.diagonal_bridge_re
 #print axioms RevHalt.T2_impossibility
-
