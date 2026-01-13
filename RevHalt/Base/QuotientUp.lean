@@ -11,7 +11,7 @@ We do **not** use `up T = up T'` (function equality). Instead we use pointwise e
 
 Then we show:
 1) UpEqv is an equivalence relation.
-2) Under DetectsMonotone K, `Rev_K K` is invariant under UpEqv (so it descends to the quotient).
+2) Under DetectsUpFixed K, `Rev_K K` is invariant under UpEqv (so it descends to the quotient).
 3) The “negative class” is exactly the UpEqv-class of ⊥ₜ, and it is the unique class where Rev_K is false.
 -/
 
@@ -44,7 +44,7 @@ lemma exists_up_congr {T T' : Trace} (h : UpEqv T T') :
     exact ⟨n, (h n).2 hn⟩
 
 /-- Main descent lemma: Rev_K is invariant under UpEqv (hence well-defined on the quotient). -/
-lemma revK_congr_of_UpEqv (K : RHKit) (hK : DetectsMonotone K)
+lemma revK_congr_of_UpEqv (K : RHKit) (hK : DetectsUpFixed K)
     {T T' : Trace} (h : UpEqv T T') :
     Rev_K K T ↔ Rev_K K T' := by
   -- reduce both sides to existence on up, then transport existence via UpEqv
@@ -75,16 +75,16 @@ lemma UpIsBottom_iff_forall_not (T : Trace) :
 /-- Anti-case predicate for a given Kit: Rev_K is false. -/
 def Anti (K : RHKit) (T : Trace) : Prop := ¬ Rev_K K T
 
-/-- Under DetectsMonotone, Anti is equivalent to “never”: ∀ n, ¬T n. -/
-lemma Anti_iff_forall_not (K : RHKit) (hK : DetectsMonotone K) (T : Trace) :
+/-- Under DetectsUpFixed, Anti is equivalent to “never”: ∀ n, ¬T n. -/
+lemma Anti_iff_forall_not (K : RHKit) (hK : DetectsUpFixed K) (T : Trace) :
     Anti K T ↔ ∀ n, ¬ T n := by
   -- reuse your existing lemma
   unfold Anti
   have h1 : ¬ Rev_K K T ↔ ∀ n, ¬ T n := not_revK_iff_forall_not K hK T
   exact h1
 
-/-- Under DetectsMonotone, Anti is equivalent to UpIsBottom. -/
-lemma Anti_iff_UpIsBottom (K : RHKit) (hK : DetectsMonotone K) (T : Trace) :
+/-- Under DetectsUpFixed, Anti is equivalent to UpIsBottom. -/
+lemma Anti_iff_UpIsBottom (K : RHKit) (hK : DetectsUpFixed K) (T : Trace) :
     Anti K T ↔ UpIsBottom T := by
   have hA : Anti K T ↔ ∀ n, ¬ T n := Anti_iff_forall_not (K := K) hK T
   have hB : UpIsBottom T ↔ ∀ n, ¬ T n := UpIsBottom_iff_forall_not (T := T)
@@ -121,8 +121,8 @@ lemma UpIsBottom_of_UpEqv_to_bottom {T : Trace} (h : UpEqv T (⊥ₜ)) :
   -- up T n ↔ up ⊥ₜ n, and up ⊥ₜ n ↔ ⊥ₜ n, hence up T n ↔ ⊥ₜ n
   exact (h n).trans (hb n)
 
-/-- “⊥ₜ is the unique anti-case (modulo UpEqv)”: Anti ↔ UpEqv-to-bottom, under DetectsMonotone. -/
-lemma Anti_iff_UpEqv_bottom (K : RHKit) (hK : DetectsMonotone K) (T : Trace) :
+/-- “⊥ₜ is the unique anti-case (modulo UpEqv)”: Anti ↔ UpEqv-to-bottom, under DetectsUpFixed. -/
+lemma Anti_iff_UpEqv_bottom (K : RHKit) (hK : DetectsUpFixed K) (T : Trace) :
     Anti K T ↔ UpEqv T (⊥ₜ) := by
   -- Anti ↔ UpIsBottom ↔ UpEqv-to-bottom
   have h1 : Anti K T ↔ UpIsBottom T := Anti_iff_UpIsBottom (K := K) hK T
@@ -134,7 +134,7 @@ lemma Anti_iff_UpEqv_bottom (K : RHKit) (hK : DetectsMonotone K) (T : Trace) :
     exact (h1).2 hBot
 
 /-- If two traces are both anti-cases, then they are UpEqv-equivalent (they collapse to the same bottom class). -/
-lemma Anti_unique_class (K : RHKit) (hK : DetectsMonotone K) {T T' : Trace} :
+lemma Anti_unique_class (K : RHKit) (hK : DetectsUpFixed K) {T T' : Trace} :
     Anti K T → Anti K T' → UpEqv T T' := by
   intro hA hA'
   have hTb  : UpEqv T  (⊥ₜ) := (Anti_iff_UpEqv_bottom (K := K) hK T).1 hA

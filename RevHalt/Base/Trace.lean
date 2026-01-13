@@ -1,5 +1,4 @@
 import Mathlib.Data.Nat.Basic
-import Mathlib.Order.Basic
 import Mathlib.Logic.Basic
 
 /-!
@@ -33,12 +32,55 @@ def up (T : Trace) : Trace := fun n => ∃ k ≤ n, T k
 def TMono (T : Trace) : Prop :=
   ∀ ⦃n m⦄, n ≤ m → T n → T m
 
-/-- Helper: up(T) is always monotone.  -/
+/--
+  Foundational definition: UpFixed (Fixed Point of Closure).
+  A trace is "closed" (or well-formed) if it is a fixed point of `up`.
+  This is the structural definition of monotonicity in this framework.
+-/
+def UpFixed (T : Trace) : Prop :=
+  ∀ n, up T n ↔ T n
+
+/-- Helper: up(T) is always monotone. -/
 lemma up_mono (T : Trace) : TMono (up T) := by
   intro n m hnm h
   obtain ⟨k, hk_le_n, hk_T⟩ := h
   -- if k ≤ n and n ≤ m, then k ≤ m
   exact ⟨k, Nat.le_trans hk_le_n hnm, hk_T⟩
+
+/-- Helper: up(T) is always a fixed point. -/
+lemma up_fixed (T : Trace) : UpFixed (up T) := by
+  intro n
+  constructor
+  · intro h
+    -- up (up T) n -> exists k <= n, up T k
+    obtain ⟨k, hk_le, ⟨j, hj_le, hj_T⟩⟩ := h
+    -- j <= k <= n -> j <= n
+    exact ⟨j, Nat.le_trans hj_le hk_le, hj_T⟩
+  · intro h
+    -- up T n -> up (up T) n (trivial direction)
+    exact ⟨n, Nat.le_refl n, h⟩
+
+/-- Equivalence: Dynamic Monotonicity implies Structural Fixed Point. -/
+lemma TMono_to_UpFixed (T : Trace) (h : TMono T) : UpFixed T := by
+  intro n
+  constructor
+  · intro hup
+    obtain ⟨k, hk_le, hk_T⟩ := hup
+    exact h hk_le hk_T
+  · intro hn
+    exact ⟨n, Nat.le_refl n, hn⟩
+
+/-- Equivalence: Structural Fixed Point implies Dynamic Monotonicity. -/
+lemma UpFixed_to_TMono (T : Trace) (hfix : UpFixed T) : TMono T := by
+  intro n m hnm hn
+  -- want T m
+  -- use fixpoint: T m ↔ up T m
+  have : up T m := by
+    -- build up T m from witness n
+    have : up T n := ⟨n, Nat.le_refl n, hn⟩
+    -- transport up T n to up T m using monotonicity of up (already have up_mono)
+    exact up_mono T hnm this
+  exact (hfix m).1 this
 
 /-- Helper: Halting is preserved by up. -/
 lemma exists_up_iff (T : Trace) : (∃ n, up T n) ↔ (∃ n, T n) := by
@@ -93,7 +135,11 @@ end RevHalt
 #print axioms RevHalt.Halts
 #print axioms RevHalt.up
 #print axioms RevHalt.TMono
+#print axioms RevHalt.UpFixed
 #print axioms RevHalt.up_mono
+#print axioms RevHalt.up_fixed
+#print axioms RevHalt.TMono_to_UpFixed
+#print axioms RevHalt.UpFixed_to_TMono
 #print axioms RevHalt.exists_up_iff
 #print axioms RevHalt.bottom
 #print axioms RevHalt.up_iff_bottom_iff_forall_not
