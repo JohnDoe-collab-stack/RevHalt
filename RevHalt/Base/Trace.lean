@@ -45,9 +45,47 @@ lemma exists_up_iff (T : Trace) : (∃ n, up T n) ↔ (∃ n, T n) := by
     obtain ⟨n, hn⟩ := h
     use n, n, Nat.le_refl n, hn
 
+/-- Bottom trace (⊥): always false. -/
+def bottom : Trace := fun _ => False
+
+notation "⊥ₜ" => bottom
+
+lemma up_eq_bottom_iff_forall_not (T : Trace) :
+    up T = ⊥ₜ ↔ ∀ n, ¬ T n := by
+  constructor
+  · intro h n hn
+    -- from hn we get up T n, hence bottom n, contradiction
+    have : up T n := ⟨n, Nat.le_refl n, hn⟩
+    have : (⊥ₜ) n := by simpa [h] using this
+    exact this
+  · intro h
+    funext n
+    apply propext
+    constructor
+    · intro hup
+      obtain ⟨k, hk, hkT⟩ := hup
+      exact (h k) hkT
+    · intro hbot
+      exact False.elim hbot
+
+lemma forall_not_up_iff_forall_not (T : Trace) :
+    (∀ n, ¬ up T n) ↔ (∀ n, ¬ T n) := by
+  constructor
+  · intro h n hn
+    have : up T n := ⟨n, Nat.le_refl n, hn⟩
+    exact (h n) this
+  · intro h n hup
+    obtain ⟨k, hk, hkT⟩ := hup
+    exact (h k) hkT
+
 end RevHalt
 
 -- Axiom checks (auto):
+#print axioms RevHalt.Trace
+#print axioms RevHalt.Halts
+#print axioms RevHalt.up
 #print axioms RevHalt.up_mono
 #print axioms RevHalt.exists_up_iff
-
+#print axioms RevHalt.bottom
+#print axioms RevHalt.up_eq_bottom_iff_forall_not
+#print axioms RevHalt.forall_not_up_iff_forall_not

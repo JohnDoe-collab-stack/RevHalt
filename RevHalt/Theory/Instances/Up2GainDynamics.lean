@@ -690,12 +690,7 @@ lemma provideWin_mem_S1_of_arithWinFreshAt
     (hThresh : g ≥ 2 * L + 1)
     (hFresh : Pos.ProvideWin L n g m ∉ Γ) :
     Pos.ProvideWin L n g m ∈ S1 Γ := by
-  have : ArithWinFreshAt Γ n := ⟨L, g, m, hWin, hThresh, hFresh⟩
-  rw [← winFrontierAt_iff_arithWinFreshAt Γ hClosed n] at this
-  rcases this with ⟨L', g', m', hS1⟩
-  -- Note: WinFrontierAt implies there exists *some* witness.
-  -- Here we want to prove *this specific* witness is in S1.
-  -- We can prove it directly:
+  -- Note: We prove *this specific* witness is in S1 directly.
   have hGood : isGood (Pos.ProvideWin L n g m) := by
     simpa [isGood] using And.intro hWin hThresh
   have hNprov : ¬ Provable Γ (Pos.ProvideWin L n g m) :=
