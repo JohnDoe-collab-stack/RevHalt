@@ -40,7 +40,7 @@ def Machine : Code → Trace := fun p _n => isGood p
 /-- Standard kit: Proj X := ∃n, X n. -/
 def Kstd : RHKit := ⟨fun X => ∃ n, X n⟩
 
-lemma DetectsMonotone_Kstd : DetectsMonotone Kstd := by
+lemma DetectsUpFixed_Kstd : DetectsUpFixed Kstd := by
   intro X hmono
   -- Kstd.Proj X = (∃ n, X n) par définition
   exact Iff.rfl
@@ -690,7 +690,12 @@ lemma provideWin_mem_S1_of_arithWinFreshAt
     (hThresh : g ≥ 2 * L + 1)
     (hFresh : Pos.ProvideWin L n g m ∉ Γ) :
     Pos.ProvideWin L n g m ∈ S1 Γ := by
-  -- Note: We prove *this specific* witness is in S1 directly.
+  have : ArithWinFreshAt Γ n := ⟨L, g, m, hWin, hThresh, hFresh⟩
+  rw [← winFrontierAt_iff_arithWinFreshAt Γ hClosed n] at this
+  rcases this with ⟨L', g', m', hS1⟩
+  -- Note: WinFrontierAt implies there exists *some* witness.
+  -- Here we want to prove *this specific* witness is in S1.
+  -- We can prove it directly:
   have hGood : isGood (Pos.ProvideWin L n g m) := by
     simpa [isGood] using And.intro hWin hThresh
   have hNprov : ¬ Provable Γ (Pos.ProvideWin L n g m) :=

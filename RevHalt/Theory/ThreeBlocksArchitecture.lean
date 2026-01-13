@@ -100,12 +100,12 @@ end Bridge
 
 section T1_on_aMachine
 
-theorem T1_on_aMachine (K : RHKit) (hK : DetectsMonotone K) (e : Code) :
+theorem T1_on_aMachine (K : RHKit) (hK : DetectsUpFixed K) (e : Code) :
     Rev0_K K (aMachine e) ↔ Halts (aMachine e) :=
   T1_traces K hK (aMachine e)
 
 theorem kits_agree_on_aMachine (K1 K2 : RHKit)
-    (h1 : DetectsMonotone K1) (h2 : DetectsMonotone K2) (e : Code) :
+    (h1 : DetectsUpFixed K1) (h2 : DetectsUpFixed K2) (e : Code) :
     Rev0_K K1 (aMachine e) ↔ Rev0_K K2 (aMachine e) :=
   T1_uniqueness K1 K2 h1 h2 (aMachine e)
 
@@ -206,7 +206,7 @@ def decidable_halts_of_decidable_eval
 
 theorem eval_iff_rev
     (A : OracleMachine Sentence Model)
-    (K : RHKit) (hK : DetectsMonotone K)
+    (K : RHKit) (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence) :
     A.Eval Γ φ ↔ Rev0_K K (aMachine (A.compile Γ φ)) := by
   have h_bridge := eval_iff_halts A Γ φ
@@ -227,7 +227,7 @@ variable (K : RHKit)
 
 /-- 1) From Architecture to External Decider for Rev0. -/
 def decidable_rev0_of_decidable_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (hCover : CompileCover A.compile)
     (hDec : ∀ (Γ : List Sentence) (φ : Sentence), Decidable (A.Eval Γ φ))
     (e : Code) : Decidable (Rev0_K K (aMachine e)) := by
@@ -250,7 +250,7 @@ def InternalizeDecider : Prop :=
 
 /-- 3) The Contradiction (Complementarity). -/
 theorem contradiction_if_internalize_external_decider
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (hCover : CompileCover A.compile)
     (hDec : ∀ (Γ : List Sentence) (φ : Sentence), Decidable (A.Eval Γ φ))
     (hLift : InternalizeDecider S K) :
@@ -273,7 +273,7 @@ open Nat.Partrec
 
 variable {PropT : Type}
 variable (S : ImpossibleSystem PropT)
-variable (K : RHKit) (hK : DetectsMonotone K)
+variable (K : RHKit) (hK : DetectsUpFixed K)
 variable (encode_halt : Code → PropT)
 
 -- 1) Instancier ComplementaritySystem sur le même a-machine / même Code
@@ -341,13 +341,13 @@ theorem certificate_exclusion_aMachine (e : Code) :
   exact hS hH
 
 /-- HaltCertificate ↔ Halts for valid kit. -/
-theorem haltCertificate_iff_halts (hK : DetectsMonotone K) (e : Code) :
+theorem haltCertificate_iff_halts (hK : DetectsUpFixed K) (e : Code) :
     HaltCertificate K e ↔ Halts (aMachine e) := by
   unfold HaltCertificate
   exact T1_traces K hK (aMachine e)
 
 /-- StabCertificate ↔ Stabilizes for valid kit. -/
-theorem stabCertificate_iff_stabilizes (hK : DetectsMonotone K) (e : Code) :
+theorem stabCertificate_iff_stabilizes (hK : DetectsUpFixed K) (e : Code) :
     StabCertificate K e ↔ Stabilizes (aMachine e) := by
   unfold StabCertificate
   exact T1_stabilization K hK (aMachine e)
@@ -366,7 +366,7 @@ variable (K : RHKit)
 
 /-- If Eval holds, the compiled code has a Σ₁ certificate. -/
 theorem eval_gives_halt_certificate
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hEval : A.Eval Γ φ) :
     HaltCertificate K (A.compile Γ φ) := by
@@ -376,7 +376,7 @@ theorem eval_gives_halt_certificate
 
 /-- If ¬Eval holds, the compiled code has a Π₁ certificate. -/
 theorem not_eval_gives_stab_certificate
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hNotEval : ¬ A.Eval Γ φ) :
     StabCertificate K (A.compile Γ φ) := by
@@ -387,7 +387,7 @@ theorem not_eval_gives_stab_certificate
 
 /-- Σ₁ certificate ↔ Eval. -/
 theorem haltCertificate_iff_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence) :
     HaltCertificate K (A.compile Γ φ) ↔ A.Eval Γ φ := by
   unfold HaltCertificate
@@ -395,7 +395,7 @@ theorem haltCertificate_iff_eval
 
 /-- Π₁ certificate ↔ ¬Eval. -/
 theorem stabCertificate_iff_not_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence) :
     StabCertificate K (A.compile Γ φ) ↔ ¬ A.Eval Γ φ := by
   unfold StabCertificate KitStabilizes
@@ -446,7 +446,7 @@ structure ArchitecturalOraclePick (Γ : List Sentence) (φ : Sentence) where
 
 /-- From a positive Eval, we get a Σ₁ certificate. -/
 def architecturalPick_of_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hEval : A.Eval Γ φ) :
     ArchitecturalOraclePick A K Γ φ where
@@ -455,7 +455,7 @@ def architecturalPick_of_eval
 
 /-- From a negative Eval, we get a Π₁ certificate. -/
 def architecturalPick_of_not_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hNotEval : ¬ A.Eval Γ φ) :
     ArchitecturalOraclePick A K Γ φ where
@@ -464,7 +464,7 @@ def architecturalPick_of_not_eval
 
 /-- The architectural pick is exhaustive: every compiled code has a certificate. -/
 theorem architecturalPick_exhaustive
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (h : A.Eval Γ φ ∨ ¬ A.Eval Γ φ) :
     ∃ _ : ArchitecturalOraclePick A K Γ φ, True := by
@@ -486,7 +486,7 @@ theorem architecturalPick_exhaustive
   which can be used to construct sound extensions in T3.
 -/
 theorem architectural_T3_certificate_transfer
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (pick : ArchitecturalOraclePick A K Γ φ) :
     (Halts (aMachine pick.code) ∧ HaltCertificate K pick.code) ∨
@@ -511,7 +511,7 @@ section CertificateStore_Framework
 variable {Sentence Model PropT : Type}
 variable (A : OracleMachine Sentence Model)
 variable (S : ImpossibleSystem PropT)
-variable (K : RHKit) (hK : DetectsMonotone K)
+variable (K : RHKit) (hK : DetectsUpFixed K)
 variable (encode_halt encode_not_halt : Code → PropT)
 
 /--

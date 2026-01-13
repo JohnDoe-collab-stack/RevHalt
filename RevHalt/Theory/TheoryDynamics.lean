@@ -373,7 +373,7 @@ theorem frontier_nonempty_all_stages
   This is the correct formulation without requiring encode_halt injectivity.
 -/
 theorem S1Rel_witness_not_in_kernel
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     {Γ : Set PropT} {p : PropT}
     (hp : p ∈ S1Rel Provable K Machine encode_halt Γ) :
     ∃ e : Code,
@@ -394,7 +394,7 @@ theorem S1Rel_witness_not_in_kernel
   **Connection**: Kit-certified halting means NOT in kernel.
 -/
 theorem kit_certified_not_in_kernel
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (e : Code)
     (hKit : Rev0_K K (Machine e)) :
     Machine e ∉ Categorical.upKernel := by
@@ -1389,7 +1389,7 @@ open Nat.Partrec in
 -/
 theorem frontier_empty_T2_full
     (S : ImpossibleSystem PropT)
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     {Γ : Set PropT}
     (hEmpty : S1Rel Provable K RevHalt.Machine encode_halt Γ = ∅)
     (hSound : Soundness Provable S.Provable Γ)
@@ -1427,7 +1427,7 @@ open Nat.Partrec in
 -/
 theorem frontier_nonempty_T2
     (S : ImpossibleSystem PropT)
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     {Γ : Set PropT}
     (hSound : Soundness Provable S.Provable Γ)
     (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
