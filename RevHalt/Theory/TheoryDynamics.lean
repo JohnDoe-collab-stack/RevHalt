@@ -1700,6 +1700,25 @@ def F0_pm (Γ : Set PropT) : Set PropT :=
   Γ ∪ S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ
 
 /--
+  **Bridging Lemma**: The One-Sided frontier is a subset of the Two-Sided frontier.
+
+  This allows us to lift any "frontier non-empty" result from the One-Sided theory
+  (e.g., from Route II/T2) directly to the Two-Sided theory.
+-/
+theorem S1Rel_subset_S1Rel_pm
+    (Γ : Set PropT) :
+    S1Rel Provable K Machine encode_halt Γ ⊆
+      S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  intro p hp
+  rcases hp with ⟨e, rfl, hKit, hNprov⟩
+  -- Construct the TwoPick witness
+  exact ⟨e, {
+    p := encode_halt e
+    cert := Or.inl ⟨hKit, rfl⟩
+    unprov := hNprov
+  }, rfl⟩
+
+/--
   **S1± is Anti-Monotone**:
   As the theory grows (Γ ⊆ Δ), the set of unprovable certified sentences shrinks.
 -/
