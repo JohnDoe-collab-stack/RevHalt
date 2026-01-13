@@ -51,7 +51,7 @@ for a fixed code `e`, an explicit witness `OraclePick` selects either `encode_ha
 
 S : ComplementaritySystem Code PropT
 S.K : RHKit
-S.h_canon : DetectsMonotone S.K
+S.h_canon : DetectsUpFixed S.K   -- Updated to UpFixed
 Rev0_K S.K : Trace → Prop
 
 ```
@@ -68,7 +68,7 @@ open Nat.Partrec
 /-- System for T3 theorems: general Code + general Machine, but realizable in Partrec.Code. -/
 structure ComplementaritySystem (Code PropT : Type) extends ImpossibleSystem PropT where
   K : RHKit
-  h_canon : DetectsMonotone K
+  h_canon : DetectsUpFixed K  -- Updated to DetectsUpFixed
 
   Machine : Code → Trace
 
@@ -101,6 +101,7 @@ theorem diagonal_bridge_of_realization
     exact htarget (S.dec c)
 
   -- Apply the canonical diagonal bridge on `RevHalt.Code`
+  -- Uses DetectsUpFixed S.h_canon
   obtain ⟨c0, hc0⟩ :=
     RevHalt.diagonal_bridge S.K S.h_canon fP hf targetP htargetP
 
@@ -298,6 +299,7 @@ theorem frontier_necessary
     semidec := h_semidec
   }
   -- Apply T2
+  -- Uses DetectsUpFixed S.h_canon
   exact T2_impossibility S.toImpossibleSystem S.K S.h_canon ⟨I, trivial⟩
 
 -- ==============================================================================================
@@ -356,43 +358,44 @@ theorem T3_weak_extension_explicit
       ¬ S.Provable (encode_halt e) := by
   let S3 : Set PropT := S3Set S S2 encode_halt
 
-  have hHalt : Halts (S.Machine e) :=
-    (T1_traces S.K S.h_canon (S.Machine e)).1 hKit
+  -- Ensure Halts via Kit
+  -- Ensure Halts via Kit
+  have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) := by
+    simpa [Rev0_K] using (RevHalt.revK_iff_halts (K := S.K) S.h_canon (T := S.Machine e))
+
+  -- Direction we need: Rev -> Halts
+  have hHalt' : Halts (S.Machine e) := hIff.mp hKit
 
   have h_mem_S1 : encode_halt e ∈ S1Set S encode_halt :=
     mem_S1Set_of_witness S encode_halt e hKit hUnprov
 
   refine Exists.intro S3 ?_
-  refine And.intro rfl ?_
-  refine And.intro ?_ ?_
-
-  · -- S2 ⊆ S3
-    intro p hp
-    -- S3 = S3Set ... = S2 ∪ S1Set ...
-    exact Or.inl hp
-
-  · refine And.intro ?_ ?_
-    · -- soundness of S3
+  constructor
+  · rfl -- S3 = S3Set ...
+  · constructor
+    · -- S2 ⊆ S3
       intro p hp
-      cases hp with
-      | inl hp2 =>
-          exact h_S2_sound p hp2
-      | inr hp1 =>
-          -- hp1 : p ∈ S1Set ...
-          rcases hp1 with ⟨e', hpEq, hKit', _hUnprov'⟩
-          have hEqK : S.K = KitOf S := Eq.symm rfl
-          have hKit'' : Rev0_K S.K (S.Machine e') := by
-            rw [hEqK]
-            exact hKit'
-          have hTrue : Truth (encode_halt e') := h_encode_correct e' hKit''
-          rw [hpEq]
-          exact hTrue
-
-    · refine And.intro h_mem_S1 ?_
-      · refine And.intro ?_ ?_
-        · -- encode_halt e ∈ S3
-          exact Or.inr h_mem_S1
-        · refine And.intro hHalt hUnprov
+      exact Or.inl hp
+    · constructor
+      · -- Soundness
+        intro p hp
+        cases hp with
+        | inl hp2 =>
+            exact h_S2_sound p hp2
+        | inr hp1 =>
+            rcases hp1 with ⟨e', hpEq, hKit', _⟩
+            have hEqK : S.K = KitOf S := rfl
+            have hKitReal : Rev0_K S.K (S.Machine e') := hKit'
+            rw [hpEq]
+            exact h_encode_correct e' hKitReal
+      · -- The 4-part conjunction for e
+        constructor
+        · exact h_mem_S1
+        · constructor
+          · exact Or.inr h_mem_S1 -- e ∈ S3
+          · constructor
+            · exact hHalt'
+            · exact hUnprov
 
 -- ==============================================================================================
 -- Infinite S₁ Elements (indexed witnesses: kit + unprovable)
@@ -557,8 +560,9 @@ theorem T3_oracle_extension_explicit
        (Stabilizes (S.Machine e) ∧ pick.p = encode_not_halt e)) := by
   let S3 : Set PropT := S3OneSet S2 pick.p
 
-  have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) :=
-    T1_traces S.K S.h_canon (S.Machine e)
+  have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) := by
+    -- Rev0_K K T ↔ Halts T
+    simpa [Rev0_K] using (revK_iff_halts (K := S.K) S.h_canon (T := S.Machine e))
 
   have hIffStab : KitStabilizes S.K (S.Machine e) ↔ Stabilizes (S.Machine e) :=
     T1_stabilization S.K S.h_canon (S.Machine e)
