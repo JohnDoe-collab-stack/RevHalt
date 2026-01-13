@@ -1,6 +1,5 @@
 import RevHalt.Base.Trace
 import RevHalt.Base.Kit
-import RevHalt.Theory.Canonicity
 import RevHalt.Base.QuotientUp
 
 /-!
@@ -54,8 +53,8 @@ theorem T1_stabilization (K : RHKit) (hK : DetectsUpFixed K) :
     ∀ T : Trace, KitStabilizes K T ↔ Stabilizes T := by
   intro T
   unfold KitStabilizes
-  -- `Rev0_K K T ↔ Halts T` from Canonicity
-  have h1 : Rev0_K K T ↔ Halts T := T1_traces K hK T
+  -- `Rev0_K K T ↔ Halts T` direct from Kit
+  have h1 : Rev0_K K T ↔ Halts T := revK_iff_halts K hK T
   -- `KitStabilizes ↔ ¬ Rev0_K ↔ ¬ Halts ↔ Stabilizes`
   exact (not_congr h1).trans (Stabilizes_iff_NotHalts T).symm
 
