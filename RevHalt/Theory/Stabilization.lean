@@ -54,7 +54,8 @@ theorem T1_stabilization (K : RHKit) (hK : DetectsUpFixed K) :
   intro T
   unfold KitStabilizes
   -- `Rev0_K K T ↔ Halts T` direct from Kit
-  have h1 : Rev0_K K T ↔ Halts T := revK_iff_halts K hK T
+  have h1 : Rev0_K K T ↔ Halts T := by
+    simpa [Rev0_K] using (revK_iff_halts (K := K) hK (T := T))
   -- `KitStabilizes ↔ ¬ Rev0_K ↔ ¬ Halts ↔ Stabilizes`
   exact (not_congr h1).trans (Stabilizes_iff_NotHalts T).symm
 
