@@ -74,6 +74,30 @@ theorem diagonal_bridge_re
   exact diagonal_bridge (K := K) (hK := hK) (f := re.f) (hf := re.f_partrec)
     (target := target) (htarget := re.spec)
 
+-- ==============================================================================================
+-- Abstract Diagonal Bridge (Cert-parameterized)
+-- ==============================================================================================
+
+/--
+**DiagonalBridge**: A certification predicate `Cert : Code → Prop` admits a diagonal bridge
+if for any r.e. target, there exists a code whose certification status equals the target.
+
+This is the abstract property that enables the non-fusion argument.
+Any predicate with this property cannot be uniformly internalized.
+-/
+def DiagonalBridge (Cert : Code → Prop) : Prop :=
+  ∀ target : Code → Prop, RECodePred target → ∃ e, Cert e ↔ target e
+
+/--
+**Rev0_K admits diagonal bridge**: The concrete certification predicate `Rev0_K K (Machine _)`
+satisfies the DiagonalBridge property (via Kleene fixed point).
+-/
+theorem diagonalBridge_for_Rev
+    (K : RHKit) (hK : DetectsUpFixed K) :
+    DiagonalBridge (fun e => Rev0_K K (Machine e)) := by
+  intro target re
+  exact diagonal_bridge_re (K := K) (hK := hK) (target := target) re
+
 /-- Minimal internal proof system data used by T2. -/
 structure ImpossibleSystem (PropT : Type) where
   Provable : PropT → Prop
@@ -95,6 +119,64 @@ structure InternalHaltingPredicate {PropT : Type}
   f        : Code → (Nat →. Nat)
   f_partrec : Partrec₂ f
   semidec  : ∀ c, S.Provable (S.Not (H c)) ↔ (∃ x : Nat, x ∈ (f c) 0)
+
+-- ==============================================================================================
+-- Abstract Internalizer (Cert-parameterized)
+-- ==============================================================================================
+
+/--
+**Internalizer**: Abstract internalization attempt of ANY external certification `Cert : Code → Prop`.
+
+This is the fully general version: the external predicate is a parameter, not hardcoded to Rev0_K.
+The non-fusion invariant holds for ANY Cert that admits a DiagonalBridge.
+-/
+structure Internalizer {PropT : Type}
+    (S : ImpossibleSystem PropT) (Cert : Code → Prop) where
+  H : Code → PropT
+  total    : ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
+  correct  : ∀ e, Cert e → S.Provable (H e)
+  complete : ∀ e, ¬ Cert e → S.Provable (S.Not (H e))
+  f        : Code → (Nat →. Nat)
+  f_partrec : Partrec₂ f
+  semidec  : ∀ c, S.Provable (S.Not (H c)) ↔ (∃ x : Nat, x ∈ (f c) 0)
+
+/--
+**General Non-Fusion Theorem**: For ANY external certification `Cert` that admits a DiagonalBridge,
+no uniform Internalizer (Total + Correct + Complete + r.e. negative) exists.
+
+This is the fully abstract form of the non-fusion invariant:
+- Parameterized by `PropT` (language independence)
+- Parameterized by `Cert` (external phenomenon independence)
+- Depends only on minimal coherence interface and DiagonalBridge
+
+The invariant: diagonal bridge + coherent internal system + r.e. negative ⇒ no uniform fusion.
+-/
+theorem no_uniform_internalizer_of_diagonal {PropT : Type}
+    (S : ImpossibleSystem PropT)
+    (Cert : Code → Prop)
+    (diag : DiagonalBridge Cert) :
+    ¬ ∃ _ : Internalizer S Cert, True := by
+  intro h
+  rcases h with ⟨I, _⟩
+
+  let target : Code → Prop := fun c => S.Provable (S.Not (I.H c))
+  have diag_app :=
+    diag target { f := I.f, f_partrec := I.f_partrec, spec := I.semidec }
+  rcases diag_app with ⟨e, he⟩
+  -- he : Cert e ↔ S.Provable (S.Not (I.H e))
+
+  cases I.total e with
+  | inl hProvH =>
+      have hNotProvNotH : ¬ S.Provable (S.Not (I.H e)) :=
+        fun hNot => S.consistent (S.absurd (I.H e) hProvH hNot)
+      have hNotCert : ¬ Cert e := mt he.mp hNotProvNotH
+      have hProvNotH : S.Provable (S.Not (I.H e)) := I.complete e hNotCert
+      exact hNotProvNotH hProvNotH
+
+  | inr hProvNotH =>
+      have hCert : Cert e := he.mpr hProvNotH
+      have hProvH : S.Provable (I.H e) := I.correct e hCert
+      exact S.consistent (S.absurd (I.H e) hProvH hProvNotH)
 
 /--
 **T2** (packaged):
@@ -145,39 +227,60 @@ theorem T2_impossibility_of_DetectsMono {PropT : Type}
 /-!
 ## Non-Fusion Invariance Principle
 
-The impossibility theorem T2 is **invariant under change of language/theory**.
+The impossibility theorem is **invariant under change of language/theory AND external phenomenon**.
 
-Formally: for ANY choice of
+### Language/Theory Independence (PropT)
+
+For ANY choice of
 - `PropT : Type` (the syntactic universe),
 - `Provable : PropT → Prop` (the internal justification predicate),
 - `Not : PropT → PropT` (internal negation),
 - minimal coherence axioms (`consistent`, `absurd`),
 
-the non-fusion result holds: there is no total, correct, complete internal predicate
-that uniformly internalizes external certification (`Rev0_K`).
+the non-fusion result holds.
 
-This invariance is captured by the universal quantification `{PropT : Type}` in T2_impossibility.
-The result depends only on:
-1. The Kit satisfying `DetectsUpFixed` (or equivalently `DetectsMono`)
-2. The internal system satisfying minimal coherence
-3. The semi-decidability of the negative case
+It does NOT depend on any specific proof calculus beyond the minimal coherence interface.
 
-It does NOT depend on:
-- The specific language (PropT can be any type)
-- The specific notion of provability
-- Arithmetic, truth, or any particular domain
+### External Phenomenon Independence (Cert)
 
-This makes T2 a **structural obstruction** to certification/justification fusion,
-not a property of any particular formal system.
+For ANY external certification predicate `Cert : Code → Prop` that admits a **DiagonalBridge**
+(i.e., for any r.e. target there exists a code whose certification equals the target),
+no uniform Internalizer exists.
+
+`Rev0_K K (Machine _)` is just one instance of such a Cert (via `diagonalBridge_for_Rev`).
+
+### The Invariant (Formal)
+
+```
+∀ PropT Cert S, DiagonalBridge Cert → ¬ ∃ I : Internalizer S Cert, True
+```
+
+This is a **structural obstruction** to certification/justification fusion,
+not a property of any particular formal system or external phenomenon.
 -/
 
 /--
-**Non-Fusion Invariance (Explicit)**:
-For any type `PropT` and any `ImpossibleSystem` over it,
-the fusion of external certification into internal justification is impossible.
+**Non-Fusion Invariance (Full)**: For any Cert with DiagonalBridge, fusion is impossible.
+This is the fully abstract form of the non-fusion principle.
+-/
+theorem non_fusion_invariance_full
+    (PropT : Type) (S : ImpossibleSystem PropT)
+    (Cert : Code → Prop) (diag : DiagonalBridge Cert) :
+    ¬ ∃ _ : Internalizer S Cert, True :=
+  no_uniform_internalizer_of_diagonal S Cert diag
 
-This theorem is the explicit statement of language/theory invariance:
-the result holds regardless of what `PropT`, `Provable`, `Not`, etc. are.
+/--
+**T2 as Corollary**: The original T2 (Rev0_K specific) follows from the general theorem.
+-/
+theorem T2_from_general {PropT : Type}
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsUpFixed K) :
+    ¬ ∃ _ : Internalizer S (fun e => Rev0_K K (Machine e)), True :=
+  no_uniform_internalizer_of_diagonal S _ (diagonalBridge_for_Rev K hK)
+
+/--
+**Non-Fusion Invariance (Legacy API)**: For Rev0_K specifically, fusion is impossible.
+(Redirects to T2_impossibility for compatibility.)
 -/
 theorem non_fusion_invariance
     (PropT : Type) (S : ImpossibleSystem PropT)
@@ -191,6 +294,12 @@ end RevHalt
 #print axioms RevHalt.Halts_Machine_iff
 #print axioms RevHalt.diagonal_bridge
 #print axioms RevHalt.diagonal_bridge_re
+#print axioms RevHalt.DiagonalBridge
+#print axioms RevHalt.diagonalBridge_for_Rev
+#print axioms RevHalt.Internalizer
+#print axioms RevHalt.no_uniform_internalizer_of_diagonal
 #print axioms RevHalt.T2_impossibility
 #print axioms RevHalt.T2_impossibility_of_DetectsMono
+#print axioms RevHalt.non_fusion_invariance_full
+#print axioms RevHalt.T2_from_general
 #print axioms RevHalt.non_fusion_invariance
