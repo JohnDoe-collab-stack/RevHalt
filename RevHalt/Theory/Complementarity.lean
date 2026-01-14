@@ -288,7 +288,7 @@ theorem frontier_necessary
     h_pos_complete
   have h_complete : ∀ e : RevHalt.Code, ¬ Rev0_K S.K (RevHalt.Machine e) → S.Provable (S.Not (H e)) :=
     h_neg_complete
-  -- Build the impossible predicate
+  -- Build the impossible predicate (InternalHaltingPredicate is now abbrev of Internalizer)
   let I : InternalHaltingPredicate S.toImpossibleSystem S.K := {
     H := H
     total := h_total
@@ -298,9 +298,8 @@ theorem frontier_necessary
     f_partrec := hf
     semidec := h_semidec
   }
-  -- Apply T2
-  -- Uses DetectsUpFixed S.h_canon
-  exact T2_impossibility S.toImpossibleSystem S.K S.h_canon ⟨I, trivial⟩
+  -- Apply T2 (now uses Nonempty)
+  exact T2_impossibility S.toImpossibleSystem S.K S.h_canon ⟨I⟩
 
 -- ==============================================================================================
 -- Unprovable Encoding Existence (uses diagonal_bridge_of_realization, no axioms)
