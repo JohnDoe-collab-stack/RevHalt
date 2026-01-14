@@ -2021,23 +2021,26 @@ def FrontierRegeneration' : Prop :=
     FrontierWitness Provable K Machine encode_halt Γ
 
 /--
-**The Incarnation Principle**: FrontierRegeneration + Admissible trajectory implies strict growth.
+**The Incarnation Principle**: FrontierRegeneration + PostSplitter trajectory implies strict growth.
 
 If regeneration holds, the trajectory is strictly increasing forever.
+Note: Absorbable is derived from PostSplitter via `PostSplitter.imp_Absorbable`.
 -/
 theorem incarnation_strict_growth
     (hRegen : FrontierRegeneration' Provable K Machine encode_halt)
     (Γ0 : Set PropT)
-    (hPS : ∀ n, PostSplitter Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n))
-    (hAbs : ∀ n, Absorbable Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
+    (hPS : ∀ n, PostSplitter Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
     ∀ n, canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊂
          canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) := by
   intro n
+  -- Derive Absorbable from PostSplitter
+  have hAbs : Absorbable Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n) :=
+    PostSplitter.imp_Absorbable Provable (hPS n)
   -- witness at rank n from regeneration
   obtain ⟨e, hKit, hNprov⟩ := hRegen _ (hPS n)
   exact strict_step_of_witness_absorbable Provable K Machine encode_halt
     (canonicalTrajectory Provable K Machine encode_halt Γ0 n)
-    (hAbs n) e hKit hNprov
+    hAbs e hKit hNprov
 
 /--
 **Incarnation Trilemma (Parametric Form)**:
