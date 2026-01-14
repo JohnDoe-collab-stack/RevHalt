@@ -107,24 +107,6 @@ structure ImpossibleSystem (PropT : Type) where
   absurd     : ∀ p, Provable p → Provable (Not p) → Provable FalseT
 
 /--
-Internalization attempt of `Rev0_K K (Machine e)` by a predicate `H e : PropT`,
-with Total + Correct + Complete, plus r.e. semi-decidability of `Provable (Not (H e))`.
--/
-structure InternalHaltingPredicate {PropT : Type}
-    (S : ImpossibleSystem PropT) (K : RHKit) where
-  H : Code → PropT
-  total    : ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
-  correct  : ∀ e, Rev0_K K (Machine e) → S.Provable (H e)
-  complete : ∀ e, ¬ Rev0_K K (Machine e) → S.Provable (S.Not (H e))
-  f        : Code → (Nat →. Nat)
-  f_partrec : Partrec₂ f
-  semidec  : ∀ c, S.Provable (S.Not (H c)) ↔ (∃ x : Nat, x ∈ (f c) 0)
-
--- ==============================================================================================
--- Abstract Internalizer (Cert-parameterized)
--- ==============================================================================================
-
-/--
 **Internalizer**: Abstract internalization attempt of ANY external certification `Cert : Code → Prop`.
 
 This is the fully general version: the external predicate is a parameter, not hardcoded to Rev0_K.
@@ -141,6 +123,13 @@ structure Internalizer {PropT : Type}
   semidec  : ∀ c, S.Provable (S.Not (H c)) ↔ (∃ x : Nat, x ∈ (f c) 0)
 
 /--
+**InternalHaltingPredicate**: Specialized Internalizer for Rev0_K (legacy API).
+-/
+abbrev InternalHaltingPredicate {PropT : Type}
+    (S : ImpossibleSystem PropT) (K : RHKit) :=
+  Internalizer S (fun e => Rev0_K K (Machine e))
+
+/--
 **General Non-Fusion Theorem**: For ANY external certification `Cert` that admits a DiagonalBridge,
 no uniform Internalizer (Total + Correct + Complete + r.e. negative) exists.
 
@@ -155,9 +144,8 @@ theorem no_uniform_internalizer_of_diagonal {PropT : Type}
     (S : ImpossibleSystem PropT)
     (Cert : Code → Prop)
     (diag : DiagonalBridge Cert) :
-    ¬ ∃ _ : Internalizer S Cert, True := by
-  intro h
-  rcases h with ⟨I, _⟩
+    ¬ Nonempty (Internalizer S Cert) := by
+  intro ⟨I⟩
 
   let target : Code → Prop := fun c => S.Provable (S.Not (I.H c))
   have diag_app :=
@@ -188,9 +176,8 @@ and the axiom audit currently reports `Classical.choice` for this theorem.
 theorem T2_impossibility {PropT : Type}
     (S : ImpossibleSystem PropT)
     (K : RHKit) (hK : DetectsUpFixed K) :
-    ¬ ∃ _: InternalHaltingPredicate S K, True := by
-  intro h
-  rcases h with ⟨I, _⟩
+    ¬ Nonempty (InternalHaltingPredicate S K) := by
+  intro ⟨I⟩
 
   let target : Code → Prop := fun c => S.Provable (S.Not (I.H c))
   have diag :=
@@ -217,7 +204,7 @@ theorem T2_impossibility {PropT : Type}
 theorem T2_impossibility_of_DetectsMono {PropT : Type}
     (S : ImpossibleSystem PropT)
     (K : RHKit) (hK : DetectsMono K) :
-    ¬ ∃ _: InternalHaltingPredicate S K, True :=
+    ¬ Nonempty (InternalHaltingPredicate S K) :=
   T2_impossibility S K ((DetectsMono_iff_DetectsUpFixed K).mp hK)
 
 -- ==============================================================================================
@@ -266,7 +253,7 @@ This is the fully abstract form of the non-fusion principle.
 theorem non_fusion_invariance_full
     (PropT : Type) (S : ImpossibleSystem PropT)
     (Cert : Code → Prop) (diag : DiagonalBridge Cert) :
-    ¬ ∃ _ : Internalizer S Cert, True :=
+    ¬ Nonempty (Internalizer S Cert) :=
   no_uniform_internalizer_of_diagonal S Cert diag
 
 /--
@@ -275,7 +262,7 @@ theorem non_fusion_invariance_full
 theorem T2_from_general {PropT : Type}
     (S : ImpossibleSystem PropT)
     (K : RHKit) (hK : DetectsUpFixed K) :
-    ¬ ∃ _ : Internalizer S (fun e => Rev0_K K (Machine e)), True :=
+    ¬ Nonempty (Internalizer S (fun e => Rev0_K K (Machine e))) :=
   no_uniform_internalizer_of_diagonal S _ (diagonalBridge_for_Rev K hK)
 
 /--
@@ -285,7 +272,7 @@ theorem T2_from_general {PropT : Type}
 theorem non_fusion_invariance
     (PropT : Type) (S : ImpossibleSystem PropT)
     (K : RHKit) (hK : DetectsUpFixed K) :
-    ¬ ∃ _ : InternalHaltingPredicate S K, True :=
+    ¬ Nonempty (InternalHaltingPredicate S K) :=
   T2_impossibility S K hK
 
 end RevHalt
