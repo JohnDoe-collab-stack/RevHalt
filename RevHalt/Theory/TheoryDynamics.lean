@@ -291,7 +291,13 @@ theorem omega0_universal (Γ0 : Set PropT) (T : Set PropT)
 def MissingFrom (Γ Δ : Set PropT) : Set PropT :=
   { p | p ∈ Δ ∧ ¬ Provable Γ p }
 
-/-- Absorbable: every member of Γ is already provable in Γ. -/
+/--
+  **Absorbable**: The state has absorbed all its members into its provability relation.
+  Formally: `p ∈ Γ → Provable Γ p`.
+
+  This is the *closure of membership* property.
+  (It is the dual of `ProvClosed`, which is `Provable Γ p → p ∈ Γ`).
+-/
 def Absorbable (Γ : Set PropT) : Prop := ∀ p, p ∈ Γ → Provable Γ p
 
 /--
@@ -2019,6 +2025,24 @@ See `RouteIIApplies_of_RouteIIHyp'` for the coupling.
 def FrontierRegeneration' : Prop :=
   ∀ Γ : Set PropT, PostSplitter Provable Γ →
     FrontierWitness Provable K Machine encode_halt Γ
+
+/--
+**Derivation of FrontierRegeneration from Route II**.
+
+This theorem formalizes the link: if Route II hypotheses hold uniformly for any state,
+then `FrontierRegeneration'` is true.
+-/
+theorem FrontierRegeneration_of_RouteII_uniform
+    {SProvable : PropT → Prop} {SNot : PropT → PropT}
+    (hSound : ∀ Γ, Soundness Provable SProvable Γ)
+    (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBar   : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    FrontierRegeneration' Provable K Machine encode_halt := by
+  intro Γ _hPS
+  have : (S1Rel Provable K Machine encode_halt Γ).Nonempty :=
+    frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
+      (hSound Γ) hNeg hBar
+  exact FrontierWitness_of_S1Rel_nonempty Provable K Machine encode_halt this
 
 /--
 **The Incarnation Principle**: FrontierRegeneration + PostSplitter trajectory implies strict growth.
