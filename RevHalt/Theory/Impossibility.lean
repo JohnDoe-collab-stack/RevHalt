@@ -169,38 +169,18 @@ theorem no_uniform_internalizer_of_diagonal {PropT : Type}
       exact S.consistent (S.absurd (I.H e) hProvH hProvNotH)
 
 /--
-**T2** (packaged):
-no such internalization predicate exists (diagonalization / fixed point).
+**T2** (packaged): No internalization predicate exists (diagonalization / fixed point).
 
-Audit note: the fixed-point machinery used here comes from `Mathlib.Computability.PartrecCode`,
-and the axiom audit currently reports `Classical.choice` for this theorem.
+This is a corollary of `no_uniform_internalizer_of_diagonal` via `diagonalBridge_for_Rev`.
+
+Audit note: uses fixed-point machinery from `Mathlib.Computability.PartrecCode`,
+which depends on `Classical.choice` (as expected for Kleene fixed-point).
 -/
 theorem T2_impossibility {PropT : Type}
     (S : ImpossibleSystem PropT)
     (K : RHKit) (hK : DetectsUpFixed K) :
-    ¬ Nonempty (InternalHaltingPredicate S K) := by
-  intro ⟨I⟩
-
-  let target : Code → Prop := fun c => S.Provable (S.Not (I.H c))
-  have diag :=
-    diagonal_bridge_re (K := K) (hK := hK) (target := target)
-      { f := I.f, f_partrec := I.f_partrec, spec := I.semidec }
-  rcases diag with ⟨e, he⟩
-  -- he : Rev0_K K (Machine e) ↔ S.Provable (S.Not (I.H e))
-
-  cases I.total e with
-  | inl hProvH =>
-      have hNotProvNotH : ¬ S.Provable (S.Not (I.H e)) :=
-        fun hNot => S.consistent (S.absurd (I.H e) hProvH hNot)
-
-      have hNotReal : ¬ Rev0_K K (Machine e) := mt he.mp hNotProvNotH
-      have hProvNotH : S.Provable (S.Not (I.H e)) := I.complete e hNotReal
-      exact hNotProvNotH hProvNotH
-
-  | inr hProvNotH =>
-      have hReal : Rev0_K K (Machine e) := he.mpr hProvNotH
-      have hProvH : S.Provable (I.H e) := I.correct e hReal
-      exact S.consistent (S.absurd (I.H e) hProvH hProvNotH)
+    ¬ Nonempty (InternalHaltingPredicate S K) :=
+  no_uniform_internalizer_of_diagonal S _ (diagonalBridge_for_Rev K hK)
 
 /-- **T2 (DetectsMono API)**: No internalization of Rev0_K is possible. -/
 theorem T2_impossibility_of_DetectsMono {PropT : Type}
@@ -261,15 +241,6 @@ theorem non_fusion_invariance_full
   no_uniform_internalizer_of_diagonal S Cert diag
 
 /--
-**T2 as Corollary**: The original T2 (Rev0_K specific) follows from the general theorem.
--/
-theorem T2_from_general {PropT : Type}
-    (S : ImpossibleSystem PropT)
-    (K : RHKit) (hK : DetectsUpFixed K) :
-    ¬ Nonempty (Internalizer S (fun e => Rev0_K K (Machine e))) :=
-  no_uniform_internalizer_of_diagonal S _ (diagonalBridge_for_Rev K hK)
-
-/--
 **Non-Fusion Invariance (Legacy API)**: For Rev0_K specifically, fusion is impossible.
 (Redirects to T2_impossibility for compatibility.)
 -/
@@ -281,7 +252,7 @@ theorem non_fusion_invariance
 
 end RevHalt
 
--- Axiom checks (auto):
+-- Axiom checks (within Mathlib's fixed-point development):
 #print axioms RevHalt.Halts_Machine_iff
 #print axioms RevHalt.diagonal_bridge
 #print axioms RevHalt.diagonal_bridge_re
@@ -292,5 +263,4 @@ end RevHalt
 #print axioms RevHalt.T2_impossibility
 #print axioms RevHalt.T2_impossibility_of_DetectsMono
 #print axioms RevHalt.non_fusion_invariance_full
-#print axioms RevHalt.T2_from_general
 #print axioms RevHalt.non_fusion_invariance
