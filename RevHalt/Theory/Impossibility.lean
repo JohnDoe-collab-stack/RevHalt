@@ -80,10 +80,12 @@ theorem diagonal_bridge_re
 
 /--
 **DiagonalBridge**: A certification predicate `Cert : Code → Prop` admits a diagonal bridge
-if for any r.e. target, there exists a code whose certification status equals the target.
+**against all r.e. targets** if for any r.e. target, there exists a code whose certification
+status equals the target.
 
-This is the abstract property that enables the non-fusion argument.
-Any predicate with this property cannot be uniformly internalized.
+This is a fixed-point/diagonalization property (not just r.e.-completeness).
+It is the abstract property that enables the non-fusion argument:
+any predicate with this property cannot be uniformly internalized.
 -/
 def DiagonalBridge (Cert : Code → Prop) : Prop :=
   ∀ target : Code → Prop, RECodePred target → ∃ e, Cert e ↔ target e
@@ -214,7 +216,8 @@ theorem T2_impossibility_of_DetectsMono {PropT : Type}
 /-!
 ## Non-Fusion Invariance Principle
 
-The impossibility theorem is **invariant under change of language/theory AND external phenomenon**.
+The impossibility theorem is **invariant under change of language/theory AND external phenomenon
+(within the fixed code model `Nat.Partrec.Code`)**.
 
 ### Language/Theory Independence (PropT)
 
@@ -230,7 +233,8 @@ It does NOT depend on any specific proof calculus beyond the minimal coherence i
 
 ### External Phenomenon Independence (Cert)
 
-For ANY external certification predicate `Cert : Code → Prop` that admits a **DiagonalBridge**
+We fix the canonical code model `Nat.Partrec.Code`. Within this model, for ANY external
+certification predicate `Cert : Code → Prop` that admits a **DiagonalBridge**
 (i.e., for any r.e. target there exists a code whose certification equals the target),
 no uniform Internalizer exists.
 
@@ -239,7 +243,7 @@ no uniform Internalizer exists.
 ### The Invariant (Formal)
 
 ```
-∀ PropT Cert S, DiagonalBridge Cert → ¬ ∃ I : Internalizer S Cert, True
+∀ PropT Cert S, DiagonalBridge Cert → ¬ Nonempty (Internalizer S Cert)
 ```
 
 This is a **structural obstruction** to certification/justification fusion,
