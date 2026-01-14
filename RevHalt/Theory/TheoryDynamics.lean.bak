@@ -297,84 +297,6 @@ theorem omega0_universal (Γ0 : Set PropT) (T : Set PropT)
   exact h n hn
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- 5.1) OMEGA-CONTINUITY AND FIXPOINTS (Structural Core)
--- ═══════════════════════════════════════════════════════════════════════════════
-
-/-- ω-continuity (Set version): F commutes with directed unions. -/
-def OmegaContinuousSet (F : Set PropT → Set PropT) : Prop :=
-  ∀ (U : ℕ → Set PropT),
-    (∀ n, U n ⊆ U (n+1)) →
-      F {p | ∃ n, p ∈ U n} = {p | ∃ n, p ∈ F (U n)}
-
-/-- Chain iterated by step F. -/
-def iter (F : Set PropT → Set PropT) (Γ0 : Set PropT) : ℕ → Set PropT
-  | 0     => Γ0
-  | n + 1 => F (iter F Γ0 n)
-
-/-- Union (ω-limit) of a chain. -/
-def omegaUnion (U : ℕ → Set PropT) : Set PropT :=
-  {p | ∃ n, p ∈ U n}
-
-/-- Technical Lemma: Shifted union equals union (for increasing chains). -/
-lemma union_shift_eq_union
-    (U : ℕ → Set PropT)
-    (hmono : ∀ n, U n ⊆ U (n+1)) :
-    {p | ∃ n, p ∈ U (n+1)} = {p | ∃ n, p ∈ U n} := by
-  ext p
-  constructor
-  · rintro ⟨n, hn⟩
-    exact ⟨n + 1, hn⟩
-  · rintro ⟨n, hn⟩
-    cases n with
-    | zero =>
-      -- p ∈ U 0 ⊆ U 1
-      exact ⟨0, hmono 0 hn⟩
-    | succ n' =>
-      exact ⟨n', hn⟩
-
-/-- Technical Lemma: The image of the chain under F is exactly the shifted chain. -/
-lemma union_iter_succ (F : Set PropT → Set PropT) (Γ0 : Set PropT) :
-    {p | ∃ n, p ∈ F (iter F Γ0 n)} = {p | ∃ n, p ∈ iter F Γ0 (n+1)} := by
-  ext p
-  constructor <;> rintro ⟨n, hn⟩
-  · exact ⟨n, by simpa [iter] using hn⟩
-  · exact ⟨n, by simpa [iter] using hn⟩
-
-/--
-  **Structural Fixpoint Lemma**:
-  If F is ω-continuous, then the limit of any F-chain is a fixpoint of F.
--/
-theorem omega_fixpoint_of_OmegaContinuousSet
-    (F : Set PropT → Set PropT)
-    (hω : OmegaContinuousSet F)
-    (Γ0 : Set PropT)
-    (hmono : ∀ n, iter F Γ0 n ⊆ iter F Γ0 (n+1)) :
-    F (omegaUnion (iter F Γ0)) =
-      omegaUnion (iter F Γ0) := by
-  dsimp [omegaUnion]
-  -- F(⋃ Γn) = ⋃ F(Γn) by continuity
-  rw [hω (iter F Γ0) hmono]
-  -- ⋃ F(Γn) = ⋃ Γ(n+1) by iter structure
-  rw [union_iter_succ F Γ0]
-  -- ⋃ Γ(n+1) = ⋃ Γn by shift lemma (using mono)
-  exact union_shift_eq_union (iter F Γ0) hmono
-
-/--
-  **Structural Escape Theorem (Abstract)**:
-  If the limit is NOT a fixpoint, then F CANNOT be ω-continuous.
-  This is the categorical formulation of the "Incarnation means rupture" thesis.
--/
-theorem not_omegaContinuous_of_no_fixpoint
-    (F : Set PropT → Set PropT)
-    (Γ0 : Set PropT)
-    (hmono : ∀ n, iter F Γ0 n ⊆ iter F Γ0 (n+1))
-    (hNoFix : F (omegaUnion (iter F Γ0)) ≠ omegaUnion (iter F Γ0)) :
-    ¬ OmegaContinuousSet F := by
-  intro hω
-  have hFix := omega_fixpoint_of_OmegaContinuousSet F hω Γ0 hmono
-  exact hNoFix hFix
-
--- ═══════════════════════════════════════════════════════════════════════════════
 -- 6) CONSERVATION LAW — "MISSING = S1"
 -- ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1405,5 +1327,789 @@ This completes the bridge between the abstract dynamics and the concrete impossi
 -/
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- F) ROUTE II — IMPOSSIBILITY OF EMPTY FRONTIER
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Route II: Impossibility of empty frontier (design theorem)
+
+This section formalizes the impossibility argument:
+  S1Rel(Γ) = ∅ ⟹ ⊥
+
+Under the axioms:
+- A1 (Soundness): `Provable Γ p → S.Provable p`
+- A2 (Negative completeness): `¬Rev0(e) → S.Provable (Not (encode_halt e))`
+- A3' (Extraction): bivalence in S → total external decider
+- A3 (Internalization + T2): total decider → contradiction
+
+The key insight: frontier empty forces a forbidden decision power.
+-/
+
+-- Note: We use SProvable and SNot as parameters instead of ImpossibleSystem
+-- to avoid universe issues and keep the section maximally parametric.
+variable (SProvable : PropT → Prop) -- Instantiate as S.Provable
+variable (SNot : PropT → PropT)     -- Instantiate as S.Not
+
+/-- A1: Soundness — relative provability implies global provability. -/
+def Soundness (Γ : Set PropT) : Prop :=
+  ∀ p, Provable Γ p → SProvable p
+
+/-- A2: Negative completeness in S — kit-non-certified implies S proves negation. -/
+def NegativeComplete : Prop :=
+  ∀ e : Code, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))
+
+/-- Absorption Σ₁: If S1Rel(Γ) = ∅, then Rev0 ⟹ Provable Γ (encode_halt e). -/
+theorem absorption_sigma1
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅) :
+    ∀ e : Code, Rev0_K K (Machine e) → Provable Γ (encode_halt e) := by
+  intro e hRev
+  by_contra hNprov
+  have hMem : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
+    ⟨e, rfl, hRev, hNprov⟩
+  rw [hEmpty] at hMem
+  simp at hMem
+
+/-- Absorption + Soundness: If S1Rel(Γ) = ∅ and Soundness(Γ), then Rev0 ⟹ S.Provable. -/
+theorem absorption_soundness
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ) :
+    ∀ e : Code, Rev0_K K (Machine e) → SProvable (encode_halt e) := by
+  intro e hRev
+  have hProv : Provable Γ (encode_halt e) :=
+    absorption_sigma1 Provable K Machine encode_halt hEmpty e hRev
+  exact hSound (encode_halt e) hProv
+
+/--
+  **Bivalence in S**: If S1Rel(Γ) = ∅ with Soundness, and S has negative completeness,
+  then for every e, S proves either halt(e) or ¬halt(e) (piloted by Rev0).
+-/
+theorem bivalence_in_S
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
+    ∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e)) := by
+  intro e
+  classical -- Rev0_K is undecidable
+  by_cases hRev : Rev0_K K (Machine e)
+  · -- Rev0(e) ⟹ S.Provable (halt e) via absorption + soundness
+    exact Or.inl (absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound e hRev)
+  · -- ¬Rev0(e) ⟹ S.Provable (¬halt e) via negative completeness
+    exact Or.inr (hNegComp e hRev)
+
+/--
+  **Route II Design Theorem (parametric form)**.
+
+  If:
+  - S1Rel(Γ) = ∅
+  - Soundness: Provable Γ p → S.Provable p
+  - Negative completeness: ¬Rev0(e) → S.Provable (¬halt e)
+  - Total decider extraction: bivalence in S produces a decidable Rev0
+  - T2 barrier: total decider implies contradiction
+
+  Then: ⊥.
+
+  This is a schema; the final step (extraction + T2) is left as a hypothesis
+  to be instantiated via OracleMachine or similar.
+-/
+theorem frontier_empty_contradiction_schema
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    -- A3' + A3: bivalence + extraction + T2 combined as one hypothesis
+    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    False := by
+  have hBiv := bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
+  exact hBarrier hBiv
+
+/-!
+### Connection to T2: InternalHaltingPredicate components
+
+The bivalence produced by `frontier_empty` provides exactly the components needed
+for `InternalHaltingPredicate`:
+
+- `total` : ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
+  → Given by `bivalence_in_S` with `H e = encode_halt e`
+
+- `correct` : ∀ e, Rev0_K K (Machine e) → S.Provable (H e)
+  → Given by `absorption_soundness` (from frontier empty + Soundness)
+
+- `complete` : ∀ e, ¬ Rev0_K K (Machine e) → S.Provable (S.Not (H e))
+  → Given by `NegativeComplete`
+
+The remaining piece for full T2 connection is the semi-decidability witness
+`f : Code → (Nat →. Nat)` for `S.Provable (S.Not (encode_halt e))`.
+This typically comes from your architecture (OracleMachine/ComplementaritySystem).
+-/
+
+/--
+  **T2 Components from Frontier Empty**.
+  If the frontier is empty, we can construct all the logical components
+  needed for InternalHaltingPredicate, except the semi-decidability witness.
+-/
+theorem frontier_empty_T2_components
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
+    -- total
+    (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) ∧
+    -- correct
+    (∀ e, Rev0_K K (Machine e) → SProvable (encode_halt e)) ∧
+    -- complete
+    (∀ e, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
+  · exact absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound
+  · exact hNegComp
+
+/-!
+### Corollary: The frontier cannot be empty (without contradiction)
+
+This is the key dynamic result: under the axioms, `S1Rel(Γ) ≠ ∅` for all admissible Γ.
+Combined with `FrontierWitness_of_S1Rel_nonempty`, this would close `infinite_strict_growth`
+without needing `PostSplitter` propagation.
+-/
+
+theorem frontier_nonempty_of_route_II
+    {Γ : Set PropT}
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
+  by_contra hEmpty
+  rw [Set.not_nonempty_iff_eq_empty] at hEmpty
+  exact frontier_empty_contradiction_schema Provable K Machine encode_halt SProvable SNot
+    hEmpty hSound hNegComp hBarrier
+
+/--
+  **RouteIIHyp' → RouteIIApplies**: OmegaAdmissible + RouteIIHyp' → RouteIIAt.
+  This makes OmegaAdmissible structurally load-bearing in the trilemma.
+-/
+theorem RouteIIApplies_of_RouteIIHyp'
+    {ωΓ : Set PropT}
+    (hHyp : RouteIIHyp' Provable K Machine encode_halt SProvable SNot ωΓ) :
+    RouteIIApplies Provable K Machine encode_halt Cn ωΓ := by
+  intro _hAdm
+  exact frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
+    hHyp.soundness hHyp.negComplete hHyp.barrier
+
 end Functor
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- G) FULL T2 CONNECTION (Route II → T2_impossibility)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Complete T2 Integration
+
+This section completes Route II by connecting to `T2_impossibility`.
+
+NOTE: This section uses concrete types from `Impossibility.lean`:
+- `RevHalt.Code = Nat.Partrec.Code`
+- `RevHalt.Machine : RevHalt.Code → Trace`
+- `ImpossibleSystem PropT` for `PropT : Type`
+
+Given:
+- `S1Rel(Γ) = ∅` (frontier empty)
+- `Soundness`: `Provable Γ p → S.Provable p`
+- `NegativeComplete`: `¬Rev0(e) → S.Provable (S.Not (encode_halt e))`
+- Semi-decidability witness `(f, hf, h_semidec)`
+
+We construct an `InternalHaltingPredicate S K` and derive a contradiction via T2.
+-/
+
+section T2_Connection
+
+variable (encode_halt : RevHalt.Code → PropT)
+
+open Nat.Partrec in
+/--
+  **Constructor for InternalHaltingPredicate** from Route II components.
+  Given (total, correct, complete) from `frontier_empty_T2_components`
+  plus the semi-decidability witness `(f, hf, hsemidec)`,
+  this constructs the `InternalHaltingPredicate` needed for T2.
+-/
+def mk_InternalHaltingPredicate_RouteII
+    (S : ImpossibleSystem PropT)
+    (hTotal    : ∀ e, S.Provable (encode_halt e) ∨ S.Provable (S.Not (encode_halt e)))
+    (hCorrect  : ∀ e, Rev0_K K (RevHalt.Machine e) → S.Provable (encode_halt e))
+    (hComplete : ∀ e, ¬ Rev0_K K (RevHalt.Machine e) → S.Provable (S.Not (encode_halt e)))
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    InternalHaltingPredicate S K where
+  H := encode_halt
+  total := hTotal
+  correct := hCorrect
+  complete := hComplete
+  f := f
+  f_partrec := hf
+  semidec := hsemidec
+
+open Nat.Partrec in
+/--
+  **Route II → T2 Contradiction (Full Theorem)**.
+
+  If:
+  - `S1Rel(Γ) = ∅`
+  - `Soundness Γ` (relative provability implies S.Provable)
+  - `NegativeComplete` (¬Rev0 ⟹ S proves negation)
+  - Semi-decidability witness `(f, hf, hsemidec)`
+  - `DetectsMonotone K`
+
+  Then: **False** (via T2_impossibility).
+
+  This is the complete formalization of Route II.
+-/
+theorem frontier_empty_T2_full
+    (S : ImpossibleSystem PropT)
+    (hK : DetectsUpFixed K)
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K RevHalt.Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable S.Provable Γ)
+    (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    -- Semi-decidability witness (from OracleMachine/ComplementaritySystem)
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    False := by
+  -- 1) Extract the T2 components from frontier empty
+  have hTriple :=
+    frontier_empty_T2_components Provable K RevHalt.Machine encode_halt S.Provable S.Not
+      hEmpty hSound hNegComp
+  obtain ⟨hTotal, hCorrect, hComplete⟩ := hTriple
+
+  -- 2) Package into InternalHaltingPredicate
+  let IH : InternalHaltingPredicate S K :=
+    { H := encode_halt
+      total := hTotal
+      correct := hCorrect
+      complete := hComplete
+      f := f
+      f_partrec := hf
+      semidec := hsemidec }
+
+  -- 3) Apply T2_impossibility (now uses Nonempty)
+  exact T2_impossibility S K hK ⟨IH⟩
+
+open Nat.Partrec in
+/--
+  **Corollary: Frontier Never Empty (Route II + T2)**.
+
+  Under the T2 hypotheses, the frontier is always non-empty.
+  This provides `FrontierWitness` for all admissible states.
+-/
+theorem frontier_nonempty_T2
+    (S : ImpossibleSystem PropT)
+    (hK : DetectsUpFixed K)
+    {Γ : Set PropT}
+    (hSound : Soundness Provable S.Provable Γ)
+    (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    (S1Rel Provable K RevHalt.Machine encode_halt Γ).Nonempty := by
+  by_contra hEmpty
+  rw [Set.not_nonempty_iff_eq_empty] at hEmpty
+  exact frontier_empty_T2_full Provable K encode_halt S hK hEmpty hSound hNegComp f hf hsemidec
+
+end T2_Connection
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- H) TRANSFINITE ITERATION (Ordinal-indexed dynamics)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Transfinite Iteration
+
+The ordinal-indexed dynamics (limit union, closure ordinal, transfinite trilemma)
+have been moved to `RevHalt.Theory.Transfinite` to isolate non-constructive
+dependencies and proof sketches.
+
+See [RevHalt/Theory/Transfinite.lean](RevHalt/Theory/Transfinite.lean).
+-/
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- TWO-SIDED DYNAMICS (Generative Complementarity)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+section TwoSidedDynamics
+
+variable (encode_not_halt : Code → PropT)
+
+/--
+  **Two-Sided Pick**: A sentence p paired with a certificate.
+
+  The certificate ties p to either:
+  - `Rev0` (halting witness) -> p = encode_halt e
+  - `KitStabilizes` (non-halting witness) -> p = encode_not_halt e
+
+  Crucially, this structure carries the certificate *without deciding* which case holds.
+  It acts as a "candidate generator" for the theory.
+-/
+structure TwoPick (Γ : Set PropT) (e : Code) where
+  p : PropT
+  cert :
+    (Rev0_K K (Machine e) ∧ p = encode_halt e) ∨
+    (KitStabilizes K (Machine e) ∧ p = encode_not_halt e)
+  unprov : ¬ Provable Γ p
+
+/--
+  **S1Rel±(Γ)**: The two-sided dynamic frontier.
+
+  This set contains all sentences backed by a TwoPick certificate that are NOT
+  currently provable in Γ. It acts as a bidirectional source of new axioms.
+-/
+def S1Rel_pm (Γ : Set PropT) : Set PropT :=
+  { p | ∃ e : Code,
+      ∃ pk : TwoPick Provable K Machine encode_halt encode_not_halt Γ e,
+        p = pk.p }
+
+/--
+  **F0±(Γ)**: The two-sided expansion step.
+-/
+def F0_pm (Γ : Set PropT) : Set PropT :=
+  Γ ∪ S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ
+
+/--
+  **Bridging Lemma**: The One-Sided frontier is a subset of the Two-Sided frontier.
+
+  This allows us to lift any "frontier non-empty" result from the One-Sided theory
+  (e.g., from Route II/T2) directly to the Two-Sided theory.
+-/
+theorem S1Rel_subset_S1Rel_pm
+    (Γ : Set PropT) :
+    S1Rel Provable K Machine encode_halt Γ ⊆
+      S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  intro p hp
+  rcases hp with ⟨e, rfl, hKit, hNprov⟩
+  -- Construct the TwoPick witness
+  exact ⟨e, {
+    p := encode_halt e
+    cert := Or.inl ⟨hKit, rfl⟩
+    unprov := hNprov
+  }, rfl⟩
+
+/--
+  **S1± is Anti-Monotone**:
+  As the theory grows (Γ ⊆ Δ), the set of unprovable certified sentences shrinks.
+-/
+theorem S1Rel_pm_anti_monotone
+    (hMono : ProvRelMonotone Provable)
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ) :
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Δ ⊆
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  intro p hp
+  rcases hp with ⟨e, pk, hpEq⟩
+  -- Explicitly construct the witness for Δ (target is Γ)
+  -- pk is in Δ (so unprovable in Δ). We want pk in Γ (unprovable in Γ).
+  exact ⟨e, {
+    p := pk.p
+    cert := pk.cert
+    unprov := fun hProvΓ => pk.unprov (hMono Γ Δ hSub pk.p hProvΓ)
+  }, hpEq⟩
+
+/--
+  **Conservation Law (Two-Sided)**:
+  Under Absorbable (membership => provability), the frontier is exactly
+  what is "missing" from the expansion.
+-/
+theorem missing_F0_pm_eq_S1Rel_pm_of_absorbable
+    (Γ : Set PropT)
+    (hAbs : Absorbable Provable Γ) :
+    MissingFrom Provable Γ
+        (F0_pm Provable K Machine encode_halt encode_not_halt Γ)
+      =
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  ext p
+  constructor
+  · intro hp
+    rcases hp with ⟨hpF0, hNprov⟩
+    cases hpF0 with
+    | inl hpΓ =>
+        have hProv : Provable Γ p := hAbs p hpΓ
+        exact False.elim (hNprov hProv)
+    | inr hpS1 =>
+        exact hpS1
+  · intro hpS1
+    refine And.intro ?_ ?_
+    · exact Or.inr hpS1
+    · -- Extract unprovability from the witness
+      rcases hpS1 with ⟨e, pk, hpEq⟩
+      intro hProvp
+      have hProvpk : Provable Γ pk.p := by
+        rw [hpEq] at hProvp
+        exact hProvp
+      exact pk.unprov hProvpk
+
+/--
+  **F0± is Monotone** (Constructive).
+
+  Requires `DecidablePred` to decide if a frontier element has been absorbed.
+-/
+theorem F0_pm_monotone_of_provClosed
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ)
+    (hDecΔ : DecidablePred (fun p => Provable Δ p)) :
+    F0_pm Provable K Machine encode_halt encode_not_halt Γ ⊆
+    F0_pm Provable K Machine encode_halt encode_not_halt Δ := by
+  intro p hp
+  cases hp with
+  | inl hpΓ =>
+      exact Or.inl (hSub hpΓ)
+  | inr hpS1Γ =>
+      rcases hpS1Γ with ⟨e, pk, hpEq⟩
+      -- Constructive split on absorption
+      cases hDecΔ pk.p with
+      | isTrue hProvΔ =>
+          -- Absorbed in Δ
+          have hMemΔ : pk.p ∈ Δ := hClosedΔ pk.p hProvΔ
+          have : p ∈ Δ := by
+            rw [hpEq]
+            exact hMemΔ
+          exact Or.inl this
+      | isFalse hNprovΔ =>
+          -- Remains in frontier S1Rel_pm(Δ)
+          refine Or.inr ?_
+          exact ⟨e, {
+            p := pk.p
+            cert := pk.cert
+            unprov := hNprovΔ
+          }, hpEq⟩
+
+/--
+  **F0± is Monotone** (Classical).
+
+  Used for the functor instance where decidability is not guaranteed.
+-/
+theorem F0_pm_monotone_classical
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ) :
+    F0_pm Provable K Machine encode_halt encode_not_halt Γ ⊆
+    F0_pm Provable K Machine encode_halt encode_not_halt Δ := by
+  classical -- Essential for the axiom-free check to report 'classical'
+  apply F0_pm_monotone_of_provClosed Provable K Machine encode_halt encode_not_halt hSub hClosedΔ (Classical.decPred _)
+
+-- -----------------------------------------------------------------------------
+-- Two-Sided Functor
+-- -----------------------------------------------------------------------------
+
+variable (Cn : Set PropT → Set PropT)
+
+/-- **F±(S)**: The two-sided dynamic step (closed). -/
+def F_pm (Γ : Set PropT) : Set PropT :=
+  Cn (F0_pm Provable K Machine encode_halt encode_not_halt Γ)
+
+/--
+  **FState±**: Lifts the two-sided step to the category of Theory States.
+-/
+def FState_pm
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn) :
+    ThState (PropT := PropT) Provable Cn where
+  Γ := F_pm Provable K Machine encode_halt encode_not_halt Cn A.Γ
+  cn_closed := by
+    dsimp [F_pm]
+    rw [hIdem]
+  prov_closed := by
+    dsimp [F_pm]
+    apply hProvCn
+
+/--
+  **FState± Map**: Functorial mapping for FState±.
+-/
+def FState_pm_map
+    (hCnMono : CnMonotone Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    {A B : ThState (PropT := PropT) Provable Cn}
+    (f : A ⟶ B) :
+    FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn A ⟶
+    FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn B := by
+  have hAB : A.Γ ⊆ B.Γ := f.down
+  refine ⟨?_⟩
+  dsimp [FState_pm, F_pm]
+  apply hCnMono
+  apply F0_pm_monotone_classical Provable K Machine encode_halt encode_not_halt hAB B.prov_closed
+
+/--
+  **TheoryStepFunctor±**: The two-sided dynamic endofunctor.
+-/
+def TheoryStepFunctor_pm
+    (hCnMono : CnMonotone Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn) :
+    ThState (PropT := PropT) Provable Cn ⥤ ThState (PropT := PropT) Provable Cn where
+  obj := FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn
+  map := FState_pm_map Provable K Machine encode_halt encode_not_halt Cn hCnMono hIdem hProvCn
+  map_id := fun _ => Subsingleton.elim _ _
+  map_comp := fun _ _ => Subsingleton.elim _ _
+
+end TwoSidedDynamics
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- TRAJECTORY DYNAMICS: The Effective Object
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Trajectory Dynamics
+
+The non-fusion invariant (T2) forces a *dynamic* interpretation:
+- No single theory captures all certified truths
+- The *effective object* is the trajectory of absorption, not a fixed theory
+
+This section formalizes:
+1. `Trajectory` as an explicit type
+2. Trajectory uniqueness given initial state + step function
+3. Initial-dependence: different Γ0 → different trajectories
+4. No global selector: impossible to uniformly select "the right" trajectory
+-/
+
+section TrajectoryDynamics
+
+
+
+/-- A trajectory is an infinite sequence of theory states. -/
+abbrev Trajectory := ℕ → Set PropT
+
+/-- A trajectory is F0-compatible if each step is F0-generated. -/
+def IsF0Trajectory (traj : Trajectory (PropT := PropT)) (Γ0 : Set PropT) : Prop :=
+  traj 0 = Γ0 ∧ ∀ n, traj (n + 1) = F0 Provable K Machine encode_halt (traj n)
+
+/-- The canonical trajectory starting from Γ0. -/
+def canonicalTrajectory (Γ0 : Set PropT) : Trajectory (PropT := PropT) :=
+  chain0 Provable K Machine encode_halt Γ0
+
+/-- The canonical trajectory is F0-compatible. -/
+theorem canonicalTrajectory_is_F0 (Γ0 : Set PropT) :
+    IsF0Trajectory Provable K Machine encode_halt
+      (canonicalTrajectory Provable K Machine encode_halt Γ0) Γ0 := by
+  constructor
+  · rfl
+  · intro n; rfl
+
+/--
+**Trajectory Uniqueness**: Any F0-compatible trajectory equals the canonical one.
+-/
+theorem trajectory_unique (Γ0 : Set PropT) (traj : Trajectory (PropT := PropT))
+    (hTraj : IsF0Trajectory Provable K Machine encode_halt traj Γ0) :
+    traj = canonicalTrajectory Provable K Machine encode_halt Γ0 := by
+  funext n
+  induction n with
+  | zero => exact hTraj.1
+  | succ n ih =>
+      have h1 : traj (n + 1) = F0 Provable K Machine encode_halt (traj n) := hTraj.2 n
+      have h2 : canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) =
+                F0 Provable K Machine encode_halt (canonicalTrajectory Provable K Machine encode_halt Γ0 n) := rfl
+      rw [h1, h2, ih]
+
+/--
+**Initial-Dependence**: Different initial states yield different trajectories
+(assuming strict growth at each stage).
+
+This is the key property: the trajectory is *fully determined* by Γ0,
+and different Γ0 give genuinely different trajectories.
+-/
+theorem trajectory_initial_dependence
+    {Γ0 Δ0 : Set PropT}
+    (hNe : Γ0 ≠ Δ0) :
+    canonicalTrajectory Provable K Machine encode_halt Γ0 ≠
+    canonicalTrajectory Provable K Machine encode_halt Δ0 := by
+  intro hContra
+  have h0 : canonicalTrajectory Provable K Machine encode_halt Γ0 0 =
+            canonicalTrajectory Provable K Machine encode_halt Δ0 0 := by
+    rw [hContra]
+  simp only [canonicalTrajectory, chain0] at h0
+  exact hNe h0
+
+/--
+**Strict Growth Along Trajectory**: If witness exists at each stage,
+the trajectory is strictly increasing.
+-/
+theorem trajectory_strict_growth
+    (Γ0 : Set PropT)
+    (hAbs : ∀ n, Absorbable Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n))
+    (hW : ∀ n, FrontierWitness Provable K Machine encode_halt
+                (canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
+    ∀ n, canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊂
+         canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) := by
+  intro n
+  obtain ⟨e, hKit, hNprov⟩ := hW n
+  exact strict_step_of_witness_absorbable Provable K Machine encode_halt
+    (canonicalTrajectory Provable K Machine encode_halt Γ0 n)
+    (hAbs n) e hKit hNprov
+
+/--
+**The ω-limit is the trajectory's effective object**.
+-/
+def trajectoryLimit (Γ0 : Set PropT) : Set PropT :=
+  omega0 Provable K Machine encode_halt Γ0
+
+/-- Each stage embeds into the limit. -/
+theorem trajectory_stage_le_limit (Γ0 : Set PropT) (n : ℕ) :
+    canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊆
+    trajectoryLimit Provable K Machine encode_halt Γ0 := by
+  exact chain0_le_omega0 Provable K Machine encode_halt Γ0 n
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- INCARNATION TRILEMMA
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The Incarnation Trilemma
+
+The core insight: three properties cannot hold simultaneously for any trajectory.
+
+1. **FrontierRegeneration**: At each step, new certified truths appear that are not yet provable
+2. **Admissible Limit**: The ω-limit is a well-formed theory state (Cn-closed, ProvClosed)
+3. **Absorption**: What is certified eventually becomes provable
+
+This is NOT Gödel. This is a limit pathology:
+> "The system cannot traverse ω without losing one of its structural properties"
+-/
+
+/--
+**FrontierRegeneration**: At every admissible state, a new frontier witness exists.
+
+This captures: "the external world keeps producing certified truths faster than absorption."
+
+**Derivation from Route II**: This property follows from `frontier_nonempty_of_route_II`
+under the conditions:
+- `Soundness`: provability in Γ implies provability in the external system
+- `NegativeComplete`: non-halting is provable externally
+- `Barrier`: T2 barrier (not all sentences decidable)
+
+When these hold for all admissible Γ, `FrontierRegeneration'` follows automatically.
+See `RouteIIApplies_of_RouteIIHyp'` for the coupling.
+-/
+def FrontierRegeneration' : Prop :=
+  ∀ Γ : Set PropT, PostSplitter Provable Γ →
+    FrontierWitness Provable K Machine encode_halt Γ
+
+/--
+**Derivation of FrontierRegeneration from Route II**.
+
+This theorem formalizes the link: if Route II hypotheses hold uniformly for any state,
+then `FrontierRegeneration'` is true.
+-/
+theorem FrontierRegeneration_of_RouteII_uniform
+    {SProvable : PropT → Prop} {SNot : PropT → PropT}
+    (hSound : ∀ Γ, Soundness Provable SProvable Γ)
+    (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBar   : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    FrontierRegeneration' Provable K Machine encode_halt := by
+  intro Γ _hPS
+  have : (S1Rel Provable K Machine encode_halt Γ).Nonempty :=
+    frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
+      (hSound Γ) hNeg hBar
+  exact FrontierWitness_of_S1Rel_nonempty Provable K Machine encode_halt this
+
+/--
+**The Incarnation Principle**: FrontierRegeneration + PostSplitter trajectory implies strict growth.
+
+If regeneration holds, the trajectory is strictly increasing forever.
+Note: Absorbable is derived from PostSplitter via `PostSplitter.imp_Absorbable`.
+-/
+theorem incarnation_strict_growth
+    (hRegen : FrontierRegeneration' Provable K Machine encode_halt)
+    (Γ0 : Set PropT)
+    (hPS : ∀ n, PostSplitter Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
+    ∀ n, canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊂
+         canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) := by
+  intro n
+  -- Derive Absorbable from PostSplitter
+  have hAbs : Absorbable Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n) :=
+    PostSplitter.imp_Absorbable Provable (hPS n)
+  -- witness at rank n from regeneration
+  obtain ⟨e, hKit, hNprov⟩ := hRegen _ (hPS n)
+  exact strict_step_of_witness_absorbable Provable K Machine encode_halt
+    (canonicalTrajectory Provable K Machine encode_halt Γ0 n)
+    hAbs e hKit hNprov
+
+/--
+**Incarnation Trilemma (Parametric Form)**:
+
+For any trajectory, the three conditions cannot all hold:
+1. Absorbable at step 1
+2. OmegaAdmissible at ω-limit
+3. RouteIIAt (frontier non-empty) at ω-limit
+
+This is a wrapper around `omega_trilemma_not_all` with full parameters.
+-/
+theorem incarnation_trilemma
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ (Absorbable Provable
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+       ∧ OmegaAdmissible Provable Cn
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+       ∧ RouteIIAt Provable K Machine encode_halt
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) :=
+  omega_trilemma_not_all Provable K Machine encode_halt Cn hMono hCnExt hIdem hProvCn A0
+
+/--
+**Crystallized Thesis**: Incarnation = non-passage to limit.
+
+The effective object is the trajectory, because no limit can be both:
+- Admissible (well-formed theory state)
+- Regenerative (frontier non-empty, Route II holds)
+
+Formally: `incarnation_trilemma` above, or equivalently `omega_trilemma_not_all`.
+-/
+theorem incarnation_means_no_stable_limit'
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hAbs : Absorbable Provable
+              (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ)
+    (hAdm : OmegaAdmissible Provable Cn
+              (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) :
+    ¬ RouteIIAt Provable K Machine encode_halt
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := by
+  intro hR
+  exact incarnation_trilemma Provable K Machine encode_halt Cn
+    hMono hCnExt hIdem hProvCn A0 ⟨hAbs, hAdm, hR⟩
+
+end TrajectoryDynamics
+
 end RevHalt
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- AXIOM CHECKS
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+#print axioms RevHalt.ThHom.refl
+#print axioms RevHalt.ThHom.trans
+#print axioms RevHalt.S1Rel
+#print axioms RevHalt.S1Rel_anti_monotone
+#print axioms RevHalt.F0_extensive
+#print axioms RevHalt.chain0_mono_step
+#print axioms RevHalt.chain0_mono
+#print axioms RevHalt.omega0_universal
+#print axioms RevHalt.missing_F0_eq_S1_of_absorbable
+#print axioms RevHalt.strict_step_of_witness_absorbable
+#print axioms RevHalt.frontier_nonempty_all_stages
+#print axioms RevHalt.kit_certified_not_in_kernel
+
+-- Functor section axioms
+#print axioms RevHalt.TheoryStepFunctor
+#print axioms RevHalt.FState
+#print axioms RevHalt.FState_map
+#print axioms RevHalt.chainState
+#print axioms RevHalt.chainState_step_hom
+#print axioms RevHalt.conservation_nonempty_state
+#print axioms RevHalt.omegaΓ
+#print axioms RevHalt.chainState_le_omegaΓ
