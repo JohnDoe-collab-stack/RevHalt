@@ -83,7 +83,8 @@ theorem diagonal_bridge_re
 **against all r.e. targets** if for any r.e. target, there exists a code whose certification
 status equals the target.
 
-This is a fixed-point/diagonalization property (not just r.e.-completeness).
+This is the exact fixed-point schema needed to generate self-referential codes
+(a fixed-point/diagonalization property, not just r.e.-completeness).
 It is the abstract property that enables the non-fusion argument:
 any predicate with this property cannot be uniformly internalized.
 -/
@@ -148,11 +149,8 @@ theorem no_uniform_internalizer_of_diagonal {PropT : Type}
     (diag : DiagonalBridge Cert) :
     ¬ Nonempty (Internalizer S Cert) := by
   intro ⟨I⟩
-
   let target : Code → Prop := fun c => S.Provable (S.Not (I.H c))
-  have diag_app :=
-    diag target { f := I.f, f_partrec := I.f_partrec, spec := I.semidec }
-  rcases diag_app with ⟨e, he⟩
+  rcases diag target { f := I.f, f_partrec := I.f_partrec, spec := I.semidec } with ⟨e, he⟩
   -- he : Cert e ↔ S.Provable (S.Not (I.H e))
 
   cases I.total e with
