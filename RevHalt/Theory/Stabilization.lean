@@ -84,6 +84,20 @@ theorem KitStabilizes_iff_UpIsBottom_explicit (K : RHKit) (hK : DetectsUpFixed K
   -- KitStabilizes ↔ UpIsBottom (just using the lemma above, as redundancy is just for explanation)
   exact KitStabilizes_iff_UpIsBottom K hK T
 
+-- ==============================================================================================
+-- DetectsMono variants (public API)
+-- ==============================================================================================
+
+/-- **T1 stabilization (DetectsMono API)**: KitStabilizes ↔ Stabilizes. -/
+theorem T1_stabilization_of_DetectsMono (K : RHKit) (hK : DetectsMono K) :
+    ∀ T : Trace, KitStabilizes K T ↔ Stabilizes T :=
+  T1_stabilization K ((DetectsMono_iff_DetectsUpFixed K).mp hK)
+
+/-- **Kernel Detector (DetectsMono API)**: KitStabilizes ↔ UpIsBottom. -/
+theorem KitStabilizes_iff_UpIsBottom_of_DetectsMono (K : RHKit) (hK : DetectsMono K) (T : Trace) :
+    KitStabilizes K T ↔ UpIsBottom T :=
+  KitStabilizes_iff_UpIsBottom K ((DetectsMono_iff_DetectsUpFixed K).mp hK) T
+
 end RevHalt
 
 -- Axiom checks (auto):
@@ -91,5 +105,7 @@ end RevHalt
 #print axioms RevHalt.Stabilizes_up_iff
 #print axioms RevHalt.Stabilizes_iff_UpIsBottom
 #print axioms RevHalt.T1_stabilization
+#print axioms RevHalt.T1_stabilization_of_DetectsMono
 #print axioms RevHalt.KitStabilizes_iff_UpIsBottom
+#print axioms RevHalt.KitStabilizes_iff_UpIsBottom_of_DetectsMono
 #print axioms RevHalt.KitStabilizes_iff_UpIsBottom_explicit

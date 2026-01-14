@@ -26,6 +26,22 @@ def DetectsUpFixed (K : RHKit) : Prop :=
   ∀ T : Trace, UpFixed T → (K.Proj T ↔ ∃ n, T n)
 
 /--
+  Abstract specification: `DetectsMono`.
+  The Kit is correct on all monotone traces (pure monotonicity, no mention of `up`).
+-/
+def DetectsMono (K : RHKit) : Prop :=
+  ∀ T : Trace, TMono T → (K.Proj T ↔ ∃ n, T n)
+
+/-- Equivalence: DetectsMono ↔ DetectsUpFixed (via TMono ↔ UpFixed). -/
+lemma DetectsMono_iff_DetectsUpFixed (K : RHKit) :
+    DetectsMono K ↔ DetectsUpFixed K := by
+  constructor
+  · intro hM T hfix
+    exact hM T (UpFixed_to_TMono T hfix)
+  · intro hU T hmono
+    exact hU T (TMono_to_UpFixed T hmono)
+
+/--
   Rev_K: The Reverse Halting Operator.
   It standardizes the trace using `up` before applying the Kit.
 -/
@@ -70,12 +86,25 @@ lemma revK_iff_exists_up (K : RHKit) (hK : DetectsUpFixed K) (T : Trace) :
   unfold Rev_K
   exact (hK (up T) (up_fixed T))
 
+/-- Abstract version: `Rev_K` ↔ `Halts` using only `DetectsMono` (no mention of `UpFixed`). -/
+lemma revK_iff_halts_of_DetectsMono (K : RHKit) (hK : DetectsMono K) (T : Trace) :
+    Rev_K K T ↔ Halts T := by
+  unfold Rev_K Halts
+  -- up T is monotone (not UpFixed — pure TMono)
+  have hmono : TMono (up T) := up_mono T
+  -- apply kit correctness on monotone trace
+  have hdet : K.Proj (up T) ↔ ∃ n, up T n := hK (up T) hmono
+  exact hdet.trans (exists_up_iff T)
+
 end RevHalt
 
 -- Axiom checks:
 #print axioms RevHalt.RHKit
 #print axioms RevHalt.DetectsUpFixed
+#print axioms RevHalt.DetectsMono
+#print axioms RevHalt.DetectsMono_iff_DetectsUpFixed
 #print axioms RevHalt.Rev_K
 #print axioms RevHalt.revK_iff_halts
+#print axioms RevHalt.revK_iff_halts_of_DetectsMono
 #print axioms RevHalt.not_revK_iff_forall_not
 #print axioms RevHalt.revK_iff_exists_up

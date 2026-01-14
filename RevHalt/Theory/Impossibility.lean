@@ -131,6 +131,60 @@ theorem T2_impossibility {PropT : Type}
       have hProvH : S.Provable (I.H e) := I.correct e hReal
       exact S.consistent (S.absurd (I.H e) hProvH hProvNotH)
 
+/-- **T2 (DetectsMono API)**: No internalization of Rev0_K is possible. -/
+theorem T2_impossibility_of_DetectsMono {PropT : Type}
+    (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsMono K) :
+    ¬ ∃ _: InternalHaltingPredicate S K, True :=
+  T2_impossibility S K ((DetectsMono_iff_DetectsUpFixed K).mp hK)
+
+-- ==============================================================================================
+-- Non-Fusion Invariance (Explicit Statement)
+-- ==============================================================================================
+
+/-!
+## Non-Fusion Invariance Principle
+
+The impossibility theorem T2 is **invariant under change of language/theory**.
+
+Formally: for ANY choice of
+- `PropT : Type` (the syntactic universe),
+- `Provable : PropT → Prop` (the internal justification predicate),
+- `Not : PropT → PropT` (internal negation),
+- minimal coherence axioms (`consistent`, `absurd`),
+
+the non-fusion result holds: there is no total, correct, complete internal predicate
+that uniformly internalizes external certification (`Rev0_K`).
+
+This invariance is captured by the universal quantification `{PropT : Type}` in T2_impossibility.
+The result depends only on:
+1. The Kit satisfying `DetectsUpFixed` (or equivalently `DetectsMono`)
+2. The internal system satisfying minimal coherence
+3. The semi-decidability of the negative case
+
+It does NOT depend on:
+- The specific language (PropT can be any type)
+- The specific notion of provability
+- Arithmetic, truth, or any particular domain
+
+This makes T2 a **structural obstruction** to certification/justification fusion,
+not a property of any particular formal system.
+-/
+
+/--
+**Non-Fusion Invariance (Explicit)**:
+For any type `PropT` and any `ImpossibleSystem` over it,
+the fusion of external certification into internal justification is impossible.
+
+This theorem is the explicit statement of language/theory invariance:
+the result holds regardless of what `PropT`, `Provable`, `Not`, etc. are.
+-/
+theorem non_fusion_invariance
+    (PropT : Type) (S : ImpossibleSystem PropT)
+    (K : RHKit) (hK : DetectsUpFixed K) :
+    ¬ ∃ _ : InternalHaltingPredicate S K, True :=
+  T2_impossibility S K hK
+
 end RevHalt
 
 -- Axiom checks (auto):
@@ -138,3 +192,5 @@ end RevHalt
 #print axioms RevHalt.diagonal_bridge
 #print axioms RevHalt.diagonal_bridge_re
 #print axioms RevHalt.T2_impossibility
+#print axioms RevHalt.T2_impossibility_of_DetectsMono
+#print axioms RevHalt.non_fusion_invariance

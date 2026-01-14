@@ -54,6 +54,26 @@ theorem T1_uniqueness (K1 K2 : RHKit) (hK1 : DetectsUpFixed K1) (hK2 : DetectsUp
   -- Transitivity via Halts T: Rev K1 T ↔ Halts T ↔ Rev K2 T
   exact (T1_traces K1 hK1 T).trans (T1_traces K2 hK2 T).symm
 
+-- ==============================================================================================
+-- T1 variants using DetectsMono (public API)
+-- ==============================================================================================
+
+/-- **T1 (DetectsMono API)**: Rev0_K captures exactly standard halting. -/
+theorem T1_traces_of_DetectsMono (K : RHKit) (hK : DetectsMono K) :
+    ∀ T : Trace, Rev0_K K T ↔ Halts T :=
+  T1_traces K ((DetectsMono_iff_DetectsUpFixed K).mp hK)
+
+/-- **T1 negative (DetectsMono API)**: Failure of Rev0_K is exactly non-halting. -/
+theorem T1_neg_traces_of_DetectsMono (K : RHKit) (hK : DetectsMono K) :
+    ∀ T : Trace, ¬ Rev0_K K T ↔ ¬ Halts T :=
+  T1_neg_traces K ((DetectsMono_iff_DetectsUpFixed K).mp hK)
+
+/-- **T1 uniqueness (DetectsMono API)**: Any two valid Kits yield the same verdict. -/
+theorem T1_uniqueness_of_DetectsMono (K1 K2 : RHKit) (hK1 : DetectsMono K1) (hK2 : DetectsMono K2) :
+    ∀ T : Trace, Rev0_K K1 T ↔ Rev0_K K2 T :=
+  T1_uniqueness K1 K2 ((DetectsMono_iff_DetectsUpFixed K1).mp hK1)
+    ((DetectsMono_iff_DetectsUpFixed K2).mp hK2)
+
 -- -----------------------------------------------------------------------
 -- Dynamic Bridge to Semantics
 -- -----------------------------------------------------------------------
@@ -113,14 +133,24 @@ theorem T1_semantics (K : RHKit) (hK : DetectsUpFixed K)
   -- Sem ↔ Halts ↔ Rev0_K
   exact (hBridge Γ φ).trans (T1_traces K hK (LR Γ φ)).symm
 
+/-- **T1 semantics (DetectsMono API)**: Semantic consequence ↔ Kit verdict. -/
+theorem T1_semantics_of_DetectsMono (K : RHKit) (hK : DetectsMono K)
+    (hBridge : DynamicBridge Sat LR) :
+    ∀ Γ φ, SemConsequences Sat Γ φ ↔ verdict_K LR K Γ φ :=
+  T1_semantics Sat LR K ((DetectsMono_iff_DetectsUpFixed K).mp hK) hBridge
+
 end RevHalt
 
 -- Axiom checks:
 #print axioms RevHalt.T1_traces
 #print axioms RevHalt.T1_neg_traces
 #print axioms RevHalt.T1_uniqueness
+#print axioms RevHalt.T1_traces_of_DetectsMono
+#print axioms RevHalt.T1_neg_traces_of_DetectsMono
+#print axioms RevHalt.T1_uniqueness_of_DetectsMono
 #print axioms RevHalt.mem_ModE
 #print axioms RevHalt.mem_ThE
 #print axioms RevHalt.SemConsequences_iff
 #print axioms RevHalt.CloE_eq
 #print axioms RevHalt.T1_semantics
+#print axioms RevHalt.T1_semantics_of_DetectsMono
