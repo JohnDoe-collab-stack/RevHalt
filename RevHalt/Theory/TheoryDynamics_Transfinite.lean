@@ -260,7 +260,7 @@ def ProvClosedDirectedOrd : Prop :=
 
 /-- ProvClosed at a limit ordinal via transfinite induction and ProvClosedDirectedOrd. -/
 theorem transIter_provClosed_at_limit
-    (hPC : ProvClosedDirectedOrd Provable)
+    (hPC : ProvClosedDirectedOrd.{v} Provable)
     (Cn : Set PropT → Set PropT)
     (hProvCn : ProvClosedCn Provable Cn)
     (F : Set PropT → Set PropT)
@@ -326,7 +326,7 @@ theorem structural_escape_transfinite
     (hCnExt : CnExtensive Cn)
     (hIdem : CnIdem Cn)
     (hProvCn : ProvClosedCn Provable Cn)
-    (hPCord : ProvClosedDirectedOrd Provable) -- Ordinal version
+    (hPCord : ProvClosedDirectedOrd.{u} Provable) -- Ordinal version
     (A0 : ThState (PropT := PropT) Provable Cn)
     (lim : Ordinal.{u})
     (hLim : Order.IsSuccLimit lim)
