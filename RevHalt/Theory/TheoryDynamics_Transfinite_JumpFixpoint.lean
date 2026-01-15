@@ -160,6 +160,73 @@ theorem part7_change_of_sense_jump
     (hAbsBelow := hAbsBelow) (hRouteAt := hRouteAt)
     (hStageIncl := hStageIncl) (hFixFromCont := hFixFromCont) (hProvClosedAt := hProvClosedAt)
 
+/-! Tight version of `no_fixpoint_at_limit`.
+
+Key changes:
+- No re-derivation of collapse/route-II inside the proof.
+- One direct call to `structural_escape_transfinite_L`.
+- You keep only the minimal local constructions:
+  * `F_dyn`
+  * `hExt : ∀ Γ, Γ ⊆ F_dyn Γ`
+  * `hStageIncl : LimitIncludesStages ...` (provided by jump lemma)
+  * `hFix` is the assumed fixpoint
+  * `hProvClosedAt` is already a hypothesis
+- Then `structural_escape_transfinite_L` yields `False`, contradiction.
+-/
+
+/-- Under the escape hypotheses, the limit state cannot be a fixpoint of F.
+    This is the "no stabilization" theorem: F(Γ_lim) ≠ Γ_lim. -/
+theorem no_fixpoint_at_limit
+    (Cn : Set PropT → Set PropT)
+    (J  : Set PropT → Set PropT)
+    (hMono   : ProvRelMonotone Provable)
+    (hCnExt  : CnExtensive (PropT := PropT) Cn)
+    (hIdem   : CnIdem (PropT := PropT) Cn)
+    (hProvCn : ProvClosedCn (PropT := PropT) Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbsBelow : ∃ β < lim, Absorbable Provable
+      (transIterL (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRouteAt : RouteIIApplies Provable K Machine encode_halt Cn
+      (transIterL (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hProvClosedAt : ProvClosed Provable
+      (transIterL (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
+    F Provable K Machine encode_halt Cn
+      (transIterL (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim) ≠
+    transIterL (jumpLimitOp (PropT := PropT) Cn J)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim := by
+  intro hFix
+
+  let F_dyn := F Provable K Machine encode_halt Cn
+  let L := jumpLimitOp (PropT := PropT) Cn J
+
+  -- stage inclusion at limits for the jump limit operator (needs only CnExtensive)
+  have hStageIncl :
+      LimitIncludesStages (PropT := PropT) L F_dyn A0.Γ :=
+    limitIncludesStages_jumpLimitOp (PropT := PropT)
+      (Cn := Cn) (J := J) hCnExt (F := F_dyn) (A0 := A0.Γ)
+
+  -- Now call the general L-escape theorem directly.
+  -- It derives False from:
+  --   Absorption below lim, RouteII at lim, stage inclusion, a fixpoint at lim, and ProvClosed at lim.
+  have : False :=
+    structural_escape_transfinite_L (PropT := PropT)
+      (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (L := L) (Cn := Cn)
+      (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem) (_hProvCn := hProvCn)
+      (A0 := A0) (lim := lim) (hLim := hLim)
+      (hAbs := hAbsBelow) (hRoute := hRouteAt)
+      (hStage := hStageIncl)
+      (hFix := hFix)
+      (hProvClosed_lim := hProvClosedAt)
+
+  exact this
+
 end JumpPart7
 
 end RevHalt
