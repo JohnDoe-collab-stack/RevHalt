@@ -67,6 +67,7 @@ theorem cnUnionLimitOp_apply
     (cnUnionLimitOp (PropT := PropT) Cn).apply (alpha := alpha) chain =
       Cn (transUnionFamily (α := alpha) chain) := rfl
 
+/-! Internal plumbing for the union limit decomposition. -/
 theorem chain_proof_irrel
     {alpha : Ordinal.{v}}
     (chain : ∀ beta < alpha, Set PropT)
@@ -205,6 +206,7 @@ def LimitIncludesStages (L : LimitOp PropT) (F : Set PropT -> Set PropT) (A0 : S
   ∀ {lim : Ordinal.{v}} (_hLim : Order.IsSuccLimit lim) {β : Ordinal.{v}} (_hβ : β < lim),
     transIterL L F A0 β ⊆ transIterL L F A0 lim
 
+/-! Internal plumbing: stage inclusion derived from a limit decomposition. -/
 theorem limitIncludesStages_of_decomp
     (L : LimitOp PropT)
     (hDecomp : LimitDecomp (L := L))
@@ -732,6 +734,41 @@ theorem global_change_of_sense
     (encode_halt := encode_halt) (L := cnUnionLimitOp (PropT := PropT) Cn)
     (Cn := Cn) (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem)
     (hProvCn := hProvCn) (A0 := A0) (lim := lim) (hLim := hLim)
+    (hAbsBelow := hAbsBelow) (hRouteAt := hRouteAt) (hStageIncl := hStageIncl)
+    (hFixFromCont := hFixFromCont) (hProvClosedAt := hProvClosedAt)
+
+/-! ## Part 7 Endpoints -/
+
+theorem part7_change_of_sense_cnUnion
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbsBelow : ∃ β < lim, Absorbable Provable
+      (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
+        (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRouteAt : RouteIIApplies Provable K Machine encode_halt Cn
+      (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hStageIncl : LimitIncludesStages.{u, v} (PropT := PropT)
+      (cnUnionLimitOp (PropT := PropT) Cn)
+      (F Provable K Machine encode_halt Cn) A0.Γ)
+    (hFixFromCont : FixpointFromContinuity (PropT := PropT)
+      (L := cnUnionLimitOp (PropT := PropT) Cn)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim)
+    (hProvClosedAt : ProvClosed Provable
+      (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
+    ¬ ContinuousAtL (PropT := PropT)
+      (L := cnUnionLimitOp (PropT := PropT) Cn)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim :=
+  global_change_of_sense (Provable := Provable) (K := K) (Machine := Machine)
+    (encode_halt := encode_halt) (Cn := Cn) (hMono := hMono) (hCnExt := hCnExt)
+    (hIdem := hIdem) (hProvCn := hProvCn) (A0 := A0) (lim := lim) (hLim := hLim)
     (hAbsBelow := hAbsBelow) (hRouteAt := hRouteAt) (hStageIncl := hStageIncl)
     (hFixFromCont := hFixFromCont) (hProvClosedAt := hProvClosedAt)
 
