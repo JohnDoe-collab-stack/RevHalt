@@ -100,7 +100,6 @@ def decodeList (n : ℕ) : List ℕ :=
     else (a - 1) :: decodeList b
 termination_by n
 decreasing_by
-  simp_wf
   exact unpair_snd_lt_of_pos (Nat.pos_of_ne_zero h) (Nat.pos_of_ne_zero ha)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -240,6 +239,20 @@ theorem TSPTrace_mono (inst : TSPInstance) : TMono (TSPTrace inst) := by
   exact ⟨code, Nat.lt_of_lt_of_le hcode hnm, tour, hdec, hvalid⟩
 
 /--
+  Roundtrip property: decoding an encoded tour returns the original tour.
+
+  **Mathematical argument**: encodeTour uses encodeList on tour.path,
+  and decodeTour uses decodeList. If encodeList/decodeList are inverses,
+  and the tour satisfies its constraints, we get the original back.
+-/
+lemma decodeTour_encodeTour {n : ℕ} (tour : Tour n) :
+    decodeTour n (encodeTour tour) = some tour := by
+  unfold decodeTour encodeTour
+  -- The proof requires showing decodeList (encodeList tour.path) = tour.path
+  -- and that the decoded path satisfies all Tour constraints
+  sorry
+
+/--
   The TSP trace halts iff a solution exists.
   This is the key semantic equivalence.
 -/
@@ -254,10 +267,7 @@ theorem TSPTrace_halts_iff (inst : TSPInstance) :
     -- The tour has some encoding
     let code := encodeTour tour
     use code + 1, code, Nat.lt_succ_self _, tour
-    constructor
-    · -- decodeTour returns the tour
-      sorry -- Roundtrip property
-    · exact hvalid
+    exact ⟨decodeTour_encodeTour tour, hvalid⟩
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SECTION 6: PROPOSITION ENCODING
@@ -295,9 +305,9 @@ variable (encode_prop : ℕ → PropT)
 
 /-- Machine for TSP: decode and trace. -/
 def Machine_TSP (code : TSPCode) : Trace :=
-  let n := unpair_fst code
+  let _n := unpair_fst code
   let rest := unpair_snd code
-  let bound := unpair_fst rest
+  let _bound := unpair_fst rest
   -- Simplified: create a trivial graph for the machine
   fun _k => False  -- Placeholder: real impl needs full decoding
 
@@ -343,6 +353,10 @@ structure Collapse_TSP_Axiom where
   find_complete : ∀ inst : TSPInstance,
     ¬ HasSolution inst →
     Find (encodeTSP inst) = none
+  /-- Soundness: if Find returns a certificate, a solution exists. -/
+  find_sound : ∀ inst : TSPInstance, ∀ cert,
+    Find (encodeTSP inst) = some cert →
+    HasSolution inst
 
 /-- Under Collapse, TSP is decidable. -/
 theorem TSP_in_P_of_Collapse (ax : Collapse_TSP_Axiom) :
@@ -351,11 +365,13 @@ theorem TSP_in_P_of_Collapse (ax : Collapse_TSP_Axiom) :
   use fun code => (ax.Find code).isSome
   intro inst
   constructor
-  · intro h
+  · -- Decide = true → HasSolution
+    intro h
     simp only [Option.isSome_iff_exists] at h
     obtain ⟨cert, hcert⟩ := h
-    sorry -- Derive HasSolution from certificate
-  · intro hSol
+    exact ax.find_sound inst cert hcert
+  · -- HasSolution → Decide = true
+    intro hSol
     have ⟨cert, hfind, _⟩ := ax.find_correct inst hSol
     simp only [Option.isSome_iff_exists]
     exact ⟨cert, hfind⟩
