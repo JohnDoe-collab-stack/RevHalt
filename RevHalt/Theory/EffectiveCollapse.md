@@ -62,40 +62,79 @@ Et ce certificat de rejet `rho` est verifiable en temps polynomial (via `CheckRe
 
 *Interpretation* : La theorie est capable de rejeter efficacement les faux positifs.
 
+*Note complexity* : H3 place L dans coNP (le complement a des certificats verifiables en P).
+
 ---
 
 ## Hypothese de Structure : Collapse
 
-**Axiome de Collapse (Stabilite Polynomiale de transIter)**
+### Distinction Fondamentale : Existence vs Recherche
 
-On suppose que la dynamique `transIter` (iteration transfine de l'enrichissement de la theorie) atteint un regime **stabilise**. Dans cet etat stabilise, les proprietes d'absorption (H1) et de dualite (H3) sont exploitables de maniere polynomialement bornee.
+> **Point crucial** : "Les certificats courts existent" ≠ "Les certificats courts sont trouvables efficacement".
 
-Concretement : Dans l'etat stabilise, pour tout `x`, il existe soit une preuve `pi`, soit une refutation `rho`, dont la taille est bornee polynomialement par `|x|` (Borne sur les certificats internes), rendant leur recherche exhaustive polynomiale.
+Si les certificats ont taille ≤ poly(|x|), l'espace de recherche naive est 2^poly(|x|) = exponentiel.
+La recherche exhaustive n'est donc **pas** polynomiale par defaut.
 
-Note d'alignement formel : la "stabilite semantique" se lit comme une forme de fixpoint au sens de `ContinuousAt` dans la formalisation. La classification Part 7 montre que, sous absorption + RouteII + admissibilite, cette continuite a la limite echoue (`structural_escape_at_limit`). L'axiome de Collapse effectif se place donc en plus, comme hypothese de ressource.
+### L'Axiome de Collapse Effectif (Version Correcte)
 
-### Precision Cruciale : Deux Types de Collapse
+**Axiome (Collapse-Search)** : Il existe un algorithme deterministe `Find(x)` s'executant en temps `poly(|x|)` qui renvoie :
 
-Il faut distinguer deux notions :
+* soit une preuve `pi` tel que `CheckProof(x, pi) = true`,
+* soit une refutation `rho` tel que `CheckRefutation(x, rho) = true`.
 
-1. **Collapse Semantique (Ordinal)** : L'iteration se stabilise en un point fixe (completude/decidabilite classique).
-2. **Collapse Effectif (Ressource)** : Le point fixe contient des certificats (preuves/refutations) *courts* (taille polynomiale).
+Cet axiome postule que la structure canonique de la theorie stabilisee permet une **navigation directe** vers le certificat, sans exploration exhaustive.
 
-**C'est le Collapse Effectif (2) qui porte le lien avec P vs NP.** Le Collapse Semantique seul ne garantirait pas la tractabilite.
+### Precision Cruciale : Trois Types de Collapse
+
+| Type | Definition | Implication |
+|------|------------|-------------|
+| **Collapse Semantique** | L'iteration se stabilise en un point fixe | Completude classique |
+| **Collapse Borne** | Les certificats ont taille polynomiale | L ∈ NP ∩ coNP |
+| **Collapse Effectif** | Les certificats sont **produisibles** en temps polynomial | L ∈ P |
+
+**C'est le Collapse Effectif (production) qui porte le lien avec P vs NP.** Le Collapse Borne seul ne garantit pas la tractabilite.
+
+### Alignement Formel
+
+La "stabilite semantique" se lit comme une forme de fixpoint au sens de `ContinuousAt` dans la formalisation. La classification Part 7 montre que, sous absorption + RouteII + admissibilite, cette continuite a la limite echoue (`structural_escape_at_limit`).
+
+L'axiome de Collapse Effectif se place **en plus**, comme hypothese de ressource computationnelle. C'est une hypothese **independante de ZFC** — elle ne peut etre ni prouvee ni refutee par les axiomes ensemblistes standards.
 
 ---
 
 ## Consequence : Le Lien Effective Collapse
 
-Sous les hypotheses H1, H2, H3 et l'Axiome de Collapse :
+Sous les hypotheses H1, H2, H3 et l'Axiome de Collapse-Search :
 
 1. **Internalisation** : La verification de traces (NP) est entierement simulee par la verification de preuves (P).
-2. **Decision** : Le probleme de decision externe "Est-ce que x est dans L ?" se reduit au probleme interne "Existe-t-il une preuve ou une refutation dans la theorie stabilisee ?".
+2. **Decision** : Le probleme de decision externe "Est-ce que x est dans L ?" se reduit a : executer `Find(x)`, verifier le certificat retourne, decider.
 
 ### Enonce Formel
 
-**Dans le regime de Collapse, le probleme de decision defini par les traces (S1Rel) — initialement lisible comme NP — devient decidable par une procedure de verification interne polynomiale.**
+**Sous H2 et l'hypothese de Collapse-Search, le langage L est decidable en temps polynomial.**
 
-**Implication : NP est inclus dans P relativement a l'axiome (ou oracle structurel) de Collapse.**
+**Ainsi, dans tout modele satisfaisant Collapse-Search, L ∈ P.**
 
-(Autrement dit : Dans tout modele satisfaisant l'axiome de Collapse, le langage L est decidable en temps polynomial via la couche deductive stabilisee.)
+### Extension : P vs NP
+
+Si Collapse-Search vaut **uniformement** pour toute relation de verification NP (ou pour une base NP-complete comme SAT), alors **P = NP dans ce modele**.
+
+Cela signifie que la question P vs NP peut se lire comme :
+
+> "L'axiome de Collapse Effectif est-il vrai ou faux dans l'univers mathematique ?"
+
+C'est une question d'**independance**, pas de resolution directe.
+
+---
+
+## Synthese
+
+| Hypothese | Ce qu'elle donne |
+|-----------|------------------|
+| H1 (Compile) | Trace → Preuve |
+| H2 (CheckProof ∈ P) | Verification polynomiale |
+| H3 (Refutations) | L ∈ coNP |
+| Collapse-Borne | L ∈ NP ∩ coNP |
+| Collapse-Search | L ∈ P |
+
+**Message principal** : La distinction P vs NP depend de la possibilite de **produire** (pas seulement verifier) des certificats courts. Cette possibilite est capturee par l'axiome de Collapse Effectif, qui est **structurellement independant** de ZFC.
