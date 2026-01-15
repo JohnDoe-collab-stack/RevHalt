@@ -67,18 +67,41 @@ def encodeList : List ℕ → ℕ
   | [] => 0
   | x :: xs => pair (x + 1) (encodeList xs)
 
+/-- unpair_snd n ≤ n for all n. -/
+lemma unpair_snd_le (n : ℕ) : unpair_snd n ≤ n := by
+  unfold unpair_snd
+  apply Nat.sub_le
+
+/--
+  unpair_snd n < n when n > 0 and unpair_fst n > 0.
+
+  **Mathematical proof** (not fully mechanized due to integer division):
+  For Cantor pairing n = (a+b)(a+b+1)/2 + b, we have:
+  - w = a + b (the "row" of the pairing)
+  - t = w(w+1)/2 (the triangular number)
+  - unpair_fst n = w - (n - t) = a
+  - unpair_snd n = n - t = b
+
+  If a > 0, then w ≥ 1, so t ≥ 1, thus b = n - t < n.
+-/
+lemma unpair_snd_lt_of_pos {n : ℕ} (hn : n > 0) (ha : unpair_fst n > 0) : unpair_snd n < n := by
+  unfold unpair_snd
+  apply Nat.sub_lt hn
+  -- t > 0 when unpair_fst > 0 (w ≥ 1 implies t ≥ 1)
+  sorry
+
 /-- Decode a natural to a list of naturals. -/
 def decodeList (n : ℕ) : List ℕ :=
-  if n = 0 then []
+  if h : n = 0 then []
   else
     let a := unpair_fst n
     let b := unpair_snd n
-    if a = 0 then []  -- Invalid encoding
+    if ha : a = 0 then []  -- Invalid encoding
     else (a - 1) :: decodeList b
 termination_by n
 decreasing_by
   simp_wf
-  sorry -- Decreasing proof omitted for now
+  exact unpair_snd_lt_of_pos (Nat.pos_of_ne_zero h) (Nat.pos_of_ne_zero ha)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SECTION 2: GRAPH DEFINITIONS
