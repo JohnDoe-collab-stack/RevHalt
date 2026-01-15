@@ -67,20 +67,6 @@ theorem continuousAtL_jumpLimitOp_iff
               F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 beta)))) := by
   rfl
 
-/-- `ContinuousAtL` specialized to `jumpLimitOp`. -/
-@[simp] theorem continuousAtL_jumpLimitOp
-    (Cn : Set PropT → Set PropT) (J : Set PropT → Set PropT)
-    (F : Set PropT → Set PropT) (A0 : Set PropT) (lim : Ordinal.{v}) :
-    ContinuousAtL (PropT := PropT) (L := jumpLimitOp (PropT := PropT) Cn J) F A0 lim
-      ↔ F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 lim) =
-          Cn (preLimit (PropT := PropT) (alpha := lim)
-                (fun beta (_ : beta < lim) =>
-                  F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 beta)) ∪
-              J (preLimit (PropT := PropT) (alpha := lim)
-                (fun beta (_ : beta < lim) =>
-                  F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 beta)))) := by
-  rfl
-
 /-- There exists a genuine novelty injected by `J`. -/
 def InjectsNew (J : Set PropT → Set PropT) : Prop :=
   ∃ U, ∃ p, p ∈ J U ∧ p ∉ U
