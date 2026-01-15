@@ -56,8 +56,16 @@ structure LimitDecomp (L : LimitOp PropT) : Type (max u (v + 1)) where
 def unionLimitOp : LimitOp PropT :=
   { apply := fun {alpha} chain => transUnionFamily (α := alpha) chain }
 
+/-- Global = closure after union; the limit stage can add consequences. -/
 def cnUnionLimitOp (Cn : Set PropT → Set PropT) : LimitOp PropT :=
   { apply := fun {alpha} chain => Cn (transUnionFamily (α := alpha) chain) }
+
+@[simp]
+theorem cnUnionLimitOp_apply
+    (Cn : Set PropT → Set PropT)
+    {alpha : Ordinal.{v}} (chain : ∀ beta < alpha, Set PropT) :
+    (cnUnionLimitOp (PropT := PropT) Cn).apply (alpha := alpha) chain =
+      Cn (transUnionFamily (α := alpha) chain) := rfl
 
 theorem chain_proof_irrel
     {alpha : Ordinal.{v}}
@@ -300,27 +308,6 @@ theorem frontierInjected_of_CnExt
 /-- Continuity at a limit (union form). -/
 def ContinuousAt (F : Set PropT → Set PropT) (A0 : Set PropT) (lim : Ordinal.{v}) : Prop :=
   F (transIter F A0 lim) = transUnion (fun β' => F (transIter F A0 β')) lim
-
-/-- Continuity at a limit (parametric L form). -/
-def ContinuousAtL
-    (L : LimitOp PropT)
-    (F : Set PropT → Set PropT)
-    (A0 : Set PropT)
-    (lim : Ordinal.{v}) : Prop :=
-  F (transIterL L F A0 lim) =
-    L.apply (alpha := lim) (fun beta (_ : beta < lim) => F (transIterL L F A0 beta))
-
-section LimitGlobal
-
-def FixpointFromContinuity
-    (L : LimitOp PropT)
-    (F : Set PropT → Set PropT)
-    (A0 : Set PropT)
-    (lim : Ordinal.{v}) : Prop :=
-  ContinuousAtL (L := L) F A0 lim →
-    F (transIterL L F A0 lim) = transIterL L F A0 lim
-
-end LimitGlobal
 
 /-- Admissibility at a limit stage. -/
 def AdmissibleAtLimit
@@ -658,6 +645,31 @@ theorem structural_escape_at_limit
   exact structural_escape_transfinite (Provable := Provable) (K := K) (Machine := Machine)
     (encode_halt := encode_halt) Cn hMono hCnExt hIdem hProvCn hPCord A0 lim hLim hAbs hRoute hCont
 
+/-! ## Part 7 API -/
+
+/-- Continuity at a limit (parametric L form). -/
+def ContinuousAtL
+    (L : LimitOp PropT)
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT)
+    (lim : Ordinal.{v}) : Prop :=
+  F (transIterL L F A0 lim) =
+    L.apply (alpha := lim) (fun beta (_ : beta < lim) => F (transIterL L F A0 beta))
+
+/-!
+A global `L` is a limit operator.
+Continuity at the limit is `ContinuousAtL`.
+Part 7 does not assume continuity implies a fixpoint; it requires it via `FixpointFromContinuity`.
+The escape theorem then forces ¬ continuity under the dynamic hypotheses.
+-/
+def FixpointFromContinuity
+    (L : LimitOp PropT)
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT)
+    (lim : Ordinal.{v}) : Prop :=
+  ContinuousAtL (L := L) F A0 lim →
+    F (transIterL L F A0 lim) = transIterL L F A0 lim
+
 theorem structural_escape_at_limit_L
     (L : LimitOp PropT)
     (Cn : Set PropT → Set PropT)
@@ -668,25 +680,26 @@ theorem structural_escape_at_limit_L
     (A0 : ThState (PropT := PropT) Provable Cn)
     (lim : Ordinal.{v})
     (hLim : Order.IsSuccLimit lim)
-    (hAbs : ∃ β < lim, Absorbable Provable
+    (hAbsBelow : ∃ β < lim, Absorbable Provable
       (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
-    (hRoute : RouteIIApplies Provable K Machine encode_halt Cn
+    (hRouteAt : RouteIIApplies Provable K Machine encode_halt Cn
       (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim))
-    (hStage : LimitIncludesStages (PropT := PropT) L (F Provable K Machine encode_halt Cn) A0.Γ)
-    (hFix_of_cont : FixpointFromContinuity (PropT := PropT) (L := L)
+    (hStageIncl : LimitIncludesStages.{u, v} (PropT := PropT) L
+      (F Provable K Machine encode_halt Cn) A0.Γ)
+    (hFixFromCont : FixpointFromContinuity (PropT := PropT) (L := L)
       (F Provable K Machine encode_halt Cn) A0.Γ lim)
-    (hProvClosed_lim : ProvClosed Provable
+    (hProvClosedAt : ProvClosed Provable
       (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
     ¬ ContinuousAtL (PropT := PropT) (L := L)
       (F Provable K Machine encode_halt Cn) A0.Γ lim := by
   intro hCont
   have hFix :=
-    hFix_of_cont hCont
+    hFixFromCont hCont
   exact structural_escape_transfinite_L (Provable := Provable) (K := K) (Machine := Machine)
     (encode_halt := encode_halt) (L := L) (Cn := Cn)
     (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem) (_hProvCn := hProvCn)
-    (A0 := A0) (lim := lim) (hLim := hLim) (hAbs := hAbs) (hRoute := hRoute)
-    (hStage := hStage) (hFix := hFix) (hProvClosed_lim := hProvClosed_lim)
+    (A0 := A0) (lim := lim) (hLim := hLim) (hAbs := hAbsBelow) (hRoute := hRouteAt)
+    (hStage := hStageIncl) (hFix := hFix) (hProvClosed_lim := hProvClosedAt)
 
 theorem global_change_of_sense
     (Cn : Set PropT → Set PropT)
@@ -697,36 +710,30 @@ theorem global_change_of_sense
     (A0 : ThState (PropT := PropT) Provable Cn)
     (lim : Ordinal.{v})
     (hLim : Order.IsSuccLimit lim)
-    (hAbs : ∃ β < lim, Absorbable Provable
+    (hAbsBelow : ∃ β < lim, Absorbable Provable
       (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
         (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
-    (hRoute : RouteIIApplies Provable K Machine encode_halt Cn
+    (hRouteAt : RouteIIApplies Provable K Machine encode_halt Cn
       (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
         (F Provable K Machine encode_halt Cn) A0.Γ lim))
-    (hStage : LimitIncludesStages.{u, v} (PropT := PropT)
+    (hStageIncl : LimitIncludesStages.{u, v} (PropT := PropT)
       (cnUnionLimitOp (PropT := PropT) Cn)
       (F Provable K Machine encode_halt Cn) A0.Γ)
-    (hFix_of_cont : FixpointFromContinuity (PropT := PropT)
+    (hFixFromCont : FixpointFromContinuity (PropT := PropT)
       (L := cnUnionLimitOp (PropT := PropT) Cn)
       (F Provable K Machine encode_halt Cn) A0.Γ lim)
-    (hProvClosed_lim : ProvClosed Provable
+    (hProvClosedAt : ProvClosed Provable
       (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
         (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
     ¬ ContinuousAtL (PropT := PropT)
       (L := cnUnionLimitOp (PropT := PropT) Cn)
-      (F Provable K Machine encode_halt Cn) A0.Γ lim := by
-  have hStage' :
-      LimitIncludesStages.{u, v} (PropT := PropT)
-        (cnUnionLimitOp (PropT := PropT) Cn)
-        (F Provable K Machine encode_halt Cn) A0.Γ := by
-    intro lim' hLim' beta hbeta
-    exact hStage hLim' hbeta
-  exact structural_escape_at_limit_L (Provable := Provable) (K := K) (Machine := Machine)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim :=
+  structural_escape_at_limit_L (Provable := Provable) (K := K) (Machine := Machine)
     (encode_halt := encode_halt) (L := cnUnionLimitOp (PropT := PropT) Cn)
     (Cn := Cn) (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem)
     (hProvCn := hProvCn) (A0 := A0) (lim := lim) (hLim := hLim)
-    (hAbs := hAbs) (hRoute := hRoute) (hStage := hStage')
-    (hFix_of_cont := hFix_of_cont) (hProvClosed_lim := hProvClosed_lim)
+    (hAbsBelow := hAbsBelow) (hRouteAt := hRouteAt) (hStageIncl := hStageIncl)
+    (hFixFromCont := hFixFromCont) (hProvClosedAt := hProvClosedAt)
 
 end TransfiniteEscape
 
