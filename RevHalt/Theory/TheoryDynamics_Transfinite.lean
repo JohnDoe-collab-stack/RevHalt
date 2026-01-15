@@ -445,7 +445,44 @@ theorem continuous_implies_fixpoint_at_limit
     have hInF : p ∈ F (transIter F A0 β) := hExt (transIter F A0 β) hp
     exact ⟨β, hβ, hInF⟩
 
-/-! Escape (L-version): takes fixpoint and ProvClosed at lim as local hypotheses. -/
+/-! ### Factored Helper Lemmas for Escape -/
+
+/-- If `Γ = Cn (Γ ∪ S)` and `Cn` is idempotent, then `Cn Γ = Γ`.
+    Together with `ProvClosed Γ`, this yields `OmegaAdmissible`. -/
+theorem fixpoint_implies_OmegaAdmissible
+    (Cn : Set PropT → Set PropT)
+    (hIdem : CnIdem (PropT := PropT) Cn)
+    (Γ : Set PropT)
+    (S : Set PropT)
+    (hFix : Cn (Γ ∪ S) = Γ)
+    (hProvClosed : ProvClosed Provable Γ) :
+    OmegaAdmissible Provable Cn Γ := by
+  have hCnClosed : Cn Γ = Γ := by
+    calc
+      Cn Γ = Cn (Cn (Γ ∪ S)) := by rw [hFix]
+      _ = Cn (Γ ∪ S) := hIdem (Γ ∪ S)
+      _ = Γ := hFix
+  exact ⟨hCnClosed, hProvClosed⟩
+
+/-- RouteII + OmegaAdmissible + S1Rel = ∅ ⇒ False -/
+theorem routeII_contradiction
+    (Cn : Set PropT → Set PropT)
+    (Γ : Set PropT)
+    (hAdm : OmegaAdmissible Provable Cn Γ)
+    (hRoute : RouteIIApplies Provable K Machine encode_halt Cn Γ)
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅) :
+    False := by
+  have hNonEmpty : S1Rel Provable K Machine encode_halt Γ ≠ ∅ :=
+    Set.nonempty_iff_ne_empty.mp (hRoute hAdm)
+  exact hNonEmpty hEmpty
+
+/-! ### Escape (L-version): Refactored with factored modules -/
+
+/-- Escape (L-version): takes fixpoint and ProvClosed at lim as local hypotheses.
+    Uses factored modules:
+    - Module A (Collapse): `limit_collapse_schema_L` → S1Rel = ∅
+    - Module B (Admissibility): `fixpoint_implies_OmegaAdmissible` → OmegaAdmissible
+    - Module C (RouteII): `routeII_contradiction` → False -/
 theorem structural_escape_transfinite_L
     (L : LimitOp PropT)
     (Cn : Set PropT → Set PropT)
@@ -471,33 +508,29 @@ theorem structural_escape_transfinite_L
   let Γ_lim : Set PropT := transIterL L F_dyn A0.Γ lim
   let S_lim : Set PropT := S1Rel Provable K Machine encode_halt Γ_lim
 
-  have hFix_symm : Γ_lim = Cn (Γ_lim ∪ S_lim) := by
-    simpa [Γ_lim, S_lim, F_dyn, F] using hFix.symm
+  -- Module B (factored): fixpoint → OmegaAdmissible
+  have hFixCn : Cn (Γ_lim ∪ S_lim) = Γ_lim := by
+    simpa [F_dyn, F, Γ_lim, S_lim] using hFix
+  have hAdm : OmegaAdmissible Provable Cn Γ_lim :=
+    fixpoint_implies_OmegaAdmissible (PropT := PropT)
+      (Provable := Provable) (Cn := Cn) (hIdem := hIdem)
+      (Γ := Γ_lim) (S := S_lim) (hFix := hFixCn) (hProvClosed := hProvClosed_lim)
 
-  have hCnClosed : Cn Γ_lim = Γ_lim := by
-    have hStep1 : Cn Γ_lim = Cn (Cn (Γ_lim ∪ S_lim)) := congrArg Cn hFix_symm
-    have hStep2 : Cn (Cn (Γ_lim ∪ S_lim)) = Cn (Γ_lim ∪ S_lim) := hIdem (Γ_lim ∪ S_lim)
-    have hStep3 : Cn (Γ_lim ∪ S_lim) = Γ_lim := hFix_symm.symm
-    rw [hStep1, hStep2, hStep3]
-
-  have hAdm : OmegaAdmissible Provable Cn Γ_lim := ⟨hCnClosed, hProvClosed_lim⟩
-
-  have hNonEmpty : S1Rel Provable K Machine encode_halt Γ_lim ≠ ∅ :=
-    Set.nonempty_iff_ne_empty.mp (hRoute hAdm)
-
+  -- Module A (factored): collapse gives frontier empty
   have hFExt : ∀ Γ, Γ ⊆ F_dyn Γ := fun Γ =>
     subset_trans Set.subset_union_left (hCnExt _)
-
   have hInj : FrontierInjected Provable K Machine encode_halt F_dyn :=
     frontierInjected_of_CnExt Provable K Machine encode_halt Cn hCnExt
-
   have hEmpty : S1Rel Provable K Machine encode_halt Γ_lim = ∅ :=
     limit_collapse_schema_L Provable K Machine encode_halt
       (L := L) (F := F_dyn) (A0 := A0.Γ)
       (hMono := hMono) (_hExt := hFExt) (hInj := hInj) (hStage := hStage)
       (lim := lim) (hLim := hLim) (hAbs := hAbs)
 
-  exact hNonEmpty hEmpty
+  -- Module C (factored): contradiction
+  exact routeII_contradiction (PropT := PropT)
+    (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+    (Cn := Cn) (Γ := Γ_lim) (hAdm := hAdm) (hRoute := hRoute) (hEmpty := hEmpty)
 
 /-- ProvClosed preserved by increasing ordinal unions below a limit.
     This is the ordinal generalization of ProvClosedDirected. -/

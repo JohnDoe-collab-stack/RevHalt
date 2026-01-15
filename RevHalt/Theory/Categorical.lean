@@ -1,7 +1,7 @@
 import RevHalt.Base.Trace
 import RevHalt.Theory.Canonicity
-import Mathlib.CategoryTheory.Thin
 
+import Mathlib.CategoryTheory.Thin
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.ULift
 import Mathlib.Order.Basic
