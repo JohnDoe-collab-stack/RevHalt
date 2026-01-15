@@ -27,7 +27,7 @@ theorem mem_preLimit_iff {alpha : Ordinal.{v}}
     (chain : ∀ beta < alpha, Set PropT) (p : PropT) :
     p ∈ preLimit (PropT := PropT) (alpha := alpha) chain
       ↔ ∃ beta, ∃ h : beta < alpha, p ∈ chain beta h := by
-  rfl
+  simp [preLimit, transUnionFamily]
 
 /-- Each stage embeds into the prelimit aggregate. -/
 theorem stage_subset_preLimit {alpha : Ordinal.{v}}
@@ -51,6 +51,20 @@ def jumpLimitOp (Cn : Set PropT → Set PropT) (J : Set PropT → Set PropT) : L
     (jumpLimitOp (PropT := PropT) Cn J).apply (alpha := alpha) chain =
       Cn (preLimit (PropT := PropT) (alpha := alpha) chain ∪
           J (preLimit (PropT := PropT) (alpha := alpha) chain)) := by
+  rfl
+
+theorem continuousAtL_jumpLimitOp_iff
+    (Cn : Set PropT → Set PropT) (J : Set PropT → Set PropT)
+    (F : Set PropT → Set PropT) (A0 : Set PropT) (lim : Ordinal.{v}) :
+    ContinuousAtL (PropT := PropT)
+      (L := jumpLimitOp (PropT := PropT) Cn J) F A0 lim
+      ↔ F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 lim) =
+          Cn (preLimit (PropT := PropT) (alpha := lim)
+            (fun beta (_ : beta < lim) =>
+              F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 beta))
+          ∪ J (preLimit (PropT := PropT) (alpha := lim)
+            (fun beta (_ : beta < lim) =>
+              F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 beta)))) := by
   rfl
 
 /-- `ContinuousAtL` specialized to `jumpLimitOp`. -/

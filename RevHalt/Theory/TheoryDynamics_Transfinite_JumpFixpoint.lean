@@ -61,7 +61,10 @@ theorem jump_fixpoint_from_continuity
         ⟨beta, hbeta, hp'⟩
   have hCont' :
       F (transIterL L F A0 lim) = Cn (U' ∪ J U') := by
-    simpa [ContinuousAtL, jumpLimitOp_apply, L, chainF, U'] using hCont
+    have h :=
+      (continuousAtL_jumpLimitOp_iff (PropT := PropT)
+        (Cn := Cn) (J := J) (F := F) (A0 := A0) (lim := lim)).1 hCont
+    simpa [L, chainF, U'] using h
   have hLimEq :
       transIterL L F A0 lim = Cn (U ∪ J U) := by
     have h := transIterL_limit (L := L) (F := F) (A0 := A0) (lim := lim) hLim
@@ -69,6 +72,24 @@ theorem jump_fixpoint_from_continuity
   have hCont'' : F (transIterL L F A0 lim) = Cn (U ∪ J U) := by
     simpa [hUeq] using hCont'
   simpa [hLimEq.symm] using hCont''
+
+theorem jump_continuousAtL_implies_fixpoint
+    (Cn : Set PropT → Set PropT)
+    (J : Set PropT → Set PropT)
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hExt : ∀ Γ, Γ ⊆ F Γ) :
+    ContinuousAtL (PropT := PropT)
+      (L := jumpLimitOp (PropT := PropT) Cn J) F A0 lim →
+      F (transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 lim) =
+        transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 lim := by
+  intro hCont
+  exact
+    jump_fixpoint_from_continuity (PropT := PropT)
+      (Cn := Cn) (J := J) (F := F) (A0 := A0)
+      (lim := lim) (hLim := hLim) (hExt := hExt) hCont
 
 end JumpFixpoint
 
@@ -111,8 +132,13 @@ theorem part7_change_of_sense_jump
       (L := jumpLimitOp (PropT := PropT) Cn J)
       (F Provable K Machine encode_halt Cn) A0.Γ lim := by
   let F_dyn := F Provable K Machine encode_halt Cn
-  have hExt : ∀ Γ, Γ ⊆ F_dyn Γ := fun Γ =>
-    subset_trans Set.subset_union_left (hCnExt _)
+  have hExtCn :
+      ∀ Γ, Γ ⊆ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := by
+    intro Γ
+    exact subset_trans Set.subset_union_left (hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ))
+  have hExt : ∀ Γ, Γ ⊆ F_dyn Γ := by
+    intro Γ
+    simpa [F_dyn, F] using hExtCn Γ
   have hFixFromCont :
       FixpointFromContinuity (PropT := PropT)
         (L := jumpLimitOp (PropT := PropT) Cn J) F_dyn A0.Γ lim :=
@@ -120,7 +146,7 @@ theorem part7_change_of_sense_jump
       (Cn := Cn) (J := J) (F := F_dyn) (A0 := A0.Γ)
       (lim := lim) (hLim := hLim) (hExt := hExt)
   have hStageIncl :
-      LimitIncludesStages.{u, v} (PropT := PropT)
+      LimitIncludesStages (PropT := PropT)
         (jumpLimitOp (PropT := PropT) Cn J) F_dyn A0.Γ :=
     limitIncludesStages_jumpLimitOp (PropT := PropT)
       (Cn := Cn) (J := J) hCnExt
