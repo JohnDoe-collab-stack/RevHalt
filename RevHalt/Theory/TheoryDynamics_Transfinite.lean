@@ -76,10 +76,13 @@ def limitDecomp_union : LimitDecomp (L := (unionLimitOp (PropT := PropT))) := by
     · exact ∅
   · intro alpha _hLim chain
     ext p
+    have hmem_apply :
+        p ∈ (unionLimitOp (PropT := PropT)).apply (alpha := alpha) chain ↔
+          ∃ beta, ∃ h : beta < alpha, p ∈ chain beta h := by
+      simp [unionLimitOp, transUnionFamily]
     constructor
     · intro hp
-      rcases (by
-        simpa [unionLimitOp, transUnionFamily] using hp) with ⟨beta, hbeta, hp⟩
+      rcases hmem_apply.mp hp with ⟨beta, hbeta, hp⟩
       refine ⟨beta, hbeta, ?_⟩
       by_cases h : beta < alpha
       · have hset : chain beta hbeta = chain beta h := (chain_proof_irrel (PropT := PropT) chain hbeta h).symm
@@ -97,8 +100,7 @@ def limitDecomp_union : LimitDecomp (L := (unionLimitOp (PropT := PropT))) := by
             simpa [h] using hp
           simpa [hset] using hmem'
         · exact (False.elim (h hbeta))
-      have : p ∈ transUnionFamily (α := alpha) chain := ⟨beta, hbeta, hmem⟩
-      simpa [unionLimitOp, transUnionFamily] using this
+      exact hmem_apply.mpr ⟨beta, hbeta, hmem⟩
   · intro alpha chain beta hbeta p hp
     by_cases h : beta < alpha
     · have hset : chain beta h = chain beta hbeta :=
