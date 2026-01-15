@@ -259,7 +259,8 @@ theorem contradiction_if_internalize_external_decider
     fun e => decidable_rev0_of_decidable_eval A K hK hCover hDec e
   have hIH : ∃ IH : InternalHaltingPredicate S K, True :=
     hLift dRev
-  exact T2_impossibility S K hK hIH
+  obtain ⟨IH, _⟩ := hIH
+  exact T2_impossibility S K hK ⟨IH⟩
 
 end ArchitecturalConstraints
 

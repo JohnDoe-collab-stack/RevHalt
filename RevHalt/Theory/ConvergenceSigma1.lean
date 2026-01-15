@@ -41,7 +41,7 @@ For a monotone kit, `Rev0_K K (Machine e)` is Σ₁ via `evaln`.
 This is the exact “arithmetization target shape” used by the Gödel track:
 `Rev0_K` on machine codes reduces to a single existential witness.
 -/
-theorem rev0_K_machine_iff_exists_evaln (K : RHKit) (hK : DetectsMonotone K) (e : Code) :
+theorem rev0_K_machine_iff_exists_evaln (K : RHKit) (hK : DetectsUpFixed K) (e : Code) :
     Rev0_K K (Machine e) ↔ ∃ k x, Nat.Partrec.Code.evaln k e 0 = some x := by
   have hT1 : Rev0_K K (Machine e) ↔ Halts (Machine e) :=
     T1_traces K hK (Machine e)

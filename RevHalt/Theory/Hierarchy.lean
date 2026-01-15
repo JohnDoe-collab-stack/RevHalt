@@ -187,7 +187,7 @@ theorem up2_orbit_implies_upEqBot
     : RevHalt.up (TimeTrace emb) = (⊥ : RevHalt.Trace) := by
   have hstab : RevHalt.Stabilizes (TimeTrace emb) :=
     up2_orbit_implies_stabilizes (Pos := Pos) emb hAvoid_orbit
-  exact (RevHalt.Stabilizes_iff_up_eq_bot (T := TimeTrace emb)).1 hstab
+  exact (RevHalt.up_eq_bot_iff (TimeTrace emb)).mpr hstab
 
 /--
 Queue/Splitter (with local safety) implies Up2 along the deterministic orbit.
@@ -256,7 +256,7 @@ theorem stabilization_chain_up1_upEqBot
   have hstab : RevHalt.Stabilizes (TimeTrace emb) :=
     stabilization_chain_up1 Pos S d I0 emb h_safe hQ
   -- Stabilizes T -> up T = ⊥
-  exact (RevHalt.Stabilizes_iff_up_eq_bot (T := TimeTrace emb)).mp hstab
+  exact (RevHalt.up_eq_bot_iff (TimeTrace emb)).mpr hstab
 
 /-- Same statement, as kernel membership (categorical view). -/
 theorem stabilization_chain_up1_mem_upKernel
