@@ -736,6 +736,82 @@ theorem structural_escape_at_limit_L
     (A0 := A0) (lim := lim) (hLim := hLim) (hAbs := hAbsBelow) (hRoute := hRouteAt)
     (hStage := hStageIncl) (hFix := hFix) (hProvClosed_lim := hProvClosedAt)
 
+/-! ### Fork Law (generic, L-version)
+
+This is the clean separation statement:
+given the standard escape hypotheses, any continuity notion that implies
+a fixpoint at `lim` is impossible.
+
+The Fork Law says: the 7 standard hypotheses together imply False.
+At least one must fail. This theorem returns `False` directly.
+-/
+
+theorem fork_law_False
+    (L : LimitOp PropT)
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbsBelow : ∃ β < lim, Absorbable Provable
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRouteAt : RouteIIApplies Provable K Machine encode_halt Cn
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hStageIncl : LimitIncludesStages (PropT := PropT) L
+      (F Provable K Machine encode_halt Cn) A0.Γ)
+    (hFixFromCont : FixpointFromContinuity (PropT := PropT) (L := L)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim)
+    (hProvClosedAt : ProvClosed Provable
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hCont : ContinuousAtL (PropT := PropT) (L := L)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim) :
+    False := by
+  exact
+    (structural_escape_at_limit_L (PropT := PropT)
+      (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (L := L) (Cn := Cn)
+      (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
+      (A0 := A0) (lim := lim) (hLim := hLim)
+      (hAbsBelow := hAbsBelow) (hRouteAt := hRouteAt)
+      (hStageIncl := hStageIncl) (hFixFromCont := hFixFromCont)
+      (hProvClosedAt := hProvClosedAt)) hCont
+
+/-- Fork Law as a direct "no-continuity" statement (more usable in endpoints).
+    This is simply an alias for `structural_escape_at_limit_L`. -/
+theorem fork_law_not_ContinuousAtL
+    (L : LimitOp PropT)
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbsBelow : ∃ β < lim, Absorbable Provable
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRouteAt : RouteIIApplies Provable K Machine encode_halt Cn
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hStageIncl : LimitIncludesStages (PropT := PropT) L
+      (F Provable K Machine encode_halt Cn) A0.Γ)
+    (hFixFromCont : FixpointFromContinuity (PropT := PropT) (L := L)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim)
+    (hProvClosedAt : ProvClosed Provable
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
+    ¬ ContinuousAtL (PropT := PropT) (L := L)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim :=
+  structural_escape_at_limit_L (PropT := PropT)
+    (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+    (L := L) (Cn := Cn)
+    (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
+    (A0 := A0) (lim := lim) (hLim := hLim)
+    (hAbsBelow := hAbsBelow) (hRouteAt := hRouteAt)
+    (hStageIncl := hStageIncl) (hFixFromCont := hFixFromCont)
+    (hProvClosedAt := hProvClosedAt)
+
 theorem global_change_of_sense
     (Cn : Set PropT → Set PropT)
     (hMono : ProvRelMonotone Provable)
