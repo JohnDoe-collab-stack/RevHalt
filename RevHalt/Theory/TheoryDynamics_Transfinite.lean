@@ -91,33 +91,31 @@ theorem transIter_mono
     Monotone (transIter F A0) := by
   intro α β hle
   revert α
-  induction β using Ordinal.limitRecOn with
-  | zero =>
-    intro α hle
-    rw [nonpos_iff_eq_zero] at hle
-    subst hle
-    exact le_refl _
-  | succ γ ih =>
-    intro α hle
-    -- Goal is: transIter α ⊆ transIter (Order.succ γ)
-    -- Order.succ γ = γ + 1, and transIter(γ+1) = F(transIter γ)
-    have hsucc_eq : Order.succ γ = γ + 1 := Ordinal.add_one_eq_succ γ |>.symm
-    rw [hsucc_eq, transIter_succ]
-    -- Now goal is: transIter α ⊆ F(transIter γ)
-    -- hle : α ≤ Order.succ γ
-    by_cases h : α = Order.succ γ
-    · -- α = Order.succ γ = γ + 1
-      subst h
-      rw [hsucc_eq, transIter_succ]
-    · -- α < Order.succ γ, so α ≤ γ
-      have hlt : α < Order.succ γ := lt_of_le_of_ne hle h
-      have h_le_γ : α ≤ γ := Order.lt_succ_iff.mp hlt
-      have h_sub_γ : transIter F A0 α ⊆ transIter F A0 γ := ih h_le_γ
-      exact subset_trans h_sub_γ (hExt (transIter F A0 γ))
-  | limit lim hLim ih =>
-    intro α hle
+  refine @Ordinal.limitRecOn (fun β => ∀ α, α ≤ β → transIter F A0 α ⊆ transIter F A0 β) β ?_ ?_ ?_
+  · intro α hle
+    -- α ≤ 0 => α = 0
+    have : α = 0 := by
+      simpa [nonpos_iff_eq_zero] using hle
+    subst this
+    exact le_rfl
+  · intro γ ih α hle
+    -- goal: Γ_α ⊆ Γ_{γ+1} = F(Γ_γ)
+    have hsucc : transIter F A0 (γ + 1) = F (transIter F A0 γ) := by
+      simpa using (transIter_succ F A0 γ)
+    -- split α ≤ γ+1 into α < γ+1 or α = γ+1
     rcases lt_or_eq_of_le hle with hlt | rfl
-    · rw [transIter_limit F A0 lim hLim]
+    · have hleγ : α ≤ γ := Order.lt_succ_iff.mp hlt
+      have hsub : transIter F A0 α ⊆ transIter F A0 γ := ih α hleγ
+      -- Γ_α ⊆ Γ_γ ⊆ F(Γ_γ)
+      rw [← Ordinal.add_one_eq_succ, hsucc]
+      exact subset_trans hsub (hExt (transIter F A0 γ))
+    · -- α = γ+1
+      -- Γ_{γ+1} ⊆ Γ_{γ+1}
+      simp [hsucc, ← Ordinal.add_one_eq_succ]
+  · intro lim hLim ih α hle
+    rcases lt_or_eq_of_le hle with hlt | rfl
+    · -- α < lim => Γ_α ⊆ ⋃_{β<lim} Γ_β
+      rw [transIter_limit F A0 lim hLim]
       intro p hp
       exact ⟨α, hlt, hp⟩
     · exact Subset.rfl
@@ -258,54 +256,41 @@ def ProvClosedDirectedOrd : Prop :=
     (∀ {α β}, α ≤ β → chain α ⊆ chain β) →
     ProvClosed Provable (transUnion chain lim)
 
-/-- ProvClosed at a limit ordinal via transfinite induction and ProvClosedDirectedOrd. -/
-theorem transIter_provClosed_at_limit
+/-- ProvClosed along the full transfinite iteration:
+    0: given by h0
+    succ: given by hProvCn
+    limit: given by ProvClosedDirectedOrd on transUnion -/
+theorem transIter_provClosed
     (hPC : ProvClosedDirectedOrd.{v} Provable)
     (Cn : Set PropT → Set PropT)
     (hProvCn : ProvClosedCn Provable Cn)
     (F : Set PropT → Set PropT)
     (A0 : Set PropT)
-    (lim : Ordinal.{v})
-    (hLim : Order.IsSuccLimit lim)
     (hExt : ∀ Γ, Γ ⊆ F Γ)
     (h0 : ProvClosed Provable A0)
     (hF_eq : ∀ Γ, F Γ = Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) :
-    ProvClosed Provable (transIter F A0 lim) := by
-  -- Use the limit equation: Γ_lim = union_{β<lim} Γ_β
-  have hEq : transIter F A0 lim = transUnion (transIter F A0) lim := by
-    simp [transIter_limit F A0 lim hLim]
-  -- Prove all stages < lim are ProvClosed by transfinite recursion
-  have hStages : ∀ β, β < lim → ProvClosed Provable (transIter F A0 β) := by
-    intro β hβ
-    revert hβ
-    refine Ordinal.limitRecOn β ?z ?s ?l
-    · intro _
-      simp; exact h0
-    · intro γ ih hSuccLt
-      -- β = γ+1, and γ < lim (since γ ≤ γ < γ+1 < lim)
-      have hγlt : γ < lim := lt_of_le_of_lt (Order.le_succ γ) hSuccLt
-      have _ : ProvClosed Provable (transIter F A0 γ) := ih hγlt
-      show ProvClosed Provable (transIter F A0 (γ + 1))
-      rw [transIter_succ, hF_eq]
+    ∀ α : Ordinal.{v}, ProvClosed Provable (transIter F A0 α) := by
+  intro α
+  induction α using Ordinal.limitRecOn with
+  | zero =>
+      simpa using h0
+  | succ γ ih =>
+      -- Γ_{γ+1} = F(Γ_γ) = Cn(...)
+      rw [← Ordinal.add_one_eq_succ]
+      have : transIter F A0 (γ + 1) = F (transIter F A0 γ) := by
+        simpa using (transIter_succ F A0 γ)
+      -- rewrite to Cn form then use hProvCn
+      rw [this, hF_eq]
       exact hProvCn (transIter F A0 γ ∪ S1Rel Provable K Machine encode_halt (transIter F A0 γ))
-    · intro μ hμ ih hμlt
-      -- β is limit μ, and μ < lim. Apply hPC at μ.
-      have hEqμ : transIter F A0 μ = transUnion (transIter F A0) μ := by
-        simp [transIter_limit F A0 μ hμ]
-      have hmonoIter : Monotone (transIter F A0) :=
-        transIter_mono F A0 hExt
-      have hPCμ : ProvClosed Provable (transUnion (transIter F A0) μ) :=
-        hPC (transIter F A0) μ
-          (fun β hβ => ih β hβ (lt_trans hβ hμlt))
-          (by intro α β hle; exact hmonoIter hle)
-      simp [hEqμ]; exact hPCμ
-  -- Monotonicity of transIter
-  have hmonoIter : Monotone (transIter F A0) :=
-    transIter_mono F A0 hExt
-  -- Apply hPC at lim
-  have hPClim : ProvClosed Provable (transUnion (transIter F A0) lim) :=
-    hPC (transIter F A0) lim hStages (by intro α β hle; exact hmonoIter hle)
-  simp [hEq]; exact hPClim
+  | limit lim hLim ih =>
+      -- Γ_lim = transUnion (Γ_β)_{β<lim}
+      rw [transIter_limit F A0 lim hLim]
+      have hmonoIter : Monotone (transIter F A0) := transIter_mono F A0 hExt
+      exact hPC (transIter F A0) lim
+        (fun β hβ => ih β hβ)
+        (by
+          intro α β hle
+          exact hmonoIter hle)
 
 end TransfiniteTheorems
 
@@ -362,11 +347,13 @@ theorem structural_escape_transfinite
     have hStep3 : Cn (Γ_lim ∪ S_lim) = Γ_lim := hFix_symm.symm
     rw [hStep1, hStep2, hStep3]
 
-  -- ProvClosed via ProvClosedDirectedOrd
+  -- ProvClosed at lim via uniform transfinite lemma
   have hF_eq : ∀ Γ, F_dyn Γ = Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := fun _ => rfl
+
   have hProvClosed_lim : ProvClosed Provable Γ_lim :=
-    transIter_provClosed_at_limit Provable K Machine encode_halt
-      hPCord Cn hProvCn F_dyn A0.Γ lim hLim hFExt A0.prov_closed hF_eq
+    transIter_provClosed (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (hPC := hPCord) (Cn := Cn) (hProvCn := hProvCn) (F := F_dyn) (A0 := A0.Γ)
+      (hExt := hFExt) (h0 := A0.prov_closed) (hF_eq := hF_eq) lim
 
   have hAdm : OmegaAdmissible Provable Cn Γ_lim := ⟨hCnClosed, hProvClosed_lim⟩
 
