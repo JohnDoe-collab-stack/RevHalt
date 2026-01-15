@@ -17,7 +17,7 @@ open Ordinal
 
 section TransfiniteDynamics
 
-universe u
+universe u v
 
 variable {PropT : Type u}
 
@@ -25,28 +25,112 @@ variable {PropT : Type u}
   **Transfinite Union (Independent)**:
   The union of a global chain up to a limit.
 -/
-def transUnion (chain : Ordinal → Set PropT) (lim : Ordinal) : Set PropT :=
+def transUnion (chain : Ordinal.{v} → Set PropT) (lim : Ordinal.{v}) : Set PropT :=
   { p | ∃ β, β < lim ∧ p ∈ chain β }
 
 /--
   **Transfinite Union (Family)**:
   Helper for recursion, taking a dependent family.
 -/
-def transUnionFamily {α : Ordinal} (chain : ∀ β < α, Set PropT) : Set PropT :=
+def transUnionFamily {α : Ordinal.{v}} (chain : ∀ β < α, Set PropT) : Set PropT :=
   { p | ∃ β, ∃ (h : β < α), p ∈ chain β h }
+
+/-- **Limit Operator**: parameterized limit constructor for transfinite recursion. -/
+structure LimitOp (PropT : Type u) where
+  apply : ∀ {alpha : Ordinal.{v}}, (∀ beta < alpha, Set PropT) -> Set PropT
+
+/-- **Limit Decomposition**: factor a limit rule through a global chain. -/
+structure LimitDecomp (L : LimitOp PropT) : Type (max u (v + 1)) where
+  decomp :
+    ∀ {alpha : Ordinal.{v}}, (∀ beta < alpha, Set PropT) -> Ordinal.{v} -> Set PropT
+  decomp_spec :
+    ∀ {alpha : Ordinal.{v}} (_hLim : Order.IsSuccLimit alpha)
+      (chain : ∀ beta < alpha, Set PropT),
+      L.apply chain = transUnion (decomp chain) alpha
+  decomp_sub :
+    ∀ {alpha : Ordinal.{v}} (chain : ∀ beta < alpha, Set PropT) {beta : Ordinal.{v}}
+      (hbeta : beta < alpha),
+      chain beta hbeta ⊆ decomp chain beta
+
+/-- Union limit operator (the current default). -/
+def unionLimitOp : LimitOp PropT :=
+  { apply := fun {alpha} chain => transUnionFamily (α := alpha) chain }
+
+def limitDecomp_union : LimitDecomp (L := (unionLimitOp (PropT := PropT))) := by
+  classical
+  refine
+    { decomp := ?decomp
+      decomp_spec := ?spec
+      decomp_sub := ?sub }
+  · intro alpha chain beta
+    by_cases h : beta < alpha
+    · exact chain beta h
+    · exact ∅
+  · intro alpha _hLim chain
+    ext p
+    constructor
+    · intro hp
+      rcases (by
+        simpa [unionLimitOp, transUnionFamily] using hp) with ⟨beta, hbeta, hp⟩
+      refine ⟨beta, hbeta, ?_⟩
+      by_cases h : beta < alpha
+      · simpa [h] using hp
+      · exact (False.elim (h hbeta))
+    · intro hp
+      rcases hp with ⟨beta, hbeta, hp⟩
+      have hmem : p ∈ chain beta hbeta := by
+        by_cases h : beta < alpha
+        · simpa [h] using hp
+        · exact (False.elim (h hbeta))
+      have : p ∈ transUnionFamily (α := alpha) chain := ⟨beta, hbeta, hmem⟩
+      simpa [unionLimitOp, transUnionFamily] using this
+  · intro alpha chain beta hbeta p hp
+    by_cases h : beta < alpha
+    · simpa [h] using hp
+    · exact (False.elim (h hbeta))
+
+/--
+  **Transfinite Iteration (Parametric Limit)**:
+  Recursively defines the state Gamma_alpha for any ordinal alpha, using a limit operator.
+-/
+def transIterL
+    (L : LimitOp PropT)
+    (F : Set PropT -> Set PropT)
+    (A0 : Set PropT)
+    (alpha : Ordinal.{v}) : Set PropT :=
+  Ordinal.limitRecOn alpha
+    A0
+    (fun _ prev => F prev)
+    (fun _ _ chain => L.apply chain)
+
+@[simp]
+theorem transIterL_zero (L : LimitOp PropT) (F : Set PropT -> Set PropT) (A0 : Set PropT) :
+    transIterL L F A0 0 = A0 :=
+  Ordinal.limitRecOn_zero _ _ _
+
+@[simp]
+theorem transIterL_succ (L : LimitOp PropT) (F : Set PropT -> Set PropT)
+    (A0 : Set PropT) (alpha : Ordinal.{v}) :
+    transIterL L F A0 (alpha + 1) = F (transIterL L F A0 alpha) :=
+  Ordinal.limitRecOn_succ _ _ _ _
+
+theorem transIterL_limit
+    (L : LimitOp PropT)
+    (F : Set PropT -> Set PropT)
+    (A0 : Set PropT)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim) :
+    transIterL L F A0 lim =
+      L.apply (alpha := lim) (fun beta (_hbeta : beta < lim) => transIterL L F A0 beta) := by
+  unfold transIterL
+  simp only [Ordinal.limitRecOn_limit _ _ _ _ hLim]
 
 /--
   **Transfinite Iteration**:
   Recursively defines the state Γ_α for any ordinal α.
 -/
-def transIter
-    (F : Set PropT → Set PropT)
-    (A0 : Set PropT)
-    (α : Ordinal) : Set PropT :=
-  Ordinal.limitRecOn α
-    A0
-    (fun _ prev => F prev)
-    (fun _ _ chain => transUnionFamily chain)
+abbrev transIter (F : Set PropT → Set PropT) (A0 : Set PropT) (α : Ordinal.{v}) : Set PropT :=
+  transIterL unionLimitOp F A0 α
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- RECURSION LEMMAS (Using + 1)
@@ -55,26 +139,70 @@ def transIter
 @[simp]
 theorem transIter_zero (F : Set PropT → Set PropT) (A0 : Set PropT) :
     transIter F A0 0 = A0 :=
-  Ordinal.limitRecOn_zero _ _ _
+  by
+    simp [transIter, transIterL_zero]
 
 @[simp]
-theorem transIter_succ (F : Set PropT → Set PropT) (A0 : Set PropT) (α : Ordinal) :
+theorem transIter_succ (F : Set PropT → Set PropT) (A0 : Set PropT) (α : Ordinal.{v}) :
     transIter F A0 (α + 1) = F (transIter F A0 α) :=
-  Ordinal.limitRecOn_succ _ _ _ _
+  by
+    change
+      transIterL unionLimitOp F A0 (α + 1) =
+        F (transIterL unionLimitOp F A0 α)
+    simpa using
+      (transIterL_succ (L := unionLimitOp) (F := F) (A0 := A0) (alpha := α))
 
 theorem transIter_limit
     (F : Set PropT → Set PropT)
     (A0 : Set PropT)
-    (lim : Ordinal)
+    (lim : Ordinal.{v})
     (hLim : Order.IsSuccLimit lim) :
     transIter F A0 lim = transUnion (transIter F A0) lim := by
-  unfold transIter
-  simp only [Ordinal.limitRecOn_limit _ _ _ _ hLim]
+  have hEq :
+      transIter F A0 lim =
+        transUnionFamily (α := lim) (fun β (_hβ : β < lim) => transIter F A0 β) := by
+    simpa [transIter, unionLimitOp] using
+      (transIterL_limit (L := unionLimitOp) (F := F) (A0 := A0) (lim := lim) hLim)
+  rw [hEq]
   dsimp [transUnion, transUnionFamily]
   ext p
   constructor
   · rintro ⟨β, hβ, hp⟩; exact ⟨β, hβ, hp⟩
   · rintro ⟨β, hβ, hp⟩; exact ⟨β, hβ, hp⟩
+
+/-- Local property: at any limit, earlier stages embed into the limit state. -/
+def LimitIncludesStages (L : LimitOp PropT) (F : Set PropT -> Set PropT) (A0 : Set PropT) : Prop :=
+  ∀ {lim : Ordinal.{v}} (_hLim : Order.IsSuccLimit lim) {β : Ordinal.{v}} (_hβ : β < lim),
+    transIterL L F A0 β ⊆ transIterL L F A0 lim
+
+theorem limitIncludesStages_of_decomp
+    (L : LimitOp PropT)
+    (hDecomp : LimitDecomp (L := L))
+    (F : Set PropT -> Set PropT)
+    (A0 : Set PropT) :
+    LimitIncludesStages L F A0 := by
+  intro lim hLim beta hbeta p hp
+  let chain : ∀ gamma < lim, Set PropT := fun gamma _hgamma => transIterL L F A0 gamma
+  have hIterEq :
+      transIterL L F A0 lim =
+        L.apply (alpha := lim) (fun gamma (_hgamma : gamma < lim) => transIterL L F A0 gamma) := by
+    simpa using (transIterL_limit (L := L) (F := F) (A0 := A0) (lim := lim) hLim)
+  have hEq : L.apply chain = transUnion (hDecomp.decomp chain) lim :=
+    hDecomp.decomp_spec hLim chain
+  have hSub : chain beta hbeta ⊆ hDecomp.decomp chain beta :=
+    hDecomp.decomp_sub chain hbeta
+  have hMem : p ∈ hDecomp.decomp chain beta := hSub hp
+  have hMemUnion : p ∈ transUnion (hDecomp.decomp chain) lim := ⟨beta, hbeta, hMem⟩
+  have hMemApply : p ∈ L.apply chain := by
+    rw [hEq]
+    exact hMemUnion
+  rw [hIterEq]
+  exact hMemApply
+
+/-- `unionLimitOp` satisfies stage-inclusion via `LimitDecomp`. -/
+theorem limitIncludesStages_union (F : Set PropT -> Set PropT) (A0 : Set PropT) :
+    LimitIncludesStages (PropT := PropT) unionLimitOp F A0 :=
+  limitIncludesStages_of_decomp (L := unionLimitOp) (limitDecomp_union (PropT := PropT)) F A0
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- MONOTONICITY
@@ -124,8 +252,8 @@ end TransfiniteDynamics
 
 section TransfiniteTheorems
 
+universe u v
 variable {PropT : Type u}
-universe v
 variable {Code : Type u}
 variable (Provable : Set PropT → PropT → Prop)
 variable (K : RHKit)
@@ -147,6 +275,85 @@ theorem frontierInjected_of_CnExt
   have : p ∈ (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := Or.inr hp
   exact hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ) this
 
+/-- Continuity at a limit (union form). -/
+def ContinuousAt (F : Set PropT → Set PropT) (A0 : Set PropT) (lim : Ordinal.{v}) : Prop :=
+  F (transIter F A0 lim) = transUnion (fun β' => F (transIter F A0 β')) lim
+
+/-- Admissibility at a limit stage. -/
+def AdmissibleAtLimit
+    (Cn : Set PropT → Set PropT)
+    (F_dyn : Set PropT → Set PropT)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v}) : Prop :=
+  OmegaAdmissible Provable Cn (transIter F_dyn A0.Γ lim)
+
+/-- Limit collapse schema (L-version), using stage-inclusion at limits. -/
+theorem limit_collapse_schema_L
+    (L : LimitOp PropT)
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (_hExt : ∀ Γ, Γ ⊆ F Γ)
+    (hInj : FrontierInjected Provable K Machine encode_halt F)
+    (hStage : LimitIncludesStages (PropT := PropT) L F A0)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbs : ∃ β < lim, Absorbable Provable (transIterL L F A0 (β + 1))) :
+    S1Rel Provable K Machine encode_halt (transIterL L F A0 lim) = ∅ := by
+  classical
+  apply Set.eq_empty_iff_forall_notMem.mpr
+  intro p hp
+
+  obtain ⟨β, hβlt, hAbsβ⟩ := hAbs
+  rcases hp with ⟨e, rfl, hKit, hNprov_lim⟩
+
+  have hSub_β_lim : transIterL L F A0 β ⊆ transIterL L F A0 lim :=
+    hStage hLim hβlt
+
+  have hSuccLt : β + 1 < lim := hLim.succ_lt hβlt
+  have hSub_succ_lim : transIterL L F A0 (β + 1) ⊆ transIterL L F A0 lim :=
+    hStage hLim hSuccLt
+
+  have hNprov_β : ¬ Provable (transIterL L F A0 β) (encode_halt e) := by
+    intro hPβ
+    have hPlim : Provable (transIterL L F A0 lim) (encode_halt e) :=
+      hMono _ _ hSub_β_lim _ hPβ
+    exact hNprov_lim hPlim
+
+  have hS1β : encode_halt e ∈ S1Rel Provable K Machine encode_halt (transIterL L F A0 β) :=
+    ⟨e, rfl, hKit, hNprov_β⟩
+
+  have hMem_succ : encode_halt e ∈ transIterL L F A0 (β + 1) := by
+    have hinj : encode_halt e ∈ F (transIterL L F A0 β) := hInj _ hS1β
+    rw [transIterL_succ (L := L) (F := F) (A0 := A0) (alpha := β)]
+    exact hinj
+
+  have hP_succ : Provable (transIterL L F A0 (β + 1)) (encode_halt e) :=
+    hAbsβ (encode_halt e) hMem_succ
+
+  have hP_lim : Provable (transIterL L F A0 lim) (encode_halt e) :=
+    hMono _ _ hSub_succ_lim _ hP_succ
+
+  exact hNprov_lim hP_lim
+
+theorem limit_collapse_schema_Decomp
+    (L : LimitOp PropT)
+    (hDecomp : LimitDecomp (L := L))
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (_hExt : ∀ Γ, Γ ⊆ F Γ)
+    (hInj : FrontierInjected Provable K Machine encode_halt F)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbs : ∃ β < lim, Absorbable Provable (transIterL L F A0 (β + 1))) :
+    S1Rel Provable K Machine encode_halt (transIterL L F A0 lim) = ∅ :=
+  limit_collapse_schema_L Provable K Machine encode_halt
+    (L := L) (F := F) (A0 := A0)
+    (hMono := hMono) (_hExt := _hExt) (hInj := hInj)
+    (hStage := limitIncludesStages_of_decomp (L := L) hDecomp F A0)
+    (lim := lim) (hLim := hLim) (hAbs := hAbs)
+
 /--
   **Limit Collapse Schema** (Corrected):
   If there is an absorption point below a limit, the frontier at the limit is empty.
@@ -164,58 +371,16 @@ theorem limit_collapse_schema
     (hMono : ProvRelMonotone Provable)
     (hExt : ∀ Γ, Γ ⊆ F Γ)
     (hInj : FrontierInjected Provable K Machine encode_halt F)
-    (lim : Ordinal)
+    (lim : Ordinal.{v})
     (hLim : Order.IsSuccLimit lim)
     (hAbs : ∃ β < lim, Absorbable Provable (transIter F A0 (β + 1))) :
     S1Rel Provable K Machine encode_halt (transIter F A0 lim) = ∅ := by
-  classical
-  apply Set.eq_empty_iff_forall_notMem.mpr
-  intro p hp
-
-  -- pick the absorption witness
-  obtain ⟨β, hβlt, hAbsβ⟩ := hAbs
-
-  -- Unpack hp at lim: p = encode_halt e, kit, and not provable at lim
-  rcases hp with ⟨e, rfl, hKit, hNprov_lim⟩
-
-  -- Need monotonicity of transIter to compare stages
-  have hmono : Monotone (transIter F A0) :=
-    transIter_mono F A0 hExt
-
-  have hSub_β_lim : transIter F A0 β ⊆ transIter F A0 lim :=
-    hmono (le_of_lt hβlt)
-
-  have hSuccLt : β + 1 < lim := hLim.succ_lt hβlt
-  have hSub_succ_lim : transIter F A0 (β + 1) ⊆ transIter F A0 lim :=
-    hmono (le_of_lt hSuccLt)
-
-  -- From ¬Provable at lim, infer ¬Provable at stage β by contrapositive
-  have hNprov_β : ¬ Provable (transIter F A0 β) (encode_halt e) := by
-    intro hPβ
-    have hPlim : Provable (transIter F A0 lim) (encode_halt e) :=
-      hMono _ _ hSub_β_lim _ hPβ
-    exact hNprov_lim hPlim
-
-  -- Hence encode_halt e is in S1Rel at stage β
-  have hS1β : encode_halt e ∈ S1Rel Provable K Machine encode_halt (transIter F A0 β) :=
-    ⟨e, rfl, hKit, hNprov_β⟩
-
-  -- Frontier injection: S1Rel(Γβ) ⊆ F(Γβ) = Γ_{β+1}
-  have hMem_succ : encode_halt e ∈ transIter F A0 (β + 1) := by
-    have hinj : encode_halt e ∈ F (transIter F A0 β) := hInj _ hS1β
-    rw [transIter_succ]
-    exact hinj
-
-  -- Absorbable at stage β+1 gives provable at stage β+1
-  have hP_succ : Provable (transIter F A0 (β + 1)) (encode_halt e) :=
-    hAbsβ (encode_halt e) hMem_succ
-
-  -- then provable at lim by monotonicity
-  have hP_lim : Provable (transIter F A0 lim) (encode_halt e) :=
-    hMono _ _ hSub_succ_lim _ hP_succ
-
-  -- contradiction
-  exact hNprov_lim hP_lim
+  simpa [transIter] using
+    (limit_collapse_schema_L Provable K Machine encode_halt
+      (L := unionLimitOp) (F := F) (A0 := A0)
+      (hMono := hMono) (_hExt := hExt) (hInj := hInj)
+      (hStage := limitIncludesStages_union (PropT := PropT) (F := F) (A0 := A0))
+      (lim := lim) (hLim := hLim) (hAbs := hAbs))
 
 /--
   **Limit Fixpoint Property**:
@@ -225,10 +390,10 @@ theorem continuous_implies_fixpoint_at_limit
     (F : Set PropT → Set PropT)
     (A0 : Set PropT)
     (hExt : ∀ Γ, Γ ⊆ F Γ)
-    (limOrd : Ordinal)
+    (limOrd : Ordinal.{v})
     (hLim : Order.IsSuccLimit limOrd)
     -- Continuity hypothesis
-    (hCont : F (transIter F A0 limOrd) = transUnion (fun β' => F (transIter F A0 β')) limOrd) :
+    (hCont : ContinuousAt (PropT := PropT) F A0 limOrd) :
     F (transIter F A0 limOrd) = transIter F A0 limOrd := by
   rw [hCont]
   -- RHS is ∪_{β<limOrd} Γ_{β+1}
@@ -248,6 +413,60 @@ theorem continuous_implies_fixpoint_at_limit
     have hInF : p ∈ F (transIter F A0 β) := hExt (transIter F A0 β) hp
     exact ⟨β, hβ, hInF⟩
 
+/-! Escape (L-version): takes fixpoint and ProvClosed at lim as local hypotheses. -/
+theorem structural_escape_transfinite_L
+    (L : LimitOp PropT)
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (_hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbs : ∃ β < lim, Absorbable Provable
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRoute : RouteIIApplies Provable K Machine encode_halt Cn
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hStage : LimitIncludesStages (PropT := PropT) L (F Provable K Machine encode_halt Cn) A0.Γ)
+    (hFix : (F Provable K Machine encode_halt Cn)
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim) =
+        transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim)
+    (hProvClosed_lim : ProvClosed Provable
+      (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
+    False := by
+  let F_dyn := F Provable K Machine encode_halt Cn
+  let Γ_lim : Set PropT := transIterL L F_dyn A0.Γ lim
+  let S_lim : Set PropT := S1Rel Provable K Machine encode_halt Γ_lim
+
+  have hFix_symm : Γ_lim = Cn (Γ_lim ∪ S_lim) := by
+    simpa [Γ_lim, S_lim, F_dyn, F] using hFix.symm
+
+  have hCnClosed : Cn Γ_lim = Γ_lim := by
+    have hStep1 : Cn Γ_lim = Cn (Cn (Γ_lim ∪ S_lim)) := congrArg Cn hFix_symm
+    have hStep2 : Cn (Cn (Γ_lim ∪ S_lim)) = Cn (Γ_lim ∪ S_lim) := hIdem (Γ_lim ∪ S_lim)
+    have hStep3 : Cn (Γ_lim ∪ S_lim) = Γ_lim := hFix_symm.symm
+    rw [hStep1, hStep2, hStep3]
+
+  have hAdm : OmegaAdmissible Provable Cn Γ_lim := ⟨hCnClosed, hProvClosed_lim⟩
+
+  have hNonEmpty : S1Rel Provable K Machine encode_halt Γ_lim ≠ ∅ :=
+    Set.nonempty_iff_ne_empty.mp (hRoute hAdm)
+
+  have hFExt : ∀ Γ, Γ ⊆ F_dyn Γ := fun Γ =>
+    subset_trans Set.subset_union_left (hCnExt _)
+
+  have hInj : FrontierInjected Provable K Machine encode_halt F_dyn :=
+    frontierInjected_of_CnExt Provable K Machine encode_halt Cn hCnExt
+
+  have hEmpty : S1Rel Provable K Machine encode_halt Γ_lim = ∅ :=
+    limit_collapse_schema_L Provable K Machine encode_halt
+      (L := L) (F := F_dyn) (A0 := A0.Γ)
+      (hMono := hMono) (_hExt := hFExt) (hInj := hInj) (hStage := hStage)
+      (lim := lim) (hLim := hLim) (hAbs := hAbs)
+
+  exact hNonEmpty hEmpty
+
 /-- ProvClosed preserved by increasing ordinal unions below a limit.
     This is the ordinal generalization of ProvClosedDirected. -/
 def ProvClosedDirectedOrd : Prop :=
@@ -261,7 +480,7 @@ def ProvClosedDirectedOrd : Prop :=
     succ: given by hProvCn
     limit: given by ProvClosedDirectedOrd on transUnion -/
 theorem transIter_provClosed
-    (hPC : ProvClosedDirectedOrd.{v} Provable)
+    (hPC : ProvClosedDirectedOrd.{u, v} Provable)
     (Cn : Set PropT → Set PropT)
     (hProvCn : ProvClosedCn Provable Cn)
     (F : Set PropT → Set PropT)
@@ -294,6 +513,16 @@ theorem transIter_provClosed
 
 end TransfiniteTheorems
 
+section TransfiniteEscape
+
+universe u v
+variable {PropT : Type u}
+variable {Code : Type u}
+variable (Provable : Set PropT → PropT → Prop)
+variable (K : RHKit)
+variable (Machine : Code → Trace)
+variable (encode_halt : Code → PropT)
+
 /--
   **Transfinite Structural Escape**:
   The canonical contradiction:
@@ -311,9 +540,9 @@ theorem structural_escape_transfinite
     (hCnExt : CnExtensive Cn)
     (hIdem : CnIdem Cn)
     (hProvCn : ProvClosedCn Provable Cn)
-    (hPCord : ProvClosedDirectedOrd.{u} Provable) -- Ordinal version
+    (hPCord : ProvClosedDirectedOrd.{u, v} Provable) -- Ordinal version
     (A0 : ThState (PropT := PropT) Provable Cn)
-    (lim : Ordinal.{u})
+    (lim : Ordinal.{v})
     (hLim : Order.IsSuccLimit lim)
     -- Hyp 1: Absorption at some predecessor
     (hAbs : ∃ β < lim, Absorbable Provable (transIter (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
@@ -321,9 +550,8 @@ theorem structural_escape_transfinite
     (hRoute : RouteIIApplies Provable K Machine encode_halt Cn
               (transIter (F Provable K Machine encode_halt Cn) A0.Γ lim))
     -- Hyp 3: Continuity
-    (hCont : F Provable K Machine encode_halt Cn (transIter (F Provable K Machine encode_halt Cn) A0.Γ lim) =
-             transUnion (fun β' => F Provable K Machine encode_halt Cn
-               (transIter (F Provable K Machine encode_halt Cn) A0.Γ β')) lim) :
+    (hCont : ContinuousAt (PropT := PropT)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim) :
     False := by
   let F_dyn := F Provable K Machine encode_halt Cn
 
@@ -368,5 +596,25 @@ theorem structural_escape_transfinite
     limit_collapse_schema Provable K Machine encode_halt F_dyn A0.Γ hMono hFExt hInj lim hLim hAbs
 
   contradiction
+
+theorem structural_escape_at_limit
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hPCord : ProvClosedDirectedOrd.{u, v} Provable)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbs : ∃ β < lim, Absorbable Provable (transIter (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRoute : RouteIIApplies Provable K Machine encode_halt Cn
+              (transIter (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
+    ¬ ContinuousAt (PropT := PropT) (F Provable K Machine encode_halt Cn) A0.Γ lim := by
+  intro hCont
+  exact structural_escape_transfinite (Provable := Provable) (K := K) (Machine := Machine)
+    (encode_halt := encode_halt) Cn hMono hCnExt hIdem hProvCn hPCord A0 lim hLim hAbs hRoute hCont
+
+end TransfiniteEscape
 
 end RevHalt
