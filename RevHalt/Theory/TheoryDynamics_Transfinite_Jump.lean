@@ -78,6 +78,35 @@ theorem preLimit_subset_jumpLimit_apply
     exact Or.inl hp
   exact hCnExt _ this
 
+/-- Stage inclusion at limits for `jumpLimitOp`, assuming `Cn` is extensive. -/
+theorem limitIncludesStages_jumpLimitOp
+    (Cn : Set PropT → Set PropT) (J : Set PropT → Set PropT)
+    (hCnExt : CnExtensive (PropT := PropT) Cn)
+    (F : Set PropT → Set PropT) (A0 : Set PropT) :
+    LimitIncludesStages (PropT := PropT) (jumpLimitOp (PropT := PropT) Cn J) F A0 := by
+  intro lim hLim beta hbeta p hp
+  have hIterEq :
+      transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 lim =
+        (jumpLimitOp (PropT := PropT) Cn J).apply (alpha := lim)
+          (fun gamma (_ : gamma < lim) =>
+            transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 gamma) := by
+    simpa using
+      (transIterL_limit
+        (L := jumpLimitOp (PropT := PropT) Cn J)
+        (F := F) (A0 := A0) (lim := lim) hLim)
+  let chain : ∀ gamma < lim, Set PropT :=
+    fun gamma _ => transIterL (jumpLimitOp (PropT := PropT) Cn J) F A0 gamma
+  have h1 : chain beta hbeta ⊆ preLimit (PropT := PropT) (alpha := lim) chain :=
+    stage_subset_preLimit (PropT := PropT) (alpha := lim) chain hbeta
+  have h2 :
+      preLimit (PropT := PropT) (alpha := lim) chain
+        ⊆ (jumpLimitOp (PropT := PropT) Cn J).apply (alpha := lim) chain :=
+    preLimit_subset_jumpLimit_apply (PropT := PropT)
+      (Cn := Cn) (J := J) hCnExt (alpha := lim) chain
+  have : p ∈ (jumpLimitOp (PropT := PropT) Cn J).apply (alpha := lim) chain :=
+    h2 (h1 hp)
+  simpa [chain] using (hIterEq.symm ▸ this)
+
 /--
 There is an element injected only at the limit, not at any stage.
 This is a sharp emergence condition for the jump `J`.
@@ -102,6 +131,93 @@ def JumpDiscontinuousAlong
     ∃ p : PropT, p ∈ J U ∧
       (∀ beta (_h : beta < lim), p ∉ J (transIterL L F A0 beta))
 
+/--
+A sharp emergence witness: injected at the limit, not already in the prelimit,
+and not injected at any stage.
+-/
+def JumpEmergenceAlong
+    (J : Set PropT → Set PropT)
+    (L : LimitOp PropT)
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT) : Prop :=
+  ∃ (lim : Ordinal.{v}) (_hLim : Order.IsSuccLimit lim),
+    let U := preLimit (PropT := PropT) (alpha := lim)
+      (fun beta (_ : beta < lim) => transIterL L F A0 beta)
+    ∃ p : PropT,
+      p ∈ J U ∧ p ∉ U ∧
+      (∀ beta (_h : beta < lim), p ∉ J (transIterL L F A0 beta))
+
+def MonotoneSetOp (T : Type u) (G : Set T → Set T) : Prop :=
+  ∀ ⦃U V : Set T⦄, U ⊆ V → G U ⊆ G V
+
+theorem preLimit_mono {alpha : Ordinal.{v}}
+    (chain₁ chain₂ : ∀ beta < alpha, Set PropT)
+    (h : ∀ beta (hb : beta < alpha), chain₁ beta hb ⊆ chain₂ beta hb) :
+    preLimit (PropT := PropT) (alpha := alpha) chain₁
+      ⊆ preLimit (PropT := PropT) (alpha := alpha) chain₂ := by
+  intro p hp
+  rcases hp with ⟨beta, hb, hp⟩
+  exact ⟨beta, hb, h beta hb hp⟩
+
 end JumpLimit
+
+section JumpPart7
+
+universe u v
+variable {PropT : Type u}
+variable {Code : Type u}
+
+variable (Provable : Set PropT → PropT → Prop)
+variable (K : RHKit)
+variable (Machine : Code → Trace)
+variable (encode_halt : Code → PropT)
+
+/-!
+## Part 7 endpoint for jump limits
+`L := jumpLimitOp Cn J`.
+-/
+
+theorem part7_change_of_sense_jump
+    (Cn : Set PropT → Set PropT)
+    (J  : Set PropT → Set PropT)
+    (hMono   : ProvRelMonotone Provable)
+    (hCnExt  : CnExtensive (PropT := PropT) Cn)
+    (hIdem   : CnIdem (PropT := PropT) Cn)
+    (hProvCn : ProvClosedCn (PropT := PropT) Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbsBelow : ∃ β < lim, Absorbable Provable
+      (transIterL (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRouteAt : RouteIIApplies Provable K Machine encode_halt Cn
+      (transIterL (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hFixFromCont : FixpointFromContinuity (PropT := PropT)
+      (L := jumpLimitOp (PropT := PropT) Cn J)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim)
+    (hProvClosedAt : ProvClosed Provable
+      (transIterL (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
+    ¬ ContinuousAtL (PropT := PropT)
+      (L := jumpLimitOp (PropT := PropT) Cn J)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim := by
+  have hStageIncl :
+      LimitIncludesStages.{u, v} (PropT := PropT)
+        (jumpLimitOp (PropT := PropT) Cn J)
+        (F Provable K Machine encode_halt Cn) A0.Γ :=
+    limitIncludesStages_jumpLimitOp (PropT := PropT)
+      (Cn := Cn) (J := J) hCnExt
+      (F := F Provable K Machine encode_halt Cn) (A0 := A0.Γ)
+
+  exact structural_escape_at_limit_L (PropT := PropT)
+    (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+    (L := jumpLimitOp (PropT := PropT) Cn J)
+    (Cn := Cn) (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
+    (A0 := A0) (lim := lim) (hLim := hLim)
+    (hAbsBelow := hAbsBelow) (hRouteAt := hRouteAt)
+    (hStageIncl := hStageIncl) (hFixFromCont := hFixFromCont) (hProvClosedAt := hProvClosedAt)
+
+end JumpPart7
 
 end RevHalt
