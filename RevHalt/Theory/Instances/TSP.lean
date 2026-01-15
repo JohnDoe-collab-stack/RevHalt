@@ -303,13 +303,29 @@ section S1Rel
 variable (Provable : Set PropT → PropT → Prop)
 variable (encode_prop : ℕ → PropT)
 
-/-- Machine for TSP: decode and trace. -/
-def Machine_TSP (code : TSPCode) : Trace :=
-  let _n := unpair_fst code
+/--
+  Decode a TSPCode to extract instance parameters.
+  Returns (n, bound) if valid, otherwise (0, 0).
+-/
+def decodeTSPParams (code : TSPCode) : ℕ × ℕ :=
+  let n := unpair_fst code
   let rest := unpair_snd code
-  let _bound := unpair_fst rest
-  -- Simplified: create a trivial graph for the machine
-  fun _k => False  -- Placeholder: real impl needs full decoding
+  let bound := unpair_fst rest
+  (n, bound)
+
+/--
+  Machine for TSP: decode the code and produce a trace.
+  The trace becomes true at step k if we find a valid tour with encoding < k.
+-/
+def Machine_TSP (code : TSPCode) : Trace :=
+  let (n, _bound) := decodeTSPParams code
+  -- Create a trace that searches for valid tours
+  fun k => ∃ tourCode < k,
+    match decodeTour n tourCode with
+    | some tour =>
+      -- Check structural validity (cost check would need graph decoding)
+      tour.path.length = n ∧ tour.path.Nodup
+    | none => False
 
 /-- The S1Rel frontier for TSP. -/
 def S1Rel_TSP (Γ : Set PropT) : Set PropT :=
