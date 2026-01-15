@@ -56,6 +56,9 @@ structure LimitDecomp (L : LimitOp PropT) : Type (max u (v + 1)) where
 def unionLimitOp : LimitOp PropT :=
   { apply := fun {alpha} chain => transUnionFamily (α := alpha) chain }
 
+def cnUnionLimitOp (Cn : Set PropT → Set PropT) : LimitOp PropT :=
+  { apply := fun {alpha} chain => Cn (transUnionFamily (α := alpha) chain) }
+
 theorem chain_proof_irrel
     {alpha : Ordinal.{v}}
     (chain : ∀ beta < alpha, Set PropT)
@@ -306,6 +309,18 @@ def ContinuousAtL
     (lim : Ordinal.{v}) : Prop :=
   F (transIterL L F A0 lim) =
     L.apply (alpha := lim) (fun beta (_ : beta < lim) => F (transIterL L F A0 beta))
+
+section LimitGlobal
+
+def FixpointFromContinuity
+    (L : LimitOp PropT)
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT)
+    (lim : Ordinal.{v}) : Prop :=
+  ContinuousAtL (L := L) F A0 lim →
+    F (transIterL L F A0 lim) = transIterL L F A0 lim
+
+end LimitGlobal
 
 /-- Admissibility at a limit stage. -/
 def AdmissibleAtLimit
@@ -658,11 +673,8 @@ theorem structural_escape_at_limit_L
     (hRoute : RouteIIApplies Provable K Machine encode_halt Cn
       (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim))
     (hStage : LimitIncludesStages (PropT := PropT) L (F Provable K Machine encode_halt Cn) A0.Γ)
-    (hFix_of_cont : ContinuousAtL (PropT := PropT) (L := L)
-      (F Provable K Machine encode_halt Cn) A0.Γ lim →
-        (F Provable K Machine encode_halt Cn)
-          (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim) =
-            transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim)
+    (hFix_of_cont : FixpointFromContinuity (PropT := PropT) (L := L)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim)
     (hProvClosed_lim : ProvClosed Provable
       (transIterL L (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
     ¬ ContinuousAtL (PropT := PropT) (L := L)
@@ -675,6 +687,46 @@ theorem structural_escape_at_limit_L
     (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem) (_hProvCn := hProvCn)
     (A0 := A0) (lim := lim) (hLim := hLim) (hAbs := hAbs) (hRoute := hRoute)
     (hStage := hStage) (hFix := hFix) (hProvClosed_lim := hProvClosed_lim)
+
+theorem global_change_of_sense
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hAbs : ∃ β < lim, Absorbable Provable
+      (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
+        (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
+    (hRoute : RouteIIApplies Provable K Machine encode_halt Cn
+      (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim))
+    (hStage : LimitIncludesStages.{u, v} (PropT := PropT)
+      (cnUnionLimitOp (PropT := PropT) Cn)
+      (F Provable K Machine encode_halt Cn) A0.Γ)
+    (hFix_of_cont : FixpointFromContinuity (PropT := PropT)
+      (L := cnUnionLimitOp (PropT := PropT) Cn)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim)
+    (hProvClosed_lim : ProvClosed Provable
+      (transIterL (cnUnionLimitOp (PropT := PropT) Cn)
+        (F Provable K Machine encode_halt Cn) A0.Γ lim)) :
+    ¬ ContinuousAtL (PropT := PropT)
+      (L := cnUnionLimitOp (PropT := PropT) Cn)
+      (F Provable K Machine encode_halt Cn) A0.Γ lim := by
+  have hStage' :
+      LimitIncludesStages.{u, v} (PropT := PropT)
+        (cnUnionLimitOp (PropT := PropT) Cn)
+        (F Provable K Machine encode_halt Cn) A0.Γ := by
+    intro lim' hLim' beta hbeta
+    exact hStage hLim' hbeta
+  exact structural_escape_at_limit_L (Provable := Provable) (K := K) (Machine := Machine)
+    (encode_halt := encode_halt) (L := cnUnionLimitOp (PropT := PropT) Cn)
+    (Cn := Cn) (hMono := hMono) (hCnExt := hCnExt) (hIdem := hIdem)
+    (hProvCn := hProvCn) (A0 := A0) (lim := lim) (hLim := hLim)
+    (hAbs := hAbs) (hRoute := hRoute) (hStage := hStage')
+    (hFix_of_cont := hFix_of_cont) (hProvClosed_lim := hProvClosed_lim)
 
 end TransfiniteEscape
 
