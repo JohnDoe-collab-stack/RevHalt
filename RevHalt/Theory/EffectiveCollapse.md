@@ -72,58 +72,74 @@ Et ce certificat de rejet `rho` est verifiable en temps polynomial (via `CheckRe
 
 > **Point crucial** : "Les certificats courts existent" ≠ "Les certificats courts sont trouvables efficacement".
 
-Si les certificats ont taille ≤ poly(|x|), l'espace de recherche naive est 2^poly(|x|) = exponentiel.
-La recherche exhaustive n'est donc **pas** polynomiale par defaut.
+Nous distinguons explicitement deux composantes :
 
-### L'Axiome de Collapse Effectif (Version Correcte)
+* **(E) Existence bornee** : Pour tout x, il existe pi ou rho avec |pi|, |rho| ≤ poly(|x|).
+* **(S) Recherche polynomiale** : Il existe un algorithme `Find(x)` en temps poly(|x|) qui produit le certificat.
 
-**Axiome (Collapse-Search)** : Il existe un algorithme deterministe `Find(x)` s'executant en temps `poly(|x|)` qui renvoie :
+(E) seul donne L ∈ NP ∩ coNP. C'est (S) qui donne L ∈ P.
 
-* soit une preuve `pi` tel que `CheckProof(x, pi) = true`,
-* soit une refutation `rho` tel que `CheckRefutation(x, rho) = true`.
+### Definition : L'Axiome de Collapse Effectif
 
-Cet axiome postule que la structure canonique de la theorie stabilisee permet une **navigation directe** vers le certificat, sans exploration exhaustive.
+**Axiome (Collapse-Search)** : L'axiome de Collapse postule que la theorie stabilisee impose une structure canonique telle qu'un algorithme de recherche polynomial `Find` produit, pour tout x, un `pi` ou un `rho` verifiable en P.
 
-### Precision Cruciale : Trois Types de Collapse
+Formellement :
 
-| Type | Definition | Implication |
-|------|------------|-------------|
-| **Collapse Semantique** | L'iteration se stabilise en un point fixe | Completude classique |
-| **Collapse Borne** | Les certificats ont taille polynomiale | L ∈ NP ∩ coNP |
-| **Collapse Effectif** | Les certificats sont **produisibles** en temps polynomial | L ∈ P |
+* `Find : Input → Certificat` s'execute en temps poly(|x|)
+* `Find(x)` retourne soit `pi` tel que `CheckProof(x, pi) = true`, soit `rho` tel que `CheckRefutation(x, rho) = true`
 
-**C'est le Collapse Effectif (production) qui porte le lien avec P vs NP.** Le Collapse Borne seul ne garantit pas la tractabilite.
+### Deux Versions de l'Axiome
+
+| Version | Portee | Consequence |
+|---------|--------|-------------|
+| **Collapse(L)** | Un langage L specifique | L ∈ P |
+| **Collapse(NP)** | Tout langage NP (ou base NP-complete) | P = NP dans ZFC + Collapse(NP) |
 
 ### Alignement Formel
 
 La "stabilite semantique" se lit comme une forme de fixpoint au sens de `ContinuousAt` dans la formalisation. La classification Part 7 montre que, sous absorption + RouteII + admissibilite, cette continuite a la limite echoue (`structural_escape_at_limit`).
 
-L'axiome de Collapse Effectif se place **en plus**, comme hypothese de ressource computationnelle. C'est une hypothese **independante de ZFC** — elle ne peut etre ni prouvee ni refutee par les axiomes ensemblistes standards.
+L'axiome de Collapse Effectif se place **en plus**, comme hypothese de ressource computationnelle — un postulat de puissance structurelle.
 
 ---
 
 ## Consequence : Le Lien Effective Collapse
 
-Sous les hypotheses H1, H2, H3 et l'Axiome de Collapse-Search :
+### Enonce Formel (Version Langage-Specifique)
 
-1. **Internalisation** : La verification de traces (NP) est entierement simulee par la verification de preuves (P).
-2. **Decision** : Le probleme de decision externe "Est-ce que x est dans L ?" se reduit a : executer `Find(x)`, verifier le certificat retourne, decider.
+**Sous H2 et Collapse(L), le langage L est decidable en temps polynomial :**
 
-### Enonce Formel
+1. Executer `Find(x)` → obtenir certificat c
+2. Verifier c via `CheckProof` ou `CheckRefutation` (temps polynomial par H2)
+3. Decider selon le type de certificat
 
-**Sous H2 et l'hypothese de Collapse-Search, le langage L est decidable en temps polynomial.**
+**Conclusion : Dans ZFC + Collapse(L), on a L ∈ P.**
 
-**Ainsi, dans tout modele satisfaisant Collapse-Search, L ∈ P.**
+### Enonce Formel (Version Schema-NP)
 
-### Extension : P vs NP
+**Si Collapse(NP) vaut uniformement pour une base NP-complete (via reductions polynomiales), alors dans ZFC + Collapse(NP), on a P = NP.**
 
-Si Collapse-Search vaut **uniformement** pour toute relation de verification NP (ou pour une base NP-complete comme SAT), alors **P = NP dans ce modele**.
+---
 
-Cela signifie que la question P vs NP peut se lire comme :
+## Statut Epistemique
 
-> "L'axiome de Collapse Effectif est-il vrai ou faux dans l'univers mathematique ?"
+### Ce que ce document etablit
 
-C'est une question d'**independance**, pas de resolution directe.
+* La **connexion formelle** entre la dynamique RevHalt et les classes de complexite.
+* La **structure conditionnelle** : sous l'axiome de Collapse, les distinctions s'effondrent.
+* L'**alignement Lean** : les objets formels correspondent aux notions de complexite.
+
+### Ce que ce document ne pretend pas
+
+L'affirmation "l'axiome de Collapse est independant de ZFC" est une **conjecture metamathematique**, pas un theoreme prouve.
+
+Ce qui est connu :
+
+* **Relativisation** (Baker-Gill-Solovay, 1975) : Aucune preuve relativisant ne peut trancher P vs NP.
+* **Natural Proofs** (Razborov-Rudich, 1997) : Une barriere sur les techniques combinatoires.
+* **Algebrization** (Aaronson-Wigderson, 2009) : Une barriere sur les techniques algebriques.
+
+Ces barrieres suggerent que P vs NP **pourrait** etre independant de ZFC, mais ce n'est pas demontre. Nous avançons que le Collapse Effectif capture cette ligne de partage potentielle.
 
 ---
 
@@ -134,7 +150,9 @@ C'est une question d'**independance**, pas de resolution directe.
 | H1 (Compile) | Trace → Preuve |
 | H2 (CheckProof ∈ P) | Verification polynomiale |
 | H3 (Refutations) | L ∈ coNP |
-| Collapse-Borne | L ∈ NP ∩ coNP |
-| Collapse-Search | L ∈ P |
+| (E) Existence bornee | L ∈ NP ∩ coNP |
+| (S) Recherche polynomiale | L ∈ P |
+| Collapse(L) = (E) + (S) | L ∈ P (conditionnel) |
+| Collapse(NP) | P = NP (conditionnel) |
 
-**Message principal** : La distinction P vs NP depend de la possibilite de **produire** (pas seulement verifier) des certificats courts. Cette possibilite est capturee par l'axiome de Collapse Effectif, qui est **structurellement independant** de ZFC.
+**Message principal** : La distinction P vs NP peut se lire comme une question sur la validite (ou non) de l'axiome de Collapse Effectif. C'est un postulat structurel qui capture la difference entre "les preuves courtes existent" et "les preuves courtes sont produisibles".
