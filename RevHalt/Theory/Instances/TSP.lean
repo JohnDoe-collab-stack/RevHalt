@@ -164,10 +164,19 @@ end Tour
 def encodeTour {n : ℕ} (tour : Tour n) : ℕ :=
   encodeList tour.path
 
-/-- The cost of a tour in a weighted graph (simplified: just sum all edges). -/
+/-- The cost of a tour in a weighted graph: sum of all consecutive edges plus return edge. -/
 def tourCost {n : ℕ} (G : WeightedGraph n) (tour : Tour n) (_hn : n ≥ 2) : ℕ :=
-  -- Compute cost by iterating over pairs of consecutive path elements
-  aux tour.path 0
+  -- Sum consecutive edges
+  let consecutiveCost := aux tour.path 0
+  -- Add return edge (last → first)
+  let returnCost := match tour.path.head?, tour.path.getLast? with
+    | some first, some last =>
+      if hf : first < n then
+        if hl : last < n then G.weight ⟨last, hl⟩ ⟨first, hf⟩
+        else 0
+      else 0
+    | _, _ => 0
+  consecutiveCost + returnCost
 where
   aux : List ℕ → ℕ → ℕ
   | [], acc => acc
