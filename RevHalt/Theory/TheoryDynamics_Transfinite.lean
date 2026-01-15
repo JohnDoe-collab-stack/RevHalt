@@ -127,6 +127,7 @@ end TransfiniteDynamics
 section TransfiniteTheorems
 
 variable {PropT : Type u}
+universe v
 variable {Code : Type u}
 variable (Provable : Set PropT → PropT → Prop)
 variable (K : RHKit)
@@ -249,6 +250,63 @@ theorem continuous_implies_fixpoint_at_limit
     have hInF : p ∈ F (transIter F A0 β) := hExt (transIter F A0 β) hp
     exact ⟨β, hβ, hInF⟩
 
+/-- ProvClosed preserved by increasing ordinal unions below a limit.
+    This is the ordinal generalization of ProvClosedDirected. -/
+def ProvClosedDirectedOrd : Prop :=
+  ∀ (chain : Ordinal.{v} → Set PropT) (lim : Ordinal.{v}),
+    (∀ β, β < lim → ProvClosed Provable (chain β)) →
+    (∀ {α β}, α ≤ β → chain α ⊆ chain β) →
+    ProvClosed Provable (transUnion chain lim)
+
+/-- ProvClosed at a limit ordinal via transfinite induction and ProvClosedDirectedOrd. -/
+theorem transIter_provClosed_at_limit
+    (hPC : ProvClosedDirectedOrd Provable)
+    (Cn : Set PropT → Set PropT)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (F : Set PropT → Set PropT)
+    (A0 : Set PropT)
+    (lim : Ordinal.{v})
+    (hLim : Order.IsSuccLimit lim)
+    (hExt : ∀ Γ, Γ ⊆ F Γ)
+    (h0 : ProvClosed Provable A0)
+    (hF_eq : ∀ Γ, F Γ = Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) :
+    ProvClosed Provable (transIter F A0 lim) := by
+  -- Use the limit equation: Γ_lim = union_{β<lim} Γ_β
+  have hEq : transIter F A0 lim = transUnion (transIter F A0) lim := by
+    simp [transIter_limit F A0 lim hLim]
+  -- Prove all stages < lim are ProvClosed by transfinite recursion
+  have hStages : ∀ β, β < lim → ProvClosed Provable (transIter F A0 β) := by
+    intro β hβ
+    revert hβ
+    refine Ordinal.limitRecOn β ?z ?s ?l
+    · intro _
+      simp; exact h0
+    · intro γ ih hSuccLt
+      -- β = γ+1, and γ < lim (since γ ≤ γ < γ+1 < lim)
+      have hγlt : γ < lim := lt_of_le_of_lt (Order.le_succ γ) hSuccLt
+      have _ : ProvClosed Provable (transIter F A0 γ) := ih hγlt
+      show ProvClosed Provable (transIter F A0 (γ + 1))
+      rw [transIter_succ, hF_eq]
+      exact hProvCn (transIter F A0 γ ∪ S1Rel Provable K Machine encode_halt (transIter F A0 γ))
+    · intro μ hμ ih hμlt
+      -- β is limit μ, and μ < lim. Apply hPC at μ.
+      have hEqμ : transIter F A0 μ = transUnion (transIter F A0) μ := by
+        simp [transIter_limit F A0 μ hμ]
+      have hmonoIter : Monotone (transIter F A0) :=
+        transIter_mono F A0 hExt
+      have hPCμ : ProvClosed Provable (transUnion (transIter F A0) μ) :=
+        hPC (transIter F A0) μ
+          (fun β hβ => ih β hβ (lt_trans hβ hμlt))
+          (by intro α β hle; exact hmonoIter hle)
+      simp [hEqμ]; exact hPCμ
+  -- Monotonicity of transIter
+  have hmonoIter : Monotone (transIter F A0) :=
+    transIter_mono F A0 hExt
+  -- Apply hPC at lim
+  have hPClim : ProvClosed Provable (transUnion (transIter F A0) lim) :=
+    hPC (transIter F A0) lim hStages (by intro α β hle; exact hmonoIter hle)
+  simp [hEq]; exact hPClim
+
 end TransfiniteTheorems
 
 /--
@@ -265,12 +323,12 @@ end TransfiniteTheorems
 theorem structural_escape_transfinite
     (Cn : Set PropT → Set PropT)
     (hMono : ProvRelMonotone Provable)
-    (hCnExt : CnExtensive Cn) -- For F extensivity
+    (hCnExt : CnExtensive Cn)
     (hIdem : CnIdem Cn)
     (hProvCn : ProvClosedCn Provable Cn)
-    (hPCdir : ProvClosedDirected Provable)
+    (hPCord : ProvClosedDirectedOrd Provable) -- Ordinal version
     (A0 : ThState (PropT := PropT) Provable Cn)
-    (lim : Ordinal)
+    (lim : Ordinal.{u})
     (hLim : Order.IsSuccLimit lim)
     -- Hyp 1: Absorption at some predecessor
     (hAbs : ∃ β < lim, Absorbable Provable (transIter (F Provable K Machine encode_halt Cn) A0.Γ (β + 1)))
@@ -283,11 +341,10 @@ theorem structural_escape_transfinite
                (transIter (F Provable K Machine encode_halt Cn) A0.Γ β')) lim) :
     False := by
   let F_dyn := F Provable K Machine encode_halt Cn
+
   -- 1. Continuity => Fixpoint
-  -- Verify F is extensive: Γ ⊆ F(Γ)
   have hFExt : ∀ Γ, Γ ⊆ F_dyn Γ := fun Γ =>
     (subset_trans Set.subset_union_left (hCnExt _))
-
   have hFix : F_dyn (transIter F_dyn A0.Γ lim) = transIter F_dyn A0.Γ lim :=
     continuous_implies_fixpoint_at_limit F_dyn A0.Γ hFExt lim hLim hCont
 
@@ -295,64 +352,29 @@ theorem structural_escape_transfinite
   let Γ_lim := transIter F_dyn A0.Γ lim
   let S_lim := S1Rel Provable K Machine encode_halt Γ_lim
 
-  -- Geometric/Algebraic derivation of Cn-closed
+  -- Cn-closed from fixpoint
   have hFix_symm : Γ_lim = Cn (Γ_lim ∪ S_lim) := by
     symm; simpa [F_dyn, F, S_lim] using hFix
 
   have hCnClosed : Cn Γ_lim = Γ_lim := by
-    -- Step 1: Cn Γ = Cn (Cn ...)
-    have hStep1 : Cn Γ_lim = Cn (Cn (Γ_lim ∪ S_lim)) :=
-      congrArg Cn hFix_symm
-    -- Step 2: Cn (Cn ...) = Cn (...)
-    have hStep2 : Cn (Cn (Γ_lim ∪ S_lim)) = Cn (Γ_lim ∪ S_lim) :=
-      hIdem (Γ_lim ∪ S_lim)
-    -- Step 3: Cn (...) = Γ
-    have hStep3 : Cn (Γ_lim ∪ S_lim) = Γ_lim :=
-      hFix_symm.symm
-    -- Combine
+    have hStep1 : Cn Γ_lim = Cn (Cn (Γ_lim ∪ S_lim)) := congrArg Cn hFix_symm
+    have hStep2 : Cn (Cn (Γ_lim ∪ S_lim)) = Cn (Γ_lim ∪ S_lim) := hIdem (Γ_lim ∪ S_lim)
+    have hStep3 : Cn (Γ_lim ∪ S_lim) = Γ_lim := hFix_symm.symm
     rw [hStep1, hStep2, hStep3]
 
-  -- ProvClosed (tricky part: Limit of successors).
-  -- A0 is ProvClosed.
-  -- Successors are F(Γ) = Cn(...), so ProvClosed (by hProvCn).
-  -- Limit is Union of ProvClosed sets.
-  -- By ProvClosedDirected (hPCdir).
-  -- Need to show chain is directed and members are ProvClosed.
-  have hChain : ∀ β < lim, ProvClosed Provable (transIter F_dyn A0.Γ β) := by
-    -- Induction up to lim?
-    -- Actually limitRecOn again or induction.
-    intro β hlt
-    induction β using Ordinal.limitRecOn with
-    | zero =>
-      simp; exact A0.prov_closed
-    | succ γ ih =>
-      -- Order.succ γ = γ + 1 for Ordinal
-      show ProvClosed Provable (transIter F_dyn A0.Γ (γ + 1))
-      rw [transIter_succ]
-      -- F_dyn returns Cn(...), which is ProvClosed by hProvCn
-      apply hProvCn
-    | limit limOrd' hL ih =>
-      rw [transIter_limit F_dyn A0.Γ limOrd' hL]
-      -- ProvClosed for transfinite limits requires ProvClosedDirectedOrd hypothesis
-      -- This is a known gap: ProvClosedDirected is for ℕ-indexed chains, not Ordinal
-      -- Using sorry as a placeholder until ProvClosedDirectedOrd is added
-      sorry -- ProvClosed for transfinite limit ordinals
+  -- ProvClosed via ProvClosedDirectedOrd
+  have hF_eq : ∀ Γ, F_dyn Γ = Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := fun _ => rfl
+  have hProvClosed_lim : ProvClosed Provable Γ_lim :=
+    transIter_provClosed_at_limit Provable K Machine encode_halt
+      hPCord Cn hProvCn F_dyn A0.Γ lim hLim hFExt A0.prov_closed hF_eq
 
-  -- Combine for Admissibility
-  -- Note: OmegaAdmissible requires ProvClosed for Γ_lim itself, not just for β < lim.
-  -- This requires ProvClosedDirectedOrd (generalization of ProvClosedDirected to Ordinal).
-  have hProvClosed_lim : ProvClosed Provable Γ_lim := by
-    -- Γ_lim = transIter F_dyn A0.Γ lim is a transfinite union of ProvClosed sets
-    -- Under ProvClosedDirectedOrd, this would be ProvClosed
-    sorry -- Requires ProvClosedDirectedOrd: transfinite union of ProvClosed is ProvClosed
   have hAdm : OmegaAdmissible Provable Cn Γ_lim := ⟨hCnClosed, hProvClosed_lim⟩
 
   -- 3. Admissibility => S1 ≠ ∅
   have hNonEmpty : S1Rel Provable K Machine encode_halt Γ_lim ≠ ∅ :=
     Set.nonempty_iff_ne_empty.mp (hRoute hAdm)
 
-  -- 4. Absorption => S1 = ∅
-  -- Need FrontierInjected for the corrected limit_collapse_schema
+  -- 4. Absorption => S1 = ∅ (via FrontierInjected + limit_collapse_schema)
   have hInj : FrontierInjected Provable K Machine encode_halt F_dyn :=
     frontierInjected_of_CnExt Provable K Machine encode_halt Cn hCnExt
   have hEmpty : S1Rel Provable K Machine encode_halt Γ_lim = ∅ :=
