@@ -121,6 +121,44 @@ termination_by n
 decreasing_by
   exact unpair_snd_lt_of_pos (Nat.pos_of_ne_zero h) (Nat.pos_of_ne_zero ha)
 
+/-- pair a b is never 0 when a > 0. -/
+lemma pair_pos {a b : ℕ} (ha : a > 0) : pair a b > 0 := by
+  unfold pair
+  have h1 : (a + b) * (a + b + 1) / 2 ≥ 0 := Nat.zero_le _
+  have h2 : b ≥ 0 := Nat.zero_le _
+  -- pair a b = (a+b)(a+b+1)/2 + b ≥ b
+  -- When a ≥ 1, (a+b) ≥ 1, so (a+b)(a+b+1) ≥ 2, so (a+b)(a+b+1)/2 ≥ 1
+  have h3 : a + b ≥ 1 := Nat.add_pos_left ha b
+  have h4 : a + b + 1 ≥ 2 := Nat.add_le_add_right h3 1
+  have h5 : (a + b) * (a + b + 1) ≥ 2 := by
+    calc (a + b) * (a + b + 1) ≥ 1 * 2 := Nat.mul_le_mul h3 h4
+      _ = 2 := rfl
+  have h6 : (a + b) * (a + b + 1) / 2 ≥ 1 := Nat.div_pos h5 (by decide)
+  omega
+
+/-- unpair_fst of pair returns the first component. -/
+lemma unpair_fst_pair (a b : ℕ) : unpair_fst (pair a b) = a := by
+  sorry -- Requires detailed proof about sqrt inverse
+
+/-- unpair_snd of pair returns the second component. -/
+lemma unpair_snd_pair (a b : ℕ) : unpair_snd (pair a b) = b := by
+  sorry -- Requires detailed proof about sqrt inverse
+
+/-- Roundtrip: decodeList ∘ encodeList = id -/
+lemma decodeList_encodeList (xs : List ℕ) : decodeList (encodeList xs) = xs := by
+  induction xs with
+  | nil =>
+    native_decide
+  | cons x xs ih =>
+    unfold encodeList
+    have h1 : pair (x + 1) (encodeList xs) ≠ 0 := by
+      have : pair (x + 1) (encodeList xs) > 0 := pair_pos (Nat.succ_pos x)
+      omega
+    rw [decodeList, dif_neg h1]
+    have h2 : unpair_fst (pair (x + 1) (encodeList xs)) = x + 1 := unpair_fst_pair _ _
+    have h3 : unpair_snd (pair (x + 1) (encodeList xs)) = encodeList xs := unpair_snd_pair _ _
+    simp only [h2, h3, Nat.add_sub_cancel, Nat.add_one_ne_zero, ↓reduceDIte, ih]
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SECTION 2: GRAPH DEFINITIONS
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -276,9 +314,11 @@ theorem TSPTrace_mono (inst : TSPInstance) : TMono (TSPTrace inst) := by
 lemma decodeTour_encodeTour {n : ℕ} (tour : Tour n) :
     decodeTour n (encodeTour tour) = some tour := by
   unfold decodeTour encodeTour
-  -- The proof requires showing decodeList (encodeList tour.path) = tour.path
-  -- and that the decoded path satisfies all Tour constraints
-  sorry
+  rw [decodeList_encodeList]
+  simp only [tour.length_eq, tour.nodup, ↓reduceDIte]
+  split_ifs with h
+  · rfl
+  · exact (h tour.range_valid).elim
 
 /--
   The TSP trace halts iff a solution exists.
