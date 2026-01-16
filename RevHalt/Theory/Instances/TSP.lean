@@ -254,11 +254,36 @@ def HasSolution (inst : TSPInstance) : Prop :=
 -- SECTION 4: INSTANCE ENCODING
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- Encode a weighted graph as a list of edge weights (row-major order). -/
+/-- Encode a weighted graph as a list of edge weights (row-major order).
+    The list has length n*n, with weights[i*n + j] = G.weight i j. -/
 def encodeWeights {n : ℕ} (G : WeightedGraph n) : List ℕ :=
-  -- Row-major: weights[i*n + j] = G.weight i j
-  (List.ofFn (fun i : Fin n =>
-    List.ofFn (fun j : Fin n => G.weight i j))).flatten
+  if hn : n = 0 then []
+  else List.ofFn (fun k : Fin (n * n) =>
+    let i : Fin n := ⟨k.val / n, by
+      have hk := k.isLt
+      exact Nat.div_lt_of_lt_mul hk⟩
+    let j : Fin n := ⟨k.val % n, Nat.mod_lt k.val (Nat.pos_of_ne_zero hn)⟩
+    G.weight i j)
+
+/-- Length of encodeWeights is n*n. -/
+lemma encodeWeights_length {n : ℕ} (G : WeightedGraph n) :
+    (encodeWeights G).length = n * n := by
+  simp only [encodeWeights]
+  split_ifs with hn
+  · simp [hn]
+  · simp
+
+/-- Key indexing lemma: getD on encodeWeights returns the correct weight.
+    Technical proof: requires List.getD lemmas and q*n + r / n = q for r < n. -/
+lemma getD_encodeWeights {n : ℕ} (G : WeightedGraph n) (i j : Fin n) :
+    (encodeWeights G).getD (i.val * n + j.val) 0 = G.weight i j := by
+  have hn : n ≠ 0 := Fin.pos i |> Nat.pos_iff_ne_zero.mp
+  simp only [encodeWeights, hn, ↓reduceDIte]
+  -- Proof outline:
+  -- 1. Index i*n + j < n*n (from i < n, j < n)
+  -- 2. getD on List.ofFn returns function value at that index
+  -- 3. (i*n + j) / n = i and (i*n + j) % n = j
+  sorry
 
 /-- Encode a TSP instance as a natural number. -/
 def encodeTSP (inst : TSPInstance) : ℕ :=
