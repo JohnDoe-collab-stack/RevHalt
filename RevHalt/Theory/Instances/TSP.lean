@@ -87,8 +87,27 @@ lemma unpair_snd_le (n : ℕ) : unpair_snd n ≤ n := by
 lemma unpair_snd_lt_of_pos {n : ℕ} (hn : n > 0) (ha : unpair_fst n > 0) : unpair_snd n < n := by
   unfold unpair_snd
   apply Nat.sub_lt hn
-  -- t > 0 when unpair_fst > 0 (w ≥ 1 implies t ≥ 1)
-  sorry
+  -- Need to show: 0 < ((8 * n + 1).sqrt - 1) / 2 * (((8 * n + 1).sqrt - 1) / 2 + 1) / 2
+  set w := (Nat.sqrt (8 * n + 1) - 1) / 2 with hw_def
+  set t := w * (w + 1) / 2 with ht_def
+  show 0 < t
+  -- First show w ≥ 1 from ha
+  have hw : w ≥ 1 := by
+    unfold unpair_fst at ha
+    rw [← hw_def] at ha
+    by_contra hc
+    push_neg at hc
+    have : w = 0 := Nat.lt_one_iff.mp hc
+    simp only [this, Nat.zero_sub] at ha
+    omega
+  -- Now show t ≥ 1 from w ≥ 1
+  have ht : w * (w + 1) ≥ 2 := by
+    have h1 : w ≥ 1 := hw
+    have h2 : w + 1 ≥ 2 := Nat.add_le_add_right hw 1
+    calc w * (w + 1) ≥ 1 * 2 := Nat.mul_le_mul h1 h2
+      _ = 2 := rfl
+  rw [ht_def]
+  exact Nat.div_pos ht (by decide)
 
 /-- Decode a natural to a list of naturals. -/
 def decodeList (n : ℕ) : List ℕ :=
