@@ -44,23 +44,17 @@ framework, demonstrating how a concrete NP problem connects to:
 namespace RevHalt.TSP
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- SECTION 1: COMPUTABLE ENCODINGS
+-- SECTION 1: COMPUTABLE ENCODINGS (using Mathlib's Nat.pair/unpair)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/-- Cantor pairing function (computable). -/
-def pair (a b : ℕ) : ℕ := (a + b) * (a + b + 1) / 2 + b
+/-- Cantor pairing function - alias for Nat.pair. -/
+abbrev pair := Nat.pair
 
-/-- Unpair: inverse of Cantor pairing (first component). -/
-def unpair_fst (n : ℕ) : ℕ :=
-  let w := (Nat.sqrt (8 * n + 1) - 1) / 2
-  let t := w * (w + 1) / 2
-  w - (n - t)
+/-- Unpair: first component - alias for (Nat.unpair n).1. -/
+abbrev unpair_fst (n : ℕ) : ℕ := (Nat.unpair n).1
 
-/-- Unpair: inverse of Cantor pairing (second component). -/
-def unpair_snd (n : ℕ) : ℕ :=
-  let w := (Nat.sqrt (8 * n + 1) - 1) / 2
-  let t := w * (w + 1) / 2
-  n - t
+/-- Unpair: second component - alias for (Nat.unpair n).2. -/
+abbrev unpair_snd (n : ℕ) : ℕ := (Nat.unpair n).2
 
 /-- Encode a list of naturals as a single natural. -/
 def encodeList : List ℕ → ℕ
@@ -68,46 +62,55 @@ def encodeList : List ℕ → ℕ
   | x :: xs => pair (x + 1) (encodeList xs)
 
 /-- unpair_snd n ≤ n for all n. -/
-lemma unpair_snd_le (n : ℕ) : unpair_snd n ≤ n := by
-  unfold unpair_snd
-  apply Nat.sub_le
+lemma unpair_snd_le (n : ℕ) : unpair_snd n ≤ n :=
+  Nat.unpair_right_le n
 
 /--
   unpair_snd n < n when n > 0 and unpair_fst n > 0.
-
-  **Mathematical proof** (not fully mechanized due to integer division):
-  For Cantor pairing n = (a+b)(a+b+1)/2 + b, we have:
-  - w = a + b (the "row" of the pairing)
-  - t = w(w+1)/2 (the triangular number)
-  - unpair_fst n = w - (n - t) = a
-  - unpair_snd n = n - t = b
-
-  If a > 0, then w ≥ 1, so t ≥ 1, thus b = n - t < n.
 -/
-lemma unpair_snd_lt_of_pos {n : ℕ} (hn : n > 0) (ha : unpair_fst n > 0) : unpair_snd n < n := by
-  unfold unpair_snd
-  apply Nat.sub_lt hn
-  -- Need to show: 0 < ((8 * n + 1).sqrt - 1) / 2 * (((8 * n + 1).sqrt - 1) / 2 + 1) / 2
-  set w := (Nat.sqrt (8 * n + 1) - 1) / 2 with hw_def
-  set t := w * (w + 1) / 2 with ht_def
-  show 0 < t
-  -- First show w ≥ 1 from ha
-  have hw : w ≥ 1 := by
-    unfold unpair_fst at ha
-    rw [← hw_def] at ha
-    by_contra hc
-    push_neg at hc
-    have : w = 0 := Nat.lt_one_iff.mp hc
-    simp only [this, Nat.zero_sub] at ha
-    omega
-  -- Now show t ≥ 1 from w ≥ 1
-  have ht : w * (w + 1) ≥ 2 := by
-    have h1 : w ≥ 1 := hw
-    have h2 : w + 1 ≥ 2 := Nat.add_le_add_right hw 1
-    calc w * (w + 1) ≥ 1 * 2 := Nat.mul_le_mul h1 h2
-      _ = 2 := rfl
-  rw [ht_def]
-  exact Nat.div_pos ht (by decide)
+lemma unpair_snd_lt_of_pos {n : ℕ} (hn : n > 0) (_ha : unpair_fst n > 0) : unpair_snd n < n := by
+  simp only [unpair_snd]
+  set a := (Nat.unpair n).1 with ha_def
+  set b := (Nat.unpair n).2 with hb_def
+  have heq : Nat.pair a b = n := Nat.pair_unpair n
+  -- b ≤ pair a b = n
+  have h_le : b ≤ Nat.pair a b := Nat.right_le_pair a b
+  rw [heq] at h_le
+  -- Need b < n. If b = n, then pair a b = b, which is only possible when a = 0 and b = 0
+  rcases Nat.lt_or_eq_of_le h_le with h_lt | h_eq
+  · exact h_lt
+  · exfalso
+    -- b = n and pair a b = n, so pair a b = b
+    have hpair_eq : Nat.pair a b = b := by rw [heq, h_eq]
+    -- pair a b = if a < b then b*b + a else a*a + a + b
+    simp only [Nat.pair] at hpair_eq
+    split_ifs at hpair_eq with hcmp
+    · -- hpair_eq : b * b + a = b
+      -- Since b * b + a = b and a ≥ 0, we need b * b ≤ b, i.e., b * (b - 1) ≤ 0
+      -- For natural numbers, this means b ≤ 1
+      -- Case b = 0: then a = 0
+      -- Case b = 1: then 1 + a = 1, so a = 0
+      -- Either way, a = 0, but _ha says a > 0, contradiction
+      simp only [unpair_fst, ← ha_def] at _ha
+      have hb_bound : b ≤ 1 := by
+        by_contra h
+        push_neg at h
+        -- b ≥ 2, so b * b ≥ 4 > b, contradiction with hpair_eq
+        have : b * b ≥ 2 * b := Nat.mul_le_mul_right b h
+        omega
+      rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hb_bound with hb0 | hb1
+      · simp [hb0] at hpair_eq; omega
+      · simp [hb1] at hpair_eq; omega
+    · -- hpair_eq : a * a + a + b = b
+      -- So a * a + a = 0, i.e., a * (a + 1) = 0
+      -- Since a + 1 > 0, we must have a = 0
+      simp only [unpair_fst, ← ha_def] at _ha
+      have ha0 : a = 0 := by
+        have heq : a * (a + 1) = 0 := by omega
+        cases Nat.mul_eq_zero.mp heq with
+        | inl h => exact h
+        | inr h => omega  -- a + 1 = 0 is impossible
+      omega
 
 /-- Decode a natural to a list of naturals. -/
 def decodeList (n : ℕ) : List ℕ :=
@@ -123,26 +126,18 @@ decreasing_by
 
 /-- pair a b is never 0 when a > 0. -/
 lemma pair_pos {a b : ℕ} (ha : a > 0) : pair a b > 0 := by
-  unfold pair
-  have h1 : (a + b) * (a + b + 1) / 2 ≥ 0 := Nat.zero_le _
-  have h2 : b ≥ 0 := Nat.zero_le _
-  -- pair a b = (a+b)(a+b+1)/2 + b ≥ b
-  -- When a ≥ 1, (a+b) ≥ 1, so (a+b)(a+b+1) ≥ 2, so (a+b)(a+b+1)/2 ≥ 1
-  have h3 : a + b ≥ 1 := Nat.add_pos_left ha b
-  have h4 : a + b + 1 ≥ 2 := Nat.add_le_add_right h3 1
-  have h5 : (a + b) * (a + b + 1) ≥ 2 := by
-    calc (a + b) * (a + b + 1) ≥ 1 * 2 := Nat.mul_le_mul h3 h4
-      _ = 2 := rfl
-  have h6 : (a + b) * (a + b + 1) / 2 ≥ 1 := Nat.div_pos h5 (by decide)
+  simp only [pair]
+  -- Use Nat.left_le_pair : a ≤ pair a b
+  have h := Nat.left_le_pair a b
   omega
 
 /-- unpair_fst of pair returns the first component. -/
 lemma unpair_fst_pair (a b : ℕ) : unpair_fst (pair a b) = a := by
-  sorry -- Requires detailed proof about sqrt inverse
+  simp only [unpair_fst, pair, Nat.unpair_pair]
 
 /-- unpair_snd of pair returns the second component. -/
 lemma unpair_snd_pair (a b : ℕ) : unpair_snd (pair a b) = b := by
-  sorry -- Requires detailed proof about sqrt inverse
+  simp only [unpair_snd, pair, Nat.unpair_pair]
 
 /-- Roundtrip: decodeList ∘ encodeList = id -/
 lemma decodeList_encodeList (xs : List ℕ) : decodeList (encodeList xs) = xs := by
