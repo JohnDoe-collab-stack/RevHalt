@@ -265,6 +265,54 @@ def encodeWeights {n : ℕ} (G : WeightedGraph n) : List ℕ :=
 def encodeTSP (inst : TSPInstance) : ℕ :=
   pair inst.n (pair inst.bound (encodeList (encodeWeights inst.graph)))
 
+/--
+  Decode a list of weights into a weight function.
+  The list is expected to be n*n elements in row-major order.
+-/
+def decodeWeightsAux (n : ℕ) (weights : List ℕ) (i j : Fin n) : ℕ :=
+  weights.getD (i.val * n + j.val) 0
+
+/--
+  Attempt to decode a weighted graph from a list of n*n weights.
+  Returns a graph with symmetry and self-zero properties enforced.
+-/
+def decodeWeightedGraph (n : ℕ) (weights : List ℕ) : WeightedGraph n where
+  weight := fun i j =>
+    if i = j then 0  -- Self-loops have zero weight
+    else
+      -- Use minimum of w(i,j) and w(j,i) to enforce symmetry
+      let w_ij := decodeWeightsAux n weights i j
+      let w_ji := decodeWeightsAux n weights j i
+      min w_ij w_ji
+  symm := fun i j => by
+    simp only
+    by_cases hij : i = j
+    · simp [hij]
+    · simp only [hij, ↓reduceIte]
+      have hji : j ≠ i := fun h => hij h.symm
+      simp only [hji, ↓reduceIte]
+      exact Nat.min_comm _ _
+  self_zero := fun i => by simp
+
+/--
+  Decode a TSPCode into a full TSPInstance.
+  Returns none if n < 2 (minimum for meaningful TSP).
+-/
+def decodeTSP (code : ℕ) : Option TSPInstance :=
+  let n := unpair_fst code
+  let rest := unpair_snd code
+  let bound := unpair_fst rest
+  let graphCode := unpair_snd rest
+  let weights := decodeList graphCode
+  if hn : n ≥ 2 then
+    some {
+      n := n
+      hn := hn
+      graph := decodeWeightedGraph n weights
+      bound := bound
+    }
+  else none
+
 /-- Type for TSP codes (natural numbers representing TSP instances). -/
 abbrev TSPCode := ℕ
 
@@ -349,13 +397,27 @@ def encode_halt_TSP (encode_prop : ℕ → PropT) (code : TSPCode) : PropT :=
 /-- Check that a tour is valid for an instance (decidable). -/
 def checkTour (inst : TSPInstance) (path : List ℕ) : Bool :=
   -- Check length
-  path.length = inst.n &&
-  -- Check range
-  path.all (· < inst.n) &&
-  -- Check no duplicates
-  path.Nodup &&
-  -- Check cost (would need to compute)
-  true  -- Placeholder: cost check deferred
+  if h_len : path.length = inst.n then
+    -- Check range
+    if h_range : path.all (· < inst.n) then
+      -- Check no duplicates
+      if h_nodup : path.Nodup then
+        -- Build tour structure
+        let range_valid : ∀ x, x ∈ path → x < inst.n := by
+          intro x hx
+          have h := List.all_eq_true.mp h_range x hx
+          exact decide_eq_true_iff.mp h
+        let tour : Tour inst.n := {
+          path := path
+          length_eq := h_len
+          nodup := h_nodup
+          range_valid := range_valid
+        }
+        -- Check cost
+        tourCost inst.graph tour inst.hn ≤ inst.bound
+      else false
+    else false
+  else false
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SECTION 8: S1Rel FOR TSP
@@ -379,16 +441,16 @@ def decodeTSPParams (code : TSPCode) : ℕ × ℕ :=
 /--
   Machine for TSP: decode the code and produce a trace.
   The trace becomes true at step k if we find a valid tour with encoding < k.
+  Uses full pipeline: decodeTSP → instance → decodeTour → ValidTour.
 -/
 def Machine_TSP (code : TSPCode) : Trace :=
-  let (n, _bound) := decodeTSPParams code
-  -- Create a trace that searches for valid tours
-  fun k => ∃ tourCode < k,
-    match decodeTour n tourCode with
-    | some tour =>
-      -- Check structural validity (cost check would need graph decoding)
-      tour.path.length = n ∧ tour.path.Nodup
-    | none => False
+  fun k => match decodeTSP code with
+    | none => False  -- Invalid instance code
+    | some inst =>
+      ∃ tourCode < k,
+        match decodeTour inst.n tourCode with
+        | some tour => ValidTour inst tour
+        | none => False
 
 /-- The S1Rel frontier for TSP. -/
 def S1Rel_TSP (Γ : Set PropT) : Set PropT :=
