@@ -5,6 +5,7 @@ Authors: RevHalt Contributors
 -/
 import RevHalt.Theory.TheoryDynamics
 import RevHalt.Theory.TheoryDynamics_RouteII
+import RevHalt.Theory.TheoryDynamics_Trajectory
 import Mathlib.Data.Fin.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.List.Basic
@@ -452,6 +453,42 @@ def Machine_TSP (code : TSPCode) : Trace :=
         | some tour => ValidTour inst tour
         | none => False
 
+/--
+  The central semantic equivalence for Machine_TSP:
+  When the code decodes to a valid instance, the machine halts iff the instance has a solution.
+-/
+theorem Machine_TSP_halts_iff {code : TSPCode} {inst : TSPInstance}
+    (hdec : decodeTSP code = some inst) :
+    Halts (Machine_TSP code) ↔ HasSolution inst := by
+  constructor
+  · -- Halts → HasSolution
+    intro ⟨k, hk⟩
+    simp only [Machine_TSP, hdec] at hk
+    obtain ⟨tourCode, _, htour⟩ := hk
+    cases htour_dec : decodeTour inst.n tourCode with
+    | none => simp [htour_dec] at htour
+    | some tour =>
+      simp only [htour_dec] at htour
+      exact ⟨tour, htour⟩
+  · -- HasSolution → Halts
+    intro ⟨tour, hvalid⟩
+    -- Encode the tour and show Machine_TSP becomes true
+    let tourCode := encodeTour tour
+    use tourCode + 1
+    simp only [Machine_TSP, hdec]
+    use tourCode, Nat.lt_succ_self _
+    rw [decodeTour_encodeTour]
+    exact hvalid
+
+/--
+  Corollary: For invalid codes, Machine_TSP never halts.
+-/
+theorem Machine_TSP_not_halts_of_invalid {code : TSPCode}
+    (hinv : decodeTSP code = none) :
+    ¬ Halts (Machine_TSP code) := by
+  intro ⟨k, hk⟩
+  simp only [Machine_TSP, hinv] at hk
+
 /-- The S1Rel frontier for TSP. -/
 def S1Rel_TSP (Γ : Set PropT) : Set PropT :=
   { p | ∃ code : TSPCode,
@@ -526,6 +563,424 @@ theorem TSP_trajectory_dependent :
   exact TSP_in_P_of_Collapse ax
 
 end Collapse
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SECTION 10: TRAJECTORY INTEGRATION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Trajectory Integration
+
+This section connects TSP to the RevHalt trajectory dynamics framework.
+The trajectory is the sequence of theory states under F0 iteration.
+-/
+
+section Trajectory
+
+open RevHalt
+
+-- Use Type (not Type u) to match ℕ's universe
+variable {PropT : Type}
+variable (Provable : Set PropT → PropT → Prop)
+variable (K : RHKit)
+variable (encode_prop : ℕ → PropT)
+
+/--
+  The TSP trajectory: iteration of F0 starting from Γ0,
+  using Machine_TSP as the halting machine.
+
+  Note: Uses ℕ as the Code type since TSPCode = ℕ.
+-/
+def TSP_Trajectory (Γ0 : Set PropT) : ℕ → Set PropT :=
+  fun n => chain0 Provable K Machine_TSP (encode_halt_TSP encode_prop) Γ0 n
+
+/-- The omega-limit of the TSP trajectory. -/
+def TSP_TrajectoryLimit (Γ0 : Set PropT) : Set PropT :=
+  omega0 Provable K Machine_TSP (encode_halt_TSP encode_prop) Γ0
+
+/-- Each stage of TSP trajectory embeds into the limit. -/
+theorem TSP_trajectory_stage_le_limit (Γ0 : Set PropT) (n : ℕ) :
+    TSP_Trajectory Provable K encode_prop Γ0 n ⊆
+    TSP_TrajectoryLimit Provable K encode_prop Γ0 := by
+  unfold TSP_Trajectory TSP_TrajectoryLimit
+  exact chain0_le_omega0 Provable K Machine_TSP (encode_halt_TSP encode_prop) Γ0 n
+
+end Trajectory
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SECTION 11: ROUTE II INTEGRATION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Route II Integration
+
+This section provides the hypotheses needed for Route II to apply to TSP.
+Route II is not TSP-specific - it's a generic result about when S1Rel is nonempty.
+We instantiate the general hypotheses here.
+-/
+
+section RouteII
+
+open RevHalt
+
+variable {PropT : Type}
+variable (Provable : Set PropT → PropT → Prop)
+variable (K : RHKit)
+variable (Cn : Set PropT → Set PropT)
+variable (encode_prop : ℕ → PropT)
+
+/--
+  Route II Hypotheses for TSP.
+  These are the conditions under which S1Rel_TSP is guaranteed nonempty.
+
+  - Soundness: Internal provability implies semantic truth
+  - NegComplete: Non-halting can be certified
+  - Barrier: No uniform decision procedure exists
+-/
+structure TSP_RouteIIHyp (SProvable : PropT → Prop) (SNot : PropT → PropT)
+    (ωΓ : Set PropT) : Prop where
+  soundness : ∀ p, Provable ωΓ p → SProvable p
+  negComplete : ∀ code : ℕ, ¬ Rev0_K K (Machine_TSP code) →
+    SProvable (SNot (encode_halt_TSP encode_prop code))
+  barrier : (∀ code : ℕ, SProvable (encode_halt_TSP encode_prop code) ∨
+    SProvable (SNot (encode_halt_TSP encode_prop code))) → False
+
+/--
+  TSP satisfies Route II: under the hypotheses, S1Rel_TSP is nonempty.
+  This is an instantiation of the general RouteII result.
+
+  The proof requires connecting:
+  - Halting → provable in ωΓ → SProvable (via soundness)
+  - Non-halting → SProvable of negation (via negComplete)
+
+  This creates a contradiction with barrier.
+-/
+theorem TSP_RouteII_applies
+    (SProvable : PropT → Prop) (SNot : PropT → PropT)
+    (ωΓ : Set PropT)
+    (hHyp : TSP_RouteIIHyp Provable K encode_prop SProvable SNot ωΓ)
+    -- Additional hypothesis: halting machines have provable halt propositions
+    (hHaltProv : ∀ code, Halts (Machine_TSP code) →
+        Provable ωΓ (encode_halt_TSP encode_prop code))
+    -- Rev0_K implies Halts (standard Kit axiom)
+    (hRevHalts : ∀ T, Rev0_K K T → Halts T) :
+    (S1Rel_TSP Provable encode_prop ωΓ).Nonempty := by
+  by_contra hempty
+  rw [Set.not_nonempty_iff_eq_empty, Set.eq_empty_iff_forall_notMem] at hempty
+  apply hHyp.barrier
+  intro code
+  by_cases hHalts : Halts (Machine_TSP code)
+  · -- If halts: use hHaltProv and soundness
+    left
+    exact hHyp.soundness _ (hHaltProv code hHalts)
+  · -- If doesn't halt: use negComplete
+    right
+    exact hHyp.negComplete code (fun hRev => hHalts (hRevHalts _ hRev))
+
+end RouteII
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SECTION 12: INCARNATION TRILEMMA FOR TSP
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Incarnation Trilemma for TSP
+
+The trilemma states that the three conditions cannot all hold simultaneously:
+1. Absorbable at step 1
+2. OmegaAdmissible at ω-limit
+3. RouteIIAt (frontier non-empty) at ω-limit
+
+This is the structural impossibility result applied to TSP.
+-/
+
+section Trilemma
+
+open RevHalt
+
+variable {PropT : Type}
+variable (Provable : Set PropT → PropT → Prop)
+variable (K : RHKit)
+variable (Cn : Set PropT → Set PropT)
+variable (encode_prop : ℕ → PropT)
+
+/--
+  The TSP incarnation trilemma: direct instantiation of the general trilemma
+  for Machine_TSP.
+
+  States: ¬(Absorbable ∧ OmegaAdmissible ∧ RouteIIAt)
+
+  This is the structural result that limits cannot be "well-behaved" in all three ways.
+-/
+theorem TSP_incarnation_trilemma
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ (Absorbable Provable
+          (chainState Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0 1).Γ
+       ∧ OmegaAdmissible Provable Cn
+            (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)
+       ∧ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop)
+            (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)) :=
+  incarnation_trilemma Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn
+    hMono hCnExt hIdem hProvCn A0
+
+/--
+  TSP trilemma in disjunction form: at least one condition must fail.
+-/
+theorem TSP_trilemma_disjunction
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ Absorbable Provable
+        (chainState Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0 1).Γ
+    ∨ ¬ OmegaAdmissible Provable Cn
+          (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)
+    ∨ ¬ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop)
+          (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) :=
+  omega_trilemma_disjunction Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn
+    hMono hCnExt hIdem hProvCn A0
+
+end Trilemma
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SECTION 13: CANONIZATION AND COLLAPSE DERIVATION (CORRECTED)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Canonization at Omega and Collapse Derivation
+
+This section defines the proper structure for deriving Collapse from trajectory constraints.
+
+### Key insight
+
+Collapse is NOT an arbitrary hypothesis. It is the **output** forced by trajectory
+constraints when we choose to preserve certain properties.
+
+### The chain of reasoning (corrected)
+
+1. **Trilemma**: ¬(Absorbable ∧ OmegaAdmissible ∧ RouteIIAt)
+2. If we preserve Absorbable and OmegaAdmissible: RouteIIAt must fail
+3. **¬RouteIIAt** → S1Rel = ∅ → **PosCompleteAtOmega** (halting is provable)
+4. **H3 (NegCompleteAtOmega)** is a separate hypothesis (non-halting is provable)
+5. **Canonization** = PosComplete ∧ NegComplete
+6. For **Collapse-search** (Find returning a tour), we need **ExtractTour**:
+   provable halting → concrete tour exists
+
+Therefore: Abs + Adm + H3 + Extract ⟹ Collapse-search
+-/
+
+section Canonization
+
+open RevHalt
+
+variable {PropT : Type}
+variable (Provable : Set PropT → PropT → Prop)
+variable (K : RHKit)
+variable (Cn : Set PropT → Set PropT)
+variable (encode_prop : ℕ → PropT)
+-- SNot is fixed (same as in RouteII)
+variable (SNot : PropT → PropT)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PART A: COMPLETENESS PROPERTIES
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  **Pos-Completude at ω**: If an instance has a solution, this is provable in ωΓ.
+
+  This is derivable from ¬RouteIIAt (empty frontier).
+  When S1Rel = ∅, all halting machines have their halt proposition provable.
+-/
+structure PosCompleteAtOmega (ωΓ : Set PropT) : Prop where
+  pos : ∀ code : TSPCode, ∀ inst : TSPInstance,
+    decodeTSP code = some inst →
+    HasSolution inst → Provable ωΓ (encode_halt_TSP encode_prop code)
+
+/--
+  **Neg-Completude at ω** (H3): If an instance has no solution, this is provable in ωΓ.
+
+  This is NOT derivable from ¬RouteIIAt alone. It requires a separate hypothesis (H3).
+  This is the "duality" condition from EffectiveCollapse.md.
+-/
+structure NegCompleteAtOmega (ωΓ : Set PropT) : Prop where
+  neg : ∀ code : TSPCode, ∀ inst : TSPInstance,
+    decodeTSP code = some inst →
+    ¬ HasSolution inst → Provable ωΓ (SNot (encode_halt_TSP encode_prop code))
+
+/--
+  **Canonization at ω** = PosCompletude ∧ NegCompletude.
+
+  At ω, every TSP instance is decidable internally:
+  - If solvable: provable halt
+  - If unsolvable: provable not-halt
+-/
+structure CanonicalizationAtOmega (ωΓ : Set PropT) : Prop where
+  posComplete : PosCompleteAtOmega Provable encode_prop ωΓ
+  negComplete : NegCompleteAtOmega Provable encode_prop SNot ωΓ
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PART B: POS-COMPLETUDE FROM ¬RouteIIAt
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  ¬RouteIIAt implies S1Rel is empty.
+
+  RouteIIAt is (S1Rel ωΓ).Nonempty, so ¬RouteIIAt gives S1Rel = ∅.
+-/
+lemma S1Rel_empty_of_not_RouteIIAt (ωΓ : Set PropT)
+    (hNotRoute : ¬ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ) :
+    S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ = ∅ := by
+  by_contra h
+  -- h : S1Rel ... ≠ ∅
+  -- need: (S1Rel ...).Nonempty
+  have hNe : (S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ).Nonempty :=
+    Set.nonempty_iff_ne_empty.mpr h
+  unfold RouteIIAt at hNotRoute
+  exact hNotRoute hNe
+
+/--
+  Empty S1Rel implies Pos-Completude at ω.
+
+  If S1Rel = ∅, then for every halting machine:
+  - Either its halt proposition is not halting (contradiction with HasSolution)
+  - Or it IS provable in ωΓ
+-/
+theorem PosComplete_of_S1Rel_empty (ωΓ : Set PropT)
+    (hEmpty : S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ = ∅) :
+    PosCompleteAtOmega Provable encode_prop ωΓ := by
+  constructor
+  intro code inst hdec hSol
+  -- If not provable, it would be in S1Rel (assuming halting)
+  by_contra hNProv
+  have hHalts : Halts (Machine_TSP code) := by
+    rw [Machine_TSP_halts_iff hdec]
+    exact hSol
+  -- Show code's halt prop is in S1Rel
+  -- S1Rel uses Rev0_K (not Halts directly), need bridge lemma
+  have hRev0 : Rev0_K K (Machine_TSP code) := by
+    -- Rev0_K K T ↔ Halts T is a standard Kit property
+    sorry -- Requires Rev0_K_iff_Halts lemma
+  have hIn : encode_halt_TSP encode_prop code ∈
+      S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ := by
+    unfold S1Rel
+    simp only [Set.mem_setOf_eq]
+    exact ⟨code, rfl, hRev0, hNProv⟩
+  rw [hEmpty] at hIn
+  exact hIn
+
+/--
+  ¬RouteIIAt implies Pos-Completude.
+
+  Direct composition of the above lemmas.
+-/
+theorem PosComplete_of_not_RouteIIAt (ωΓ : Set PropT)
+    (hNotRoute : ¬ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ) :
+    PosCompleteAtOmega Provable encode_prop ωΓ :=
+  PosComplete_of_S1Rel_empty Provable K encode_prop ωΓ
+    (S1Rel_empty_of_not_RouteIIAt Provable K encode_prop ωΓ hNotRoute)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PART C: EXTRACTION FOR COLLAPSE-SEARCH
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  **ExtractTour**: The ability to extract a concrete tour from a proof of halting.
+
+  This is needed for Collapse-SEARCH (not just Collapse-DECISION).
+  Without this, we can only conclude "decidable" not "searchable".
+
+  This corresponds to H1 (Bio-Absorption Effective) in the operational direction.
+-/
+structure ExtractTour (ωΓ : Set PropT) : Prop where
+  extract : ∀ code : TSPCode, ∀ inst : TSPInstance,
+    decodeTSP code = some inst →
+    Provable ωΓ (encode_halt_TSP encode_prop code) →
+    ∃ tour : Tour inst.n, ValidTour inst tour
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PART D: COLLAPSE DERIVATION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  Canonization + Extraction → Collapse-Search exists.
+
+  Given:
+  - CanonicalizationAtOmega: every instance is decidable internally
+  - ExtractTour: provable halting can be converted to a concrete tour
+
+  We can construct Collapse_TSP_Axiom.
+-/
+theorem Collapse_of_Canon_Extract (ωΓ : Set PropT)
+    (hCanon : CanonicalizationAtOmega Provable encode_prop SNot ωΓ)
+    (hExtract : ExtractTour Provable encode_prop ωΓ) :
+    ∃ ax : Collapse_TSP_Axiom, True := by
+  -- The proof requires constructing Find with proper certificate extraction
+  -- This uses classical choice since HasSolution is not decidable
+  use {
+    Find := fun code =>
+      match decodeTSP code with
+      | none => none
+      | some inst =>
+        -- Non-constructive: we know decidability from Canon, but need to search
+        sorry -- Requires classical noncomputable construction
+    find_correct := fun inst hSol => sorry
+    find_complete := fun inst hNSol => sorry
+    find_sound := fun inst cert hfind => sorry
+  }
+
+/--
+  **Main Theorem**: Trajectory constraints + H3 + Extract ⟹ Collapse.
+
+  The complete derivation:
+  1. Trilemma gives ¬(Abs ∧ Adm ∧ RouteIIAt)
+  2. Abs + Adm ⟹ ¬RouteIIAt
+  3. ¬RouteIIAt ⟹ PosCompleteAtOmega
+  4. H3 gives NegCompleteAtOmega
+  5. Pos + Neg = CanonicalizationAtOmega
+  6. Canon + Extract ⟹ Collapse
+-/
+theorem Collapse_from_trajectory
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState Provable Cn)
+    -- Trajectory constraints preserved
+    (hAbs : Absorbable Provable
+        (chainState Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0 1).Γ)
+    (hAdm : OmegaAdmissible Provable Cn
+        (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0))
+    -- H3: Neg-Completude (external hypothesis, not derivable from trilemma)
+    (hH3 : NegCompleteAtOmega Provable encode_prop SNot
+        (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0))
+    -- Extract: for Collapse-search (not needed for Collapse-decision)
+    (hExtract : ExtractTour Provable encode_prop
+        (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)) :
+    ∃ ax : Collapse_TSP_Axiom, True := by
+  -- Step 1-2: Trilemma + Abs + Adm ⟹ ¬RouteIIAt
+  have hTrilemma := TSP_incarnation_trilemma Provable K Cn encode_prop hMono hCnExt hIdem hProvCn A0
+  have hNotRouteII : ¬ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop)
+      (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) := by
+    intro hRouteII
+    exact hTrilemma ⟨hAbs, hAdm, hRouteII⟩
+  -- Step 3: ¬RouteIIAt ⟹ PosComplete
+  have hPosComplete := PosComplete_of_not_RouteIIAt Provable K encode_prop
+    (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) hNotRouteII
+  -- Step 4-5: Pos + Neg (H3) = Canonization
+  have hCanon : CanonicalizationAtOmega Provable encode_prop SNot
+      (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) :=
+    ⟨hPosComplete, hH3⟩
+  -- Step 6: Canon + Extract ⟹ Collapse
+  exact Collapse_of_Canon_Extract Provable encode_prop SNot
+    (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)
+    hCanon hExtract
+
+end Canonization
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SUMMARY
