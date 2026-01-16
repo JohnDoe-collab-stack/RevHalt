@@ -961,7 +961,7 @@ theorem Collapse_from_trajectory
     -- Extract: for Collapse-search (not needed for Collapse-decision)
     (hExtract : ExtractTour Provable encode_prop
         (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)) :
-    ∃ ax : Collapse_TSP_Axiom, True := by
+    ∃ _ax : Collapse_TSP_Axiom, True := by
   -- Step 1-2: Trilemma + Abs + Adm ⟹ ¬RouteIIAt
   have hTrilemma := TSP_incarnation_trilemma Provable K Cn encode_prop hMono hCnExt hIdem hProvCn A0
   have hNotRouteII : ¬ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop)
