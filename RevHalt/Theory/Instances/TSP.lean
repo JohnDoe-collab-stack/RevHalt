@@ -6,6 +6,7 @@ Authors: RevHalt Contributors
 import RevHalt.Theory.TheoryDynamics
 import RevHalt.Theory.TheoryDynamics_RouteII
 import RevHalt.Theory.TheoryDynamics_Trajectory
+import RevHalt.Theory.Canonicity
 import Mathlib.Data.Fin.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.List.Basic
@@ -851,6 +852,7 @@ lemma S1Rel_empty_of_not_RouteIIAt (ωΓ : Set PropT)
   - Or it IS provable in ωΓ
 -/
 theorem PosComplete_of_S1Rel_empty (ωΓ : Set PropT)
+    (hKMono : DetectsMono K)  -- Needed for Rev0_K ↔ Halts bridge
     (hEmpty : S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ = ∅) :
     PosCompleteAtOmega Provable encode_prop ωΓ := by
   constructor
@@ -860,11 +862,9 @@ theorem PosComplete_of_S1Rel_empty (ωΓ : Set PropT)
   have hHalts : Halts (Machine_TSP code) := by
     rw [Machine_TSP_halts_iff hdec]
     exact hSol
-  -- Show code's halt prop is in S1Rel
-  -- S1Rel uses Rev0_K (not Halts directly), need bridge lemma
+  -- Use T1_traces_of_DetectsMono: Rev0_K K T ↔ Halts T
   have hRev0 : Rev0_K K (Machine_TSP code) := by
-    -- Rev0_K K T ↔ Halts T is a standard Kit property
-    sorry -- Requires Rev0_K_iff_Halts lemma
+    exact (T1_traces_of_DetectsMono K hKMono (Machine_TSP code)).mpr hHalts
   have hIn : encode_halt_TSP encode_prop code ∈
       S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ := by
     unfold S1Rel
@@ -879,9 +879,10 @@ theorem PosComplete_of_S1Rel_empty (ωΓ : Set PropT)
   Direct composition of the above lemmas.
 -/
 theorem PosComplete_of_not_RouteIIAt (ωΓ : Set PropT)
+    (hKMono : DetectsMono K)
     (hNotRoute : ¬ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ) :
     PosCompleteAtOmega Provable encode_prop ωΓ :=
-  PosComplete_of_S1Rel_empty Provable K encode_prop ωΓ
+  PosComplete_of_S1Rel_empty Provable K encode_prop ωΓ hKMono
     (S1Rel_empty_of_not_RouteIIAt Provable K encode_prop ωΓ hNotRoute)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -950,6 +951,8 @@ theorem Collapse_from_trajectory
     (hIdem : CnIdem Cn)
     (hProvCn : ProvClosedCn Provable Cn)
     (A0 : ThState Provable Cn)
+    -- Kit validity condition (needed for Rev0_K ↔ Halts)
+    (hKMono : DetectsMono K)
     -- Trajectory constraints preserved
     (hAbs : Absorbable Provable
         (chainState Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0 1).Γ)
@@ -968,9 +971,9 @@ theorem Collapse_from_trajectory
       (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) := by
     intro hRouteII
     exact hTrilemma ⟨hAbs, hAdm, hRouteII⟩
-  -- Step 3: ¬RouteIIAt ⟹ PosComplete
+  -- Step 3: ¬RouteIIAt ⟹ PosComplete (needs hKMono for Rev0_K ↔ Halts)
   have hPosComplete := PosComplete_of_not_RouteIIAt Provable K encode_prop
-    (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) hNotRouteII
+    (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) hKMono hNotRouteII
   -- Step 4-5: Pos + Neg (H3) = Canonization
   have hCanon : CanonicalizationAtOmega Provable encode_prop SNot
       (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) :=
