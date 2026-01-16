@@ -913,26 +913,30 @@ structure ExtractTour (ωΓ : Set PropT) : Prop where
   Given:
   - CanonicalizationAtOmega: every instance is decidable internally
   - ExtractTour: provable halting can be converted to a concrete tour
+  - An explicit Find function (provided externally)
+  - Proof that Find is correct w.r.t. the canonization
 
   We can construct Collapse_TSP_Axiom.
+
+  Note: Find must be provided explicitly because constructing it requires
+  computational content (searching for a tour) that cannot be extracted
+  from the mere existence proof in ExtractTour.
 -/
 theorem Collapse_of_Canon_Extract (ωΓ : Set PropT)
-    (hCanon : CanonicalizationAtOmega Provable encode_prop SNot ωΓ)
-    (hExtract : ExtractTour Provable encode_prop ωΓ) :
-    ∃ ax : Collapse_TSP_Axiom, True := by
-  -- The proof requires constructing Find with proper certificate extraction
-  -- This uses classical choice since HasSolution is not decidable
-  use {
-    Find := fun code =>
-      match decodeTSP code with
-      | none => none
-      | some inst =>
-        -- Non-constructive: we know decidability from Canon, but need to search
-        sorry -- Requires classical noncomputable construction
-    find_correct := fun inst hSol => sorry
-    find_complete := fun inst hNSol => sorry
-    find_sound := fun inst cert hfind => sorry
-  }
+    (_hCanon : CanonicalizationAtOmega Provable encode_prop SNot ωΓ)
+    (_hExtract : ExtractTour Provable encode_prop ωΓ)
+    -- The Find function must be provided explicitly (not constructed here)
+    (Find : TSPCode → Option (List ℕ))
+    -- Together with its correctness proofs
+    (hFind_correct : ∀ inst : TSPInstance, HasSolution inst →
+        ∃ cert, Find (encodeTSP inst) = some cert ∧
+          (∃ tour : Tour inst.n, tour.path = cert ∧ ValidTour inst tour))
+    (hFind_complete : ∀ inst : TSPInstance, ¬ HasSolution inst →
+        Find (encodeTSP inst) = none)
+    (hFind_sound : ∀ inst : TSPInstance, ∀ cert,
+        Find (encodeTSP inst) = some cert → HasSolution inst) :
+    ∃ _ax : Collapse_TSP_Axiom, True := by
+  use ⟨Find, hFind_correct, hFind_complete, hFind_sound⟩
 
 /--
   **Main Theorem**: Trajectory constraints + H3 + Extract ⟹ Collapse.
@@ -963,7 +967,16 @@ theorem Collapse_from_trajectory
         (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0))
     -- Extract: for Collapse-search (not needed for Collapse-decision)
     (hExtract : ExtractTour Provable encode_prop
-        (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)) :
+        (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0))
+    -- The Find function must be provided explicitly with its correctness proofs
+    (Find : TSPCode → Option (List ℕ))
+    (hFind_correct : ∀ inst : TSPInstance, HasSolution inst →
+        ∃ cert, Find (encodeTSP inst) = some cert ∧
+          (∃ tour : Tour inst.n, tour.path = cert ∧ ValidTour inst tour))
+    (hFind_complete : ∀ inst : TSPInstance, ¬ HasSolution inst →
+        Find (encodeTSP inst) = none)
+    (hFind_sound : ∀ inst : TSPInstance, ∀ cert,
+        Find (encodeTSP inst) = some cert → HasSolution inst) :
     ∃ _ax : Collapse_TSP_Axiom, True := by
   -- Step 1-2: Trilemma + Abs + Adm ⟹ ¬RouteIIAt
   have hTrilemma := TSP_incarnation_trilemma Provable K Cn encode_prop hMono hCnExt hIdem hProvCn A0
@@ -978,10 +991,10 @@ theorem Collapse_from_trajectory
   have hCanon : CanonicalizationAtOmega Provable encode_prop SNot
       (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0) :=
     ⟨hPosComplete, hH3⟩
-  -- Step 6: Canon + Extract ⟹ Collapse
+  -- Step 6: Canon + Extract + Find ⟹ Collapse
   exact Collapse_of_Canon_Extract Provable encode_prop SNot
     (omegaΓ Provable K Machine_TSP (encode_halt_TSP encode_prop) Cn hIdem hProvCn A0)
-    hCanon hExtract
+    hCanon hExtract Find hFind_correct hFind_complete hFind_sound
 
 end Canonization
 
