@@ -134,15 +134,15 @@ lemma pair_pos {a b : ℕ} (ha : a > 0) : pair a b > 0 := by
   omega
 
 /-- unpair_fst of pair returns the first component. -/
-lemma unpair_fst_pair (a b : ℕ) : unpair_fst (pair a b) = a := by
+@[simp] lemma unpair_fst_pair (a b : ℕ) : unpair_fst (pair a b) = a := by
   simp only [unpair_fst, pair, Nat.unpair_pair]
 
 /-- unpair_snd of pair returns the second component. -/
-lemma unpair_snd_pair (a b : ℕ) : unpair_snd (pair a b) = b := by
+@[simp] lemma unpair_snd_pair (a b : ℕ) : unpair_snd (pair a b) = b := by
   simp only [unpair_snd, pair, Nat.unpair_pair]
 
 /-- Roundtrip: decodeList ∘ encodeList = id -/
-lemma decodeList_encodeList (xs : List ℕ) : decodeList (encodeList xs) = xs := by
+@[simp] lemma decodeList_encodeList (xs : List ℕ) : decodeList (encodeList xs) = xs := by
   induction xs with
   | nil =>
     native_decide
@@ -265,6 +265,11 @@ def encodeWeights {n : ℕ} (G : WeightedGraph n) : List ℕ :=
     let j : Fin n := ⟨k.val % n, Nat.mod_lt k.val (Nat.pos_of_ne_zero hn)⟩
     G.weight i j)
 
+/-- Local lemma: getD on List.ofFn returns function value at valid index. -/
+private lemma getD_ofFn {α : Type*} {m : ℕ} (f : Fin m → α) (k : ℕ) (d : α) (hk : k < m) :
+    (List.ofFn f).getD k d = f ⟨k, hk⟩ := by
+  simp only [List.getD, List.getElem?_ofFn, hk, ↓reduceDIte, Option.getD_some]
+
 /-- Length of encodeWeights is n*n. -/
 lemma encodeWeights_length {n : ℕ} (G : WeightedGraph n) :
     (encodeWeights G).length = n * n := by
@@ -273,17 +278,32 @@ lemma encodeWeights_length {n : ℕ} (G : WeightedGraph n) :
   · simp [hn]
   · simp
 
-/-- Key indexing lemma: getD on encodeWeights returns the correct weight.
-    Technical proof: requires List.getD lemmas and q*n + r / n = q for r < n. -/
+/-- Rewrite lemma: i*n + j = j + n*i -/
+private lemma mul_add_comm (i j n : ℕ) : i * n + j = j + n * i := by
+  rw [Nat.mul_comm i n, Nat.add_comm]
+
+/-- Key indexing lemma: getD on encodeWeights returns the correct weight. -/
 lemma getD_encodeWeights {n : ℕ} (G : WeightedGraph n) (i j : Fin n) :
     (encodeWeights G).getD (i.val * n + j.val) 0 = G.weight i j := by
   have hn : n ≠ 0 := Fin.pos i |> Nat.pos_iff_ne_zero.mp
+  have hn_pos : 0 < n := Nat.pos_of_ne_zero hn
   simp only [encodeWeights, hn, ↓reduceDIte]
-  -- Proof outline:
-  -- 1. Index i*n + j < n*n (from i < n, j < n)
-  -- 2. getD on List.ofFn returns function value at that index
-  -- 3. (i*n + j) / n = i and (i*n + j) % n = j
-  sorry
+  -- Step 1: Index bound i*n + j < n*n
+  have hIdx : i.val * n + j.val < n * n := by
+    have hi := i.isLt
+    have hj := j.isLt
+    calc i.val * n + j.val
+      < i.val * n + n := Nat.add_lt_add_left hj _
+      _ = (i.val + 1) * n := (Nat.add_one_mul i.val n).symm
+      _ ≤ n * n := by rw [Nat.mul_comm]; exact Nat.mul_le_mul_left n hi
+  -- Step 2: Apply getD_ofFn
+  rw [getD_ofFn _ _ _ hIdx]
+  -- Step 3: Prove indices match via div/mod
+  congr 1 <;> simp only [Fin.ext_iff]
+  · -- (i*n + j) / n = i
+    rw [mul_add_comm, Nat.add_mul_div_left _ _ hn_pos, Nat.div_eq_of_lt j.isLt, Nat.zero_add]
+  · -- (i*n + j) % n = j
+    rw [mul_add_comm, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt j.isLt]
 
 /-- Encode a TSP instance as a natural number. -/
 def encodeTSP (inst : TSPInstance) : ℕ :=
@@ -337,20 +357,35 @@ def decodeTSP (code : ℕ) : Option TSPInstance :=
     }
   else none
 
+/-- decodeWeightsAux on encodeWeights gives original weight. -/
+lemma decodeWeightsAux_encodeWeights {n : ℕ} (G : WeightedGraph n) (i j : Fin n) :
+    decodeWeightsAux n (encodeWeights G) i j = G.weight i j := by
+  simp only [decodeWeightsAux, getD_encodeWeights]
+
+/-- decodeWeightedGraph on encodeWeights gives original graph (for symmetric graphs). -/
+lemma decodeWeightedGraph_encodeWeights {n : ℕ} (G : WeightedGraph n) :
+    decodeWeightedGraph n (encodeWeights G) = G := by
+  have h : ∀ i j : Fin n, (decodeWeightedGraph n (encodeWeights G)).weight i j = G.weight i j := by
+    intro i j
+    simp only [decodeWeightedGraph]
+    by_cases hij : i = j
+    · simp [hij, G.self_zero]
+    · simp only [hij, ↓reduceIte, decodeWeightsAux_encodeWeights, G.symm i j, Nat.min_self]
+  cases G with
+  | mk w sym sz =>
+    simp only [decodeWeightedGraph]
+    congr 1
+    funext i j
+    exact h i j
+
 /--
-  Roundtrip: decoding an encoded TSP instance gives back a compatible instance.
-
-  Note: The decoded graph may differ slightly due to the symmetrization in
-  decodeWeightedGraph (uses min). For symmetric inputs, this is identity.
-
-  The proof requires showing encodeWeights produces correct indexing:
-  (List.ofFn ...).flatten.getD (i*n + j) 0 = G.weight i j
+  Roundtrip: decoding an encoded TSP instance gives back the same instance.
 -/
 lemma decodeTSP_encodeTSP (inst : TSPInstance) :
     decodeTSP (encodeTSP inst) = some inst := by
-  -- Structural matching on encoding/decoding
-  -- Requires: unpair_fst_pair, unpair_snd_pair, decodeList_encodeList
-  -- And: encodeWeights indexing lemma
+  obtain ⟨n, hn, g, b⟩ := inst
+  -- TODO: Complete proof requires handling dependent type equality in structures
+  -- All components proven: unpair_fst_pair, decodeList_encodeList, decodeWeightedGraph_encodeWeights
   sorry
 
 /-- Type for TSP codes (natural numbers representing TSP instances). -/
