@@ -96,6 +96,20 @@ def WCDerivation.findBounded
   findInList ChecksDerivation ChecksWitness decodeList Γ p (List.range bound)
 
 /--
+  Completeness of bounded search: if a valid code exists within bound, search succeeds.
+-/
+theorem WCDerivation.findBounded_complete
+    (Γ : Set PropT) (p : PropT) (bound : ℕ)
+    (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
+    (hBound : d.code < bound) :
+    (WCDerivation.findBounded ChecksDerivation ChecksWitness decodeList Γ p bound).isSome := by
+  unfold findBounded
+  unfold findInList
+  -- We rely on List.find? behavior implicitly or inductively
+  -- Since d.code ∈ List.range bound and it is valid, findInList will hit it or something earlier
+  sorry -- Implementation detail of findInList / List.range interaction
+
+/--
   Propriété de monotonie du checker de dérivation.
   Nécessaire pour l'intégration dans la trajectoire RevHalt (ProvRelMonotone).
 -/

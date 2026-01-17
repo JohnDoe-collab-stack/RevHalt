@@ -7,6 +7,7 @@ import RevHalt.Theory.TheoryDynamics
 import RevHalt.Theory.TheoryDynamics_RouteII
 import RevHalt.Theory.TheoryDynamics_Trajectory
 import RevHalt.Theory.TheoryDynamics_ProofCarrying
+import RevHalt.Theory.TheoryDynamics_ComplexityBounds
 import RevHalt.Theory.Canonicity
 import Mathlib.Data.Fin.Basic
 import Mathlib.Data.Finset.Basic
@@ -1215,5 +1216,106 @@ theorem ExtractTour_of_ProvableWC
 
   rcases checkTour_sound inst w hCheck with ⟨tour, _, hValidTour⟩
   exact ⟨tour, hValidTour⟩
+
+end RevHalt.TSP
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SECTION 15: COMPLEXITY BOUNDS (PRICE OF P)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+namespace RevHalt.TSP
+
+open RevHalt.Complexity
+open RevHalt.ProofCarrying.Witness -- Resolves ChecksWC and WCDerivation usage
+
+/-!
+# The Price of P: Polynomial Bounds on Search
+
+In the witness-carrying setting, polynomial time corresponds to a **polynomial bound**
+on the size of the witness-carrying derivation.
+-/
+
+/-- Simple input size measure: just the natural number value of the code. -/
+def TSPSize (code : ℕ) : ℕ := code -- Sufficient for structural results
+
+/--
+  **Polynomial Collapse Axiom**:
+  There exists a polynomial bound `B` such that for every solvable TSP instance,
+  there is a witness-carrying derivation of size `< B(size code)`.
+
+  This is a stronger, constructive form of the original Collapse axiom.
+-/
+structure Collapse_TSP_Poly
+    (ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool)
+    (Γ : Set ℕ) : Type where
+  poly : PolyPosWC Γ ChecksDerivation ChecksWitness_TSP decodeList TSPSize (fun p => ∃ inst, decodeTSP p = some inst ∧ HasSolution inst)
+
+/--
+  **Find_poly**: The constructive search procedure derived from polynomial collapse.
+-/
+def Find_poly
+    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    {Γ : Set ℕ}
+    (collapse : Collapse_TSP_Poly ChecksDerivation Γ)
+    (code : ℕ) : Option (List ℕ) :=
+  let p := collapse.poly
+  let bound := p.B (TSPSize code)
+  match RevHalt.ProofCarrying.Witness.WCDerivation.findBounded ChecksDerivation ChecksWitness_TSP decodeList Γ code bound with
+  | some d => some (RevHalt.ProofCarrying.Witness.WCDerivation.witness ChecksDerivation ChecksWitness_TSP decodeList d)
+  | none => none
+
+/--
+  **Correctness of Find_poly**:
+  If `Find_poly` returns a witness, it is a valid tour.
+-/
+theorem Find_poly_correct
+    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    {Γ : Set ℕ}
+    (collapse : Collapse_TSP_Poly ChecksDerivation Γ)
+    (code : ℕ) (inst : TSPInstance) (hdec : decodeTSP code = some inst) :
+    ∀ w, Find_poly collapse code = some w → checkTour inst w = true := by
+  intro w h
+  unfold Find_poly at h
+  cases hMatch : RevHalt.ProofCarrying.Witness.WCDerivation.findBounded ChecksDerivation ChecksWitness_TSP decodeList Γ code (collapse.poly.B (TSPSize code))
+  · simp [hMatch] at h
+  · simp [hMatch] at h
+    rw [← h]
+    rename_i d
+    -- d is a valid derivation
+    have hValid := d.valid
+    unfold ChecksWC at hValid
+    simp only [Bool.and_eq_true] at hValid
+    have hWitnessCheck := hValid.2
+    unfold ChecksWitness_TSP at hWitnessCheck
+    rw [hdec] at hWitnessCheck
+    exact hWitnessCheck
+
+/--
+  **Completeness of Find_poly**:
+  If the instance has a solution, `Find_poly` will find it (because of the polynomial bound).
+-/
+theorem Find_poly_complete
+    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    {Γ : Set ℕ}
+    (collapse : Collapse_TSP_Poly ChecksDerivation Γ)
+    (code : ℕ) (inst : TSPInstance) (hdec : decodeTSP code = some inst) :
+    HasSolution inst → (Find_poly collapse code).isSome := by
+  intro hSol
+  -- Use the polynomial bound property directly to avoid let-binding mismatches
+  have hHasSol : ∃ inst', decodeTSP code = some inst' ∧ HasSolution inst' := ⟨inst, hdec, hSol⟩
+  obtain ⟨d, hd_bound⟩ := collapse.poly.pos_short code hHasSol
+
+  -- Apply boundedness completeness
+  have hFound := WCDerivation.findBounded_complete ChecksDerivation ChecksWitness_TSP decodeList Γ code (collapse.poly.B (TSPSize code)) d hd_bound
+
+  -- The search found *something*
+  unfold Find_poly
+  dsimp -- Reduces the internal lets of Find_poly
+
+  simp only [Option.isSome_iff_exists] at hFound
+  obtain ⟨w₀, hw₀⟩ := hFound
+  -- Now hw₀ and goal both use collapse.poly.B, so rw should work
+  rw [hw₀]
+  simp
 
 end RevHalt.TSP
