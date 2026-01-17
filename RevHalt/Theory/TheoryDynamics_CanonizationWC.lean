@@ -1,5 +1,6 @@
 import RevHalt.Theory.TheoryDynamics
 import RevHalt.Theory.TheoryDynamics_ProofCarrying
+import RevHalt.Theory.TheoryDynamics_ComplexityBounds
 import Mathlib.Data.List.Basic
 
 namespace RevHalt.CanonizationWC
@@ -12,7 +13,7 @@ section Variables
 /-
   We fix the proposition type `PropT` to be generic, but it will be `ℕ` for TSP.
 -/
-variable {PropT : Type*}
+variable {PropT : Type}
 
 -- A generic notion of "ground truth" for valid instances/propositions.
 variable (IsTrue : PropT → Prop)
@@ -170,6 +171,76 @@ theorem Find_of_Bound_complete
   -- 3. Conclusion
   unfold Find_of_Bound
   simpa using hFound
+
+
+/-!
+  ## 3) Compression and Closure (Option C)
+
+  We separate "Completeness" (Layer 2) from "Compression/Complexity" (Price of P).
+
+  * `PosCompleteWC` : If true, then provable.
+  * `PolyCompressionWC` : If provable, then short (polynomial) derivation exists.
+  * `PolyPosWC` : If true, then short derivation exists (The combination).
+-/
+
+/--
+  **CompressionWC**: "If p is WC-provable, there exists a derivation bounded by B(size p)."
+  This represents the "Price of P" as a conditional property of the proof system.
+-/
+structure CompressionWC (Γ : Set PropT) (size : PropT → ℕ) : Type where
+  B : ℕ → ℕ
+  compress :
+    ∀ p : PropT,
+      ProvableWC (PropT:=PropT)
+        (ChecksDerivation:=ChecksDerivation)
+        (ChecksWitness:=ChecksWitness)
+        (decodeList:=decodeList)
+        Γ p →
+      ∃ d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p,
+        d.code < B (size p)
+
+/--
+  **PolyCompressionWC**: The compression function B is polynomial.
+  This is the precise statement of "Price of P" as a complexity hypothesis.
+-/
+structure PolyCompressionWC (Γ : Set PropT) (size : PropT → ℕ)
+    : Type extends CompressionWC (PropT:=PropT) (ChecksDerivation:=ChecksDerivation)
+      (ChecksWitness:=ChecksWitness) (decodeList:=decodeList) Γ size where
+  B_poly : RevHalt.Complexity.IsPoly B
+
+/--
+  **Closure Lemma**: PosComplete + PolyCompression => PolyPosWC.
+  This closes the loop: Logical Completeness (from Dynamics) + Complexity Hypothesis => Constructive Bounds.
+-/
+def PolyPosWC_of_PosComplete_and_PolyCompression
+    {Γ : Set PropT} {size : PropT → ℕ}
+    (pos : PosCompleteWC
+      (PropT:=PropT) (IsTrue:=IsTrue)
+      (ChecksDerivation:=ChecksDerivation)
+      (ChecksWitness:=ChecksWitness)
+      (decodeList:=decodeList)
+      Γ)
+    (pc : PolyCompressionWC
+      (PropT:=PropT)
+      (ChecksDerivation:=ChecksDerivation)
+      (ChecksWitness:=ChecksWitness)
+      (decodeList:=decodeList)
+      Γ size) :
+    @RevHalt.Complexity.PolyPosWC PropT Γ ChecksDerivation ChecksWitness decodeList size IsTrue := {
+  B := pc.B
+  B_poly := pc.B_poly
+  pos_short := by
+    intro p hTrue
+    -- 1. PosCompleteWC gives ProvableWC
+    have hp : ProvableWC (PropT:=PropT)
+        (ChecksDerivation:=ChecksDerivation)
+        (ChecksWitness:=ChecksWitness)
+        (decodeList:=decodeList)
+        Γ p :=
+      pos.pos p hTrue
+    -- 2. PolyCompressionWC "compresses" it into a bounded derivation
+    exact pc.compress p hp
+}
 
 end Variables
 

@@ -55,12 +55,13 @@ def IsPoly (f : ℕ → ℕ) : Prop :=
     If decoding fails, the condition is vacuously true or ignored.
 -/
 structure PolyPosWC
-    (Γ : Set ℕ)
-    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
-    (ChecksWitness : ℕ → List ℕ → Bool) -- Specific to List ℕ witnesses for now
+    {PropT : Type}
+    (Γ : Set PropT)
+    (ChecksDerivation : Set PropT → PropT → DerivationCode → Bool)
+    (ChecksWitness : PropT → List ℕ → Bool)
     (decodeList : ℕ → List ℕ)
-    (size : ℕ → ℕ)
-    (HasSolution : ℕ → Prop) -- Simplified: usually depends on decoded structure
+    (size : PropT → ℕ)
+    (HasSolution : PropT → Prop)
     : Type where
   /-- The bounding function. -/
   B : ℕ → ℕ
@@ -69,10 +70,11 @@ structure PolyPosWC
   /--
     Short Derivation Existence:
     For any valid instance code `p` that has a solution,
-    there exists a valid WCDerivation `d` whose code is bounded by `B(size p)`.
+    there exists a valid WCDerivation ChecksDerivation ChecksWitness decodeList Γ p,
+      whose code is bounded by `B(size p)`.
   -/
   pos_short :
-    ∀ p : ℕ, HasSolution p →
+    ∀ p : PropT, HasSolution p →
     ∃ d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p,
       d.code < B (size p)
 
@@ -82,12 +84,13 @@ structure PolyPosWC
   then the *same* bound applies to `Γ'` (since proofs in `Γ` remain valid in `Γ'`).
 -/
 def PolyPosWC_monotone
-    {Γ Γ' : Set ℕ}
-    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
-    {ChecksWitness : ℕ → List ℕ → Bool}
+    {PropT : Type}
+    {Γ Γ' : Set PropT}
+    {ChecksDerivation : Set PropT → PropT → DerivationCode → Bool}
+    {ChecksWitness : PropT → List ℕ → Bool}
     {decodeList : ℕ → List ℕ}
-    {size : ℕ → ℕ}
-    {HasSolution : ℕ → Prop}
+    {size : PropT → ℕ}
+    {HasSolution : PropT → Prop}
     (hMono : ChecksDerivationMonotone ChecksDerivation)
     (hSub : Γ ⊆ Γ')
     (poly : PolyPosWC Γ ChecksDerivation ChecksWitness decodeList size HasSolution) :

@@ -1,9 +1,14 @@
 import RevHalt.Theory.TheoryDynamics_CanonizationWC
+import RevHalt.Theory.TheoryDynamics_ComplexityBounds
 import RevHalt.Theory.Instances.TSP
 
 namespace RevHalt.TSP
 
 open RevHalt.CanonizationWC
+-- open RevHalt.ProofCarrying.Witness -- Removed to avoid ProvableWC ambiguity
+
+/-- Alias for the derivation code type used in ProofCarrying -/
+abbrev DerivationCode := RevHalt.ProofCarrying.Witness.DerivationCode
 
 /-
   **TSP Canonization Layer**
@@ -22,7 +27,7 @@ def IsTrue_TSP (p : ℕ) : Prop :=
   Uses the standard TSP checkers and decoders.
 -/
 def Provable_TSP_WC
-    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
     (Γ : Set ℕ) (p : ℕ) : Prop :=
   ProvableWC (PropT:=ℕ)
     (ChecksDerivation:=ChecksDerivation)
@@ -35,7 +40,7 @@ def Provable_TSP_WC
   This is the Layer 2 output we want to produce.
 -/
 def BoundPosWC_TSP
-    (ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool)
+    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
     (Γ : Set ℕ) : Type :=
   BoundPosWC (PropT:=ℕ) IsTrue_TSP ChecksDerivation ChecksWitness_TSP decodeList Γ TSPSize
 
@@ -44,7 +49,7 @@ def BoundPosWC_TSP
   This is just a BoundPosWC where the bound is polynomial.
 -/
 def PolyPosWC_TSP
-    (ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool)
+    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
     (Γ : Set ℕ) : Type :=
   RevHalt.Complexity.PolyPosWC Γ ChecksDerivation ChecksWitness_TSP decodeList TSPSize IsTrue_TSP
 
@@ -57,7 +62,7 @@ def PolyPosWC_TSP
   Stability (S1Rel = ∅) → Canonization (PosCompleteWC)
 -/
 theorem PosCompleteWC_of_S1Rel_empty_TSP
-    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
     (K : RHKit)
     (ωΓ : Set ℕ)
     (hKMono : RevHalt.DetectsMono K)
@@ -86,15 +91,63 @@ theorem PosCompleteWC_of_S1Rel_empty_TSP
 
     -- 3. If NOT Provable, then p ∈ S1Rel
     by_contra hNProv
+    classical -- Explicitly invoking Classical logic for by_contra/decidability
     have hIn : p ∈ S1Rel (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation)) K Machine_TSP (fun x => x) ωΓ := by
       unfold S1Rel
       simp only [Set.mem_setOf_eq]
-      -- S1Rel = {x | Rev0_K(M(x)) ∧ ¬Provable(f(x))}
+      unfold Provable_TSP_WC
       refine ⟨p, rfl, hRev0, hNProv⟩
 
     -- 4. Contradiction with empty S1Rel
     rw [hEmpty] at hIn
     exact hIn
 }
+
+
+/--
+  **PolyCompressionWC_TSP**:
+  The "Price of P" hypothesis for TSP:
+  "If a TSP instance is WC-provable, there exists a polynomial-size derivation."
+-/
+abbrev PolyCompressionWC_TSP
+    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
+    (Γ : Set ℕ) : Type :=
+  RevHalt.CanonizationWC.PolyCompressionWC
+    (PropT:=ℕ)
+    (ChecksDerivation:=ChecksDerivation)
+    (ChecksWitness:=ChecksWitness_TSP)
+    (decodeList:=decodeList)
+    Γ TSPSize
+
+/--
+  **Closure of Layer 2**:
+  (Stability ⇒ PosCompleteWC) + (Price of P ⇒ PolyCompressionWC) ⇒ PolyPosWC
+-/
+def PolyPosWC_TSP_of_Stable
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
+    (K : RHKit) (ωΓ : Set ℕ)
+    (hKMono : RevHalt.DetectsMono K)
+    (hEmpty : S1Rel
+        (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
+        K Machine_TSP (fun x => x) ωΓ = ∅)
+    (pc : PolyCompressionWC_TSP ChecksDerivation ωΓ) :
+    PolyPosWC_TSP ChecksDerivation ωΓ := by
+  -- 1. Layer 2 Result: PosCompleteWC
+  let pos : PosCompleteWC
+      (PropT:=ℕ) (IsTrue:=IsTrue_TSP)
+      (ChecksDerivation:=ChecksDerivation)
+      (ChecksWitness:=ChecksWitness_TSP)
+      (decodeList:=decodeList)
+      ωΓ :=
+    PosCompleteWC_of_S1Rel_empty_TSP
+      (ChecksDerivation:=ChecksDerivation) K ωΓ hKMono hEmpty
+  -- 2. Closure via Price of P
+  exact RevHalt.CanonizationWC.PolyPosWC_of_PosComplete_and_PolyCompression
+    (PropT:=ℕ) (IsTrue:=IsTrue_TSP)
+    (ChecksDerivation:=ChecksDerivation)
+    (ChecksWitness:=ChecksWitness_TSP)
+    (decodeList:=decodeList)
+    (Γ:=ωΓ) (size:=TSPSize)
+    pos pc
 
 end RevHalt.TSP

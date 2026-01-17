@@ -1,60 +1,61 @@
-# Price of P: Synthesis and Architecture
+# Price of P: Synthesis and Architecture (Option C Refinement)
 
 ## Core Philosophy
 
-**"Price of P"** is not an algorithmic search procedure itself, but a **structural data object** (`PolyPosWC`).
-**"Collapse"** is the **constructive derivation** of a decision procedure (`Find`) from this object.
+The "Price of P" architecture has been refined to clearly separate **logical completeness** from **computational complexity**. This is "Option C":
 
-The central equation is:
-> **Price of P = Data (PolyPosWC)**
-> **Collapse = Construction (Find from Data)**
+**"Price of P"** is strictly defined as the **Data Compression** property (`PolyCompressionWC`):
+> "If a proof exists, then a short (polynomial) proof exists."
+
+The derivation chain is now:
+
+1. **Dynamics (Layer 2)**: Stability $\implies$ **PosCompleteWC** (Logical Completeness).
+2. **Complexity Hypothesis**: **PolyCompressionWC** (Price of P).
+3. **Synthesis**: PosCompleteWC + PolyCompressionWC $\implies$ **PolyPosWC** (Constructive Bound).
+4. **Collapse (Layer 1)**: PolyPosWC $\implies$ **P = NP**.
 
 ## Key Formalisms
 
-### 1. The Data Object: `PolyPosWC`
+### 1. Logical Completeness: `PosCompleteWC`
 
-Defined in `RevHalt.Theory.TheoryDynamics_ComplexityBounds`.
-It asserts the existence of **polynomially bounded witness-carrying derivations**.
+* **Defined in**: `RevHalt.Theory.TheoryDynamics_CanonizationWC`
+* **Meaning**: "Every true instance is WC-provable in $\Gamma$."
+* **Source**: Derived from **Trajectory Stability** (`S1Rel = ∅`).
+  * Theorem: `PosCompleteWC_of_S1Rel_empty_TSP`
 
-- **Witness-Carrying**: Proofs that carry a witness (e.g., a TSP tour).
-- **Polynomially Bounded**: The code size of the derivation is bounded by $B(\text{size}(input))$, where $B$ is a polynomial.
+### 2. The Data Object (Price of P): `PolyCompressionWC`
 
-### 2. The Construction: `Collapse_TSP_Axiom_of_Poly`
+* **Defined in**: `RevHalt.Theory.TheoryDynamics_CanonizationWC`
+* **Meaning**: "If $p$ is WC-provable, there exists a derivation bounded by $B(\text{size}(p))$ where $B \in \text{Poly}$."
+* **Role**: This represents the pure "cost" of the proof system. It is independent of whether statements are true/false, only concernings *proof size*.
 
-Defined in `RevHalt.Theory.Instances.TSP`.
-This function constructs a `Collapse_TSP_Axiom` (which packages a computable `Find` function) solely from a `PolyPosWC` instance.
+### 3. The Synthesis: `PolyPosWC`
 
-- **Find_poly**: Explicitly enumerates derivations up to the bound $B$.
-- **Correctness/Completeness**: Guaranteed by the `PolyPosWC` properties.
+* **Defined in**: `RevHalt.Theory.TheoryDynamics_ComplexityBounds`
+* **Meaning**: "Every true instance has a polynomially bounded witness-carrying derivation."
+* **derivation**: `PolyPosWC = PosCompleteWC + PolyCompressionWC`.
+  * Lemma: `PolyPosWC_of_PosComplete_and_PolyCompression`
 
 ## Trajectory Connection
 
-We have formally connected this static architecture to the dynamic RevHalt trajectory ($\Gamma_0 \to \dots \to \omega\Gamma$).
+We have formally connected this modular architecture to the dynamic RevHalt trajectory ($\Gamma_0 \to \dots \to \omega\Gamma$).
 
-### Lemma A: Monotonicity (Transport)
+### Lemma A: Stability to Completeness
 
-**`RevHalt.Complexity.PolyPosWC_monotone`**
-If a polynomial bound holds for a theory state $\Gamma$, it holds for any extension $\Gamma' \supseteq \Gamma$.
+**`RevHalt.TSP.PosCompleteWC_of_S1Rel_empty_TSP`**
+If the "Route II" frontier ($S^1(\omega\Gamma)$) is empty (Stability), then $\omega\Gamma$ is logically complete (`PosCompleteWC`).
 
-- *Significance*: Bounds established at any finite stage are preserved at the limit.
+### Lemma B: Closure
 
-### Lemma B: Limit Derivation
+**`RevHalt.TSP.PolyPosWC_TSP_of_Stable`**
+If Stability holds AND the "Price of P" (`PolyCompressionWC`) holds for $\omega\Gamma$, then `PolyPosWC` is instantiated.
 
-**`RevHalt.TSP.Collapse_of_Trajectory_Poly`**
-If the trajectory limit $\omega\Gamma$ possesses the `PolyPosWC` structure, then `Collapse_TSP_Axiom` is derivable.
+### Lemma C: Collapse
 
-- *Significance*: The limit object is sufficient to grounding P=NP.
-
-### Lemma C: Finite Stage Propagation
-
-**`RevHalt.TSP.Collapse_of_TrajectoryStage_Poly`**
-If any finite stage $\Gamma_n$ of the trajectory produces `PolyPosWC`, then:
-
-1. The bound lifts to $\omega\Gamma$ (via Monotonicity).
-2. The limit derives Collapse (via Limit Derivation).
-3. **Conclusion**: P=NP is constructively established for TSP.
+from `PolyPosWC`, we derive `Collapse` (P=NP for TSP) via the arithmetic search procedure `Find_poly`.
 
 ## Summary Status
 
-- **Constructive**: All definitions are `def` or constructive proofs. No `noncomputable` or classical choice used for the search procedure.
-- **Input/Output**: `PolyPosWC` is the *output* of the dynamic analysis (Layer 2), and the *input* to the complexity collapse (Layer 1).
+* **Modular**: Clear separation between "What is provable" (Dynamics) and "How hard is it to prove" (Complexity).
+* **Constructive**: The synthesis step is fully constructive.
+* **Explicit Classical Logic**: Logical completeness uses `classical` logic (via `by_contra`), while the computational collapse remains constructive given the resulting objects.
