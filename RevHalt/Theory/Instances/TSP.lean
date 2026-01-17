@@ -1384,4 +1384,30 @@ def Collapse_of_Trajectory_Poly
     Collapse_TSP_Axiom :=
   Collapse_TSP_Axiom_of_Poly { poly := poly }
 
+/--
+  **Trajectory Stage ⇒ Collapse**:
+  If a *finite stage* `Γ_n` produces `PolyPosWC` (i.e. stability is reached at finite time),
+  then it propagates to the limit via monotonicity, and Collapse follows.
+
+  This is the strong constructive statement:
+  "If the trajectory stabilizes to a polynomial bound at any step n, then P=NP."
+-/
+def Collapse_of_TrajectoryStage_Poly
+    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    (Γ0 : Set ℕ) (n : ℕ)
+    (hMono : ChecksDerivationMonotone ChecksDerivation)
+    (poly_n : PolyPosWC (TSP_Trajectory (PropT:=ℕ) Provable K encode_prop Γ0 n)
+                        ChecksDerivation ChecksWitness_TSP decodeList TSPSize
+                        (fun p => ∃ inst, decodeTSP p = some inst ∧ HasSolution inst)) :
+    Collapse_TSP_Axiom :=
+  let ωΓ := TSP_TrajectoryLimit (PropT:=ℕ) Provable K encode_prop Γ0
+  have hSub : (TSP_Trajectory (PropT:=ℕ) Provable K encode_prop Γ0 n) ⊆ ωΓ :=
+    TSP_trajectory_stage_le_limit (PropT:=ℕ) Provable K encode_prop Γ0 n
+
+  -- Lift the polynomial bound to the limit
+  let poly_ω : PolyPosWC ωΓ ChecksDerivation ChecksWitness_TSP decodeList TSPSize _ :=
+    PolyPosWC_monotone hMono hSub poly_n
+
+  Collapse_of_Trajectory_Poly ωΓ poly_ω
+
 end RevHalt.TSP
