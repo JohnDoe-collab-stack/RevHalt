@@ -401,11 +401,17 @@ lemma decodeTSP_encodeTSP (inst : TSPInstance) :
   | mk n hn g b =>
     have hG : decodeWeightedGraph n (encodeWeights g) = g :=
       decodeWeightedGraph_encodeWeights g
-    -- The proof is definitional after substituting hG
     show decodeTSP (encodeTSP ⟨n, hn, g, b⟩) = some ⟨n, hn, g, b⟩
-    unfold decodeTSP encodeTSP
-    -- Both sides should be definitionally equal after unfolding
-    rfl
+    simp [decodeTSP, encodeTSP, hn]
+    have hfst :
+        unpair_fst (pair n (pair b (encodeList (encodeWeights g)))) = n := by
+      simp
+    have hleft :
+        decodeWeightedGraph (unpair_fst (pair n (pair b (encodeList (encodeWeights g)))))
+            (encodeWeights g) ≍
+          decodeWeightedGraph n (encodeWeights g) := by
+      rw [hfst]
+    exact heq_of_heq_of_eq hleft hG
 
 /-- Type for TSP codes (natural numbers representing TSP instances). -/
 abbrev TSPCode := ℕ
