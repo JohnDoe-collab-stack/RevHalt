@@ -3,95 +3,152 @@ Copyright (c) 2026 RevHalt Project. All rights reserved.
 Released under the MIT license.
 -/
 import RevHalt.Theory.TheoryDynamics
+import Mathlib.Data.Nat.Basic
+import Mathlib.Data.List.Basic
 
 /-!
-# Proof-Carrying Provability
+# Witness-Carrying Provability
 
-This module formalizes **proof-carrying** provability where proofs are
-represented as verifiable codes rather than abstract propositions.
+This module formalizes **witness-carrying** provability where proofs are
+represented as verifiable codes that also carry a witness (certificate).
 
 ## Main definitions
 
-* `DerivationCode` - A code representing a derivation
-* `ChecksDerivation` - Decidable check that a code is a valid derivation
-* `Derivation` - Structure bundling code with validity proof
+* `WCCode` - A code representing a pair (proof, witness)
+* `ChecksWC` - Decidable check that a code is valid (checks both proof and witness)
+* `WCDerivation` - Structure bundling WCCode with validity proof
+* `findBounded` - Computable search for a valid derivation
 
 ## Key insight
 
-Instead of `Provable Γ p : Prop`, we work with:
-```lean
-Derivation Γ p := { code : ℕ // ChecksDerivation Γ p code = true }
-```
+Instead of just `Provable Γ p`, we work with an object that guarantees:
+1. A proof exists (`ChecksDerivation`)
+2. A witness exists and passes `ChecksWitness`
 
-This makes proof extraction computable.
+This effectively makes extraction (e.g. of a TSP tour) a projection of the proof object.
 -/
 
 namespace RevHalt.ProofCarrying
 
 variable {PropT : Type*}
 
-/--
-  A derivation code is a natural number encoding a proof tree.
-  The encoding depends on the specific proof system.
--/
+/-- A derivation code is a natural number encoding a proof tree. -/
 abbrev DerivationCode := ℕ
 
-/--
-  Decidable check that `code` is a valid derivation of `p` from `Γ`.
+/-- A witness-carrying code encodes a pair (proof, witness). -/
+abbrev WCCode := ℕ
 
-  This is the core computational primitive: given a code, we can
-  mechanically verify if it represents a valid proof.
+-- Aliases for Mathlib pairing
+abbrev pair := Nat.pair
+abbrev unpair_fst (n : ℕ) : ℕ := (Nat.unpair n).1
+abbrev unpair_snd (n : ℕ) : ℕ := (Nat.unpair n).2
 
-  Implementation note: The actual checking function depends on the
-  proof system. Here we axiomatize it via variable.
--/
+/-- Sépare le code (preuve, témoin). -/
+def proofPart (c : WCCode) : DerivationCode := unpair_fst c
+def witnessPart (c : WCCode) : ℕ := unpair_snd c
+
+
+--  Checker de preuve (abstrait) et checker de témoin (abstrait).
+--  On ne suppose rien de classique ici, tout est Bool.
+--  Note: ChecksWitness depends on the proposition p and the witness list.
+
 variable (ChecksDerivation : Set PropT → PropT → DerivationCode → Bool)
+variable (ChecksWitness : PropT → List ℕ → Bool)
+
+-- Encodage/décodage d'une liste en ℕ.
+variable (encodeList : List ℕ → ℕ)
+variable (decodeList : ℕ → List ℕ)
+
+/-- Décodage du témoin contenu dans le WCCode. -/
+def decodeWitness (c : WCCode) : List ℕ :=
+  decodeList (witnessPart c)
 
 /--
-  A derivation is a code together with a proof that it checks.
-  This is the proof-carrying structure.
+  Le WCCode est valide si la preuve et le témoin checkent.
+  C'est la conjonction de la validité déductive et de la validité sémantique du témoin.
 -/
-structure Derivation (Γ : Set PropT) (p : PropT) where
-  /-- The derivation code -/
-  code : DerivationCode
-  /-- Proof that the code is valid -/
-  valid : ChecksDerivation Γ p code = true
+def ChecksWC (Γ : Set PropT) (p : PropT) (c : WCCode) : Bool :=
+  (ChecksDerivation Γ p (proofPart c)) && (ChecksWitness p (decodeWitness decodeList c))
 
 /--
-  Soundness hypothesis: If a derivation exists, the proposition is provable.
-  This connects proof-carrying to the abstract Provable predicate.
+  Une "dérivation witness-carrying" est juste un code qui passe ChecksWC.
 -/
-def DerivationSoundness (Provable : Set PropT → PropT → Prop) : Prop :=
-  ∀ Γ p, Derivation ChecksDerivation Γ p → Provable Γ p
+structure WCDerivation (Γ : Set PropT) (p : PropT) where
+  code : WCCode
+  valid : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p code = true
+
+/-- Extraction computable du témoin. -/
+def WCDerivation.witness {Γ : Set PropT} {p : PropT}
+    (d : WCDerivation (ChecksDerivation:=ChecksDerivation)
+                      (ChecksWitness:=ChecksWitness)
+                      (decodeList:=decodeList) Γ p) : List ℕ :=
+  decodeWitness decodeList d.code
+
+/-- Helper for finding a witness in a list -/
+def findInList (Γ : Set PropT) (p : PropT) : List ℕ → Option (WCDerivation (ChecksDerivation:=ChecksDerivation) (ChecksWitness:=ChecksWitness) (decodeList:=decodeList) Γ p)
+  | [] => none
+  | k :: ks =>
+    if h : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p k = true then
+      some ⟨k, h⟩
+    else
+      findInList Γ p ks
 
 /--
-  Completeness hypothesis: If p is provable, a derivation exists.
-  This is the key bridge for extraction.
+  Recherche bornée (totalement constructive) d'une WCDerivation.
+  Utilise List.range pour éviter toute récursion explicite.
 -/
-def DerivationCompleteness (Provable : Set PropT → PropT → Prop) : Prop :=
-  ∀ Γ p, Provable Γ p → ∃ d : Derivation ChecksDerivation Γ p, True
+def WCDerivation.findBounded
+    (Γ : Set PropT) (p : PropT) (bound : ℕ) :
+    Option (WCDerivation (ChecksDerivation:=ChecksDerivation)
+                         (ChecksWitness:=ChecksWitness)
+                         (decodeList:=decodeList) Γ p) :=
+  findInList ChecksDerivation ChecksWitness decodeList Γ p (List.range bound)
 
 /--
-  If ChecksDerivation is decidable for all codes (which it is by construction),
-  we can search for a derivation by enumeration.
-
-  This returns `some d` if a derivation is found within the search bound,
-  `none` otherwise.
+  Propriété de monotonie du checker de dérivation.
+  Nécessaire pour l'intégration dans la trajectoire RevHalt (ProvRelMonotone).
 -/
-def Derivation.findBounded (Γ : Set PropT) (p : PropT) (bound : ℕ) :
-    Option (Derivation ChecksDerivation Γ p) :=
-  let rec search (k : ℕ) : Option (Derivation ChecksDerivation Γ p) :=
-    if k ≥ bound then none
-    else if hcheck : ChecksDerivation Γ p k = true
-         then some ⟨k, hcheck⟩
-         else search (k + 1)
-  search 0
+def ChecksDerivationMonotone : Prop :=
+  ∀ {Γ Γ' : Set PropT} {p : PropT} {c : DerivationCode},
+    Γ ⊆ Γ' →
+    ChecksDerivation Γ p c = true →
+    ChecksDerivation Γ' p c = true
 
 /--
-  Given an explicit derivation code that we know is valid, construct the Derivation.
+  ChecksWC hérite de la monotonie de ChecksDerivation.
+  (ChecksWitness ne dépend pas de Γ, donc il est trivialement monotone).
 -/
-def Derivation.ofCode (Γ : Set PropT) (p : PropT) (code : DerivationCode)
-    (hvalid : ChecksDerivation Γ p code = true) : Derivation ChecksDerivation Γ p :=
-  ⟨code, hvalid⟩
+theorem ChecksWC_monotone
+    (hMono : ChecksDerivationMonotone ChecksDerivation)
+    {Γ Γ' : Set PropT} (hSub : Γ ⊆ Γ')
+    (p : PropT) (c : WCCode) :
+    ChecksWC ChecksDerivation ChecksWitness decodeList Γ p c = true →
+    ChecksWC ChecksDerivation ChecksWitness decodeList Γ' p c = true := by
+  intro h
+  unfold ChecksWC at *
+  simp only [Bool.and_eq_true] at h ⊢
+  constructor
+  · exact hMono hSub h.1
+  · exact h.2
+
+/--
+  Provable Proof-Carrying (W) est monotone si le checker l'est.
+-/
+theorem WCDerivation_monotone
+    (hMono : ChecksDerivationMonotone ChecksDerivation)
+    {Γ Γ' : Set PropT} (hSub : Γ ⊆ Γ') (p : PropT) :
+    Nonempty (WCDerivation (ChecksDerivation:=ChecksDerivation)
+                           (ChecksWitness:=ChecksWitness)
+                           (decodeList:=decodeList)
+                           Γ p) →
+    Nonempty (WCDerivation (ChecksDerivation:=ChecksDerivation)
+                           (ChecksWitness:=ChecksWitness)
+                           (decodeList:=decodeList)
+                           Γ' p) := by
+  rintro ⟨d⟩
+  exact ⟨{
+    code := d.code
+    valid := ChecksWC_monotone ChecksDerivation ChecksWitness decodeList hMono hSub p d.code d.valid
+  }⟩
 
 end RevHalt.ProofCarrying
