@@ -76,4 +76,32 @@ structure PolyPosWC
     ∃ d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p,
       d.code < B (size p)
 
+/--
+  **Monotonicity of Price of P**:
+  If a polynomial bound exists for `Γ`, and `Γ ⊆ Γ'` (monotonic extension),
+  then the *same* bound applies to `Γ'` (since proofs in `Γ` remain valid in `Γ'`).
+-/
+def PolyPosWC_monotone
+    {Γ Γ' : Set ℕ}
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
+    {ChecksWitness : ℕ → List ℕ → Bool}
+    {decodeList : ℕ → List ℕ}
+    {size : ℕ → ℕ}
+    {HasSolution : ℕ → Prop}
+    (hMono : ChecksDerivationMonotone ChecksDerivation)
+    (hSub : Γ ⊆ Γ')
+    (poly : PolyPosWC Γ ChecksDerivation ChecksWitness decodeList size HasSolution) :
+    PolyPosWC Γ' ChecksDerivation ChecksWitness decodeList size HasSolution := {
+  B := poly.B
+  B_poly := poly.B_poly
+  pos_short := fun p hSol =>
+    let ⟨d, hd_bound⟩ := poly.pos_short p hSol
+    -- Lift derivation d from Γ to Γ'
+    let d' : WCDerivation ChecksDerivation ChecksWitness decodeList Γ' p := {
+      code := d.code
+      valid := ChecksWC_monotone ChecksDerivation ChecksWitness decodeList hMono hSub p d.code d.valid
+    }
+    ⟨d', hd_bound⟩
+}
+
 end RevHalt.Complexity

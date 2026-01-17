@@ -1369,4 +1369,19 @@ def Collapse_TSP_Axiom_of_Poly
     exact Find_poly_sound collapse inst cert h
 }
 
+/--
+  **Trajectory Output ⇒ Collapse**:
+  If the trajectory limit `ωΓ` produces a `PolyPosWC` structure (i.e., short proofs exist at the limit),
+  then the Collapse Axiom is formally derivable.
+
+  This is the final connection:
+  Trajectory Stability → PolyPosWC at Limit → Collapse_TSP_Axiom → P
+-/
+def Collapse_of_Trajectory_Poly
+    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    (ωΓ : Set ℕ)
+    (poly : PolyPosWC ωΓ ChecksDerivation ChecksWitness_TSP decodeList TSPSize (fun p => ∃ inst, decodeTSP p = some inst ∧ HasSolution inst)) :
+    Collapse_TSP_Axiom :=
+  Collapse_TSP_Axiom_of_Poly { poly := poly }
+
 end RevHalt.TSP
