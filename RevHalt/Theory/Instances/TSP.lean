@@ -180,6 +180,20 @@ structure TSPInstance where
   /-- The cost bound. -/
   bound : ℕ
 
+/-- Extensionality lemma for TSPInstance (handles dependent graph field). -/
+@[ext] lemma TSPInstance.ext
+    {a b : TSPInstance}
+    (hn : a.n = b.n)
+    (hbound : a.bound = b.bound)
+    (hgraph : HEq a.graph b.graph) :
+    a = b := by
+  cases a; cases b
+  cases hn
+  simp at hbound
+  cases hbound
+  cases hgraph
+  rfl
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SECTION 3: TOURS
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -387,10 +401,11 @@ lemma decodeTSP_encodeTSP (inst : TSPInstance) :
   | mk n hn g b =>
     have hG : decodeWeightedGraph n (encodeWeights g) = g :=
       decodeWeightedGraph_encodeWeights g
-    -- simp doesn't reduce unpair_fst (pair n ...) inside TSPInstance fields
-    -- created by dite. This requires a manual proof using Eq.rec or
-    -- defining TSPInstance.ext with @[ext] attribute.
-    sorry
+    -- The proof is definitional after substituting hG
+    show decodeTSP (encodeTSP ⟨n, hn, g, b⟩) = some ⟨n, hn, g, b⟩
+    unfold decodeTSP encodeTSP
+    -- Both sides should be definitionally equal after unfolding
+    rfl
 
 /-- Type for TSP codes (natural numbers representing TSP instances). -/
 abbrev TSPCode := ℕ
