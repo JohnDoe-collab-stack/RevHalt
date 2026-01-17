@@ -9,25 +9,25 @@ The "Price of P" architecture has been refined to clearly separate **logical com
 
 The derivation chain is now:
 
-1. **Dynamics (Layer 2)**: Stability $\implies$ **PosCompleteWC** (Logical Completeness).
+1. **Dynamics (Layer 2)**: Stability -> **PosCompleteWC** (Logical Completeness).
 2. **Complexity Hypothesis**: **PolyCompressionWC** (Price of P).
-3. **Synthesis**: PosCompleteWC + PolyCompressionWC $\implies$ **PolyPosWC** (Constructive Bound).
-4. **Collapse (Layer 1)**: PolyPosWC $\implies$ **P = NP**.
+3. **Synthesis**: PosCompleteWC + PolyCompressionWC -> **PolyPosWC** (Constructive Bound).
+4. **Collapse (Layer 1)**: PolyPosWC -> **P = NP**.
 
 ## Key Formalisms
 
 ### 1. Logical Completeness: `PosCompleteWC`
 
 * **Defined in**: `RevHalt.Theory.TheoryDynamics_CanonizationWC`
-* **Meaning**: "Every true instance is WC-provable in $\Gamma$."
-* **Source**: Derived from **Trajectory Stability** (`S1Rel = ∅`).
+* **Meaning**: "Every true instance is WC-provable in Gamma."
+* **Source**: Derived from **Trajectory Stability** (S1Rel = empty).
   * Theorem: `PosCompleteWC_of_S1Rel_empty_TSP`
 
 ### 2. The Data Object (Price of P): `PolyCompressionWC`
 
 * **Defined in**: `RevHalt.Theory.TheoryDynamics_CanonizationWC`
-* **Meaning**: "If $p$ is WC-provable, there exists a derivation bounded by $B(\text{size}(p))$ where $B \in \text{Poly}$."
-* **Role**: This represents the pure "cost" of the proof system. It is independent of whether statements are true/false, only concernings *proof size*.
+* **Meaning**: "If p is WC-provable, there exists a derivation bounded by B(size(p)) where B is in Poly."
+* **Role**: This represents the pure "cost" of the proof system. It is independent of whether statements are true/false, only concernings proof size.
 
 ### 3. The Synthesis: `PolyPosWC`
 
@@ -38,17 +38,17 @@ The derivation chain is now:
 
 ## Trajectory Connection
 
-We have formally connected this modular architecture to the dynamic RevHalt trajectory ($\Gamma_0 \to \dots \to \omega\Gamma$).
+We have formally connected this modular architecture to the dynamic RevHalt trajectory (Gamma_0 -> ... -> omegaGamma).
 
 ### Lemma A: Stability to Completeness
 
 **`RevHalt.TSP.PosCompleteWC_of_S1Rel_empty_TSP`**
-If the "Route II" frontier ($S^1(\omega\Gamma)$) is empty (Stability), then $\omega\Gamma$ is logically complete (`PosCompleteWC`).
+If the "Route II" frontier (S1(omegaGamma)) is empty (Stability), then omegaGamma is logically complete (`PosCompleteWC`).
 
 ### Lemma B: Closure
 
 **`RevHalt.TSP.PolyPosWC_TSP_of_Stable`**
-If Stability holds AND the "Price of P" (`PolyCompressionWC`) holds for $\omega\Gamma$, then `PolyPosWC` is instantiated.
+If Stability holds AND the "Price of P" (`PolyCompressionWC`) holds for omegaGamma, then `PolyPosWC` is instantiated.
 
 ### Lemma C: Collapse
 
@@ -56,7 +56,7 @@ From `PolyPosWC`, we derive `Collapse` (P=NP for TSP) via the arithmetic search 
 
 The entire chain is packaged in:
 **`RevHalt.TSP.Collapse_TSP_of_Stable_and_PriceOfP`**
-$Stability \land PolyCompression \implies Collapse TSP$.
+Stability and PolyCompression -> Collapse TSP.
 
 ## Summary Status
 
