@@ -1235,8 +1235,8 @@ In the witness-carrying setting, polynomial time corresponds to a **polynomial b
 on the size of the witness-carrying derivation.
 -/
 
-/-- Simple input size measure: just the natural number value of the code. -/
-def TSPSize (code : ℕ) : ℕ := code -- Sufficient for structural results
+/-- Simple input size measure: bitlength of the code (log2). -/
+def TSPSize (code : ℕ) : ℕ := Nat.log2 code -- Standard bitlength complexity
 
 /--
   **Polynomial Collapse Axiom**:
@@ -1310,12 +1310,63 @@ theorem Find_poly_complete
 
   -- The search found *something*
   unfold Find_poly
-  dsimp -- Reduces the internal lets of Find_poly
-
   simp only [Option.isSome_iff_exists] at hFound
-  obtain ⟨w₀, hw₀⟩ := hFound
-  -- Now hw₀ and goal both use collapse.poly.B, so rw should work
-  rw [hw₀]
-  simp
+  obtain ⟨dFound, hdFound⟩ := hFound
+
+  -- Show that Find_poly returns something
+  dsimp
+  simp [hdFound]
+
+/--
+  **Soundness of Find_poly**:
+  If `Find_poly` returns a witness, a solution exists.
+-/
+theorem Find_poly_sound
+    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    {Γ : Set ℕ}
+    (collapse : Collapse_TSP_Poly ChecksDerivation Γ)
+    (inst : TSPInstance) (cert : List ℕ) :
+    Find_poly collapse (encodeTSP inst) = some cert →
+    HasSolution inst := by
+  intro h
+  have hCheck := Find_poly_correct collapse (encodeTSP inst) inst (decodeTSP_encodeTSP inst) cert h
+  obtain ⟨tour, _, hValid⟩ := checkTour_sound inst cert hCheck
+  exact ⟨tour, hValid⟩
+
+/--
+  **Derivation of the Collapse Axiom**:
+  The polynomial bound structure implies the existence of the abstract Collapse axiom.
+  This formally links "Price of P" (poly bound) to "Collapse" (decidability).
+-/
+def Collapse_TSP_Axiom_of_Poly
+    {ChecksDerivation : Set ℕ → ℕ → RevHalt.ProofCarrying.Witness.DerivationCode → Bool}
+    {Γ : Set ℕ}
+    (collapse : Collapse_TSP_Poly ChecksDerivation Γ) :
+    Collapse_TSP_Axiom := {
+  Find := fun code => Find_poly collapse code
+  find_correct := by
+    intro inst hSol
+    have hSome := Find_poly_complete collapse (encodeTSP inst) inst (decodeTSP_encodeTSP inst) hSol
+    simp only [Option.isSome_iff_exists] at hSome
+    obtain ⟨cert, hcert⟩ := hSome
+    use cert
+    constructor
+    · exact hcert
+    · -- Need to show it is a valid tour
+      have hCheck := Find_poly_correct collapse (encodeTSP inst) inst (decodeTSP_encodeTSP inst) cert hcert
+      obtain ⟨tour, hpath, hvalid⟩ := checkTour_sound inst cert hCheck
+      use tour
+  find_complete := by
+    intro inst hNotSol
+    cases h : Find_poly collapse (encodeTSP inst)
+    · rfl -- None case, correct
+    · rename_i cert
+      -- contradiction: found certificate implies solution
+      have hSol := Find_poly_sound collapse inst cert h
+      contradiction
+  find_sound := by
+    intro inst cert h
+    exact Find_poly_sound collapse inst cert h
+}
 
 end RevHalt.TSP
