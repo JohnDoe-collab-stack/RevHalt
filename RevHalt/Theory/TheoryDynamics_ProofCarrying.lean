@@ -98,16 +98,34 @@ def WCDerivation.findBounded
 /--
   Completeness of bounded search: if a valid code exists within bound, search succeeds.
 -/
+theorem findInList_complete_aux
+    (l : List ℕ)
+    (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
+    (hMem : d.code ∈ l) :
+    (findInList ChecksDerivation ChecksWitness decodeList Γ p l).isSome := by
+  induction l with
+  | nil => contradiction
+  | cons k ks ih =>
+    unfold findInList
+    by_cases hCheck : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p k = true
+    · simp [hCheck]
+    · simp [hCheck]
+      have hNe : k ≠ d.code := by
+        intro hEq
+        rw [hEq] at hCheck
+        have hValid := d.valid
+        rw [hValid] at hCheck
+        contradiction
+      have hInKs : d.code ∈ ks := List.mem_of_ne_of_mem hNe.symm hMem
+      exact ih hInKs
 theorem WCDerivation.findBounded_complete
     (Γ : Set PropT) (p : PropT) (bound : ℕ)
     (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
     (hBound : d.code < bound) :
     (WCDerivation.findBounded ChecksDerivation ChecksWitness decodeList Γ p bound).isSome := by
+  have hMem : d.code ∈ List.range bound := List.mem_range.mpr hBound
   unfold findBounded
-  unfold findInList
-  -- We rely on List.find? behavior implicitly or inductively
-  -- Since d.code ∈ List.range bound and it is valid, findInList will hit it or something earlier
-  sorry -- Implementation detail of findInList / List.range interaction
+  exact findInList_complete_aux ChecksDerivation ChecksWitness decodeList (List.range bound) d hMem
 
 /--
   Propriété de monotonie du checker de dérivation.

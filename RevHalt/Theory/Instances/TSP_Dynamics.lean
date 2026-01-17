@@ -84,15 +84,24 @@ theorem S1Rel_empty_at_omega_of_absorbable_and_admissible
     intro hRoute
     exact hTri ⟨hAbs, hAdm, hRoute⟩
 
-  -- 3) ¬RouteIIAt ⇒ S1Rel = ∅ (Logic: Nonempty S1Rel ⇒ RouteIIAt)
+  -- 3. ¬RouteIIAt ⇒ S1Rel = ∅ (Logic: Nonempty S1Rel ⇒ RouteIIAt)
+  classical
   by_contra hNe
-  have hNonempty :
+  have hNonemptyS1 :
     (S1Rel (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
       K Machine_TSP Enc
       (omegaΓ (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
         K Machine_TSP Enc Cn hIdem hProvCn A0)).Nonempty :=
     Set.nonempty_iff_ne_empty.mpr hNe
-  exact hNotRoute hNonempty
+
+  have hRoute :
+    RouteIIAt (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
+      K Machine_TSP Enc
+      (omegaΓ (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
+        K Machine_TSP Enc Cn hIdem hProvCn A0) := by
+    simpa [RouteIIAt] using hNonemptyS1
+
+  exact hNotRoute hRoute
 
 
 /--
