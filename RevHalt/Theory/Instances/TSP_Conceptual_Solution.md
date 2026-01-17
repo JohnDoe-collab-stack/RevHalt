@@ -9,11 +9,11 @@ The file does not give a new algorithm for TSP. It gives a formal bridge from:
 
 - a concrete NP problem (TSP),
 - to halting and provability dynamics (RevHalt),
-- and to a **derived** statement about efficient search.
+- and to a **conditional** statement about search/decision procedures.
 
 So the "solution" is a meta-theoretic pipeline: encode, model, relate halting,
-then show how certain trajectory constraints **force** a Collapse result
-that yields an efficient search procedure.
+then show how certain **hypothesis packages and trajectory choices** yield a
+Collapse-style search procedure.
 
 ## Core conceptual steps
 
@@ -30,59 +30,40 @@ that yields an efficient search procedure.
 1) Frontier and trajectory
 
 - `S1Rel_TSP` captures true-but-unprovable halting statements in a theory state.
+- Note: `S1Rel_TSP` uses `Halts`, while generic `S1Rel` uses `Rev0_K`.
+  A bridge lemma (via `DetectsMono`) is needed to relate them.
 - Trajectory operators iterate theory enrichment and define an omega limit.
-- This sets up the setting for Route II and the trilemma.
 
 1) Route II and the trilemma
 
-- Route II provides conditions under which the frontier is nonempty.
-- The trilemma says you cannot keep Absorbable, OmegaAdmissible, and RouteIIAt
-  together; one must fail.
+- Route II is a **separate hypothesis package** (soundness, negative completeness,
+  barrier) about an external semantic layer — not given by TSP structure alone.
+- The trilemma proves: ¬(Absorbable ∧ OmegaAdmissible ∧ RouteIIAt).
+- To conclude ¬RouteIIAt, you must **commit** to keeping Absorbable and
+  OmegaAdmissible. This is a **trajectory choice**, not a forced implication.
 
 1) Canonization and Collapse
 
-- If the frontier is empty, you get positive completeness at omega.
-- A separate negative completeness assumption is needed for full canonization.
-- To move from "provable halting" to an actual tour, you need extraction.
-- An effective canonization bundles decision and extraction as data.
-- From that data, Collapse is **derived** as a theorem, not assumed as an axiom.
+- **Given** ¬RouteIIAt (from trajectory choice), you get PosComplete at ω.
+- **Given** NegComplete (additional hypothesis), you get full Canonization.
+- **Given** effective extraction data, you can construct a Collapse procedure.
+- Collapse is therefore derived from effective canonization **data**, not forced
+  by dynamics alone.
 
-## Key insight: Collapse is OUTPUT, not INPUT
+## What is assumed vs what is derived
 
-The Collapse result is **not** an arbitrary axiom added for convenience.
-It is the **logical consequence** of the framework's structure:
+| **Assumed / Given** | **Derived** |
+|---------------------|-------------|
+| Route II hypothesis package | Trilemma disjunction |
+| Trajectory choice: keep Absorbable + OmegaAdmissible | ¬RouteIIAt |
+| DetectsMono K (for Halts↔Rev0_K bridge) | S1Rel_TSP alignment |
+| NegComplete | Full Canonization |
+| EffectiveCanonizationAtOmega (data) | **Collapse** (theorem) |
 
-```
-Route II conditions (given by the problem structure)
-       ↓
-   Trilemma (proven from dynamics)
-       ↓
-¬RouteIIAt ⟹ S1Rel_TSP = ∅ (frontier empty)
-       ↓
-PosComplete at ω (positive completeness)
-       +
-NegComplete (completeness hypothesis)
-       ↓
-Canonization at ω (full completeness)
-       +
-Effective extraction (constructive data)
-       ↓
-  **Collapse**  ← DERIVED OUTPUT
-```
-
-What is **assumed**:
-
-- DetectsMono K (structural property of the kernel)
-- OmegaAdmissible (trajectory coherence)
-- NegComplete (theory completeness)
-- Effective extraction (constructive certificate schema)
-
-What is **derived**:
-
-- Trilemma disjunction
-- PosComplete from ¬RouteIIAt
-- Canonization from PosComplete + NegComplete
-- **Collapse** from Canonization + extraction
+**Important**: The existence of `EffectiveCanonizationAtOmega` is itself an
+assumption/data source unless you prove the trajectory produces it. Collapse is
+"derived from effective canonization data," not "forced by dynamics" in a strong
+unconditional sense.
 
 ## What changes vs the usual view
 
@@ -93,16 +74,29 @@ Usual view:
 
 RevHalt view in this file:
 
-- P vs NP becomes a question about **which structural constraints hold**.
-- If they hold, Collapse is **forced** — not chosen.
+- P vs NP becomes a question about **which hypothesis packages hold** and
+  **which trajectory choices you make**.
+- If they hold and you make those choices, Collapse follows.
 - Decision vs search is explicit: you must also justify extraction, not just
   decidability.
 - The frontier `S1Rel_TSP` adds a provability layer that is absent in standard
   complexity treatments.
 
-## Practical interpretation
+## Complexity caveat
 
-The file shows that under certain meta-theoretic constraints (DetectsMono,
-OmegaAdmissible, completeness, effective extraction), the framework **derives**
-Collapse as a consequence. This means TSP admits an efficient search procedure
-in this setting — not because we assumed it, but because the dynamics force it.
+`Collapse_TSP_Axiom` says "exists Find" but does not formalize or prove
+a polynomial bound. "Efficient" remains informal unless resource bounds are
+modeled explicitly.
+
+## Summary (accurate version)
+
+The file shows a **conditional pipeline**:
+
+**Given** the Route II hypothesis package and **given** a trajectory choice that
+preserves Absorbable + OmegaAdmissible, you obtain ¬RouteIIAt.
+
+From that (plus the Halts↔Rev0_K bridge if using generic S1Rel) you get
+PosComplete-at-ω.
+
+Adding NegComplete and effective canonization data yields a Collapse-style
+search/decision procedure.
