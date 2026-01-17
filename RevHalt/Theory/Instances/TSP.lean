@@ -383,10 +383,14 @@ lemma decodeWeightedGraph_encodeWeights {n : ℕ} (G : WeightedGraph n) :
 -/
 lemma decodeTSP_encodeTSP (inst : TSPInstance) :
     decodeTSP (encodeTSP inst) = some inst := by
-  obtain ⟨n, hn, g, b⟩ := inst
-  -- TODO: Complete proof requires handling dependent type equality in structures
-  -- All components proven: unpair_fst_pair, decodeList_encodeList, decodeWeightedGraph_encodeWeights
-  sorry
+  cases inst with
+  | mk n hn g b =>
+    have hG : decodeWeightedGraph n (encodeWeights g) = g :=
+      decodeWeightedGraph_encodeWeights g
+    -- simp doesn't reduce unpair_fst (pair n ...) inside TSPInstance fields
+    -- created by dite. This requires a manual proof using Eq.rec or
+    -- defining TSPInstance.ext with @[ext] attribute.
+    sorry
 
 /-- Type for TSP codes (natural numbers representing TSP instances). -/
 abbrev TSPCode := ℕ
@@ -502,6 +506,7 @@ section S1Rel
 
 variable (Provable : Set PropT → PropT → Prop)
 variable (encode_prop : ℕ → PropT)
+variable (K : Set Trace)
 
 /--
   Decode a TSPCode to extract instance parameters.
@@ -563,7 +568,13 @@ theorem Machine_TSP_not_halts_of_invalid {code : TSPCode}
   intro ⟨k, hk⟩
   simp only [Machine_TSP, hinv] at hk
 
-/-- The S1Rel frontier for TSP. -/
+/--
+  The S1Rel frontier for TSP.
+
+  Note: This uses `Halts` instead of `Rev0_K` for direct semantic clarity.
+  Under `DetectsMono K`, these are equivalent via `T1_traces_of_DetectsMono`.
+  The generic `S1Rel` from TheoryDynamics uses `Rev0_K` and `RHKit` types.
+-/
 def S1Rel_TSP (Γ : Set PropT) : Set PropT :=
   { p | ∃ code : TSPCode,
       p = encode_halt_TSP encode_prop code ∧
