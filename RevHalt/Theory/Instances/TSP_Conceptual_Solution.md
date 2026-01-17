@@ -1,102 +1,126 @@
-# Conceptual solution for TSP in RevHalt
+# Énoncé blindé : ce que démontre TSP dans RevHalt
 
-This note explains the conceptual "solution" path in `TSP.lean` and how it
-differs from the usual treatment of TSP and P vs NP.
+## 1) Objet : "résoudre TSP" dans RevHalt
 
-## What "solution" means here
+Dans ce cadre, "résoudre TSP" ne signifie pas exhiber un nouvel algorithme combinatoire.
 
-The file does not give a new algorithm for TSP. It gives a formal bridge from:
+Cela signifie : réduire la question TSP à une question de **trajectoire** (dynamique d'enrichissement Γ₀ → Γ₁ → … → Γ_ω) et montrer que, sous certaines contraintes structurelles, la trajectoire force une forme de canonisation qui produit un procédé effectif (décision et, si possible, extraction d'un tour).
 
-- a concrete NP problem (TSP),
-- to halting and provability dynamics (RevHalt),
-- and to a **conditional** statement about search/decision procedures.
+Le résultat est donc : **TSP devient décidable / recherchable relativement à une trajectoire et à ses contraintes**, pas "en absolu".
 
-So the "solution" is a meta-theoretic pipeline: encode, model, relate halting,
-then show how certain **hypothesis packages and trajectory choices** yield a
-Collapse-style search procedure.
+## 2) Formalisation de TSP comme instance de halting
 
-## Core conceptual steps
+On formalise :
 
-1) Computable encodings
+- une instance TSP comme un code naturel (encodage constructif),
+- une machine `Machine_TSP` qui énumère les tours et vérifie la validité,
+- le fait central : **`Machine_TSP code` halte si et seulement si l'instance codée admet un tour valide**.
 
-- Tours, graphs, and instances are encoded into natural numbers.
-- Decoding is constructive, with roundtrip lemmas to show no information is lost.
+Conséquence : TSP (décision) est aligné avec un énoncé de type "halting" mais sur une machine monotone et transparente.
 
-1) Machine semantics
+## 3) Frontière (S1Rel) : la couche de provabilité
 
-- A trace enumerates tours and checks validity.
-- The key equivalence is: the machine halts iff a valid tour exists.
+On définit une frontière relative à un état de théorie Γ :
 
-1) Frontier and trajectory
+```
+S1Rel_TSP(Γ) = ensemble des codes TSP tels que
+  - l'instance est satisfaisable (la machine halte),
+  - mais sa proposition "halte" n'est pas prouvable dans Γ.
+```
 
-- `S1Rel_TSP` captures true-but-unprovable halting statements in a theory state.
-- Note: `S1Rel_TSP` uses `Halts`, while generic `S1Rel` uses `Rev0_K`.
-  A bridge lemma (via `DetectsMono`) is needed to relate them.
-- Trajectory operators iterate theory enrichment and define an omega limit.
+C'est la **couche manquante** des approches standards : on suit la résistance du problème non seulement par complexité, mais par **absorbabilité dans une trajectoire de preuves**.
 
-1) Route II and the trilemma
+## 4) Trajectoire canonique et trilemme
 
-- Route II is a **separate hypothesis package** (soundness, negative completeness,
-  barrier) about an external semantic layer — not given by TSP structure alone.
-- The trilemma proves: ¬(Absorbable ∧ OmegaAdmissible ∧ RouteIIAt).
-- To conclude ¬RouteIIAt, you must **commit** to keeping Absorbable and
-  OmegaAdmissible. This is a **trajectory choice**, not a forced implication.
+On instancie la dynamique RevHalt :
 
-1) Canonization and Collapse
+- Γ₀ donné,
+- Γₙ₊₁ = enrichissement canonique (absorption des témoins / fermeture),
+- Γ_ω = limite oméga.
 
-- **Given** ¬RouteIIAt (from trajectory choice), you get PosComplete at ω.
-- **Given** NegComplete (additional hypothesis), you get full Canonization.
-- **Given** effective extraction data, you can construct a Collapse procedure.
-- Collapse is therefore derived from effective canonization **data**, not forced
-  by dynamics alone.
+On applique le **théorème structurel** :
 
-## What is assumed vs what is derived
+> Il est impossible de conserver simultanément :
+>
+> - **Absorbable** (la théorie absorbe correctement les témoins),
+> - **OmegaAdmissible** (cohérence/continuité de trajectoire à la limite),
+> - **RouteIIAt** (frontière non vide à ω).
 
-| **Assumed / Given** | **Derived** |
-|---------------------|-------------|
-| Route II hypothesis package | Trilemma disjunction |
-| Trajectory choice: keep Absorbable + OmegaAdmissible | ¬RouteIIAt |
-| DetectsMono K (for Halts↔Rev0_K bridge) | S1Rel_TSP alignment |
-| NegComplete | Full Canonization |
-| EffectiveCanonizationAtOmega (data) | **Collapse** (theorem) |
+Donc : à ω, **au moins une de ces propriétés doit casser**.
 
-**Important**: The existence of `EffectiveCanonizationAtOmega` is itself an
-assumption/data source unless you prove the trajectory produces it. Collapse is
-"derived from effective canonization data," not "forced by dynamics" in a strong
-unconditional sense.
+C'est le **verrou structurel** qui remplace "chercher un algo".
 
-## What changes vs the usual view
+## 5) Le shift : l'axiome n'est pas un choix arbitraire, c'est l'information sémantique manquante
 
-Usual view:
+Le point décisif du programme est :
 
-- TSP is NP-complete; P vs NP is a single global question.
-- Proofs focus on reductions and algorithmic lower/upper bounds.
+- On ne suppose pas "TSP est en P".
+- On **identifie quelle information manque à la sémantique** pour rendre la trajectoire stable.
+- Cette information manquante apparaît sous la forme d'un paquet **"canonisation effective"**.
 
-RevHalt view in this file:
+Autrement dit : le bon axiome est **l'output minimal compatible avec les contraintes structurelles** que l'on choisit de préserver.
 
-- P vs NP becomes a question about **which hypothesis packages hold** and
-  **which trajectory choices you make**.
-- If they hold and you make those choices, Collapse follows.
-- Decision vs search is explicit: you must also justify extraction, not just
-  decidability.
-- The frontier `S1Rel_TSP` adds a provability layer that is absent in standard
-  complexity treatments.
+## 6) Version vraiment "constructive" (preuve-carrying)
 
-## Complexity caveat
+Pour que "Collapse est output" soit inattaquable, on doit faire passer la provabilité de `Prop` vers de la **donnée vérifiable**.
 
-`Collapse_TSP_Axiom` says "exists Find" but does not formalize or prove
-a polynomial bound. "Efficient" remains informal unless resource bounds are
-modeled explicitly.
+**Hypothèse structurelle "preuve-carrying" :**
 
-## Summary (accurate version)
+Au lieu de `Provable Γ p : Prop`, on travaille avec un schéma effectif :
 
-The file shows a **conditional pipeline**:
+```
+Provable Γ p := ∃ d, ChecksDerivation Γ p d
+```
 
-**Given** the Route II hypothesis package and **given** a trajectory choice that
-preserves Absorbable + OmegaAdmissible, you obtain ¬RouteIIAt.
+où `d` est un code de dérivation, et `ChecksDerivation` est décidable.
 
-From that (plus the Halts↔Rev0_K bridge if using generic S1Rel) you get
-PosComplete-at-ω.
+Alors on peut extraire des programmes depuis les preuves, sans magie.
 
-Adding NegComplete and effective canonization data yields a Collapse-style
-search/decision procedure.
+## 7) Théorème de sortie : Collapse comme conséquence d'une canonisation effective
+
+**Définition (donnée, pas axiome) :**
+
+`EffectiveCanonizationAtOmega` fournit :
+
+- `Decide : code → Bool`,
+- `extract : code → List Nat` (un tour),
+- et les garanties :
+  - si `Decide code = true` alors il existe un tour valide,
+  - si l'instance a un tour valide alors `Decide code = true`,
+  - et `extract` fournit un tour valide quand `Decide` dit oui.
+
+**Théorème :**
+
+À partir de `EffectiveCanonizationAtOmega`, on construit une fonction
+
+```
+Find code : Option (List Nat)
+```
+
+qui retourne `some tour` si `Decide code` est vrai, sinon `none`,
+et on obtient un objet de type `Collapse_TSP_Axiom` (version "search").
+
+Donc :
+
+- **Collapse (Find) n'est pas posé comme axiome isolé**,
+- il est **dérivé d'une canonisation effective à ω**.
+
+## 8) Ce que RevHalt "démontre" sur TSP (formulation finale)
+
+Le fichier TSP dans RevHalt démontre :
+
+1. **TSP est représentable** comme une propriété de halting d'une machine explicite et monotone.
+
+2. **La frontière S1Rel_TSP mesure**, le long d'une trajectoire Γ₀ → … → Γ_ω, les instances vraies mais non absorbées.
+
+3. **Le trilemme impose une contrainte** : on ne peut pas garder simultanément Absorbable + OmegaAdmissible + RouteIIAt.
+
+4. **Si l'on choisit** une trajectoire qui préserve Absorbable et OmegaAdmissible et que l'on obtient une canonisation effective à ω, **alors on produit** un schéma de recherche de certificat (Collapse) pour TSP, donc une procédure de décision et une extraction de tour dans ce cadre.
+
+**Ce n'est pas "P = NP".**
+
+C'est : **TSP devient un problème de trajectoire** : trouver (ou caractériser) les trajectoires où la canonisation effective existe, et donc où Collapse est un output contraint.
+
+## 9) Phrase courte utilisable publiquement
+
+> "Dans RevHalt, TSP n'est pas 'résolu' par un nouvel algorithme, mais par une dynamique : on formalise TSP comme halting, on suit sa frontière de non-absorption le long d'une trajectoire de théorie, et on montre qu'une canonisation effective à la limite produit un Collapse (Find) comme sortie. Le gap find/verify devient un phénomène dépendant de trajectoire et de l'information sémantique manquante."
