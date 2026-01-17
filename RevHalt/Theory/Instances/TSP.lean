@@ -6,6 +6,7 @@ Authors: RevHalt Contributors
 import RevHalt.Theory.TheoryDynamics
 import RevHalt.Theory.TheoryDynamics_RouteII
 import RevHalt.Theory.TheoryDynamics_Trajectory
+import RevHalt.Theory.TheoryDynamics_ProofCarrying
 import RevHalt.Theory.Canonicity
 import Mathlib.Data.Fin.Basic
 import Mathlib.Data.Finset.Basic
@@ -987,19 +988,18 @@ theorem PosComplete_of_not_RouteIIAt (ωΓ : Set PropT)
 -- PART C: EXTRACTION FOR COLLAPSE-SEARCH
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-/--
+/-
   **ExtractTour**: The ability to extract a concrete tour from a proof of halting.
 
   This is needed for Collapse-SEARCH (not just Collapse-DECISION).
   Without this, we can only conclude "decidable" not "searchable".
 
   This corresponds to H1 (Bio-Absorption Effective) in the operational direction.
+
+  *Update*: This is now satisfied by the **Witness-Carrying** framework.
+  The abstract requirement is provided by `ExtractTour_of_ProvableWC`.
 -/
-structure ExtractTour (ωΓ : Set PropT) : Prop where
-  extract : ∀ code : TSPCode, ∀ inst : TSPInstance,
-    decodeTSP code = some inst →
-    Provable ωΓ (encode_halt_TSP encode_prop code) →
-    ∃ tour : Tour inst.n, ValidTour inst tour
+-- structure ExtractTour (deprecated, replaced by ProvableWC theorem)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- PART D: EFFECTIVE CANONIZATION (CONSTRUCTIVE)
@@ -1130,5 +1130,90 @@ TSP formalized within RevHalt framework:
 
 P vs NP is **trajectory-dependent**: different axiom choices yield different answers.
 -/
+
+end RevHalt.TSP
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SECTION 14: WITNESS-CARRYING INTEGRATION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+namespace RevHalt.TSP
+
+open RevHalt.ProofCarrying.Witness
+
+/-!
+# Witness-Carrying Integration for TSP
+
+This section bridges the general witness-carrying framework (`RevHalt.TheoryDynamics_ProofCarrying`)
+with the concrete TSP instance.
+
+We adopt **Option A**: `PropT := ℕ`, where the proposition `p` is simply the encoded TSP instance code.
+-/
+
+/--
+  Concrete Witness Checker for TSP.
+  `p` is interpreted as the encoded TSP instance.
+  `w` is the witness (list of nodes representing the tour).
+-/
+def ChecksWitness_TSP (p : ℕ) (w : List ℕ) : Bool :=
+  match decodeTSP p with
+  | none => false
+  | some inst => checkTour inst w
+
+/--
+  Soundness of `checkTour`: if it returns true, there exists a valid tour structure.
+  This is the key lemma for extraction.
+-/
+theorem checkTour_sound (inst : TSPInstance) (path : List ℕ) :
+    checkTour inst path = true →
+    ∃ tour : Tour inst.n, tour.path = path ∧ ValidTour inst tour := by
+  intro h
+  unfold checkTour at h
+  split_ifs at h with h_len h_range h_nodup
+  · -- valid case
+    let range_valid : ∀ x, x ∈ path → x < inst.n := by
+      intro x hx
+      have hr := List.all_eq_true.mp h_range x hx
+      exact decide_eq_true_iff.mp hr
+    let tour : Tour inst.n := {
+      path := path
+      length_eq := h_len
+      nodup := h_nodup
+      range_valid := range_valid
+    }
+    exists tour
+    constructor
+    · rfl
+    · apply decide_eq_true_iff.mp h
+
+/--
+  **Extraction Theorem**:
+  If there is a valid Witness-Carrying derivation (ProvableWC) for a TSP instance code,
+  then a valid TSP solution exists.
+
+  This replaces the abstract `ExtractTour` hypothesis.
+-/
+theorem ExtractTour_of_ProvableWC
+    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
+    (Γ : Set ℕ) (code : ℕ) (inst : TSPInstance)
+    (hdec : decodeTSP code = some inst) :
+    (ProvableWC ChecksDerivation ChecksWitness_TSP decodeList Γ code) →
+    ∃ tour : Tour inst.n, ValidTour inst tour := by
+  rintro ⟨d⟩
+  -- d.valid : ChecksWC ... = true
+  have hValid := d.valid
+  unfold ChecksWC at hValid
+  simp only [Bool.and_eq_true] at hValid
+  have hWitnessCheck := hValid.2
+
+  -- Interpret ChecksWitness_TSP
+  unfold ChecksWitness_TSP at hWitnessCheck
+  rw [hdec] at hWitnessCheck
+
+  let w := WCDerivation.witness ChecksDerivation ChecksWitness_TSP decodeList d
+  have hCheck : checkTour inst w = true := hWitnessCheck
+
+  rcases checkTour_sound inst w hCheck with ⟨tour, _, hValidTour⟩
+  exact ⟨tour, hValidTour⟩
 
 end RevHalt.TSP
