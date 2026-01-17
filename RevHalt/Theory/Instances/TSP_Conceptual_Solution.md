@@ -60,6 +60,13 @@ Le point décisif du programme est :
 
 Autrement dit : le bon axiome est **l'output minimal compatible avec les contraintes structurelles** que l'on choisit de préserver.
 
+Mais il faut être précis sur ce qui est **forcé** vs **fourni** :
+
+- **Forcé par la dynamique** : Le trilemme impose qu'on ne peut garder simultanément Absorbable + OmegaAdmissible + RouteIIAt. Si on garde les deux premiers, la frontière RouteIIAt doit céder (Collapse).
+- **Pas "gratuit" (Fourni)** : Passer d'une frontière vide à un `Find` effectif (et polynomial) nécessite **du contenu effectif** (`EffectiveCanonizationAtOmega`). Ce contenu est le cœur algorithmique qui doit être extrait de la trajectoire.
+
+Donc : le shift est majeur car il déplace le problème, mais l'effectivité n'est pas magique ; elle provient de la richesse de la trajectoire choisie.
+
 ## 6) Version vraiment "constructive" (preuve-carrying)
 
 Pour que "Collapse est output" soit inattaquable, on doit faire passer la provabilité de `Prop` vers de la **donnée vérifiable**.
@@ -115,7 +122,11 @@ Le fichier TSP dans RevHalt démontre :
 
 3. **Le trilemme impose une contrainte** : on ne peut pas garder simultanément Absorbable + OmegaAdmissible + RouteIIAt.
 
-4. **Si l'on choisit** une trajectoire qui préserve Absorbable et OmegaAdmissible et que l'on obtient une canonisation effective à ω, **alors on produit** un schéma de recherche de certificat (Collapse) pour TSP, donc une procédure de décision et une extraction de tour dans ce cadre.
+4. **Si l'on choisit** une trajectoire qui préserve Absorbable et OmegaAdmissible et que l'on obtient une canonisation effective à ω (ce qui n'est pas automatique, mais conditionnel à la trajectoire), **alors on produit** un schéma de recherche de certificat (Collapse) pour TSP.
+
+-
+
++5. **Le "Prix" de P** : La borne polynomiale et l'effectivité de `Find` ne sortent pas du vide ; elles sont encapsulées dans l'hypothèse `EffectiveCanonizationAtOmega`. Le théorème montre que **SI** la trajectoire permet cette canonisation, **ALORS** TSP est en P.
 
 **Ce n'est pas "P = NP".**
 

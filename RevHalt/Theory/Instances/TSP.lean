@@ -187,12 +187,11 @@ structure TSPInstance where
     (hbound : a.bound = b.bound)
     (hgraph : HEq a.graph b.graph) :
     a = b := by
-  cases a; cases b
-  cases hn
-  simp at hbound
-  cases hbound
-  cases hgraph
-  rfl
+  rcases a with ⟨n, hn_a, graph, bound⟩
+  rcases b with ⟨n', hn_b, graph', bound'⟩
+  dsimp at hn hbound
+  cases hn; cases hbound; cases hgraph
+  congr
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SECTION 3: TOURS
@@ -399,19 +398,12 @@ lemma decodeTSP_encodeTSP (inst : TSPInstance) :
     decodeTSP (encodeTSP inst) = some inst := by
   cases inst with
   | mk n hn g b =>
-    have hG : decodeWeightedGraph n (encodeWeights g) = g :=
-      decodeWeightedGraph_encodeWeights g
-    show decodeTSP (encodeTSP ⟨n, hn, g, b⟩) = some ⟨n, hn, g, b⟩
-    simp [decodeTSP, encodeTSP, hn]
-    have hfst :
-        unpair_fst (pair n (pair b (encodeList (encodeWeights g)))) = n := by
-      simp
-    have hleft :
-        decodeWeightedGraph (unpair_fst (pair n (pair b (encodeList (encodeWeights g)))))
-            (encodeWeights g) ≍
-          decodeWeightedGraph n (encodeWeights g) := by
-      rw [hfst]
-    exact heq_of_heq_of_eq hleft hG
+    rw [encodeTSP]
+    dsimp only [decodeTSP]
+    have h_n : unpair_fst (pair n (pair b (encodeList (encodeWeights g)))) = n := by
+      simp only [unpair_fst_pair]
+    rw [h_n]
+    simp only [unpair_snd_pair, unpair_fst_pair, decodeList_encodeList, decodeWeightedGraph_encodeWeights, hn, ↓reduceDIte]
 
 /-- Type for TSP codes (natural numbers representing TSP instances). -/
 abbrev TSPCode := ℕ
@@ -471,7 +463,8 @@ theorem TSPTrace_halts_iff (inst : TSPInstance) :
     Halts (TSPTrace inst) ↔ HasSolution inst := by
   constructor
   · -- Halts → HasSolution
-    intro ⟨k, code, _, tour, _, hvalid⟩
+    intro ⟨k, hk⟩
+    rcases hk with ⟨code, hcode, tour, hdec, hvalid⟩
     exact ⟨tour, hvalid⟩
   · -- HasSolution → Halts
     intro ⟨tour, hvalid⟩
@@ -514,7 +507,7 @@ def checkTour (inst : TSPInstance) (path : List ℕ) : Bool :=
           range_valid := range_valid
         }
         -- Check cost
-        tourCost inst.graph tour inst.hn ≤ inst.bound
+        decide (tourCost inst.graph tour inst.hn ≤ inst.bound)
       else false
     else false
   else false
