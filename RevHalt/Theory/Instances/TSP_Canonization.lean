@@ -5,7 +5,8 @@ import RevHalt.Theory.Instances.TSP
 namespace RevHalt.TSP
 
 open RevHalt.CanonizationWC
-open RevHalt.CanonizationWC
+
+
 open RevHalt.ProofCarrying.Witness
 
 /-
@@ -98,8 +99,8 @@ theorem PosCompleteWC_of_S1Rel_empty_TSP
       refine ⟨p, rfl, hRev0, hNProv⟩
 
     -- 4. Contradiction with empty S1Rel
-    rw [hEmpty] at hIn
-    exact hIn
+    -- 4. Contradiction with empty S1Rel
+    simpa [hEmpty] using hIn
 }
 
 
