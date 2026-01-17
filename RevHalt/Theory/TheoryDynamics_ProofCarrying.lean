@@ -18,6 +18,7 @@ represented as verifiable codes that also carry a witness (certificate).
 * `ChecksWC` - Decidable check that a code is valid (checks both proof and witness)
 * `WCDerivation` - Structure bundling WCCode with validity proof
 * `findBounded` - Computable search for a valid derivation
+* `ProvableWC` - The resulting provability predicate (Nonempty WCDerivation)
 
 ## Key insight
 
@@ -28,7 +29,7 @@ Instead of just `Provable Γ p`, we work with an object that guarantees:
 This effectively makes extraction (e.g. of a TSP tour) a projection of the proof object.
 -/
 
-namespace RevHalt.ProofCarrying
+namespace RevHalt.ProofCarrying.Witness
 
 variable {PropT : Type*}
 
@@ -47,15 +48,9 @@ abbrev unpair_snd (n : ℕ) : ℕ := (Nat.unpair n).2
 def proofPart (c : WCCode) : DerivationCode := unpair_fst c
 def witnessPart (c : WCCode) : ℕ := unpair_snd c
 
-
---  Checker de preuve (abstrait) et checker de témoin (abstrait).
---  On ne suppose rien de classique ici, tout est Bool.
---  Note: ChecksWitness depends on the proposition p and the witness list.
-
+section Variables
 variable (ChecksDerivation : Set PropT → PropT → DerivationCode → Bool)
 variable (ChecksWitness : PropT → List ℕ → Bool)
-
--- Encodage/décodage d'une liste en ℕ.
 variable (encodeList : List ℕ → ℕ)
 variable (decodeList : ℕ → List ℕ)
 
@@ -79,13 +74,11 @@ structure WCDerivation (Γ : Set PropT) (p : PropT) where
 
 /-- Extraction computable du témoin. -/
 def WCDerivation.witness {Γ : Set PropT} {p : PropT}
-    (d : WCDerivation (ChecksDerivation:=ChecksDerivation)
-                      (ChecksWitness:=ChecksWitness)
-                      (decodeList:=decodeList) Γ p) : List ℕ :=
+    (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p) : List ℕ :=
   decodeWitness decodeList d.code
 
 /-- Helper for finding a witness in a list -/
-def findInList (Γ : Set PropT) (p : PropT) : List ℕ → Option (WCDerivation (ChecksDerivation:=ChecksDerivation) (ChecksWitness:=ChecksWitness) (decodeList:=decodeList) Γ p)
+def findInList (Γ : Set PropT) (p : PropT) : List ℕ → Option (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
   | [] => none
   | k :: ks =>
     if h : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p k = true then
@@ -99,9 +92,7 @@ def findInList (Γ : Set PropT) (p : PropT) : List ℕ → Option (WCDerivation 
 -/
 def WCDerivation.findBounded
     (Γ : Set PropT) (p : PropT) (bound : ℕ) :
-    Option (WCDerivation (ChecksDerivation:=ChecksDerivation)
-                         (ChecksWitness:=ChecksWitness)
-                         (decodeList:=decodeList) Γ p) :=
+    Option (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p) :=
   findInList ChecksDerivation ChecksWitness decodeList Γ p (List.range bound)
 
 /--
@@ -117,6 +108,7 @@ def ChecksDerivationMonotone : Prop :=
 /--
   ChecksWC hérite de la monotonie de ChecksDerivation.
   (ChecksWitness ne dépend pas de Γ, donc il est trivialement monotone).
+  Preuve robuste sans `simp`.
 -/
 theorem ChecksWC_monotone
     (hMono : ChecksDerivationMonotone ChecksDerivation)
@@ -125,11 +117,9 @@ theorem ChecksWC_monotone
     ChecksWC ChecksDerivation ChecksWitness decodeList Γ p c = true →
     ChecksWC ChecksDerivation ChecksWitness decodeList Γ' p c = true := by
   intro h
-  unfold ChecksWC at *
-  simp only [Bool.and_eq_true] at h ⊢
-  constructor
-  · exact hMono hSub h.1
-  · exact h.2
+  simp only [ChecksWC, Bool.and_eq_true] at h ⊢
+  refine ⟨?_, h.2⟩
+  exact hMono hSub h.1
 
 /--
   Provable Proof-Carrying (W) est monotone si le checker l'est.
@@ -137,18 +127,30 @@ theorem ChecksWC_monotone
 theorem WCDerivation_monotone
     (hMono : ChecksDerivationMonotone ChecksDerivation)
     {Γ Γ' : Set PropT} (hSub : Γ ⊆ Γ') (p : PropT) :
-    Nonempty (WCDerivation (ChecksDerivation:=ChecksDerivation)
-                           (ChecksWitness:=ChecksWitness)
-                           (decodeList:=decodeList)
-                           Γ p) →
-    Nonempty (WCDerivation (ChecksDerivation:=ChecksDerivation)
-                           (ChecksWitness:=ChecksWitness)
-                           (decodeList:=decodeList)
-                           Γ' p) := by
+    Nonempty (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p) →
+    Nonempty (WCDerivation ChecksDerivation ChecksWitness decodeList Γ' p) := by
   rintro ⟨d⟩
   exact ⟨{
     code := d.code
     valid := ChecksWC_monotone ChecksDerivation ChecksWitness decodeList hMono hSub p d.code d.valid
   }⟩
 
-end RevHalt.ProofCarrying
+/--
+  **ProvableWC**: The integration definition for RevHalt.
+  Provability is defined as the existence of a valid witness-carrying derivation.
+-/
+def ProvableWC (Γ : Set PropT) (p : PropT) : Prop :=
+  Nonempty (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
+
+/--
+  ProvableWC satisfies the monotonicity requirement of TheoryDynamics.
+-/
+theorem ProvableWC_monotone
+    (hMono : ChecksDerivationMonotone ChecksDerivation) :
+    RevHalt.ProvRelMonotone (ProvableWC ChecksDerivation ChecksWitness decodeList) := by
+  intro Γ Δ hSub p hProv
+  exact WCDerivation_monotone ChecksDerivation ChecksWitness decodeList hMono hSub p hProv
+
+end Variables
+
+end RevHalt.ProofCarrying.Witness
