@@ -89,7 +89,7 @@ theorem PosCompleteWC_of_S1Rel_empty_TSP
       exact hHalts
 
     -- 3. If NOT Provable, then p ∈ S1Rel
-    -- 3. If NOT Provable, then p ∈ S1Rel
+
     classical
     by_contra hNProv
     have hIn : p ∈ S1Rel (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation)) K Machine_TSP (fun x => x) ωΓ := by
@@ -99,8 +99,8 @@ theorem PosCompleteWC_of_S1Rel_empty_TSP
       refine ⟨p, rfl, hRev0, hNProv⟩
 
     -- 4. Contradiction with empty S1Rel
-    -- 4. Contradiction with empty S1Rel
-    simpa [hEmpty] using hIn
+    rw [hEmpty] at hIn
+    exact hIn.elim
 }
 
 
