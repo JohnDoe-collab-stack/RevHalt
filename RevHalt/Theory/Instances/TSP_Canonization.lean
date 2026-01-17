@@ -5,10 +5,8 @@ import RevHalt.Theory.Instances.TSP
 namespace RevHalt.TSP
 
 open RevHalt.CanonizationWC
--- open RevHalt.ProofCarrying.Witness -- Removed to avoid ProvableWC ambiguity
-
-/-- Alias for the derivation code type used in ProofCarrying -/
-abbrev DerivationCode := RevHalt.ProofCarrying.Witness.DerivationCode
+open RevHalt.CanonizationWC
+open RevHalt.ProofCarrying.Witness
 
 /-
   **TSP Canonization Layer**
@@ -90,8 +88,9 @@ theorem PosCompleteWC_of_S1Rel_empty_TSP
       exact hHalts
 
     -- 3. If NOT Provable, then p ∈ S1Rel
+    -- 3. If NOT Provable, then p ∈ S1Rel
+    classical
     by_contra hNProv
-    classical -- Explicitly invoking Classical logic for by_contra/decidability
     have hIn : p ∈ S1Rel (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation)) K Machine_TSP (fun x => x) ωΓ := by
       unfold S1Rel
       simp only [Set.mem_setOf_eq]
@@ -149,5 +148,21 @@ def PolyPosWC_TSP_of_Stable
     (decodeList:=decodeList)
     (Γ:=ωΓ) (size:=TSPSize)
     pos pc
+
+/--
+  **End-to-End**: Stability + Price of P ⇒ Collapse.
+  This is the single function that projects Layer 2 stability into Layer 1 collapse.
+-/
+def Collapse_TSP_of_Stable_and_PriceOfP
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
+    (K : RHKit) (ωΓ : Set ℕ)
+    (hKMono : RevHalt.DetectsMono K)
+    (hEmpty : S1Rel
+        (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
+        K Machine_TSP (fun x => x) ωΓ = ∅)
+    (pc : PolyCompressionWC_TSP ChecksDerivation ωΓ) :
+    Collapse_TSP_Axiom := by
+  let poly := PolyPosWC_TSP_of_Stable (ChecksDerivation:=ChecksDerivation) K ωΓ hKMono hEmpty pc
+  exact Collapse_of_Trajectory_Poly (ωΓ:=ωΓ) poly
 
 end RevHalt.TSP

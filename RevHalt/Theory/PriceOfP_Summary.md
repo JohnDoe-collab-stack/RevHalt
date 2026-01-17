@@ -52,7 +52,11 @@ If Stability holds AND the "Price of P" (`PolyCompressionWC`) holds for $\omega\
 
 ### Lemma C: Collapse
 
-from `PolyPosWC`, we derive `Collapse` (P=NP for TSP) via the arithmetic search procedure `Find_poly`.
+From `PolyPosWC`, we derive `Collapse` (P=NP for TSP) via the arithmetic search procedure `Find_poly`.
+
+The entire chain is packaged in:
+**`RevHalt.TSP.Collapse_TSP_of_Stable_and_PriceOfP`**
+$Stability \land PolyCompression \implies Collapse TSP$.
 
 ## Summary Status
 

@@ -23,13 +23,8 @@ variable (ChecksDerivation : Set PropT → PropT → DerivationCode → Bool)
 variable (ChecksWitness    : PropT → List ℕ → Bool)
 variable (decodeList       : ℕ → List ℕ)
 
-/--
-  **ProvableWC**: Witness-Carrying Provability.
-  A proposition `p` is WC-provable in `Γ` if there exists a valid `WCDerivation`.
-  This replaces abstract `Provable` with a structural definition.
--/
-def ProvableWC (Γ : Set PropT) (p : PropT) : Prop :=
-  Nonempty (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
+
+
 
 /--
   **PosCompleteWC**: Positive Completeness in WC terms.
@@ -59,6 +54,7 @@ theorem findInList_complete_aux
     {ChecksDerivation : Set PropT → PropT → DerivationCode → Bool}
     {ChecksWitness : PropT → List ℕ → Bool}
     {decodeList : ℕ → List ℕ}
+    (p : PropT)
     (l : List ℕ)
     (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
     (hMem : d.code ∈ l) :
@@ -94,7 +90,7 @@ theorem findBounded_complete_local
     (WCDerivation.findBounded ChecksDerivation ChecksWitness decodeList Γ p bound).isSome := by
   have hMem : d.code ∈ List.range bound := List.mem_range.mpr hd
   unfold WCDerivation.findBounded
-  exact findInList_complete_aux (List.range bound) d hMem
+  exact findInList_complete_aux p (List.range bound) d hMem
 
 /--
   **Find_of_Bound**: Constructive Search from Bound.
@@ -140,8 +136,7 @@ theorem Find_of_Bound_correct
       simpa using h
     -- d is valid
     have hv := d.valid
-    unfold WCDerivation.valid ChecksWC at hv
-    simp only [Bool.and_eq_true] at hv
+    simp [ChecksWC, Bool.and_eq_true] at hv
     -- substitute
     rw [←hw]
     exact hv.2
