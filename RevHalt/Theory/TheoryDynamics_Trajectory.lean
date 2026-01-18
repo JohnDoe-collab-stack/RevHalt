@@ -58,11 +58,8 @@ theorem trajectory_unique (Γ0 : Set PropT) (traj : Trajectory (PropT := PropT))
       rw [h1, h2, ih]
 
 /--
-**Initial-Dependence**: Different initial states yield different trajectories
-(assuming strict growth at each stage).
-
-This is the key property: the trajectory is *fully determined* by Γ0,
-and different Γ0 give genuinely different trajectories.
+**Initial-Dependence**: Different initial states yield different trajectories,
+since the trajectory is fully determined by its value at time 0.
 -/
 theorem trajectory_initial_dependence
     {Γ0 Δ0 : Set PropT}
