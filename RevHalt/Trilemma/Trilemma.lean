@@ -162,4 +162,33 @@ theorem omegaAdmissible_omega_and_routeIIAt_omega_implies_not_absorbable_step
           (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
           hMono hCnExt hIdem hProvCn n) ⟨hA, ⟨hB, hC⟩⟩
 
+theorem trilemma_disjunction_at_step
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (n : Nat) :
+    ¬ Absorbable Provable
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)).Γ
+    ∨ ¬ OmegaAdmissible Provable Cn
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n))
+    ∨ ¬ RouteIIAt Provable K Machine encode_halt
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n)) := by
+  classical
+  by_cases hP : Absorbable Provable
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)).Γ
+  · by_cases hQ : OmegaAdmissible Provable Cn
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n))
+    · right; right
+      intro hR
+      exact (trilemma_not_all_at_step
+        (Provable := Provable) (K := K) (Machine := Machine)
+        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+        hMono hCnExt hIdem hProvCn n) ⟨hP, ⟨hQ, hR⟩⟩
+    · right; left; exact hQ
+  · left; exact hP
+
 end RevHalt.Trilemma
