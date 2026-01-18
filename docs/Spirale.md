@@ -182,7 +182,7 @@ forall Gamma, R(Gamma) -> exists s in S1Rel(Gamma) and R(Gamma union {s})
 Donne une reparabilite locale. Ne produit pas automatiquement une suite infinie
 sans choix dependant.
 
-2) Existence d'une suite globale (sans fonction Next):
+1) Existence d'une suite globale (sans fonction Next):
 
 ```
 exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
@@ -190,7 +190,7 @@ exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
 
 Cible directe de l'objectif A. En general incomparable avec (1) sans choix.
 
-3) Choix classique / Skolem non calculable:
+1) Choix classique / Skolem non calculable:
 
 ```
 Next(Gamma) in S1Rel(Gamma) when R(Gamma)
@@ -198,7 +198,7 @@ Next(Gamma) in S1Rel(Gamma) when R(Gamma)
 
 Equivalent a (1) + choix uniforme. Donne une regle locale non calculable.
 
-4) Extension par toute la frontiere:
+1) Extension par toute la frontiere:
 
 ```
 Ext(Gamma) := Gamma union S1Rel(Gamma)
@@ -212,7 +212,7 @@ R(Gamma) -> R(Ext(Gamma))
 
 Cette persistance est une hypothese forte.
 
-5) Oracle/kit (Next externe):
+1) Oracle/kit (Next externe):
 
 ```
 Next_O(Gamma) fourni par un oracle, avec
@@ -278,5 +278,96 @@ du trilemme seul. Une fois posee, l'assignation est une simple verification
 par evaluation.
 
 Note de rigueur:
+
 - "Collatz se deduit du trilemme" = faux (theoreme)
 - "Collatz est une instanciation reconnaissable sous canonisation + puits" = vrai (interpretation)
+
+Sous une instanciation Collatz->D et l’hypothèse (ou preuve) ¬R au puits, le cycle 4-2-1 se reconnaît comme un représentant arithmétique du régime Type_PQ (stabilisation). Dans cette lecture, “s’arrêter” correspond à l’extinction de la frontière (plus de témoin S1 à ajouter), et l’absence de variable orthogonale observable au niveau des régimes rend compatible le fait qu’on retombe sur un cycle.
+
+---
+
+## 13) Verrou de preuve (le seul point non mecanique)
+
+### 13.1 Deux directions exclusives (ne pas confondre)
+
+**(A) Canonisation / arret (puits, type PQ)**
+Objectif : montrer que la spirale s'eteint en temps fini.
+
+Formes equivalentes :
+
+1. **Extinction finie de la frontiere**
+
+```
+exists n, not R_n
+```
+
+1. **Fixpoint d'extension (canonisation)**
+
+```
+exists n, Ext(Gamma^(n)) = Gamma^(n)
+```
+
+(avec la lecture : "plus rien a ajouter")
+
+1. **Stabilisation en Type_PQ a partir d'un rang**
+
+```
+exists n0, forall n >= n0, Type_PQ_n
+```
+
+**(B) Spirale infinie (regeneration)**
+Objectif : montrer que la spirale ne s'arrete jamais.
+
+Formes equivalentes :
+
+1. **Regeneration globale**
+
+```
+forall n, R_n
+```
+
+1. **Regle locale Next (version constructive)**
+
+```
+forall n, R_n -> exists s_n in S1Rel(Gamma^(n)) and R(Gamma^(n) union {s_n})
+```
+
+### 13.2 Ou la preuve doit tomber
+
+Le framework sert a isoler ce verrou. Tout le reste est mecanique une fois
+(A) ou (B) etabli.
+
+---
+
+## 14) Canonisation arithmetique (contrainte implicite)
+
+Principe de canonisation (arithmetique) :
+Sous la contrainte arithmetique, l'extension par frontiere atteint un fixpoint
+(donc la frontiere s'eteint).
+
+```
+ArithmeticConstraint -> exists n, Ext(Gamma^(n)) = Gamma^(n)
+```
+
+Et par definition :
+
+```
+Ext(Gamma) = Gamma  ->  not R(Gamma)
+```
+
+Cela rend l'"implicite" explicitement localise : ce n'est pas le trilemme,
+c'est la contrainte arithmetique.
+
+---
+
+## 15) Collatz : statut du puits
+
+Dans l'instanciation Collatz->D, le puits 4-2-1 est suppose (ou montre) etre
+un fixpoint pour Ext, donc non-R.
+
+```
+Puits_421 -> Ext(omegaGamma_puits) = omegaGamma_puits -> not R_puits
+```
+
+Ceci relie la "canonisation" a la Condition 2, confirmant que le lien est
+mecanique une fois le puits atteint.
