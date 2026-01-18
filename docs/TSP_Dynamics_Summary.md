@@ -85,6 +85,9 @@ However, the library makes the fixed-point forcing mechanism explicit.
 ### 7.1 Fixed point is a theorem under a policy + continuity
 
 There are two formal fixed-point schemata in the code:
+Here F is the theory transformer (e.g. F0 in TheoryDynamics), and
+omegaUnion (iter F Γ0) is the omega-limit of the iterative chain under
+the chosen LimitOp.
 
 (A) omega-chain (natural iteration):
   - OmegaContinuousSet F -> F(omegaUnion (iter F Γ0)) = omegaUnion (iter F Γ0)
@@ -108,9 +111,13 @@ So a fixed point at omega is not "natural"; it is produced by:
 
 ### 7.3 Conceptual mapping (non-essential lens)
 
+This project does not use the Lawvere/Tarski method; it treats fixed points
+as artifacts of explicit policy + continuity, not as a diagonalization route.
+
 - ZFC lens:
-  limit = union corresponds to unionLimitOp / cnUnionLimitOp.
-  The framework externalizes this as a policy, not a default.
+  common practice treats omega limits as unions of stages.
+  In this library that practice is unionLimitOp / cnUnionLimitOp,
+  and it is exposed as a policy, not a default.
 
 - Lawvere lens:
   diagonal or self-reference is a source of fixed points when the ambient
