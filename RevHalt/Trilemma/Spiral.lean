@@ -28,10 +28,14 @@ theorem spiral_step_strict
     (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
       ⊂
     (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)).Γ := by
-  exact strict_chainState_step Provable K Machine encode_halt Cn
-    hCnExt hIdem hProvCn A0 n hPS hW
+  simpa using
+    (strict_chainState_step
+      (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (Cn := Cn)
+      (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
+      (A0 := A0) (n := n) (hPS := hPS) (hW := hW))
 
-/-- Spiral step: monotone extension for every n. -/
+/-- Spiral step: monotone extension for every `n`. -/
 theorem spiral_step_mono
     (hCnExt : CnExtensive Cn)
     (hIdem : CnIdem Cn)
@@ -40,7 +44,11 @@ theorem spiral_step_mono
     (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
       ⊆
     (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)).Γ := by
-  exact chainState_step_hom_def Provable K Machine encode_halt Cn
-    hCnExt hIdem hProvCn A0 n
+  simpa using
+    (chainState_step_hom_def
+      (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (Cn := Cn)
+      (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
+      (A0 := A0) (n := n))
 
 end RevHalt.Trilemma
