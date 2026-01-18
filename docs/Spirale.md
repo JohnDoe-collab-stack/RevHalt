@@ -95,6 +95,8 @@ Gamma^(0) subsetneq Gamma^(1) subsetneq Gamma^(2) subsetneq ...
 ```
 
 On repete le mecanisme "frontiere -> ajout" sans revenir au meme etat.
+Cette stricte croissance suppose que chaque s_n est bien hors de Gamma^(n).
+Convention: on note omegaGamma^(n) := Gamma^(n) (iteration au niveau omega).
 
 ---
 
@@ -114,14 +116,14 @@ Le trilemme impose:
 not (P_n and Q_n and R_n)
 ```
 
-Et, si on adopte l'axe structurel:
+Et, si on adopte l'axe structurel (optionnel):
 
 ```
 R_n -> not P_n
 ```
 
 Lecture simple: tant que la spirale a du carburant (R_n vrai), l'absorption
-forte P_n est impossible.
+forte P_n est impossible. Garder R force a perdre P et/ou Q.
 
 ---
 
@@ -167,6 +169,8 @@ Next/Ext fabrique Gamma^(n+1) a partir de Gamma^(n)
 et garantit la persistance de la frontiere
 ```
 
+Les alternatives ci-dessous sont des moyens possibles de realiser ces objectifs.
+
 ## 9) Alternatives classees par force logique
 
 1) Regeneration non constructive (existence locale):
@@ -178,7 +182,7 @@ forall Gamma, R(Gamma) -> exists s in S1Rel(Gamma) and R(Gamma union {s})
 Donne une reparabilite locale. Ne produit pas automatiquement une suite infinie
 sans choix dependant.
 
-1) Existence d'une suite globale (sans fonction Next):
+2) Existence d'une suite globale (sans fonction Next):
 
 ```
 exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
@@ -186,7 +190,7 @@ exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
 
 Cible directe de l'objectif A. En general incomparable avec (1) sans choix.
 
-1) Choix classique / Skolem non calculable:
+3) Choix classique / Skolem non calculable:
 
 ```
 Next(Gamma) in S1Rel(Gamma) when R(Gamma)
@@ -194,7 +198,7 @@ Next(Gamma) in S1Rel(Gamma) when R(Gamma)
 
 Equivalent a (1) + choix uniforme. Donne une regle locale non calculable.
 
-1) Extension par toute la frontiere:
+4) Extension par toute la frontiere:
 
 ```
 Ext(Gamma) := Gamma union S1Rel(Gamma)
@@ -208,7 +212,7 @@ R(Gamma) -> R(Ext(Gamma))
 
 Cette persistance est une hypothese forte.
 
-1) Oracle/kit (Next externe):
+5) Oracle/kit (Next externe):
 
 ```
 Next_O(Gamma) fourni par un oracle, avec
@@ -269,5 +273,10 @@ mais conditionnelle.
 > Alors "puits = Type_PQ" est une consequence immediate (definitionnelle).
 
 L'unique point non mecanique est la clause "frontiere vide au puits", qui est
-soit un axiome d'instanciation, soit un lemme a prouver. Une fois posee,
-l'assignation est une simple verification par evaluation.
+soit un axiome d'instanciation, soit un lemme a prouver. Elle ne se deduit pas
+du trilemme seul. Une fois posee, l'assignation est une simple verification
+par evaluation.
+
+Note de rigueur:
+- "Collatz se deduit du trilemme" = faux (theoreme)
+- "Collatz est une instanciation reconnaissable sous canonisation + puits" = vrai (interpretation)
