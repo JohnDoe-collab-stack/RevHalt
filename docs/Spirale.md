@@ -60,6 +60,14 @@ Ext(Gamma) := Gamma union {s}
 
 ou s est "frontiere": certifie vrai et non prouvable dans Gamma.
 
+Notation: Ext est le pas singleton. Quand on sature, on ecrit:
+
+```
+Ext_sat(Gamma) := Gamma union S1Rel(Gamma)
+```
+
+Rappel: S1Rel(Gamma) est le predicat "frontiere" et S1Set(Gamma) son ensemble.
+
 Forme canonique (dans Complementarity):
 
 ```
@@ -182,7 +190,7 @@ forall Gamma, R(Gamma) -> exists s in S1Rel(Gamma) and R(Gamma union {s})
 Donne une reparabilite locale. Ne produit pas automatiquement une suite infinie
 sans choix dependant.
 
-1) Existence d'une suite globale (sans fonction Next):
+2) Existence d'une suite globale (sans fonction Next):
 
 ```
 exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
@@ -190,7 +198,7 @@ exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
 
 Cible directe de l'objectif A. En general incomparable avec (1) sans choix.
 
-1) Choix classique / Skolem non calculable:
+3) Choix classique / Skolem non calculable:
 
 ```
 Next(Gamma) in S1Rel(Gamma) when R(Gamma)
@@ -198,21 +206,21 @@ Next(Gamma) in S1Rel(Gamma) when R(Gamma)
 
 Equivalent a (1) + choix uniforme. Donne une regle locale non calculable.
 
-1) Extension par toute la frontiere:
+4) Extension par toute la frontiere:
 
 ```
-Ext(Gamma) := Gamma union S1Rel(Gamma)
+Ext_sat(Gamma) := Gamma union S1Rel(Gamma)
 ```
 
 Evite le choix d'un temoin, mais requiert en plus:
 
 ```
-R(Gamma) -> R(Ext(Gamma))
+R(Gamma) -> R(Ext_sat(Gamma))
 ```
 
 Cette persistance est une hypothese forte.
 
-1) Oracle/kit (Next externe):
+5) Oracle/kit (Next externe):
 
 ```
 Next_O(Gamma) fourni par un oracle, avec
@@ -248,7 +256,7 @@ Points structurants:
 
 - Separation nette entre regimes (P/Q/R) et etats (Gamma) pour eviter
   "cycle des regimes = pas de progres".
-- Cout explicite a chaque etape: garder R force a perdre P ou Q.
+- Cout explicite a chaque etape: garder R force a perdre P et/ou Q.
 - Localisation des hypotheses manquantes: regeneration/Next est isolee
   comme principe cible, pas comme consequence cachee.
 - Progres prouvable: inclusion stricte ou rang ordinal comme mesure.
@@ -258,8 +266,8 @@ Points structurants:
 
 ## 12) Application a Collatz (Verification conditionnelle)
 
-La question "Le cycle 4-2-1 correspond-il au regime Type_PQ ?" est decidable
-mais conditionnelle.
+La question "Le cycle 4-2-1 correspond-il au regime Type_PQ ?" est verifiable
+(conditionnelle), et decidable si P/Q/R le sont.
 
 - **Condition 1 (Instanciation)** : Il faut definir explicitement un objet D
   associe a Collatz et des predicats P(D), Q(D), R(D).
@@ -274,8 +282,8 @@ mais conditionnelle.
 
 L'unique point non mecanique est la clause "frontiere vide au puits", qui est
 soit un axiome d'instanciation, soit un lemme a prouver. Elle ne se deduit pas
-du trilemme seul. Une fois posee, l'assignation est une simple verification
-par evaluation.
+du trilemme seul. Une fois posee, l'assignation est une verification definie
+(et mecanique si P,Q,R sont decidables).
 
 Note de rigueur:
 
@@ -293,7 +301,13 @@ Sous une instanciation Collatz->D et l’hypothèse (ou preuve) ¬R au puits, le
 **(A) Canonisation / arret (puits, type PQ)**
 Objectif : montrer que la spirale s'eteint en temps fini.
 
-Formes equivalentes :
+Hypothese (stabilite PQ):
+
+```
+forall n (ou a partir d'un rang), P_n and Q_n
+```
+
+Formes equivalentes sous stabilite(P,Q) :
 
 1. **Extinction finie de la frontiere**
 
@@ -304,7 +318,7 @@ exists n, not R_n
 1. **Fixpoint d'extension (canonisation)**
 
 ```
-exists n, Ext(Gamma^(n)) = Gamma^(n)
+exists n, Ext_sat(Gamma^(n)) = Gamma^(n)
 ```
 
 (avec la lecture : "plus rien a ajouter")
@@ -342,31 +356,36 @@ Le framework sert a isoler ce verrou. Tout le reste est mecanique une fois
 ## 14) Canonisation arithmetique (contrainte implicite)
 
 Principe de canonisation (arithmetique) :
-Sous la contrainte arithmetique, l'extension par frontiere atteint un fixpoint
+Sous la contrainte arithmetique, l'extension saturee par frontiere atteint un fixpoint
 (donc la frontiere s'eteint).
 
 ```
-ArithmeticConstraint -> exists n, Ext(Gamma^(n)) = Gamma^(n)
+ArithmeticConstraint -> exists n, Ext_sat(Gamma^(n)) = Gamma^(n)
 ```
 
-Et par definition :
+Definition directe du Fixpoint :
 
 ```
-Ext(Gamma) = Gamma  ->  not R(Gamma)
+Fixpoint(Gamma) := S1Rel(Gamma) = emptyset
 ```
 
-Cela rend l'"implicite" explicitement localise : ce n'est pas le trilemme,
-c'est la contrainte arithmetique.
+Comme R(Gamma) := S1Rel(Gamma) != emptyset, on a :
+
+```
+Fixpoint(Gamma) <-> not R(Gamma)
+```
+
+La canonisation arithmetique force ce Fixpoint.
 
 ---
 
 ## 15) Collatz : statut du puits
 
 Dans l'instanciation Collatz->D, le puits 4-2-1 est suppose (ou montre) etre
-un fixpoint pour Ext, donc non-R.
+un fixpoint pour Ext_sat, donc non-R.
 
 ```
-Puits_421 -> Ext(omegaGamma_puits) = omegaGamma_puits -> not R_puits
+Puits_421 -> Ext_sat(omegaGamma_puits) = omegaGamma_puits -> not R_puits
 ```
 
 Ceci relie la "canonisation" a la Condition 2, confirmant que le lien est
