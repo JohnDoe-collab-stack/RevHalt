@@ -9,6 +9,7 @@ import RevHalt.Theory.TheoryDynamics_Trajectory
 import RevHalt.Theory.TheoryDynamics_ProofCarrying
 import RevHalt.Theory.TheoryDynamics_ComplexityBounds
 import RevHalt.Theory.Canonicity
+
 import Mathlib.Data.Fin.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.List.Basic
