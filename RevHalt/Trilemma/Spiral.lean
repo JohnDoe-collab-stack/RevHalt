@@ -53,6 +53,22 @@ theorem spiral_step_mono
       (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
       (A0 := A0) (n := n))
 
+/-- Bridge: if `Cn` is the identity, chainState matches canonicalTrajectory. -/
+theorem chainState_eq_canonicalTrajectory_of_Cn_id
+    (hCnId : ∀ Γ : Set PropT, Cn Γ = Γ)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ∀ n,
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ =
+      RevHalt.canonicalTrajectory Provable K Machine encode_halt A0.Γ n := by
+  intro n
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      simp [chainState_succ, FState, F, hCnId, ih,
+        RevHalt.canonicalTrajectory, RevHalt.chain0, RevHalt.F0]
+
 end ChainState
 
 section Trajectory
@@ -65,6 +81,30 @@ variable (encode_halt : Code -> PropT)
 /-- A trajectory is a spiral if it strictly grows at every step. -/
 def IsSpiral (Γ : Nat -> Set PropT) : Prop :=
   ∀ n, Γ n ⊂ Γ (n + 1)
+
+/-- Hypothesis: one-step preservation of PostSplitter along F0. -/
+def F0_preserves_PostSplitter : Prop :=
+  ∀ Γ : Set PropT,
+    PostSplitter Provable Γ →
+    PostSplitter Provable (F0 Provable K Machine encode_halt Γ)
+
+/-- PostSplitter propagates along the canonical trajectory if F0 preserves it. -/
+theorem PostSplitter_canonicalTrajectory
+    (hPSstep : F0_preserves_PostSplitter Provable K Machine encode_halt)
+    (Γ0 : Set PropT)
+    (hPS0 : PostSplitter Provable Γ0) :
+    ∀ n, PostSplitter Provable
+      (RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0 n) := by
+  intro n
+  induction n with
+  | zero =>
+      simpa [RevHalt.canonicalTrajectory, RevHalt.chain0] using hPS0
+  | succ n ih =>
+      have hPSn :
+          PostSplitter Provable
+            (RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0 n) := ih
+      simpa [RevHalt.canonicalTrajectory, RevHalt.chain0] using
+        (hPSstep _ hPSn)
 
 /-- Trajectory bridge: strict growth of the canonical trajectory. -/
 theorem spiral_trajectory_strict_growth
@@ -91,6 +131,31 @@ theorem canonicalTrajectory_isSpiral
     (spiral_trajectory_strict_growth
       (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       hRegen Γ0 hPS)
+
+/-- Canonical trajectory is a spiral from Route II + PostSplitter propagation. -/
+theorem canonicalTrajectory_isSpiral_of_RouteII
+    {SProvable : PropT -> Prop} {SNot : PropT -> PropT}
+    (hSound : ∀ Γ, Soundness Provable SProvable Γ)
+    (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBar   : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False)
+    (hPSstep : F0_preserves_PostSplitter Provable K Machine encode_halt)
+    (Γ0 : Set PropT)
+    (hPS0 : PostSplitter Provable Γ0) :
+    IsSpiral (RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0) := by
+  have hRegen :
+      RevHalt.FrontierRegeneration' Provable K Machine encode_halt :=
+    RevHalt.FrontierRegeneration_of_RouteII_uniform
+      (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (hSound := hSound)
+      (hNeg := hNeg) (hBar := hBar)
+  have hPS : ∀ n, RevHalt.PostSplitter Provable
+      (RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0 n) :=
+    PostSplitter_canonicalTrajectory
+      (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) hPSstep Γ0 hPS0
+  exact canonicalTrajectory_isSpiral
+    (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+    hRegen Γ0 hPS
 
 end Trajectory
 
