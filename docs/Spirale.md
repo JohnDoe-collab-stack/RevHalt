@@ -178,7 +178,7 @@ forall Gamma, R(Gamma) -> exists s in S1Rel(Gamma) and R(Gamma union {s})
 Donne une reparabilite locale. Ne produit pas automatiquement une suite infinie
 sans choix dependant.
 
-2) Existence d'une suite globale (sans fonction Next):
+1) Existence d'une suite globale (sans fonction Next):
 
 ```
 exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
@@ -186,7 +186,7 @@ exists (s_n), s_n in S1Rel(Gamma^(n)) and Gamma^(n+1) = Gamma^(n) union {s_n}
 
 Cible directe de l'objectif A. En general incomparable avec (1) sans choix.
 
-3) Choix classique / Skolem non calculable:
+1) Choix classique / Skolem non calculable:
 
 ```
 Next(Gamma) in S1Rel(Gamma) when R(Gamma)
@@ -194,7 +194,7 @@ Next(Gamma) in S1Rel(Gamma) when R(Gamma)
 
 Equivalent a (1) + choix uniforme. Donne une regle locale non calculable.
 
-4) Extension par toute la frontiere:
+1) Extension par toute la frontiere:
 
 ```
 Ext(Gamma) := Gamma union S1Rel(Gamma)
@@ -208,7 +208,7 @@ R(Gamma) -> R(Ext(Gamma))
 
 Cette persistance est une hypothese forte.
 
-5) Oracle/kit (Next externe):
+1) Oracle/kit (Next externe):
 
 ```
 Next_O(Gamma) fourni par un oracle, avec
@@ -235,7 +235,7 @@ and R(Gamma union {Next_O(Gamma)})
 
 ---
 
-## 11) Interet du systeme (formalise)
+## 11) Intérêt du systeme (formalise)
 
 Le systeme sert a transformer le trilemme en dynamique demonstrable, pas en
 simple narration.
@@ -251,3 +251,16 @@ Points structurants:
 - Formule courte: "le trilemme induit un automate fini de regimes, et toute
   non-trivialite (spirale) exige une variable de progres orthogonale, sinon
   on retombe en cycle".
+
+## 12) Application a Collatz (Interpretation conditionnelle)
+
+Le lien avec Collatz (cycle 4-2-1) releve de l'interpretation.
+
+- **Fait formel** : Le trilemme s'applique a des objets (Gamma, omegaGamma).
+- **Fait arithmetique** : Collatz evolue sur N et possede un attracteur 4-2-1.
+- **Pont (Analogie)** : SI on instancie le systeme en projetant Collatz sur
+  un objet D(n), ALORS on peut interpreter le cycle 4-2-1 comme un analogue
+  du regime Type_PQ (R faux, stabilisation).
+
+Cette identification n'est pas une deduction formelle du systeme P-Q-R seul,
+mais une hypothese de modelisation.
