@@ -252,15 +252,22 @@ Points structurants:
   non-trivialite (spirale) exige une variable de progres orthogonale, sinon
   on retombe en cycle".
 
-## 12) Application a Collatz (Interpretation conditionnelle)
+## 12) Application a Collatz (Verification conditionnelle)
 
-Le lien avec Collatz (cycle 4-2-1) releve de l'interpretation.
+La question "Le cycle 4-2-1 correspond-il au regime Type_PQ ?" est decidable
+mais conditionnelle.
 
-- **Fait formel** : Le trilemme s'applique a des objets (Gamma, omegaGamma).
-- **Fait arithmetique** : Collatz evolue sur N et possede un attracteur 4-2-1.
-- **Pont (Analogie)** : SI on instancie le systeme en projetant Collatz sur
-  un objet D(n), ALORS on peut interpreter le cycle 4-2-1 comme un analogue
-  du regime Type_PQ (R faux, stabilisation).
+- **Condition 1 (Instanciation)** : Il faut definir explicitement un objet D
+  associe a Collatz et des predicats P(D), Q(D), R(D).
+- **Condition 2 (Hypothese Frontiere)** : Il faut poser (ou prouver) que
+  l'etat "cycle 4-2-1" implique "frontiere vide" (R est faux).
 
-Cette identification n'est pas une deduction formelle du systeme P-Q-R seul,
-mais une hypothese de modelisation.
+**Formulation Canonique** :
+
+> Fixer l'interpretation Collatz (-> D) et les definitions de (P,Q,R).
+> Ajouter (ou prouver) non-R au puits.
+> Alors "puits = Type_PQ" est une consequence immediate (definitionnelle).
+
+L'unique point non mecanique est la clause "frontiere vide au puits", qui est
+soit un axiome d'instanciation, soit un lemme a prouver. Une fois posee,
+l'assignation est une simple verification par evaluation.
