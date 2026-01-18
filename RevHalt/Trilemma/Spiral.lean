@@ -1,4 +1,5 @@
 import RevHalt.Theory.TheoryDynamics
+import RevHalt.Theory.TheoryDynamics_Trajectory
 
 namespace RevHalt.Trilemma
 
@@ -50,5 +51,19 @@ theorem spiral_step_mono
       (encode_halt := encode_halt) (Cn := Cn)
       (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
       (A0 := A0) (n := n))
+
+/-- Trajectory bridge: strict growth of the canonical trajectory. -/
+theorem spiral_trajectory_strict_growth
+    (hRegen : RevHalt.FrontierRegeneration' Provable K Machine encode_halt)
+    (Γ0 : Set PropT)
+    (hPS : ∀ n, RevHalt.PostSplitter Provable
+      (RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
+    ∀ n, RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊂
+         RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) := by
+  simpa using
+    (RevHalt.incarnation_strict_growth
+      (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (hRegen := hRegen)
+      (Γ0 := Γ0) (hPS := hPS))
 
 end RevHalt.Trilemma
