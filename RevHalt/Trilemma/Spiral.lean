@@ -8,12 +8,13 @@ universe u
 variable {PropT : Type u}
 variable {Code : Type u}
 
+section ChainState
+
 variable (Provable : Set PropT -> PropT -> Prop)
 variable (K : RHKit)
 variable (Machine : Code -> Trace)
 variable (encode_halt : Code -> PropT)
 variable (Cn : Set PropT -> Set PropT)
-
 variable (A0 : ThState (PropT := PropT) Provable Cn)
 
 /-- Spiral step: strict extension from a frontier witness. -/
@@ -52,6 +53,19 @@ theorem spiral_step_mono
       (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
       (A0 := A0) (n := n))
 
+end ChainState
+
+section Trajectory
+
+variable (Provable : Set PropT -> PropT -> Prop)
+variable (K : RHKit)
+variable (Machine : Code -> Trace)
+variable (encode_halt : Code -> PropT)
+
+/-- A trajectory is a spiral if it strictly grows at every step. -/
+def IsSpiral (Γ : Nat -> Set PropT) : Prop :=
+  ∀ n, Γ n ⊂ Γ (n + 1)
+
 /-- Trajectory bridge: strict growth of the canonical trajectory. -/
 theorem spiral_trajectory_strict_growth
     (hRegen : RevHalt.FrontierRegeneration' Provable K Machine encode_halt)
@@ -65,5 +79,19 @@ theorem spiral_trajectory_strict_growth
       (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (hRegen := hRegen)
       (Γ0 := Γ0) (hPS := hPS))
+
+/-- Canonical trajectory is a spiral under regeneration + PostSplitter. -/
+theorem canonicalTrajectory_isSpiral
+    (hRegen : RevHalt.FrontierRegeneration' Provable K Machine encode_halt)
+    (Γ0 : Set PropT)
+    (hPS : ∀ n, RevHalt.PostSplitter Provable
+      (RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
+    IsSpiral (RevHalt.canonicalTrajectory Provable K Machine encode_halt Γ0) := by
+  simpa [IsSpiral] using
+    (spiral_trajectory_strict_growth
+      (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      hRegen Γ0 hPS)
+
+end Trajectory
 
 end RevHalt.Trilemma
