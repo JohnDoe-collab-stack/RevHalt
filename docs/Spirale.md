@@ -264,7 +264,24 @@ Points structurants:
   non-trivialite (spirale) exige une variable de progres orthogonale, sinon
   on retombe en cycle".
 
-## 12) Application a Collatz (Verification conditionnelle)
+## 12) Apport de Trajectory (couche dynamique)
+
+Le fichier Trajectory ajoute une couche "dynamique effective" a la spirale.
+
+Points clefs:
+
+- Trajectoire canonique: une suite unique Γ_n = F0^n(Γ0), pas un schema ambigu.
+- Unicite: toute trajectoire F0-compatible est egale a la canonique.
+- Dependence initiale: la trajectoire est entierement determinee par Γ0 (temps 0).
+- Croissance stricte conditionnelle: regeneration + PostSplitter -> progression stricte.
+- Point de rupture formalise: "incarnation trilemma" et "escape via continuity"
+  isolent la variable libre (continuité ω).
+
+Lecture simple: Spirale = schema; Trajectory = schema + objet effectif + verrou logique.
+
+---
+
+## 13) Application a Collatz (Verification conditionnelle)
 
 La question "Le cycle 4-2-1 correspond-il au regime Type_PQ ?" est verifiable
 (conditionnelle), et decidable si P/Q/R le sont.
@@ -294,9 +311,9 @@ Sous une instanciation Collatz->D et l’hypothèse (ou preuve) ¬R au puits, le
 
 ---
 
-## 13) Verrou de preuve (le seul point non mecanique)
+## 14) Verrou de preuve (le seul point non mecanique)
 
-### 13.1 Deux directions exclusives (ne pas confondre)
+### 14.1 Deux directions exclusives (ne pas confondre)
 
 **(A) Canonisation / arret (puits, type PQ)**
 Objectif : montrer que la spirale s'eteint en temps fini.
@@ -353,7 +370,7 @@ Le framework sert a isoler ce verrou. Tout le reste est mecanique une fois
 
 ---
 
-## 14) Canonisation arithmetique (contrainte implicite)
+## 15) Canonisation arithmetique (contrainte implicite)
 
 Principe de canonisation (arithmetique) :
 Sous la contrainte arithmetique, l'extension saturee par frontiere atteint un fixpoint
@@ -379,7 +396,7 @@ La canonisation arithmetique force ce Fixpoint.
 
 ---
 
-## 15) Collatz : statut du puits
+## 16) Collatz : statut du puits
 
 Dans l'instanciation Collatz->D, le puits 4-2-1 est suppose (ou montre) etre
 un fixpoint pour Ext_sat, donc non-R.
