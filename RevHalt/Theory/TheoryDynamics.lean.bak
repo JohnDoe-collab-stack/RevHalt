@@ -1,0 +1,2115 @@
+import Mathlib.Data.Set.Basic
+import Mathlib.CategoryTheory.Thin
+
+
+import RevHalt.Theory.Complementarity
+import RevHalt.Theory.Stabilization
+import RevHalt.Theory.Categorical
+import RevHalt.Theory.Impossibility
+
+/-!
+# RevHalt.Theory.TheoryDynamics
+
+Formalizes the dynamic theory functor:
+
+  F(S) := Cn(S ∪ S1(S))
+
+where:
+- S = current theory state (post-splitter / corpus)
+- S1(S) = frontier relative to S (kit-detection + non-provable in S)
+- The iteration S_{n+1} = F(S_n) encodes the interdependent dynamics
+
+## Key Insight
+
+The frontier S1(Γ) depends on `¬Provable Γ`, so as Γ grows, S1(Γ) shrinks.
+This is the "conservation law": the gap persists because extending the theory
+regenerates the frontier at each step.
+
+## Structure
+
+1. Thin category of theories (ThObj, ThHom)
+2. Relative provability (Provable : Set PropT → PropT → Prop)
+3. Dynamic frontier S1Rel(Γ)
+4. Step function F0, F
+5. Iteration chain and ω-limit
+6. Conservation law: MissingFrom = S1Rel
+-/
+
+namespace RevHalt
+
+open Set
+open CategoryTheory
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 1) THIN CATEGORY OF THEORIES (CORPUS)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+universe u
+
+variable {PropT : Type u}
+
+/-- A theory object is a corpus Γ : Set PropT. -/
+abbrev ThObj (PropT : Type u) := Set PropT
+
+/-- Morphisms between theory objects are inclusions. -/
+def ThHom (Γ Δ : ThObj PropT) : Prop := Γ ⊆ Δ
+
+theorem ThHom.refl (Γ : ThObj PropT) : ThHom Γ Γ := Subset.refl Γ
+
+theorem ThHom.trans {Γ Δ Ξ : ThObj PropT} (h1 : ThHom Γ Δ) (h2 : ThHom Δ Ξ) :
+    ThHom Γ Ξ := Subset.trans h1 h2
+
+/-- Category instance: thin category where Hom Γ Δ is a lifted Prop (inclusion). -/
+instance : Category (ThObj PropT) where
+  Hom Γ Δ := PLift (ThHom (PropT := PropT) Γ Δ)
+  id Γ := ⟨ThHom.refl (PropT := PropT) Γ⟩
+  comp f g := ⟨ThHom.trans (PropT := PropT) f.down g.down⟩
+  id_comp := by
+    intro Γ Δ f; cases f; rfl
+  comp_id := by
+    intro Γ Δ f; cases f; rfl
+  assoc := by
+    intro Γ Δ Ξ Ω f g h; cases f; cases g; cases h; rfl
+
+instance (Γ Δ : ThObj PropT) : Subsingleton (Γ ⟶ Δ) := by
+  refine ⟨?_⟩
+  intro f g
+  cases f; cases g
+  rfl
+
+/-- Convert a Prop-level inclusion into a categorical morphism. -/
+def homOfThHom {Γ Δ : ThObj PropT} (h : ThHom (PropT := PropT) Γ Δ) : Γ ⟶ Δ :=
+  ⟨h⟩
+
+/-- Extract the underlying inclusion from a categorical morphism. -/
+def thHomOfHom {Γ Δ : ThObj PropT} (f : Γ ⟶ Δ) : ThHom (PropT := PropT) Γ Δ :=
+  f.down
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 2) RELATIVE PROVABILITY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+variable (Provable : Set PropT → PropT → Prop)
+
+/-- Provability is monotone: extending the corpus preserves provability. -/
+def ProvRelMonotone : Prop :=
+  ∀ Γ Δ : Set PropT, Γ ⊆ Δ → ∀ p : PropT, Provable Γ p → Provable Δ p
+
+/--
+  **ProvClosed**: A corpus is closed under its own provability.
+  This is the key hypothesis for F0_monotone: provable ⇒ membership.
+-/
+def ProvClosed (Γ : Set PropT) : Prop :=
+  ∀ p : PropT, Provable Γ p → p ∈ Γ
+
+/--
+  **PostSplitter**: A corpus where membership ⇔ provability.
+  This is the strong form: S = S2(S).
+-/
+def PostSplitter (Γ : Set PropT) : Prop :=
+  ∀ p : PropT, p ∈ Γ ↔ Provable Γ p
+
+/-- Deductive closure operator axioms. -/
+def CnExtensive (Cn : Set PropT → Set PropT) : Prop := ∀ Γ, Γ ⊆ Cn Γ
+def CnMonotone  (Cn : Set PropT → Set PropT) : Prop := ∀ {Γ Δ}, Γ ⊆ Δ → Cn Γ ⊆ Cn Δ
+def CnIdem      (Cn : Set PropT → Set PropT) : Prop := ∀ Γ, Cn (Cn Γ) = Cn Γ
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 3) DYNAMIC FRONTIER S1(Γ) — THE KEY DEFINITION
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+variable {Code : Type u}
+variable (K : RHKit)
+variable (Machine : Code → Trace)
+variable (encode_halt : Code → PropT)
+
+/--
+  **Dynamic Frontier S1(Γ)**:
+  The set of kit-certified halting sentences that are NOT provable in Γ.
+
+  This is the core of the interdependent dynamics:
+  - S1 depends on Γ via `¬ Provable Γ (encode_halt e)`
+  - As Γ grows, S1(Γ) shrinks (anti-monotone)
+-/
+def S1Rel (Γ : Set PropT) : Set PropT :=
+  { p | ∃ e : Code,
+      p = encode_halt e ∧
+      Rev0_K K (Machine e) ∧
+      ¬ Provable Γ (encode_halt e) }
+
+/-- Membership lemma for S1Rel. -/
+lemma mem_S1Rel_of_witness
+    (Γ : Set PropT) (e : Code)
+    (hKit : Rev0_K K (Machine e))
+    (hNprov : ¬ Provable Γ (encode_halt e)) :
+    encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ := by
+  exact ⟨e, rfl, hKit, hNprov⟩
+
+/--
+  **S1 is Anti-Monotone**:
+  If Provable is monotone, then S1 is anti-monotone:
+  Γ ⊆ Δ → S1(Δ) ⊆ S1(Γ)
+
+  More provable ⟹ smaller frontier.
+-/
+theorem S1Rel_anti_monotone
+    (hMono : ProvRelMonotone Provable)
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ) :
+    S1Rel Provable K Machine encode_halt Δ ⊆
+    S1Rel Provable K Machine encode_halt Γ := by
+  intro p hp
+  obtain ⟨e, hpEq, hKit, hNprovΔ⟩ := hp
+  refine ⟨e, hpEq, hKit, ?_⟩
+  intro hProvΓ
+  have hProvΔ : Provable Δ (encode_halt e) := hMono Γ Δ hSub (encode_halt e) hProvΓ
+  exact hNprovΔ hProvΔ
+
+/-- Post-splitter S2(Γ): what is provable in Γ. -/
+def S2Rel (Γ : Set PropT) : Set PropT := { p | Provable Γ p }
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 4) DYNAMIC STEP F — THE ENDO-FUNCTOR
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  **Minimal Step F0**: Γ ↦ Γ ∪ S1(Γ)
+
+  This is the simplest form of the dynamic step.
+-/
+def F0 (Γ : Set PropT) : Set PropT :=
+  Γ ∪ S1Rel Provable K Machine encode_halt Γ
+
+/--
+  **Full Step F**: Γ ↦ Cn(Γ ∪ S1(Γ))
+
+  Includes deductive closure.
+-/
+def F (Cn : Set PropT → Set PropT) (Γ : Set PropT) : Set PropT :=
+  Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ)
+
+@[simp] lemma F0_apply (Γ : Set PropT) :
+  F0 Provable K Machine encode_halt Γ =
+    Γ ∪ S1Rel Provable K Machine encode_halt Γ := rfl
+
+@[simp] lemma F_apply (Cn : Set PropT → Set PropT) (Γ : Set PropT) :
+  F Provable K Machine encode_halt Cn Γ =
+    Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := rfl
+
+/-- F0 is extensive: Γ ⊆ F0(Γ). -/
+theorem F0_extensive (Γ : Set PropT) :
+    Γ ⊆ F0 Provable K Machine encode_halt Γ := by
+  intro p hp
+  exact Or.inl hp
+
+/--
+  **F0 is Monotone under ProvClosed hypothesis** (Constructive).
+
+  The key insight: if p ∈ S1(Γ) becomes provable in Δ, then by ProvClosed
+  it must be in Δ, so p ∈ F0(Δ) via the left branch.
+
+  Requires `DecidablePred` for constructivity.
+-/
+theorem F0_monotone_of_provClosed
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ)
+    (hDecΔ : DecidablePred (fun p => Provable Δ p)) :
+    F0 Provable K Machine encode_halt Γ ⊆
+    F0 Provable K Machine encode_halt Δ := by
+  intro p hp
+  cases hp with
+  | inl hpΓ =>
+      -- p ∈ Γ, so p ∈ Δ by inclusion
+      exact Or.inl (hSub hpΓ)
+  | inr hpS1Γ =>
+      -- p ∈ S1(Γ): p = encode_halt e, kit ok, ¬Provable Γ (encode_halt e)
+      obtain ⟨e, hpEq, hKit, hNprovΓ⟩ := hpS1Γ
+      -- Constructive split
+      cases hDecΔ (encode_halt e) with
+      | isTrue hProvΔ =>
+          have hMemΔ : encode_halt e ∈ Δ := hClosedΔ (encode_halt e) hProvΔ
+          rw [hpEq]
+          exact Or.inl hMemΔ
+      | isFalse hProvΔ =>
+          right
+          exact ⟨e, hpEq, hKit, hProvΔ⟩
+
+/-- F is monotone (assuming Cn is monotone). -/
+theorem F_monotone
+    (Cn : Set PropT → Set PropT)
+    (hCnMono : CnMonotone Cn)
+    {Γ Δ : Set PropT}
+    (hF0Mono : F0 Provable K Machine encode_halt Γ ⊆ F0 Provable K Machine encode_halt Δ) :
+    F Provable K Machine encode_halt Cn Γ ⊆
+    F Provable K Machine encode_halt Cn Δ := by
+  unfold F
+  exact hCnMono hF0Mono
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 5) ITERATION CHAIN AND ω-LIMIT
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- Iteration of F0 starting from Γ0. -/
+def chain0 (Γ0 : Set PropT) : ℕ → Set PropT
+  | 0     => Γ0
+  | n + 1 => F0 Provable K Machine encode_halt (chain0 Γ0 n)
+
+/-- Iteration of F starting from Γ0. -/
+def chain (Cn : Set PropT → Set PropT) (Γ0 : Set PropT) : ℕ → Set PropT
+  | 0     => Γ0
+  | n + 1 => F Provable K Machine encode_halt Cn (chain Cn Γ0 n)
+
+/-- The chain is monotonically increasing (each step extends). -/
+theorem chain0_mono_step (Γ0 : Set PropT) :
+    ∀ n, chain0 Provable K Machine encode_halt Γ0 n ⊆
+         chain0 Provable K Machine encode_halt Γ0 (n + 1) := by
+  intro n
+  -- chain0 Γ0 (n+1) = F0 (chain0 Γ0 n) = (chain0 Γ0 n) ∪ S1(chain0 Γ0 n)
+  -- So chain0 Γ0 n ⊆ chain0 Γ0 n ∪ ... is trivial
+  exact F0_extensive Provable K Machine encode_halt (chain0 Provable K Machine encode_halt Γ0 n)
+
+/-- Transitivity: n ≤ m → chain0 Γ0 n ⊆ chain0 Γ0 m. -/
+theorem chain0_mono (Γ0 : Set PropT) :
+    ∀ n m, n ≤ m → chain0 Provable K Machine encode_halt Γ0 n ⊆
+                   chain0 Provable K Machine encode_halt Γ0 m := by
+  intro n m hnm
+  induction hnm with
+  | refl => exact Subset.refl _
+  | step _ ih =>
+      exact Subset.trans ih (chain0_mono_step Provable K Machine encode_halt Γ0 _)
+
+/-- The ω-limit: union of all stages. -/
+def omega0 (Γ0 : Set PropT) : Set PropT :=
+  { p | ∃ n, p ∈ chain0 Provable K Machine encode_halt Γ0 n }
+
+/-- Each stage embeds into the ω-limit. -/
+theorem chain0_le_omega0 (Γ0 : Set PropT) (n : ℕ) :
+    chain0 Provable K Machine encode_halt Γ0 n ⊆
+    omega0 Provable K Machine encode_halt Γ0 := by
+  intro p hp
+  exact ⟨n, hp⟩
+
+/-- Universal property of ω-limit. -/
+theorem omega0_universal (Γ0 : Set PropT) (T : Set PropT)
+    (h : ∀ n, chain0 Provable K Machine encode_halt Γ0 n ⊆ T) :
+    omega0 Provable K Machine encode_halt Γ0 ⊆ T := by
+  intro p hp
+  obtain ⟨n, hn⟩ := hp
+  exact h n hn
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6) CONSERVATION LAW — "MISSING = S1"
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- What the step adds but is not provable in Γ. -/
+def MissingFrom (Γ Δ : Set PropT) : Set PropT :=
+  { p | p ∈ Δ ∧ ¬ Provable Γ p }
+
+/--
+  **Absorbable**: The state has absorbed all its members into its provability relation.
+  Formally: `p ∈ Γ → Provable Γ p`.
+
+  This is the *closure of membership* property.
+  (It is the dual of `ProvClosed`, which is `Provable Γ p → p ∈ Γ`).
+-/
+def Absorbable (Γ : Set PropT) : Prop := ∀ p, p ∈ Γ → Provable Γ p
+
+/--
+  **Conservation Law (Subtraction Property)**:
+  If Γ is absorbable (post-splitter), then:
+    MissingFrom Γ (F0 Γ) = S1(Γ)
+
+  This is the dynamic version of `missing_equals_S1` from Complementarity.lean.
+-/
+theorem missing_F0_eq_S1_of_absorbable
+    (Γ : Set PropT)
+    (hAbs : Absorbable Provable Γ) :
+    MissingFrom Provable Γ (F0 Provable K Machine encode_halt Γ) =
+    S1Rel Provable K Machine encode_halt Γ := by
+  ext p
+  constructor
+  · -- MissingFrom → S1
+    intro hp
+    obtain ⟨hpF0, hNprov⟩ := hp
+    cases hpF0 with
+    | inl hpΓ =>
+        -- p ∈ Γ but ¬Provable Γ p, contradicts Absorbable
+        have hProv : Provable Γ p := hAbs p hpΓ
+        exact False.elim (hNprov hProv)
+    | inr hpS1 =>
+        exact hpS1
+  · -- S1 → MissingFrom
+    intro hpS1
+    constructor
+    · exact Or.inr hpS1
+    · obtain ⟨e, hpEq, _hKit, hNprov⟩ := hpS1
+      rw [hpEq]
+      exact hNprov
+
+
+/--
+  **Strict Extension (with Absorbable hypothesis)**:
+  Under absorbability, a witness gives strict extension.
+-/
+theorem strict_step_of_witness_absorbable
+    (Γ : Set PropT)
+    (hAbs : Absorbable Provable Γ)
+    (e : Code)
+    (hKit : Rev0_K K (Machine e))
+    (hNprov : ¬ Provable Γ (encode_halt e)) :
+    Γ ⊂ F0 Provable K Machine encode_halt Γ := by
+  constructor
+  · exact F0_extensive Provable K Machine encode_halt Γ
+  · intro hContra
+    have hMem : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
+      ⟨e, rfl, hKit, hNprov⟩
+    have hMemF0 : encode_halt e ∈ F0 Provable K Machine encode_halt Γ :=
+      Or.inr hMem
+    have hMemΓ : encode_halt e ∈ Γ := hContra hMemF0
+    have hProv : Provable Γ (encode_halt e) := hAbs (encode_halt e) hMemΓ
+    exact hNprov hProv
+
+/--
+  **Frontier Non-Annihilation**:
+  If at every stage there exists a witness, then the frontier is non-empty at all stages.
+-/
+theorem frontier_nonempty_all_stages
+    (Γ0 : Set PropT)
+    (H : ∀ Γ : Set PropT, (S1Rel Provable K Machine encode_halt Γ).Nonempty) :
+    ∀ n, (S1Rel Provable K Machine encode_halt
+            (chain0 Provable K Machine encode_halt Γ0 n)).Nonempty := by
+  intro n
+  exact H _
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 7) BRIDGE TO TRACE KERNEL
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  **S1Rel witness implies trace not in kernel (witness-based)**.
+
+  If p ∈ S1Rel Γ, we get a witness e with Kit-certified halting.
+  Thus Machine e cannot be in upKernel (stabilization).
+
+  This is the correct formulation without requiring encode_halt injectivity.
+-/
+theorem S1Rel_witness_not_in_kernel
+    (hK : DetectsUpFixed K)
+    {Γ : Set PropT} {p : PropT}
+    (hp : p ∈ S1Rel Provable K Machine encode_halt Γ) :
+    ∃ e : Code,
+      p = encode_halt e ∧
+      Rev0_K K (Machine e) ∧
+      Machine e ∉ Categorical.upKernel := by
+  obtain ⟨e, hpEq, hKit, _hNprov⟩ := hp
+  refine ⟨e, hpEq, hKit, ?_⟩
+  -- Machine e ∉ upKernel because Kit certifies halting
+  intro hContra
+  have hHalts : Halts (Machine e) := (T1_traces K hK (Machine e)).mp hKit
+  have hStab : ∀ n, ¬ (Machine e) n :=
+    (RevHalt.Categorical.mem_upKernel_iff (T := Machine e)).mp hContra
+  obtain ⟨n, hn⟩ := hHalts
+  exact hStab n hn
+
+/--
+  **Connection**: Kit-certified halting means NOT in kernel.
+-/
+theorem kit_certified_not_in_kernel
+    (hK : DetectsUpFixed K)
+    (e : Code)
+    (hKit : Rev0_K K (Machine e)) :
+    Machine e ∉ Categorical.upKernel := by
+  intro hContra
+  have hHalts : Halts (Machine e) := (T1_traces K hK (Machine e)).mp hKit
+  have hStab : ∀ n, ¬ (Machine e) n :=
+    (RevHalt.Categorical.mem_upKernel_iff (T := Machine e)).mp hContra
+  obtain ⟨n, hn⟩ := hHalts
+  exact hStab n hn
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 8) THE TRUE DYNAMIC FUNCTOR (Complete Formalization)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The Dynamic Functor on Admissible Theory States
+
+To make F a true endo-functor, the target must remain in the category.
+This requires theory states that are:
+1. **Cn-closed**: Cn Γ = Γ (fixed point of deductive closure)
+2. **ProvClosed**: Provable Γ p → p ∈ Γ (membership captures provability)
+
+The key axiom `ProvClosedCn` states that Cn produces ProvClosed sets.
+This makes FState an endo-functor without external hypotheses.
+-/
+
+section Functor
+
+variable (Cn : Set PropT → Set PropT)
+
+/-- Cn produces ProvClosed sets (key structural axiom). -/
+def ProvClosedCn : Prop := ∀ Γ, ProvClosed Provable (Cn Γ)
+
+/--
+  **ThState**: An admissible theory state.
+  - Cn-closed: fixed point of deductive closure
+  - ProvClosed: provability implies membership
+-/
+structure ThState where
+  Γ : Set PropT
+  cn_closed : Cn Γ = Γ
+  prov_closed : ProvClosed Provable Γ
+
+/-- Morphisms between ThState objects are inclusions of carriers. -/
+def ThStateHom (A B : ThState Provable Cn) : Prop := A.Γ ⊆ B.Γ
+
+theorem ThStateHom.refl (A : ThState Provable Cn) : ThStateHom Provable Cn A A :=
+  Subset.refl A.Γ
+
+theorem ThStateHom.trans {A B C : ThState Provable Cn}
+    (h1 : ThStateHom Provable Cn A B) (h2 : ThStateHom Provable Cn B C) :
+    ThStateHom Provable Cn A C :=
+  Subset.trans h1 h2
+
+-- Category instance for ThState
+instance : Category (ThState (PropT := PropT) Provable Cn) where
+  Hom A B := PLift (ThStateHom Provable Cn A B)
+  id A := ⟨ThStateHom.refl Provable Cn A⟩
+  comp f g := ⟨ThStateHom.trans Provable Cn f.down g.down⟩
+  id_comp := by
+    intro A B f; cases f; rfl
+  comp_id := by
+    intro A B f; cases f; rfl
+  assoc := by
+    intro A B C D f g h; cases f; cases g; cases h; rfl
+
+instance (A B : ThState (PropT := PropT) Provable Cn) : Subsingleton (A ⟶ B) := by
+  refine ⟨?_⟩
+  intro f g
+  cases f; cases g
+  rfl
+
+/--
+  **FState**: The dynamic step applied to an admissible theory state.
+  - Result is Cn-closed via CnIdem
+  - Result is ProvClosed via ProvClosedCn
+-/
+def FState
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn) : ThState (PropT := PropT) Provable Cn where
+  Γ := F Provable K Machine encode_halt Cn A.Γ
+  cn_closed := by
+    unfold F
+    exact hIdem (A.Γ ∪ S1Rel Provable K Machine encode_halt A.Γ)
+  prov_closed := by
+    unfold F
+    exact hProvCn (A.Γ ∪ S1Rel Provable K Machine encode_halt A.Γ)
+
+/--
+  **FState preserves morphisms (functoriality)**:
+  If A.Γ ⊆ B.Γ, then FState(A).Γ ⊆ FState(B).Γ.
+  Uses B.prov_closed from the structure (no external argument).
+-/
+theorem FState_map
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hCnMono : CnMonotone Cn)
+    {A B : ThState (PropT := PropT) Provable Cn}
+    (hAB : ThStateHom Provable Cn A B) :
+    ThStateHom Provable Cn
+      (FState Provable K Machine encode_halt Cn hIdem hProvCn A)
+      (FState Provable K Machine encode_halt Cn hIdem hProvCn B) := by
+  unfold FState ThStateHom
+  apply F_monotone Provable K Machine encode_halt Cn hCnMono
+  -- Use classical decidability for the functor map existence
+  classical
+  exact F0_monotone_of_provClosed Provable K Machine encode_halt hAB B.prov_closed (Classical.decPred _)
+
+/--
+  **TheoryStepFunctor**: The endo-functor `F : ThState ⥤ ThState`.
+  In a thin category, `map_id` and `map_comp` are trivial.
+-/
+def TheoryStepFunctor
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hCnMono : CnMonotone Cn) :
+    ThState (PropT := PropT) Provable Cn ⥤
+    ThState (PropT := PropT) Provable Cn where
+  obj := FState Provable K Machine encode_halt Cn hIdem hProvCn
+  map f := ⟨FState_map Provable K Machine encode_halt Cn hIdem hProvCn hCnMono f.down⟩
+  map_id := fun _ => Subsingleton.elim _ _
+  map_comp := fun _ _ => Subsingleton.elim _ _
+
+/--
+  **The chain on ThState**: iteration of the functor.
+-/
+def chainState
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) : ℕ → ThState (PropT := PropT) Provable Cn
+  | 0     => A0
+  | n + 1 => FState Provable K Machine encode_halt Cn hIdem hProvCn (chainState hIdem hProvCn A0 n)
+
+@[simp] lemma mem_chainState_succ
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ) (p : PropT) :
+    p ∈ (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)).Γ ↔
+    p ∈ Cn ((chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ ∪
+            S1Rel Provable K Machine encode_halt (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ) := by
+  rfl
+
+/--
+  **Chain step morphism**: Each stage embeds into the next.
+  Uses CnExtensive to show Γ_n ⊆ Γ_{n+1}.
+-/
+theorem chainState_step_hom
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hCnExt : CnExtensive Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ) :
+    ThStateHom Provable Cn
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n)
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)) := by
+  intro p hp
+  -- Force the form of the goal: step n+1 = FState (step n)
+  change p ∈
+    (FState Provable K Machine encode_halt Cn hIdem hProvCn
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n)).Γ
+  -- Unfold only FState then F (not chainState) for stability
+  simp only [FState, F]
+  -- Goal: p ∈ Cn ((Γn) ∪ S1Rel(Γn))
+  apply hCnExt
+  exact Or.inl hp
+
+-- Simp lemmas for stability
+@[simp] lemma FState_Γ
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn) :
+    (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ
+      = F Provable K Machine encode_halt Cn A.Γ := rfl
+
+@[simp] lemma chainState_succ
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) (n : ℕ) :
+    chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n+1)
+      = FState Provable K Machine encode_halt Cn hIdem hProvCn
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n) := rfl
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- A) WITNESS => S1Rel NONEMPTY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- A concrete RevHalt-style witness that the frontier is nonempty at Γ. -/
+def FrontierWitness (Γ : Set PropT) : Prop :=
+  ∃ e : Code, Rev0_K K (Machine e) ∧ ¬ Provable Γ (encode_halt e)
+
+/-- A witness produces a nonempty dynamic frontier. -/
+theorem S1Rel_nonempty_of_witness
+    {Γ : Set PropT}
+    (hW : FrontierWitness Provable K Machine encode_halt Γ) :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
+  rcases hW with ⟨e, hKit, hNprov⟩
+  refine ⟨encode_halt e, ?_⟩
+  exact mem_S1Rel_of_witness Provable K Machine encode_halt Γ e hKit hNprov
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B) NO FIXED POINT + STRICT GROWTH (core dynamics)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- If Γ is absorbable and has a frontier witness, Γ cannot be a fixed point of F. -/
+theorem not_fixpoint_F_of_absorbable
+    (hCnExt : CnExtensive Cn)
+    {Γ : Set PropT}
+    (hAbs : Absorbable Provable Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt Γ)
+    (hFix : F Provable K Machine encode_halt Cn Γ = Γ) :
+    False := by
+  have hS1Sub : S1Rel Provable K Machine encode_halt Γ ⊆ Γ := by
+    intro p hpS1
+    have hUnion : p ∈ (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := Or.inr hpS1
+    have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) :=
+      (hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) hUnion
+    have hF : p ∈ F Provable K Machine encode_halt Cn Γ := by
+      rw [F_apply]
+      exact hCn
+    rw [hFix] at hF
+    exact hF
+  rcases hW with ⟨e, hKit, hNprov⟩
+  have hMemS1 : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
+    mem_S1Rel_of_witness Provable K Machine encode_halt Γ e hKit hNprov
+  have hMemΓ : encode_halt e ∈ Γ := hS1Sub hMemS1
+  have hProv : Provable Γ (encode_halt e) := hAbs _ hMemΓ
+  exact hNprov hProv
+
+/-- Under absorbability + witness, the dynamic step strictly extends Γ. -/
+theorem strict_F_of_absorbable
+    (hCnExt : CnExtensive Cn)
+    {Γ : Set PropT}
+    (hAbs : Absorbable Provable Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt Γ) :
+    Γ ⊂ F Provable K Machine encode_halt Cn Γ := by
+  refine ⟨?_, ?_⟩
+  · intro p hp
+    have hUnion : p ∈ (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := Or.inl hp
+    have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) :=
+      (hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) hUnion
+    simpa [F] using hCn
+  · intro hContra
+    have hEq : F Provable K Machine encode_halt Cn Γ = Γ := by
+      ext p
+      constructor
+      · exact fun hpF => hContra hpF
+      · intro hpΓ
+        have hUnion : p ∈ (Γ ∪ S1Rel Provable K Machine encode_halt Γ) := Or.inl hpΓ
+        have hCn : p ∈ Cn (Γ ∪ S1Rel Provable K Machine encode_halt Γ) :=
+          (hCnExt (Γ ∪ S1Rel Provable K Machine encode_halt Γ)) hUnion
+        simpa [F] using hCn
+    exact not_fixpoint_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW hEq
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- B') LIFT TO ThState (clean minimal version)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-- PostSplitter implies Absorbable (trivial direction). -/
+lemma PostSplitter.imp_Absorbable
+    {Γ : Set PropT}
+    (hPS : PostSplitter Provable Γ) :
+    Absorbable Provable Γ := by
+  intro p hp
+  exact (hPS p).mp hp
+
+/-- Strict step at ThState level. -/
+theorem strict_step_state
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn)
+    (hPS : PostSplitter Provable A.Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt A.Γ) :
+    A.Γ ⊂ (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ := by
+  have hAbs : Absorbable Provable A.Γ := PostSplitter.imp_Absorbable Provable hPS
+  simpa [FState] using strict_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW
+
+/-- No fixed point at ThState level. -/
+theorem no_fixpoint_state
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn)
+    (hPS : PostSplitter Provable A.Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt A.Γ) :
+    (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ ≠ A.Γ := by
+  intro hEq
+  have hAbs : Absorbable Provable A.Γ := PostSplitter.imp_Absorbable Provable hPS
+  exact not_fixpoint_F_of_absorbable Provable K Machine encode_halt Cn hCnExt hAbs hW
+    (by simpa [FState] using hEq)
+
+/-- Strict growth along chainState. -/
+theorem strict_chainState_step
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ)
+    (hPS : PostSplitter Provable
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ)
+    (hW : FrontierWitness Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ) :
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
+      ⊂
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n+1)).Γ := by
+  simpa [chainState_succ] using
+    strict_step_state Provable K Machine encode_halt Cn hCnExt hIdem hProvCn
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n) hPS hW
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- D) GLOBAL DYNAMICS
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Global strict growth along the orbit
+
+This block isolates the *two genuinely load-bearing open obligations*:
+
+1) **PostSplitter is preserved by one step**:
+   PostSplitter(Γ) → PostSplitter(FState(Γ)).
+
+2) **FrontierWitness is produced automatically at each stage** (from whatever
+   "frontier_necessary"/incompleteness hypothesis you use in Complementarity).
+
+Once these two are available, strict growth follows for *all* steps of chainState.
+-/
+
+/-- Hypothesis: one-step preservation of PostSplitter along FState. -/
+def FState_preserves_PostSplitter
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn) : Prop :=
+  ∀ (A : ThState (PropT := PropT) Provable Cn),
+    PostSplitter Provable A.Γ →
+    PostSplitter Provable (FState Provable K Machine encode_halt Cn hIdem hProvCn A).Γ
+
+/-- Hypothesis: automatic production of a frontier witness at each stage. -/
+def FrontierWitness_along_chainState : Prop :=
+  ∀ (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn),
+    PostSplitter Provable A0.Γ →
+    ∀ n, FrontierWitness Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
+
+/-- PostSplitter propagates along the chain if it is preserved by FState. -/
+theorem PostSplitter_chainState
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hPSstep : FState_preserves_PostSplitter Provable K Machine encode_halt Cn hIdem hProvCn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hPS0 : PostSplitter Provable A0.Γ) :
+    ∀ n, PostSplitter Provable (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ := by
+  intro n
+  induction n with
+  | zero =>
+      simpa [chainState] using hPS0
+  | succ n ih =>
+      have : PostSplitter Provable
+          (FState Provable K Machine encode_halt Cn hIdem hProvCn
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n)).Γ :=
+        hPSstep _ ih
+      simpa [chainState_succ] using this
+
+/--
+**Infinite strict growth**: if
+- PostSplitter is preserved by FState, and
+- FrontierWitness exists at every stage,
+
+then every step is a strict extension: Γ_n ⊂ Γ_{n+1}.
+-/
+theorem infinite_strict_growth
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hPSstep : FState_preserves_PostSplitter Provable K Machine encode_halt Cn hIdem hProvCn)
+    (hWchain : FrontierWitness_along_chainState Provable K Machine encode_halt Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hPS0 : PostSplitter Provable A0.Γ) :
+    ∀ n,
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
+        ⊂
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n+1)).Γ := by
+  intro n
+  have hPSn : PostSplitter Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ :=
+    PostSplitter_chainState Provable K Machine encode_halt Cn hIdem hProvCn hPSstep A0 hPS0 n
+  have hWn : FrontierWitness Provable K Machine encode_halt
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ :=
+    hWchain hIdem hProvCn A0 hPS0 n
+  exact strict_chainState_step Provable K Machine encode_halt Cn hCnExt hIdem hProvCn A0 n hPSn hWn
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- C) LIFT TO chainState (dynamic consequences along the orbit)
+theorem frontier_nonempty_chainState_of_witnesses
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (HW : ∀ n, FrontierWitness Provable K Machine encode_halt
+              (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ) :
+    ∀ n, (S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ).Nonempty := by
+  intro n
+  exact S1Rel_nonempty_of_witness Provable K Machine encode_halt (HW n)
+
+
+/--
+  **Conservation at ThState level**: The frontier is non-empty at each stage
+  if it is non-empty for every corpus.
+-/
+theorem conservation_nonempty_state
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (H : ∀ Γ : Set PropT, (S1Rel Provable K Machine encode_halt Γ).Nonempty) :
+    ∀ n, (S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ).Nonempty := by
+  intro n
+  exact H _
+
+/--
+  **ω-limit of the chain**: Union of all stages (at the carrier level).
+-/
+def omegaΓ
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) : Set PropT :=
+  { p | ∃ n, p ∈ (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ }
+
+/--
+  **Each stage embeds into the ω-limit**.
+-/
+theorem chainState_le_omegaΓ
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ) :
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ ⊆
+    omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 := by
+  intro p hp
+  exact ⟨n, hp⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- E) ADMISSIBILITY OF OMEGA LIMIT
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/--
+  **Admissibility Condition**:
+  A set is Omega-Admissible if it is a fixed point of Cn and is ProvClosed.
+-/
+def OmegaAdmissible (Provable : Set PropT → PropT → Prop) (Cn : Set PropT → Set PropT) (ωΓ : Set PropT) : Prop :=
+  Cn ωΓ = ωΓ ∧ ProvClosed Provable ωΓ
+
+/--
+  **Characterization of Membership**:
+  A sentence is in ωΓ iff it is in some finite stage.
+-/
+@[simp] lemma mem_omegaΓ
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) (p : PropT) :
+    p ∈ omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0
+      ↔ ∃ n, p ∈ (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ := by
+  rfl
+
+/-- Step monotonicity (unconditional). -/
+theorem chainState_step_hom_def
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (n : ℕ) :
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ ⊆
+    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n + 1)).Γ := by
+  intro p hp
+  rw [mem_chainState_succ]
+  apply hCnExt
+  exact Or.inl hp
+
+/--
+  **Chain Monotonicity**:
+  The sequence of theory states is increasing w.r.t inclusion.
+-/
+theorem chainState_mono
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ∀ n m, n ≤ m →
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ ⊆
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 m).Γ := by
+  intro n m hnm
+  induction hnm with
+  | refl => exact Subset.refl _
+  | step _ ih =>
+      exact Subset.trans ih (chainState_step_hom_def Provable K Machine encode_halt Cn hCnExt hIdem hProvCn A0 _)
+
+/--
+  **Universal Property (Colimit)**:
+  omegaΓ is the smallest set containing all stages.
+-/
+theorem omegaΓ_universal
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) (T : Set PropT)
+    (h : ∀ n, (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ ⊆ T) :
+    omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 ⊆ T := by
+  intro p hp
+  rcases hp with ⟨n, hn⟩
+  exact h n hn
+
+/--
+  **Abstract Directed Provable Closure**:
+  Hypothesis: Provability is preserved by directed unions.
+-/
+def ProvClosedDirected : Prop :=
+  ∀ (U : ℕ → Set PropT),
+    (∀ n, ProvClosed Provable (U n)) →
+    (∀ n, U n ⊆ U (n+1)) →
+    ProvClosed Provable {p | ∃ n, p ∈ U n}
+
+/--
+  **Admissibility Lemma 1**:
+  If ProvClosed is directed-continuous, then omegaΓ is ProvClosed.
+-/
+theorem omegaΓ_provClosed_of_directed
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (hPCdir : ProvClosedDirected Provable)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ProvClosed Provable (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := by
+  refine hPCdir (fun n => (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ) ?_ ?_
+  · intro n; exact (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).prov_closed
+  · intro n; exact chainState_step_hom_def Provable K Machine encode_halt Cn hCnExt hIdem hProvCn A0 n
+
+/--
+  **Abstract Omega-Continuity of Cn**:
+  Hypothesis: Deductive closure commutes with directed unions.
+-/
+def CnOmegaContinuous : Prop :=
+  ∀ (U : ℕ → Set PropT),
+    (∀ n, U n ⊆ U (n+1)) →
+    Cn {p | ∃ n, p ∈ U n} = {p | ∃ n, p ∈ Cn (U n)}
+
+/--
+  **Admissibility Lemma 2**:
+  If Cn is omega-continuous, then omegaΓ is a fixed point of Cn (Cn-closed).
+-/
+theorem omegaΓ_cn_closed_of_omega_continuous
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (hω : CnOmegaContinuous Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    Cn (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+      = omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 := by
+  -- Monotonicity of the chain
+  have hmono : ∀ n, (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ ⊆
+                    (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 (n+1)).Γ :=
+    fun n => chainState_step_hom_def Provable K Machine encode_halt Cn hCnExt hIdem hProvCn A0 n
+
+  -- Apply continuity
+  simp [omegaΓ]
+  rw [hω _ hmono] -- Explicit rewrite as simp might not pick it up correctly with arguments
+
+  -- Use that each stage is Cn-closed
+  ext p
+  constructor <;> intro hp
+  · rcases hp with ⟨n, hn⟩
+    refine ⟨n, ?_⟩
+    simpa [(chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).cn_closed] using hn
+  · rcases hp with ⟨n, hn⟩
+    refine ⟨n, ?_⟩
+    simpa [(chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).cn_closed] using hn
+
+/--
+  **The Admissibility Theorem**:
+  Under structural continuity assumptions, the omega-limit is an admissible theory state.
+-/
+theorem omegaΓ_OmegaAdmissible
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (hPCdir : ProvClosedDirected Provable)
+    (hω : CnOmegaContinuous Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    OmegaAdmissible Provable Cn (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := by
+  refine ⟨?_, ?_⟩
+  · exact omegaΓ_cn_closed_of_omega_continuous Provable K Machine encode_halt Cn hCnExt hIdem hProvCn hω A0
+  · exact omegaΓ_provClosed_of_directed Provable K Machine encode_halt Cn hCnExt hIdem hProvCn hPCdir A0
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- D') OMEGA LIMIT ANALYSIS: The ω-Collapse Phenomenon
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The ω-Collapse Theorem
+
+This section formalizes a key ordinal phenomenon:
+
+**If stage 1 is absorbable, then S1Rel(omegaΓ) = ∅**.
+
+This is the "ω-collapse" effect:
+- At finite stages, S1Rel can remain nonempty (frontiers are generated and added).
+- But at the limit ω, if absorption holds, *everything that was ever a frontier*
+  has been pushed into a successor stage and became provable.
+- Hence nothing can remain "kit-certified but unprovable" at ω.
+
+Combined with Route II/T2 (which says S1 must be nonempty for admissible Γ),
+this forces a **trilemma**:
+1. Absorbable/PostSplitter does NOT propagate along the chain, OR
+2. ωΓ is NOT an admissible state (exits ThState or Route II hypotheses), OR
+3. The colimit/union is NOT the right limit object (F is not ω-continuous).
+-/
+
+/--
+  **ω-Collapse Theorem**: If stage 1 along the chain is absorbable, then the
+  dynamic frontier at the ω-limit is forced empty.
+
+  This is a fundamental ordinal phenomenon: what "remains unprovable at ω"
+  has already been absorbed at a finite stage (hence provable at ω by monotonicity).
+
+  NOTE: This requires only `Absorbable` at stage 1, not at all stages.
+-/
+theorem S1Rel_omegaΓ_eq_empty_of_absorbable_succ
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hAbs1 :
+      Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ) :
+    S1Rel Provable K Machine encode_halt
+      (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) = ∅ := by
+  apply Set.eq_empty_iff_forall_notMem.mpr
+  intro p hp
+  rcases hp with ⟨e, rfl, hKit, hNprovω⟩
+
+  -- inclusions into ω
+  have hIncl0 :
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ ⊆
+      omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 :=
+    chainState_le_omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 0
+
+  have hIncl1 :
+      (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ ⊆
+      omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 :=
+    chainState_le_omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0 1
+
+  -- ¬Provable ω ⟹ ¬Provable Γ₀ (contrapositive of monotonicity)
+  have hNprov0 :
+      ¬ Provable
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ
+          (encode_halt e) := by
+    intro hP0
+    have hPω := hMono _ _ hIncl0 _ hP0
+    exact hNprovω hPω
+
+  -- So encode_halt e ∈ S1Rel(Γ₀)
+  have hpS1_0 :
+      encode_halt e ∈
+        S1Rel Provable K Machine encode_halt
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ :=
+    ⟨e, rfl, hKit, hNprov0⟩
+
+  -- p ∈ Γ₁ via CnExtensive on the union Γ₀ ∪ S1Rel(Γ₀)
+  have hpIn1 :
+      encode_halt e ∈
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ := by
+    have hUnion : encode_halt e ∈
+        ((chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ ∪
+          S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ) :=
+      Or.inr hpS1_0
+    have hCnMem : encode_halt e ∈
+        Cn ((chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ ∪
+          S1Rel Provable K Machine encode_halt
+            (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 0).Γ) :=
+      (hCnExt _) hUnion
+    -- chainState 1 = FState (chainState 0), and (FState A).Γ = Cn(A.Γ ∪ S1Rel A.Γ)
+    simpa [chainState, FState, F] using hCnMem
+
+  -- Absorbable at stage 1: membership ⟹ provability
+  have hP1 :
+      Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+        (encode_halt e) :=
+    hAbs1 _ hpIn1
+
+  -- Monotonicity: Provable Γ₁ ⟹ Provable ωΓ
+  have hPω := hMono _ _ hIncl1 _ hP1
+
+  -- Contradiction with ¬Provable ωΓ
+  exact hNprovω hPω
+
+/--
+  **Trilemma at ω**: If the ω-limit is admissible AND Route II applies,
+  then Absorbable cannot hold at stage 1.
+
+  This formalizes the structural constraint:
+  - Route II says S1 must be nonempty for admissible Γ.
+  - The ω-collapse says Absorbable at stage 1 forces S1(ωΓ) = ∅.
+  - Therefore, under Route II, Absorbable cannot hold at stage 1.
+-/
+theorem omega_trilemma
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    -- Route II hypothesis: S1 is nonempty at ω (the limit is admissible)
+    (hRouteII : (S1Rel Provable K Machine encode_halt
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)).Nonempty) :
+    ¬ Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ := by
+  intro hAbs1
+  have hEmpty :=
+    S1Rel_omegaΓ_eq_empty_of_absorbable_succ Provable K Machine encode_halt Cn
+      hMono hCnExt hIdem hProvCn A0 hAbs1
+  rw [hEmpty] at hRouteII
+  exact Set.not_nonempty_empty hRouteII
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- D'') TRILEMMA IN DISJUNCTION FORM
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The ω-Trilemma: Explicit Disjunction
+
+We now define intrinsic notions of admissibility and Route II at ω,
+then express the trilemma as an explicit disjunction:
+
+    ¬Absorbable(Γ₁) ∨ ¬OmegaAdmissible(ωΓ) ∨ ¬RouteIIAt(ωΓ)
+
+This says: you cannot have all three simultaneously.
+At least one must fail for the dynamics to be consistent.
+-/
+
+
+
+/-- Minimal "Route II at ω" predicate: frontier nonempty.
+    This is the condition that Route II/T2 would enforce for admissible states. -/
+def RouteIIAt (ωΓ : Set PropT) : Prop :=
+  (S1Rel Provable K Machine encode_halt ωΓ).Nonempty
+
+/--
+  **Route II Hypotheses**: The conditions under which Route II applies.
+  This bundles Soundness + Negative Completeness + the T2 barrier.
+  When these hold AND the state is OmegaAdmissible, then RouteIIAt is forced.
+-/
+structure RouteIIHyp' (SProvable : PropT → Prop) (SNot : PropT → PropT) (ωΓ : Set PropT) : Prop where
+  soundness : ∀ p, Provable ωΓ p → SProvable p
+  negComplete : ∀ e : Code, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))
+  barrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False
+
+/--
+  **Route II applies to admissible states**: The key coupling.
+  If ωΓ is admissible (in the intrinsic sense), then Route II forces S1 nonempty.
+  This is the bridge that makes the trilemma genuinely 3-way.
+-/
+def RouteIIApplies (ωΓ : Set PropT) : Prop :=
+  OmegaAdmissible Provable Cn ωΓ → (S1Rel Provable K Machine encode_halt ωΓ).Nonempty
+
+/--
+  **Trilemma in Disjunction Form**: All three branches are active.
+
+  This version properly uses OmegaAdmissible by splitting on all cases.
+  The trilemma says: given Absorbable(Γ₁) and OmegaAdmissible(ωΓ),
+  we can derive ¬RouteIIAt(ωΓ).
+-/
+theorem omega_trilemma_disjunction
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+    ∨ ¬ OmegaAdmissible Provable Cn
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+    ∨ ¬ RouteIIAt Provable K Machine encode_halt
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := by
+  classical
+  by_cases hAbs :
+      Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+  · by_cases hΩ :
+        OmegaAdmissible Provable Cn
+          (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+    · -- Both Absorbable and OmegaAdmissible hold → Route II must fail
+      right; right
+      intro hR
+      -- Use omega_trilemma directly: RouteIIAt → ¬Absorbable, contradiction
+      have hNAbs := omega_trilemma Provable K Machine encode_halt Cn
+          hMono hCnExt hIdem hProvCn A0 hR
+      exact hNAbs hAbs
+    · -- OmegaAdmissible fails
+      right; left; exact hΩ
+  · -- Absorbable fails
+    left; exact hAbs
+
+/--
+  **Trilemma (Conjunction Form)**: It is impossible to have all three conditions.
+
+  This is often more exploitable: given any two, you can derive the negation of the third.
+-/
+theorem omega_trilemma_not_all
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ (Absorbable Provable
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+       ∧ OmegaAdmissible Provable Cn
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+       ∧ RouteIIAt Provable K Machine encode_halt
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) := by
+  intro h
+  have hR : RouteIIAt Provable K Machine encode_halt
+      (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := h.2.2
+  have hNAbs :=
+    omega_trilemma Provable K Machine encode_halt Cn
+      hMono hCnExt hIdem hProvCn A0 hR
+  exact hNAbs h.1
+
+/--
+  **Structural Corollary**: If Route II applies to all admissible states,
+  then Absorbable + OmegaAdmissible → False.
+
+  This is the "pure structural" form: the dynamics cannot have both
+  successor-level absorption and limit-level admissibility when Route II holds.
+-/
+theorem omega_collapse_structural
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hRouteIIApplies : RouteIIApplies Provable K Machine encode_halt Cn
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0))
+    (hAbs : Absorbable Provable
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ)
+    (hΩ : OmegaAdmissible Provable Cn
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) :
+    False := by
+  have hR : RouteIIAt Provable K Machine encode_halt
+      (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) :=
+    hRouteIIApplies hΩ
+  exact (omega_trilemma_not_all Provable K Machine encode_halt Cn
+    hMono hCnExt hIdem hProvCn A0) ⟨hAbs, hΩ, hR⟩
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- E) BRIDGE TO COMPLEMENTARITY
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Connecting to frontier_necessary from Complementarity
+
+The abstract hypotheses `FState_preserves_PostSplitter` and `FrontierWitness_along_chainState`
+can be instantiated using theorems from `Complementarity.lean`, specifically:
+
+1. **frontier_necessary** proves `(S1Eff S encode_halt).Nonempty` under negative completeness
+   and semi-decidability assumptions.
+
+2. `S1Eff.Nonempty` implies `FrontierWitness` because both capture the same concept:
+   ∃ e, Rev0_K K (Machine e) ∧ ¬ Provable Γ (encode_halt e).
+
+The following theorem makes this connection explicit.
+-/
+
+/--
+  **S1Rel.Nonempty implies FrontierWitness** (definitional equivalence).
+  This shows that `S1Rel Γ ≠ ∅` is the same as having a `FrontierWitness` for Γ.
+-/
+theorem FrontierWitness_of_S1Rel_nonempty
+    {Γ : Set PropT}
+    (h : (S1Rel Provable K Machine encode_halt Γ).Nonempty) :
+    FrontierWitness Provable K Machine encode_halt Γ := by
+  rcases h with ⟨p, hp⟩
+  rcases hp with ⟨e, hpEq, hKit, hNprov⟩
+  exact ⟨e, hKit, hNprov⟩
+
+/--
+  **FrontierWitness implies S1Rel.Nonempty** (converse direction).
+-/
+theorem S1Rel_nonempty_of_FrontierWitness
+    {Γ : Set PropT}
+    (h : FrontierWitness Provable K Machine encode_halt Γ) :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
+  rcases h with ⟨e, hKit, hNprov⟩
+  refine ⟨encode_halt e, ?_⟩
+  exact ⟨e, rfl, hKit, hNprov⟩
+
+/--
+  **S1Rel.Nonempty ↔ FrontierWitness** (definitional equivalence).
+-/
+theorem S1Rel_nonempty_iff_FrontierWitness
+    {Γ : Set PropT} :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty ↔
+    FrontierWitness Provable K Machine encode_halt Γ :=
+  ⟨FrontierWitness_of_S1Rel_nonempty Provable K Machine encode_halt,
+   S1Rel_nonempty_of_FrontierWitness Provable K Machine encode_halt⟩
+
+/-!
+### How to instantiate the global dynamics
+
+To apply `infinite_strict_growth` to a concrete `ComplementaritySystem S`, you would:
+
+1. Set `Provable := S.Provable`, `K := S.K`, `Machine := S.Machine ∘ S.dec`, `encode_halt := your_encoding`
+2. Prove `FState_preserves_PostSplitter` for your specific `Cn` (usually `Cn = id` or a sound closure)
+3. Use `frontier_necessary` to derive `S1Rel.Nonempty` for each stage, then convert to `FrontierWitness`
+   via `FrontierWitness_of_S1Rel_nonempty`
+
+This completes the bridge between the abstract dynamics and the concrete impossibility theorems.
+-/
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- F) ROUTE II — IMPOSSIBILITY OF EMPTY FRONTIER
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Route II: Impossibility of empty frontier (design theorem)
+
+This section formalizes the impossibility argument:
+  S1Rel(Γ) = ∅ ⟹ ⊥
+
+Under the axioms:
+- A1 (Soundness): `Provable Γ p → S.Provable p`
+- A2 (Negative completeness): `¬Rev0(e) → S.Provable (Not (encode_halt e))`
+- A3' (Extraction): bivalence in S → total external decider
+- A3 (Internalization + T2): total decider → contradiction
+
+The key insight: frontier empty forces a forbidden decision power.
+-/
+
+-- Note: We use SProvable and SNot as parameters instead of ImpossibleSystem
+-- to avoid universe issues and keep the section maximally parametric.
+variable (SProvable : PropT → Prop) -- Instantiate as S.Provable
+variable (SNot : PropT → PropT)     -- Instantiate as S.Not
+
+/-- A1: Soundness — relative provability implies global provability. -/
+def Soundness (Γ : Set PropT) : Prop :=
+  ∀ p, Provable Γ p → SProvable p
+
+/-- A2: Negative completeness in S — kit-non-certified implies S proves negation. -/
+def NegativeComplete : Prop :=
+  ∀ e : Code, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))
+
+/-- Absorption Σ₁: If S1Rel(Γ) = ∅, then Rev0 ⟹ Provable Γ (encode_halt e). -/
+theorem absorption_sigma1
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅) :
+    ∀ e : Code, Rev0_K K (Machine e) → Provable Γ (encode_halt e) := by
+  intro e hRev
+  by_contra hNprov
+  have hMem : encode_halt e ∈ S1Rel Provable K Machine encode_halt Γ :=
+    ⟨e, rfl, hRev, hNprov⟩
+  rw [hEmpty] at hMem
+  simp at hMem
+
+/-- Absorption + Soundness: If S1Rel(Γ) = ∅ and Soundness(Γ), then Rev0 ⟹ S.Provable. -/
+theorem absorption_soundness
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ) :
+    ∀ e : Code, Rev0_K K (Machine e) → SProvable (encode_halt e) := by
+  intro e hRev
+  have hProv : Provable Γ (encode_halt e) :=
+    absorption_sigma1 Provable K Machine encode_halt hEmpty e hRev
+  exact hSound (encode_halt e) hProv
+
+/--
+  **Bivalence in S**: If S1Rel(Γ) = ∅ with Soundness, and S has negative completeness,
+  then for every e, S proves either halt(e) or ¬halt(e) (piloted by Rev0).
+-/
+theorem bivalence_in_S
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
+    ∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e)) := by
+  intro e
+  classical -- Rev0_K is undecidable
+  by_cases hRev : Rev0_K K (Machine e)
+  · -- Rev0(e) ⟹ S.Provable (halt e) via absorption + soundness
+    exact Or.inl (absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound e hRev)
+  · -- ¬Rev0(e) ⟹ S.Provable (¬halt e) via negative completeness
+    exact Or.inr (hNegComp e hRev)
+
+/--
+  **Route II Design Theorem (parametric form)**.
+
+  If:
+  - S1Rel(Γ) = ∅
+  - Soundness: Provable Γ p → S.Provable p
+  - Negative completeness: ¬Rev0(e) → S.Provable (¬halt e)
+  - Total decider extraction: bivalence in S produces a decidable Rev0
+  - T2 barrier: total decider implies contradiction
+
+  Then: ⊥.
+
+  This is a schema; the final step (extraction + T2) is left as a hypothesis
+  to be instantiated via OracleMachine or similar.
+-/
+theorem frontier_empty_contradiction_schema
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    -- A3' + A3: bivalence + extraction + T2 combined as one hypothesis
+    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    False := by
+  have hBiv := bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
+  exact hBarrier hBiv
+
+/-!
+### Connection to T2: InternalHaltingPredicate components
+
+The bivalence produced by `frontier_empty` provides exactly the components needed
+for `InternalHaltingPredicate`:
+
+- `total` : ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
+  → Given by `bivalence_in_S` with `H e = encode_halt e`
+
+- `correct` : ∀ e, Rev0_K K (Machine e) → S.Provable (H e)
+  → Given by `absorption_soundness` (from frontier empty + Soundness)
+
+- `complete` : ∀ e, ¬ Rev0_K K (Machine e) → S.Provable (S.Not (H e))
+  → Given by `NegativeComplete`
+
+The remaining piece for full T2 connection is the semi-decidability witness
+`f : Code → (Nat →. Nat)` for `S.Provable (S.Not (encode_halt e))`.
+This typically comes from your architecture (OracleMachine/ComplementaritySystem).
+-/
+
+/--
+  **T2 Components from Frontier Empty**.
+  If the frontier is empty, we can construct all the logical components
+  needed for InternalHaltingPredicate, except the semi-decidability witness.
+-/
+theorem frontier_empty_T2_components
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
+    -- total
+    (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) ∧
+    -- correct
+    (∀ e, Rev0_K K (Machine e) → SProvable (encode_halt e)) ∧
+    -- complete
+    (∀ e, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
+  · exact absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound
+  · exact hNegComp
+
+/-!
+### Corollary: The frontier cannot be empty (without contradiction)
+
+This is the key dynamic result: under the axioms, `S1Rel(Γ) ≠ ∅` for all admissible Γ.
+Combined with `FrontierWitness_of_S1Rel_nonempty`, this would close `infinite_strict_growth`
+without needing `PostSplitter` propagation.
+-/
+
+theorem frontier_nonempty_of_route_II
+    {Γ : Set PropT}
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
+  by_contra hEmpty
+  rw [Set.not_nonempty_iff_eq_empty] at hEmpty
+  exact frontier_empty_contradiction_schema Provable K Machine encode_halt SProvable SNot
+    hEmpty hSound hNegComp hBarrier
+
+/--
+  **RouteIIHyp' → RouteIIApplies**: OmegaAdmissible + RouteIIHyp' → RouteIIAt.
+  This makes OmegaAdmissible structurally load-bearing in the trilemma.
+-/
+theorem RouteIIApplies_of_RouteIIHyp'
+    {ωΓ : Set PropT}
+    (hHyp : RouteIIHyp' Provable K Machine encode_halt SProvable SNot ωΓ) :
+    RouteIIApplies Provable K Machine encode_halt Cn ωΓ := by
+  intro _hAdm
+  exact frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
+    hHyp.soundness hHyp.negComplete hHyp.barrier
+
+end Functor
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- G) FULL T2 CONNECTION (Route II → T2_impossibility)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Complete T2 Integration
+
+This section completes Route II by connecting to `T2_impossibility`.
+
+NOTE: This section uses concrete types from `Impossibility.lean`:
+- `RevHalt.Code = Nat.Partrec.Code`
+- `RevHalt.Machine : RevHalt.Code → Trace`
+- `ImpossibleSystem PropT` for `PropT : Type`
+
+Given:
+- `S1Rel(Γ) = ∅` (frontier empty)
+- `Soundness`: `Provable Γ p → S.Provable p`
+- `NegativeComplete`: `¬Rev0(e) → S.Provable (S.Not (encode_halt e))`
+- Semi-decidability witness `(f, hf, h_semidec)`
+
+We construct an `InternalHaltingPredicate S K` and derive a contradiction via T2.
+-/
+
+section T2_Connection
+
+variable (encode_halt : RevHalt.Code → PropT)
+
+open Nat.Partrec in
+/--
+  **Constructor for InternalHaltingPredicate** from Route II components.
+  Given (total, correct, complete) from `frontier_empty_T2_components`
+  plus the semi-decidability witness `(f, hf, hsemidec)`,
+  this constructs the `InternalHaltingPredicate` needed for T2.
+-/
+def mk_InternalHaltingPredicate_RouteII
+    (S : ImpossibleSystem PropT)
+    (hTotal    : ∀ e, S.Provable (encode_halt e) ∨ S.Provable (S.Not (encode_halt e)))
+    (hCorrect  : ∀ e, Rev0_K K (RevHalt.Machine e) → S.Provable (encode_halt e))
+    (hComplete : ∀ e, ¬ Rev0_K K (RevHalt.Machine e) → S.Provable (S.Not (encode_halt e)))
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    InternalHaltingPredicate S K where
+  H := encode_halt
+  total := hTotal
+  correct := hCorrect
+  complete := hComplete
+  f := f
+  f_partrec := hf
+  semidec := hsemidec
+
+open Nat.Partrec in
+/--
+  **Route II → T2 Contradiction (Full Theorem)**.
+
+  If:
+  - `S1Rel(Γ) = ∅`
+  - `Soundness Γ` (relative provability implies S.Provable)
+  - `NegativeComplete` (¬Rev0 ⟹ S proves negation)
+  - Semi-decidability witness `(f, hf, hsemidec)`
+  - `DetectsMonotone K`
+
+  Then: **False** (via T2_impossibility).
+
+  This is the complete formalization of Route II.
+-/
+theorem frontier_empty_T2_full
+    (S : ImpossibleSystem PropT)
+    (hK : DetectsUpFixed K)
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K RevHalt.Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable S.Provable Γ)
+    (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    -- Semi-decidability witness (from OracleMachine/ComplementaritySystem)
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    False := by
+  -- 1) Extract the T2 components from frontier empty
+  have hTriple :=
+    frontier_empty_T2_components Provable K RevHalt.Machine encode_halt S.Provable S.Not
+      hEmpty hSound hNegComp
+  obtain ⟨hTotal, hCorrect, hComplete⟩ := hTriple
+
+  -- 2) Package into InternalHaltingPredicate
+  let IH : InternalHaltingPredicate S K :=
+    { H := encode_halt
+      total := hTotal
+      correct := hCorrect
+      complete := hComplete
+      f := f
+      f_partrec := hf
+      semidec := hsemidec }
+
+  -- 3) Apply T2_impossibility (now uses Nonempty)
+  exact T2_impossibility S K hK ⟨IH⟩
+
+open Nat.Partrec in
+/--
+  **Corollary: Frontier Never Empty (Route II + T2)**.
+
+  Under the T2 hypotheses, the frontier is always non-empty.
+  This provides `FrontierWitness` for all admissible states.
+-/
+theorem frontier_nonempty_T2
+    (S : ImpossibleSystem PropT)
+    (hK : DetectsUpFixed K)
+    {Γ : Set PropT}
+    (hSound : Soundness Provable S.Provable Γ)
+    (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    (S1Rel Provable K RevHalt.Machine encode_halt Γ).Nonempty := by
+  by_contra hEmpty
+  rw [Set.not_nonempty_iff_eq_empty] at hEmpty
+  exact frontier_empty_T2_full Provable K encode_halt S hK hEmpty hSound hNegComp f hf hsemidec
+
+end T2_Connection
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- H) TRANSFINITE ITERATION (Ordinal-indexed dynamics)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Transfinite Iteration
+
+The ordinal-indexed dynamics (limit union, closure ordinal, transfinite trilemma)
+have been moved to `RevHalt.Theory.Transfinite` to isolate non-constructive
+dependencies and proof sketches.
+
+See [RevHalt/Theory/Transfinite.lean](RevHalt/Theory/Transfinite.lean).
+-/
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- TWO-SIDED DYNAMICS (Generative Complementarity)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+section TwoSidedDynamics
+
+variable (encode_not_halt : Code → PropT)
+
+/--
+  **Two-Sided Pick**: A sentence p paired with a certificate.
+
+  The certificate ties p to either:
+  - `Rev0` (halting witness) -> p = encode_halt e
+  - `KitStabilizes` (non-halting witness) -> p = encode_not_halt e
+
+  Crucially, this structure carries the certificate *without deciding* which case holds.
+  It acts as a "candidate generator" for the theory.
+-/
+structure TwoPick (Γ : Set PropT) (e : Code) where
+  p : PropT
+  cert :
+    (Rev0_K K (Machine e) ∧ p = encode_halt e) ∨
+    (KitStabilizes K (Machine e) ∧ p = encode_not_halt e)
+  unprov : ¬ Provable Γ p
+
+/--
+  **S1Rel±(Γ)**: The two-sided dynamic frontier.
+
+  This set contains all sentences backed by a TwoPick certificate that are NOT
+  currently provable in Γ. It acts as a bidirectional source of new axioms.
+-/
+def S1Rel_pm (Γ : Set PropT) : Set PropT :=
+  { p | ∃ e : Code,
+      ∃ pk : TwoPick Provable K Machine encode_halt encode_not_halt Γ e,
+        p = pk.p }
+
+/--
+  **F0±(Γ)**: The two-sided expansion step.
+-/
+def F0_pm (Γ : Set PropT) : Set PropT :=
+  Γ ∪ S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ
+
+/--
+  **Bridging Lemma**: The One-Sided frontier is a subset of the Two-Sided frontier.
+
+  This allows us to lift any "frontier non-empty" result from the One-Sided theory
+  (e.g., from Route II/T2) directly to the Two-Sided theory.
+-/
+theorem S1Rel_subset_S1Rel_pm
+    (Γ : Set PropT) :
+    S1Rel Provable K Machine encode_halt Γ ⊆
+      S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  intro p hp
+  rcases hp with ⟨e, rfl, hKit, hNprov⟩
+  -- Construct the TwoPick witness
+  exact ⟨e, {
+    p := encode_halt e
+    cert := Or.inl ⟨hKit, rfl⟩
+    unprov := hNprov
+  }, rfl⟩
+
+/--
+  **S1± is Anti-Monotone**:
+  As the theory grows (Γ ⊆ Δ), the set of unprovable certified sentences shrinks.
+-/
+theorem S1Rel_pm_anti_monotone
+    (hMono : ProvRelMonotone Provable)
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ) :
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Δ ⊆
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  intro p hp
+  rcases hp with ⟨e, pk, hpEq⟩
+  -- Explicitly construct the witness for Δ (target is Γ)
+  -- pk is in Δ (so unprovable in Δ). We want pk in Γ (unprovable in Γ).
+  exact ⟨e, {
+    p := pk.p
+    cert := pk.cert
+    unprov := fun hProvΓ => pk.unprov (hMono Γ Δ hSub pk.p hProvΓ)
+  }, hpEq⟩
+
+/--
+  **Conservation Law (Two-Sided)**:
+  Under Absorbable (membership => provability), the frontier is exactly
+  what is "missing" from the expansion.
+-/
+theorem missing_F0_pm_eq_S1Rel_pm_of_absorbable
+    (Γ : Set PropT)
+    (hAbs : Absorbable Provable Γ) :
+    MissingFrom Provable Γ
+        (F0_pm Provable K Machine encode_halt encode_not_halt Γ)
+      =
+    S1Rel_pm Provable K Machine encode_halt encode_not_halt Γ := by
+  ext p
+  constructor
+  · intro hp
+    rcases hp with ⟨hpF0, hNprov⟩
+    cases hpF0 with
+    | inl hpΓ =>
+        have hProv : Provable Γ p := hAbs p hpΓ
+        exact False.elim (hNprov hProv)
+    | inr hpS1 =>
+        exact hpS1
+  · intro hpS1
+    refine And.intro ?_ ?_
+    · exact Or.inr hpS1
+    · -- Extract unprovability from the witness
+      rcases hpS1 with ⟨e, pk, hpEq⟩
+      intro hProvp
+      have hProvpk : Provable Γ pk.p := by
+        rw [hpEq] at hProvp
+        exact hProvp
+      exact pk.unprov hProvpk
+
+/--
+  **F0± is Monotone** (Constructive).
+
+  Requires `DecidablePred` to decide if a frontier element has been absorbed.
+-/
+theorem F0_pm_monotone_of_provClosed
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ)
+    (hDecΔ : DecidablePred (fun p => Provable Δ p)) :
+    F0_pm Provable K Machine encode_halt encode_not_halt Γ ⊆
+    F0_pm Provable K Machine encode_halt encode_not_halt Δ := by
+  intro p hp
+  cases hp with
+  | inl hpΓ =>
+      exact Or.inl (hSub hpΓ)
+  | inr hpS1Γ =>
+      rcases hpS1Γ with ⟨e, pk, hpEq⟩
+      -- Constructive split on absorption
+      cases hDecΔ pk.p with
+      | isTrue hProvΔ =>
+          -- Absorbed in Δ
+          have hMemΔ : pk.p ∈ Δ := hClosedΔ pk.p hProvΔ
+          have : p ∈ Δ := by
+            rw [hpEq]
+            exact hMemΔ
+          exact Or.inl this
+      | isFalse hNprovΔ =>
+          -- Remains in frontier S1Rel_pm(Δ)
+          refine Or.inr ?_
+          exact ⟨e, {
+            p := pk.p
+            cert := pk.cert
+            unprov := hNprovΔ
+          }, hpEq⟩
+
+/--
+  **F0± is Monotone** (Classical).
+
+  Used for the functor instance where decidability is not guaranteed.
+-/
+theorem F0_pm_monotone_classical
+    {Γ Δ : Set PropT} (hSub : Γ ⊆ Δ)
+    (hClosedΔ : ProvClosed Provable Δ) :
+    F0_pm Provable K Machine encode_halt encode_not_halt Γ ⊆
+    F0_pm Provable K Machine encode_halt encode_not_halt Δ := by
+  classical -- Essential for the axiom-free check to report 'classical'
+  apply F0_pm_monotone_of_provClosed Provable K Machine encode_halt encode_not_halt hSub hClosedΔ (Classical.decPred _)
+
+-- -----------------------------------------------------------------------------
+-- Two-Sided Functor
+-- -----------------------------------------------------------------------------
+
+variable (Cn : Set PropT → Set PropT)
+
+/-- **F±(S)**: The two-sided dynamic step (closed). -/
+def F_pm (Γ : Set PropT) : Set PropT :=
+  Cn (F0_pm Provable K Machine encode_halt encode_not_halt Γ)
+
+/--
+  **FState±**: Lifts the two-sided step to the category of Theory States.
+-/
+def FState_pm
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A : ThState (PropT := PropT) Provable Cn) :
+    ThState (PropT := PropT) Provable Cn where
+  Γ := F_pm Provable K Machine encode_halt encode_not_halt Cn A.Γ
+  cn_closed := by
+    dsimp [F_pm]
+    rw [hIdem]
+  prov_closed := by
+    dsimp [F_pm]
+    apply hProvCn
+
+/--
+  **FState± Map**: Functorial mapping for FState±.
+-/
+def FState_pm_map
+    (hCnMono : CnMonotone Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    {A B : ThState (PropT := PropT) Provable Cn}
+    (f : A ⟶ B) :
+    FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn A ⟶
+    FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn B := by
+  have hAB : A.Γ ⊆ B.Γ := f.down
+  refine ⟨?_⟩
+  dsimp [FState_pm, F_pm]
+  apply hCnMono
+  apply F0_pm_monotone_classical Provable K Machine encode_halt encode_not_halt hAB B.prov_closed
+
+/--
+  **TheoryStepFunctor±**: The two-sided dynamic endofunctor.
+-/
+def TheoryStepFunctor_pm
+    (hCnMono : CnMonotone Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn) :
+    ThState (PropT := PropT) Provable Cn ⥤ ThState (PropT := PropT) Provable Cn where
+  obj := FState_pm Provable K Machine encode_halt encode_not_halt Cn hIdem hProvCn
+  map := FState_pm_map Provable K Machine encode_halt encode_not_halt Cn hCnMono hIdem hProvCn
+  map_id := fun _ => Subsingleton.elim _ _
+  map_comp := fun _ _ => Subsingleton.elim _ _
+
+end TwoSidedDynamics
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- TRAJECTORY DYNAMICS: The Effective Object
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## Trajectory Dynamics
+
+The non-fusion invariant (T2) forces a *dynamic* interpretation:
+- No single theory captures all certified truths
+- The *effective object* is the trajectory of absorption, not a fixed theory
+
+This section formalizes:
+1. `Trajectory` as an explicit type
+2. Trajectory uniqueness given initial state + step function
+3. Initial-dependence: different Γ0 → different trajectories
+4. No global selector: impossible to uniformly select "the right" trajectory
+-/
+
+section TrajectoryDynamics
+
+
+
+/-- A trajectory is an infinite sequence of theory states. -/
+abbrev Trajectory := ℕ → Set PropT
+
+/-- A trajectory is F0-compatible if each step is F0-generated. -/
+def IsF0Trajectory (traj : Trajectory (PropT := PropT)) (Γ0 : Set PropT) : Prop :=
+  traj 0 = Γ0 ∧ ∀ n, traj (n + 1) = F0 Provable K Machine encode_halt (traj n)
+
+/-- The canonical trajectory starting from Γ0. -/
+def canonicalTrajectory (Γ0 : Set PropT) : Trajectory (PropT := PropT) :=
+  chain0 Provable K Machine encode_halt Γ0
+
+/-- The canonical trajectory is F0-compatible. -/
+theorem canonicalTrajectory_is_F0 (Γ0 : Set PropT) :
+    IsF0Trajectory Provable K Machine encode_halt
+      (canonicalTrajectory Provable K Machine encode_halt Γ0) Γ0 := by
+  constructor
+  · rfl
+  · intro n; rfl
+
+/--
+**Trajectory Uniqueness**: Any F0-compatible trajectory equals the canonical one.
+-/
+theorem trajectory_unique (Γ0 : Set PropT) (traj : Trajectory (PropT := PropT))
+    (hTraj : IsF0Trajectory Provable K Machine encode_halt traj Γ0) :
+    traj = canonicalTrajectory Provable K Machine encode_halt Γ0 := by
+  funext n
+  induction n with
+  | zero => exact hTraj.1
+  | succ n ih =>
+      have h1 : traj (n + 1) = F0 Provable K Machine encode_halt (traj n) := hTraj.2 n
+      have h2 : canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) =
+                F0 Provable K Machine encode_halt (canonicalTrajectory Provable K Machine encode_halt Γ0 n) := rfl
+      rw [h1, h2, ih]
+
+/--
+**Initial-Dependence**: Different initial states yield different trajectories
+(assuming strict growth at each stage).
+
+This is the key property: the trajectory is *fully determined* by Γ0,
+and different Γ0 give genuinely different trajectories.
+-/
+theorem trajectory_initial_dependence
+    {Γ0 Δ0 : Set PropT}
+    (hNe : Γ0 ≠ Δ0) :
+    canonicalTrajectory Provable K Machine encode_halt Γ0 ≠
+    canonicalTrajectory Provable K Machine encode_halt Δ0 := by
+  intro hContra
+  have h0 : canonicalTrajectory Provable K Machine encode_halt Γ0 0 =
+            canonicalTrajectory Provable K Machine encode_halt Δ0 0 := by
+    rw [hContra]
+  simp only [canonicalTrajectory, chain0] at h0
+  exact hNe h0
+
+/--
+**Strict Growth Along Trajectory**: If witness exists at each stage,
+the trajectory is strictly increasing.
+-/
+theorem trajectory_strict_growth
+    (Γ0 : Set PropT)
+    (hAbs : ∀ n, Absorbable Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n))
+    (hW : ∀ n, FrontierWitness Provable K Machine encode_halt
+                (canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
+    ∀ n, canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊂
+         canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) := by
+  intro n
+  obtain ⟨e, hKit, hNprov⟩ := hW n
+  exact strict_step_of_witness_absorbable Provable K Machine encode_halt
+    (canonicalTrajectory Provable K Machine encode_halt Γ0 n)
+    (hAbs n) e hKit hNprov
+
+/--
+**The ω-limit is the trajectory's effective object**.
+-/
+def trajectoryLimit (Γ0 : Set PropT) : Set PropT :=
+  omega0 Provable K Machine encode_halt Γ0
+
+/-- Each stage embeds into the limit. -/
+theorem trajectory_stage_le_limit (Γ0 : Set PropT) (n : ℕ) :
+    canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊆
+    trajectoryLimit Provable K Machine encode_halt Γ0 := by
+  exact chain0_le_omega0 Provable K Machine encode_halt Γ0 n
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- INCARNATION TRILEMMA
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+/-!
+## The Incarnation Trilemma
+
+The core insight: three properties cannot hold simultaneously for any trajectory.
+
+1. **FrontierRegeneration**: At each step, new certified truths appear that are not yet provable
+2. **Admissible Limit**: The ω-limit is a well-formed theory state (Cn-closed, ProvClosed)
+3. **Absorption**: What is certified eventually becomes provable
+
+This is NOT Gödel. This is a limit pathology:
+> "The system cannot traverse ω without losing one of its structural properties"
+-/
+
+/--
+**FrontierRegeneration**: At every admissible state, a new frontier witness exists.
+
+This captures: "the external world keeps producing certified truths faster than absorption."
+
+**Derivation from Route II**: This property follows from `frontier_nonempty_of_route_II`
+under the conditions:
+- `Soundness`: provability in Γ implies provability in the external system
+- `NegativeComplete`: non-halting is provable externally
+- `Barrier`: T2 barrier (not all sentences decidable)
+
+When these hold for all admissible Γ, `FrontierRegeneration'` follows automatically.
+See `RouteIIApplies_of_RouteIIHyp'` for the coupling.
+-/
+def FrontierRegeneration' : Prop :=
+  ∀ Γ : Set PropT, PostSplitter Provable Γ →
+    FrontierWitness Provable K Machine encode_halt Γ
+
+/--
+**Derivation of FrontierRegeneration from Route II**.
+
+This theorem formalizes the link: if Route II hypotheses hold uniformly for any state,
+then `FrontierRegeneration'` is true.
+-/
+theorem FrontierRegeneration_of_RouteII_uniform
+    {SProvable : PropT → Prop} {SNot : PropT → PropT}
+    (hSound : ∀ Γ, Soundness Provable SProvable Γ)
+    (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBar   : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    FrontierRegeneration' Provable K Machine encode_halt := by
+  intro Γ _hPS
+  have : (S1Rel Provable K Machine encode_halt Γ).Nonempty :=
+    frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
+      (hSound Γ) hNeg hBar
+  exact FrontierWitness_of_S1Rel_nonempty Provable K Machine encode_halt this
+
+/--
+**The Incarnation Principle**: FrontierRegeneration + PostSplitter trajectory implies strict growth.
+
+If regeneration holds, the trajectory is strictly increasing forever.
+Note: Absorbable is derived from PostSplitter via `PostSplitter.imp_Absorbable`.
+-/
+theorem incarnation_strict_growth
+    (hRegen : FrontierRegeneration' Provable K Machine encode_halt)
+    (Γ0 : Set PropT)
+    (hPS : ∀ n, PostSplitter Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n)) :
+    ∀ n, canonicalTrajectory Provable K Machine encode_halt Γ0 n ⊂
+         canonicalTrajectory Provable K Machine encode_halt Γ0 (n + 1) := by
+  intro n
+  -- Derive Absorbable from PostSplitter
+  have hAbs : Absorbable Provable (canonicalTrajectory Provable K Machine encode_halt Γ0 n) :=
+    PostSplitter.imp_Absorbable Provable (hPS n)
+  -- witness at rank n from regeneration
+  obtain ⟨e, hKit, hNprov⟩ := hRegen _ (hPS n)
+  exact strict_step_of_witness_absorbable Provable K Machine encode_halt
+    (canonicalTrajectory Provable K Machine encode_halt Γ0 n)
+    hAbs e hKit hNprov
+
+/--
+**Incarnation Trilemma (Parametric Form)**:
+
+For any trajectory, the three conditions cannot all hold:
+1. Absorbable at step 1
+2. OmegaAdmissible at ω-limit
+3. RouteIIAt (frontier non-empty) at ω-limit
+
+This is a wrapper around `omega_trilemma_not_all` with full parameters.
+-/
+theorem incarnation_trilemma
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn) :
+    ¬ (Absorbable Provable
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ
+       ∧ OmegaAdmissible Provable Cn
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)
+       ∧ RouteIIAt Provable K Machine encode_halt
+            (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) :=
+  omega_trilemma_not_all Provable K Machine encode_halt Cn hMono hCnExt hIdem hProvCn A0
+
+/--
+**Crystallized Thesis**: Incarnation = non-passage to limit.
+
+The effective object is the trajectory, because no limit can be both:
+- Admissible (well-formed theory state)
+- Regenerative (frontier non-empty, Route II holds)
+
+Formally: `incarnation_trilemma` above, or equivalently `omega_trilemma_not_all`.
+-/
+theorem incarnation_means_no_stable_limit'
+    (Cn : Set PropT → Set PropT)
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (A0 : ThState (PropT := PropT) Provable Cn)
+    (hAbs : Absorbable Provable
+              (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 1).Γ)
+    (hAdm : OmegaAdmissible Provable Cn
+              (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0)) :
+    ¬ RouteIIAt Provable K Machine encode_halt
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn A0) := by
+  intro hR
+  exact incarnation_trilemma Provable K Machine encode_halt Cn
+    hMono hCnExt hIdem hProvCn A0 ⟨hAbs, hAdm, hR⟩
+
+end TrajectoryDynamics
+
+end RevHalt
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- AXIOM CHECKS
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+#print axioms RevHalt.ThHom.refl
+#print axioms RevHalt.ThHom.trans
+#print axioms RevHalt.S1Rel
+#print axioms RevHalt.S1Rel_anti_monotone
+#print axioms RevHalt.F0_extensive
+#print axioms RevHalt.chain0_mono_step
+#print axioms RevHalt.chain0_mono
+#print axioms RevHalt.omega0_universal
+#print axioms RevHalt.missing_F0_eq_S1_of_absorbable
+#print axioms RevHalt.strict_step_of_witness_absorbable
+#print axioms RevHalt.frontier_nonempty_all_stages
+#print axioms RevHalt.kit_certified_not_in_kernel
+
+-- Functor section axioms
+#print axioms RevHalt.TheoryStepFunctor
+#print axioms RevHalt.FState
+#print axioms RevHalt.FState_map
+#print axioms RevHalt.chainState
+#print axioms RevHalt.chainState_step_hom
+#print axioms RevHalt.conservation_nonempty_state
+#print axioms RevHalt.omegaΓ
+#print axioms RevHalt.chainState_le_omegaΓ

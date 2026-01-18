@@ -119,7 +119,7 @@ theorem quantifier_swap_coexistence
     (h_neg : ∀ e, KitStabilizes S.K (S.Machine e) → Truth (encode_not_halt e))
     (picks : ∀ e, OraclePick S encode_halt encode_not_halt e) :
     -- T2: No uniform internal predicate
-    (¬ ∃ _ : InternalHaltingPredicate S.toImpossibleSystem S.K, True) ∧
+    (¬ Nonempty (InternalHaltingPredicate S.toImpossibleSystem S.K)) ∧
     -- T3: For each e, there exists a sound deciding extension
     (∀ e, ∃ S_e : Set PropT,
       S2 ⊆ S_e ∧
@@ -152,4 +152,3 @@ end RevHalt
 -- Axiom checks (auto):
 #print axioms RevHalt.T3_permits_instancewise
 #print axioms RevHalt.quantifier_swap_coexistence
-

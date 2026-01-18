@@ -100,12 +100,12 @@ end Bridge
 
 section T1_on_aMachine
 
-theorem T1_on_aMachine (K : RHKit) (hK : DetectsMonotone K) (e : Code) :
+theorem T1_on_aMachine (K : RHKit) (hK : DetectsUpFixed K) (e : Code) :
     Rev0_K K (aMachine e) ↔ Halts (aMachine e) :=
   T1_traces K hK (aMachine e)
 
 theorem kits_agree_on_aMachine (K1 K2 : RHKit)
-    (h1 : DetectsMonotone K1) (h2 : DetectsMonotone K2) (e : Code) :
+    (h1 : DetectsUpFixed K1) (h2 : DetectsUpFixed K2) (e : Code) :
     Rev0_K K1 (aMachine e) ↔ Rev0_K K2 (aMachine e) :=
   T1_uniqueness K1 K2 h1 h2 (aMachine e)
 
@@ -206,7 +206,7 @@ def decidable_halts_of_decidable_eval
 
 theorem eval_iff_rev
     (A : OracleMachine Sentence Model)
-    (K : RHKit) (hK : DetectsMonotone K)
+    (K : RHKit) (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence) :
     A.Eval Γ φ ↔ Rev0_K K (aMachine (A.compile Γ φ)) := by
   have h_bridge := eval_iff_halts A Γ φ
@@ -227,7 +227,7 @@ variable (K : RHKit)
 
 /-- 1) From Architecture to External Decider for Rev0. -/
 def decidable_rev0_of_decidable_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (hCover : CompileCover A.compile)
     (hDec : ∀ (Γ : List Sentence) (φ : Sentence), Decidable (A.Eval Γ φ))
     (e : Code) : Decidable (Rev0_K K (aMachine e)) := by
@@ -250,7 +250,7 @@ def InternalizeDecider : Prop :=
 
 /-- 3) The Contradiction (Complementarity). -/
 theorem contradiction_if_internalize_external_decider
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (hCover : CompileCover A.compile)
     (hDec : ∀ (Γ : List Sentence) (φ : Sentence), Decidable (A.Eval Γ φ))
     (hLift : InternalizeDecider S K) :
@@ -259,22 +259,22 @@ theorem contradiction_if_internalize_external_decider
     fun e => decidable_rev0_of_decidable_eval A K hK hCover hDec e
   have hIH : ∃ IH : InternalHaltingPredicate S K, True :=
     hLift dRev
-  exact T2_impossibility S K hK hIH
+  obtain ⟨IH, _⟩ := hIH
+  exact T2_impossibility S K hK ⟨IH⟩
 
 end ArchitecturalConstraints
 
 /-!
-## 8b) T3.0 Projection: Subtraction in Architecture
+## 8b) T3.0 Structural — Frontier Necessity in Architecture
 -/
 
-section T3_0_Projection
+section T3_0_Structural
 
 open Nat.Partrec
--- open RevHalt -- already in namespace RevHalt
 
 variable {PropT : Type}
 variable (S : ImpossibleSystem PropT)
-variable (K : RHKit) (hK : DetectsMonotone K)
+variable (K : RHKit) (hK : DetectsUpFixed K)
 variable (encode_halt : Code → PropT)
 
 -- 1) Instancier ComplementaritySystem sur le même a-machine / même Code
@@ -296,20 +296,27 @@ def CS : ComplementaritySystem Code PropT :=
   machine_eq := by intro e; rfl
 }
 
--- 2) Choix standard : S2 = couche provable
-def S2prov : Set PropT := { p | S.Provable p }
+/--
+  **T3.0 Architectural — Frontier Necessity**
 
-lemma S2prov_is_prov : ∀ p, p ∈ S2prov S → S.Provable p := by
-  intro p hp; exact hp
+  For the a-machine/o-machine architecture, the frontier S1Eff is necessarily non-empty
+  under the hypotheses of negative completeness and semi-decidability.
 
--- 3) T3.0 : projection "ce qui manque à S2" = S1
-theorem Missing_projection_eq_S1 :
-    MissingFromS2 (CS S K hK) (S3Set (CS S K hK) (S2prov S) encode_halt) =
-    S1Set (CS S K hK) encode_halt := by
-  apply missing_equals_S1
-  exact S2prov_is_prov S
+  This is the architectural instantiation of `frontier_necessary`.
+-/
+theorem frontier_necessary_arch
+    (h_neg_complete : ∀ c : Code,
+        ¬ Rev0_K K (aMachine c) → S.Provable (S.Not (encode_halt c)))
+    (f : Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (h_semidec : ∀ c : Code,
+        S.Provable (S.Not (encode_halt c)) ↔ (∃ x, x ∈ (f c) 0)) :
+    (S1Eff (CS S K hK) encode_halt).Nonempty := by
+  exact frontier_necessary (CS S K hK) encode_halt
+    (fun c hNotRev => h_neg_complete c hNotRev)
+    f hf h_semidec
 
-end T3_0_Projection
+end T3_0_Structural
 
 /-!
 ## 9) T3 Integration — Certificate Types
@@ -335,13 +342,13 @@ theorem certificate_exclusion_aMachine (e : Code) :
   exact hS hH
 
 /-- HaltCertificate ↔ Halts for valid kit. -/
-theorem haltCertificate_iff_halts (hK : DetectsMonotone K) (e : Code) :
+theorem haltCertificate_iff_halts (hK : DetectsUpFixed K) (e : Code) :
     HaltCertificate K e ↔ Halts (aMachine e) := by
   unfold HaltCertificate
   exact T1_traces K hK (aMachine e)
 
 /-- StabCertificate ↔ Stabilizes for valid kit. -/
-theorem stabCertificate_iff_stabilizes (hK : DetectsMonotone K) (e : Code) :
+theorem stabCertificate_iff_stabilizes (hK : DetectsUpFixed K) (e : Code) :
     StabCertificate K e ↔ Stabilizes (aMachine e) := by
   unfold StabCertificate
   exact T1_stabilization K hK (aMachine e)
@@ -360,7 +367,7 @@ variable (K : RHKit)
 
 /-- If Eval holds, the compiled code has a Σ₁ certificate. -/
 theorem eval_gives_halt_certificate
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hEval : A.Eval Γ φ) :
     HaltCertificate K (A.compile Γ φ) := by
@@ -370,7 +377,7 @@ theorem eval_gives_halt_certificate
 
 /-- If ¬Eval holds, the compiled code has a Π₁ certificate. -/
 theorem not_eval_gives_stab_certificate
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hNotEval : ¬ A.Eval Γ φ) :
     StabCertificate K (A.compile Γ φ) := by
@@ -381,7 +388,7 @@ theorem not_eval_gives_stab_certificate
 
 /-- Σ₁ certificate ↔ Eval. -/
 theorem haltCertificate_iff_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence) :
     HaltCertificate K (A.compile Γ φ) ↔ A.Eval Γ φ := by
   unfold HaltCertificate
@@ -389,7 +396,7 @@ theorem haltCertificate_iff_eval
 
 /-- Π₁ certificate ↔ ¬Eval. -/
 theorem stabCertificate_iff_not_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence) :
     StabCertificate K (A.compile Γ φ) ↔ ¬ A.Eval Γ φ := by
   unfold StabCertificate KitStabilizes
@@ -440,7 +447,7 @@ structure ArchitecturalOraclePick (Γ : List Sentence) (φ : Sentence) where
 
 /-- From a positive Eval, we get a Σ₁ certificate. -/
 def architecturalPick_of_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hEval : A.Eval Γ φ) :
     ArchitecturalOraclePick A K Γ φ where
@@ -449,7 +456,7 @@ def architecturalPick_of_eval
 
 /-- From a negative Eval, we get a Π₁ certificate. -/
 def architecturalPick_of_not_eval
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (hNotEval : ¬ A.Eval Γ φ) :
     ArchitecturalOraclePick A K Γ φ where
@@ -458,7 +465,7 @@ def architecturalPick_of_not_eval
 
 /-- The architectural pick is exhaustive: every compiled code has a certificate. -/
 theorem architecturalPick_exhaustive
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (h : A.Eval Γ φ ∨ ¬ A.Eval Γ φ) :
     ∃ _ : ArchitecturalOraclePick A K Γ φ, True := by
@@ -480,7 +487,7 @@ theorem architecturalPick_exhaustive
   which can be used to construct sound extensions in T3.
 -/
 theorem architectural_T3_certificate_transfer
-    (hK : DetectsMonotone K)
+    (hK : DetectsUpFixed K)
     (Γ : List Sentence) (φ : Sentence)
     (pick : ArchitecturalOraclePick A K Γ φ) :
     (Halts (aMachine pick.code) ∧ HaltCertificate K pick.code) ∨
@@ -497,7 +504,7 @@ end OracleMachineToT3
 -- end RevHalt (temporarily comment out to insert new section inside namespace)
 
 /-!
-## 12) CertificateStore — Concrete S₃ Realization + T3.0 Subtraction (Architectural)
+## 12) CertificateStore — Concrete S₃ Realization
 -/
 
 section CertificateStore_Framework
@@ -505,86 +512,38 @@ section CertificateStore_Framework
 variable {Sentence Model PropT : Type}
 variable (A : OracleMachine Sentence Model)
 variable (S : ImpossibleSystem PropT)
-variable (K : RHKit) (hK : DetectsMonotone K)
-variable (encode_halt : Code → PropT)
+variable (K : RHKit) (hK : DetectsUpFixed K)
+variable (encode_halt encode_not_halt : Code → PropT)
 
 /--
   **CertificateStore**:
   Concrete architectural realization of the extension S3.
-  It consists of:
-  1. The base provable system (S2).
-  2. A collection of architectural certificates (witnesses from the o-machine).
+  A collection of architectural certificates (witnesses from the o-machine).
 -/
 structure CertificateStore where
-  -- The Certificates: a collection of picks indexed by some type I
-  index : Type -- Renamed 'I' to 'index' to avoid ambiguity
+  index : Type
   picks : index → List Sentence × Sentence
   certs : ∀ i, ArchitecturalOraclePick A K (picks i).1 (picks i).2
 
 /--
-  Map the Store to its Semantic Set (S3).
-  S3 = S2 ∪ { encoded certificates }
+  Map the Store to its one-sided semantic set.
+  S3 = Provable ∪ { encode_halt(code) | HaltCertificate }
 -/
-def StoreToS3 (store : CertificateStore A K) : Set PropT :=
+def StoreToS3_OneSided (store : CertificateStore A K) : Set PropT :=
+  { p | S.Provable p } ∪
+  { p | ∃ i, ∃ _ : HaltCertificate K (store.certs i).code, p = encode_halt (store.certs i).code }
+
+/--
+  Map the Store to its two-sided semantic set.
+  S3 = Provable ∪ { encode_halt(e) | Halt } ∪ { encode_not_halt(e) | Stab }
+-/
+def StoreToS3_TwoSided (store : CertificateStore A K) : Set PropT :=
   { p | S.Provable p } ∪
   { p | ∃ i,
-      let pick := store.certs i
-      -- Map certificate to PropT via encode_halt (if halt)
-      -- Focusing on the S1 part (Halt certificates) for the projection theorem
-      (∃ _ : HaltCertificate K pick.code, p = encode_halt pick.code)
-  }
-
-/--
-  **The Frontier of the Store**:
-  Elements of the store that correspond to Halt certificates but are NOT provable.
--/
-def StoreFrontier (store : CertificateStore A K) : Set PropT :=
-  { p | p ∈ StoreToS3 A S K encode_halt store ∧ ¬ S.Provable p }
-
-/--
-  **Architectural Subtraction Theorem**:
-  Applying T3.0 to the CertificateStore:
-  The "Missing" part of the Store (S3 \ S2) is exactly the set of non-provable Halt certificates.
--/
-theorem StoreMissing_eq_StoreFrontier (store : CertificateStore A K) :
-    StoreFrontier A S K encode_halt store =
-    { p | p ∈ StoreToS3 A S K encode_halt store ∧ ¬ S.Provable p } := rfl
-
-/-!
-### Two-Sided Variant (S3TwoSided)
--/
-
-variable (encode_not_halt : Code → PropT)
-
-/--
-  **StoreToS3TwoSided**:
-  Maps the store to S3 including both positive (Halt) and negative (Stab) certificates.
-  This realizes the full extension S3 = S2 ∪ S1(halt) ∪ S1(stab).
--/
-def StoreToS3TwoSided (store : CertificateStore A K) : Set PropT :=
-  { p | S.Provable p } ∪
-  { p | ∃ i,
-      let pick := store.certs i
-      let code := pick.code
-      -- Union of both certificate types
+      let code := (store.certs i).code
       (∃ _ : HaltCertificate K code, p = encode_halt code) ∨
       (∃ _ : StabCertificate K code, p = encode_not_halt code)
   }
-
-/--
-  **StoreFrontierTwoSided**:
-  The non-provable part of the two-sided projection.
--/
-def StoreFrontierTwoSided (store : CertificateStore A K) : Set PropT :=
-  { p | p ∈ StoreToS3TwoSided A S K encode_halt encode_not_halt store ∧ ¬ S.Provable p }
-
-/--
-  **Two-Sided Subtraction**:
-  The missing part of the full S3 is exactly the union of unprovable Halt and Stab certificates.
--/
-theorem StoreMissingTwoSided_eq_Frontier (store : CertificateStore A K) :
-    StoreFrontierTwoSided A S K encode_halt encode_not_halt store =
-    { p | p ∈ StoreToS3TwoSided A S K encode_halt encode_not_halt store ∧ ¬ S.Provable p } := rfl
 
 end CertificateStore_Framework
 
@@ -598,6 +557,8 @@ end RevHalt
 #print axioms RevHalt.eval_iff_halts
 #print axioms RevHalt.eval_iff_rev
 #print axioms RevHalt.contradiction_if_internalize_external_decider
+#print axioms RevHalt.CS
+#print axioms RevHalt.frontier_necessary_arch
 #print axioms RevHalt.certificate_exclusion_aMachine
 #print axioms RevHalt.haltCertificate_iff_halts
 #print axioms RevHalt.stabCertificate_iff_stabilizes

@@ -51,7 +51,7 @@ for a fixed code `e`, an explicit witness `OraclePick` selects either `encode_ha
 
 S : ComplementaritySystem Code PropT
 S.K : RHKit
-S.h_canon : DetectsMonotone S.K
+S.h_canon : DetectsUpFixed S.K   -- Updated to UpFixed
 Rev0_K S.K : Trace → Prop
 
 ```
@@ -68,7 +68,7 @@ open Nat.Partrec
 /-- System for T3 theorems: general Code + general Machine, but realizable in Partrec.Code. -/
 structure ComplementaritySystem (Code PropT : Type) extends ImpossibleSystem PropT where
   K : RHKit
-  h_canon : DetectsMonotone K
+  h_canon : DetectsUpFixed K  -- Updated to DetectsUpFixed
 
   Machine : Code → Trace
 
@@ -101,6 +101,7 @@ theorem diagonal_bridge_of_realization
     exact htarget (S.dec c)
 
   -- Apply the canonical diagonal bridge on `RevHalt.Code`
+  -- Uses DetectsUpFixed S.h_canon
   obtain ⟨c0, hc0⟩ :=
     RevHalt.diagonal_bridge S.K S.h_canon fP hf targetP htargetP
 
@@ -195,6 +196,112 @@ theorem missing_equals_S1
       exact hUnprov hProv_p
 
 -- ==============================================================================================
+-- T3.0 Structural — Deep Characterization of the Frontier
+-- ==============================================================================================
+
+/-- S1Raw : Kit-certified truths (no provability condition).
+    This is the "raw" frontier before filtering by provability. -/
+def S1Raw {Code PropT : Type} (S : ComplementaritySystem Code PropT)
+    (encode_halt : Code → PropT) : Set PropT :=
+  { p | ∃ e : Code, p = encode_halt e ∧ Rev0_K S.K (S.Machine e) }
+
+/-- S1Eff : Effective frontier = Kit-certified AND unprovable.
+    These are the truths that escape the internal system. -/
+def S1Eff {Code PropT : Type} (S : ComplementaritySystem Code PropT)
+    (encode_halt : Code → PropT) : Set PropT :=
+  { p | p ∈ S1Raw S encode_halt ∧ ¬ S.Provable p }
+
+/-- S1Eff equals the original S1Set — the definitions are equivalent. -/
+lemma S1Eff_eq_S1Set {Code PropT : Type} (S : ComplementaritySystem Code PropT)
+    (encode_halt : Code → PropT) :
+    S1Eff S encode_halt = S1Set S encode_halt := by
+  ext p
+  constructor
+  · intro hp
+    obtain ⟨⟨e, hpEq, hRev⟩, hNot⟩ := hp
+    have hEq : KitOf S = S.K := rfl
+    have hRev' : Rev0_K (KitOf S) (S.Machine e) := by rw [hEq]; exact hRev
+    rw [hpEq] at hNot ⊢
+    exact ⟨e, rfl, hRev', hNot⟩
+  · intro hp
+    obtain ⟨e, hpEq, hRev, hNot⟩ := hp
+    -- KitOf S = S.K by definition, so Rev0_K (KitOf S) = Rev0_K S.K
+    have hRev' : Rev0_K S.K (S.Machine e) := hRev
+    constructor
+    · exact ⟨e, hpEq, hRev'⟩
+    · rw [hpEq]; exact hNot
+
+/--
+  **T3.0 Structural — Necessity of the Frontier**
+
+  If the system admits "negative completeness" (can prove ¬H when stabilization),
+  then the frontier S1Eff is necessarily non-empty.
+
+  Otherwise, we could construct an InternalHaltingPredicate, contradicting T2.
+
+  This theorem shows that S1 ≠ ∅ is a **structural necessity** forced by T2,
+  not just an incidental property.
+-/
+theorem frontier_necessary
+    {Code PropT : Type} (S : ComplementaritySystem Code PropT)
+    (encode_halt : Code → PropT)
+    -- Negative completeness: can prove ¬H when ¬Rev_K
+    (h_neg_complete : ∀ c : RevHalt.Code,
+        ¬ Rev0_K S.K (RevHalt.Machine c) → S.Provable (S.Not (encode_halt (S.dec c))))
+    -- Semi-decidability of provability of ¬H
+    (f : RevHalt.Code → (Nat →. Nat))
+    (hf : Partrec₂ f)
+    (h_semidec : ∀ c : RevHalt.Code,
+        S.Provable (S.Not (encode_halt (S.dec c))) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
+    (S1Eff S encode_halt).Nonempty := by
+  -- Proof by contradiction: suppose S1Eff = ∅
+  by_contra h_empty
+  rw [Set.not_nonempty_iff_eq_empty] at h_empty
+  -- Then: ∀ e : Code, Rev_K(Machine e) → Provable(encode_halt e)
+  have h_pos_complete : ∀ c : RevHalt.Code,
+      Rev0_K S.K (RevHalt.Machine c) → S.Provable (encode_halt (S.dec c)) := by
+    intro c hRev
+    by_contra hNotProv
+    -- If Rev_K(c) and ¬Provable(encode_halt(dec c)), then dec c ∈ S1Eff
+    have h_in_raw : encode_halt (S.dec c) ∈ S1Raw S encode_halt := by
+      use S.dec c
+      constructor
+      · rfl
+      · -- Need: Rev0_K S.K (S.Machine (S.dec c)) = Rev0_K S.K (RevHalt.Machine c)
+        have hMach : S.Machine (S.dec c) = RevHalt.Machine (S.enc (S.dec c)) :=
+          S.machine_eq (S.dec c)
+        rw [S.enc_dec c] at hMach
+        rw [hMach]
+        exact hRev
+    have h_in_eff : encode_halt (S.dec c) ∈ S1Eff S encode_halt := ⟨h_in_raw, hNotProv⟩
+    have h_not_mem : encode_halt (S.dec c) ∉ S1Eff S encode_halt := by
+      rw [h_empty]; exact Set.notMem_empty _
+    exact h_not_mem h_in_eff
+  -- Construct InternalHaltingPredicate
+  let H : RevHalt.Code → PropT := fun c => encode_halt (S.dec c)
+  have h_total : ∀ e : RevHalt.Code, S.Provable (H e) ∨ S.Provable (S.Not (H e)) := by
+    intro e
+    cases Classical.em (Rev0_K S.K (RevHalt.Machine e)) with
+    | inl hRev => exact Or.inl (h_pos_complete e hRev)
+    | inr hNotRev => exact Or.inr (h_neg_complete e hNotRev)
+  have h_correct : ∀ e : RevHalt.Code, Rev0_K S.K (RevHalt.Machine e) → S.Provable (H e) :=
+    h_pos_complete
+  have h_complete : ∀ e : RevHalt.Code, ¬ Rev0_K S.K (RevHalt.Machine e) → S.Provable (S.Not (H e)) :=
+    h_neg_complete
+  -- Build the impossible predicate (InternalHaltingPredicate is now abbrev of Internalizer)
+  let I : InternalHaltingPredicate S.toImpossibleSystem S.K := {
+    H := H
+    total := h_total
+    correct := h_correct
+    complete := h_complete
+    f := f
+    f_partrec := hf
+    semidec := h_semidec
+  }
+  -- Apply T2 (now uses Nonempty)
+  exact T2_impossibility S.toImpossibleSystem S.K S.h_canon ⟨I⟩
+
+-- ==============================================================================================
 -- Unprovable Encoding Existence (uses diagonal_bridge_of_realization, no axioms)
 -- ==============================================================================================
 
@@ -250,43 +357,44 @@ theorem T3_weak_extension_explicit
       ¬ S.Provable (encode_halt e) := by
   let S3 : Set PropT := S3Set S S2 encode_halt
 
-  have hHalt : Halts (S.Machine e) :=
-    (T1_traces S.K S.h_canon (S.Machine e)).1 hKit
+  -- Ensure Halts via Kit
+  -- Ensure Halts via Kit
+  have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) := by
+    simpa [Rev0_K] using (RevHalt.revK_iff_halts (K := S.K) S.h_canon (T := S.Machine e))
+
+  -- Direction we need: Rev -> Halts
+  have hHalt' : Halts (S.Machine e) := hIff.mp hKit
 
   have h_mem_S1 : encode_halt e ∈ S1Set S encode_halt :=
     mem_S1Set_of_witness S encode_halt e hKit hUnprov
 
   refine Exists.intro S3 ?_
-  refine And.intro rfl ?_
-  refine And.intro ?_ ?_
-
-  · -- S2 ⊆ S3
-    intro p hp
-    -- S3 = S3Set ... = S2 ∪ S1Set ...
-    exact Or.inl hp
-
-  · refine And.intro ?_ ?_
-    · -- soundness of S3
+  constructor
+  · rfl -- S3 = S3Set ...
+  · constructor
+    · -- S2 ⊆ S3
       intro p hp
-      cases hp with
-      | inl hp2 =>
-          exact h_S2_sound p hp2
-      | inr hp1 =>
-          -- hp1 : p ∈ S1Set ...
-          rcases hp1 with ⟨e', hpEq, hKit', _hUnprov'⟩
-          have hEqK : S.K = KitOf S := Eq.symm rfl
-          have hKit'' : Rev0_K S.K (S.Machine e') := by
-            rw [hEqK]
-            exact hKit'
-          have hTrue : Truth (encode_halt e') := h_encode_correct e' hKit''
-          rw [hpEq]
-          exact hTrue
-
-    · refine And.intro h_mem_S1 ?_
-      · refine And.intro ?_ ?_
-        · -- encode_halt e ∈ S3
-          exact Or.inr h_mem_S1
-        · refine And.intro hHalt hUnprov
+      exact Or.inl hp
+    · constructor
+      · -- Soundness
+        intro p hp
+        cases hp with
+        | inl hp2 =>
+            exact h_S2_sound p hp2
+        | inr hp1 =>
+            rcases hp1 with ⟨e', hpEq, hKit', _⟩
+            have hEqK : S.K = KitOf S := rfl
+            have hKitReal : Rev0_K S.K (S.Machine e') := hKit'
+            rw [hpEq]
+            exact h_encode_correct e' hKitReal
+      · -- The 4-part conjunction for e
+        constructor
+        · exact h_mem_S1
+        · constructor
+          · exact Or.inr h_mem_S1 -- e ∈ S3
+          · constructor
+            · exact hHalt'
+            · exact hUnprov
 
 -- ==============================================================================================
 -- Infinite S₁ Elements (indexed witnesses: kit + unprovable)
@@ -451,8 +559,9 @@ theorem T3_oracle_extension_explicit
        (Stabilizes (S.Machine e) ∧ pick.p = encode_not_halt e)) := by
   let S3 : Set PropT := S3OneSet S2 pick.p
 
-  have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) :=
-    T1_traces S.K S.h_canon (S.Machine e)
+  have hIff : Rev0_K S.K (S.Machine e) ↔ Halts (S.Machine e) := by
+    -- Rev0_K K T ↔ Halts T
+    simpa [Rev0_K] using (revK_iff_halts (K := S.K) S.h_canon (T := S.Machine e))
 
   have hIffStab : KitStabilizes S.K (S.Machine e) ↔ Stabilizes (S.Machine e) :=
     T1_stabilization S.K S.h_canon (S.Machine e)
@@ -546,9 +655,14 @@ lemma mem_S1TwoSet_of_pick
 end RevHalt
 
 -- Axiom checks (auto):
+#print axioms RevHalt.S1Raw
+#print axioms RevHalt.S1Eff
+#print axioms RevHalt.S1Eff_eq_S1Set
+#print axioms RevHalt.frontier_necessary
 #print axioms RevHalt.diagonal_bridge_of_realization
 #print axioms RevHalt.mem_S1Set_of_witness
 #print axioms RevHalt.S1Set_nonempty_of_witness
+#print axioms RevHalt.missing_equals_S1
 #print axioms RevHalt.exists_unprovable_encode_halt
 #print axioms RevHalt.T3_weak_extension_explicit
 #print axioms RevHalt.InfiniteS1

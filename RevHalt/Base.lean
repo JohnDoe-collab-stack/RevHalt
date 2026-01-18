@@ -1,5 +1,6 @@
 import RevHalt.Base.Trace
 import RevHalt.Base.Kit
+import RevHalt.Base.QuotientUp
 
 /-!
 # RevHalt.Base

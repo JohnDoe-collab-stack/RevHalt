@@ -1,11 +1,21 @@
 import RevHalt.Theory.Canonicity
 import RevHalt.Theory.Impossibility
 import RevHalt.Theory.Complementarity
+import RevHalt.Theory.Stabilization
+import RevHalt.Theory.Categorical
 
-/-!
-# RevHalt.Theory
+import RevHalt.Theory.QuantifierSwap
+import RevHalt.Theory.ThreeBlocksArchitecture
 
-Entry point for the Theory layer (T1/T2/T3 theorems).
+import RevHalt.Theory.ScottTopology
+import RevHalt.Theory.RECodePred
 
-Exports: T1_traces, T1_uniqueness, T2_impossibility, T3_weak_extension, T3_strong
--/
+import RevHalt.Theory.TheoryDynamics
+import RevHalt.Theory.TheoryDynamics_CanonizationWC
+import RevHalt.Theory.TheoryDynamics_ComplexityBounds
+import RevHalt.Theory.TheoryDynamics_ProofCarrying
+import RevHalt.Theory.TheoryDynamics_RouteII
+import RevHalt.Theory.TheoryDynamics_Trajectory
+import RevHalt.Theory.TheoryDynamics_Transfinite_Jump
+import RevHalt.Theory.TheoryDynamics_Transfinite_JumpFixpoint
+import RevHalt.Theory.TheoryDynamics_Transfinite
