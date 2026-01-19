@@ -1,76 +1,60 @@
-# Fixpoint in RevHalt (no latex)
 
-This note defines "fixpoint" as used in RevHalt.
+Dans votre cadre, un “point fixe” n’est pas une assertion vague sur l’existence d’un Γ. C’est un **artefact typé**, construit et vérifiable, qui factorise *explicitement* les choix (limite/itération/continuité). Concrètement, vous forcez la notion à vivre sous forme de **données structurées** (au sens type-théorie), même si Lean l’exprime parfois via des `Prop`.
 
----
+### 1) Le point fixe fort est une donnée à 4 champs (pas un slogan)
 
-## 1) Base definition
+Le contenu réel est :
 
-Given a transformer F : Set PropT -> Set PropT, a fixpoint is:
+* **politique de limite** : `L : LimitOp PropT`
+* **trajectoire canonique** : `transIterL L F A0 : Ordinal -> Set PropT`
+* **candidat-limite** : `Γ_lim := transIterL L F A0 lim`
+* **certificat** : une preuve de l’équation `F Γ_lim = Γ_lim`
 
-```
-Fixpoint(F, Γ) := F Γ = Γ
-```
+Autrement dit, le “fixpoint” est un **couple (candidat, certificat)**, et le candidat est lui-même une **sortie déterministe** de `(L, F, A0, lim)`.
 
-This is the only primitive notion. Everything else is a theorem about when a
-fixpoint exists under a chosen policy or continuity condition.
+### 2) La continuité n’est plus un décor : c’est une interface qui fabrique des certificats
 
----
+Votre séparation :
 
-## 2) Omega-chain fixpoint (TheoryDynamics.lean)
+* `ContinuousAtL L F A0 lim` = donnée de compatibilité “F commute avec la limite selon L”
+* `FixpointFromContinuity L F A0 lim` = **contrat** : si on me donne la donnée `ContinuousAtL`, je produis la donnée “certificat de point fixe”.
 
-For natural iteration, the omega-limit of a chain is a fixpoint under
-omega-continuity:
+Donc ce qui était implicite chez les autres devient une **flèche explicite** :
+`(ContinuousAtL) -> (FixpointCertificate)`.
 
-```
-OmegaContinuousSet F ->
-F(omegaUnion (iter F Γ0)) = omegaUnion (iter F Γ0)
-```
+Et vous montrez que cette flèche peut être **incohérente** dans certains régimes dynamiques.
 
-Lemma:
-```
-omega_fixpoint_of_OmegaContinuousSet
-```
+### 3) Le vrai gain preuve-théorique : on peut réfuter une *construction* de point fixe, pas juste nier un énoncé
 
----
+Vos théorèmes d’escape/fork ne disent pas seulement “pas de point fixe” au sens existentiel. Ils disent, plus finement :
 
-## 3) Transfinite limit fixpoint (TheoryDynamics_Transfinite.lean)
+* **pas de continuité de ce type** au rang limite (donc pas de mécanisme canonique qui fabrique le certificat),
+* et/ou directement `F Γ_lim ≠ Γ_lim` pour le candidat imposé par la politique.
 
-For ordinal limits, continuity at the limit plus extensivity yields a fixpoint:
+C’est une réfutation **de l’artefact** “point fixe canonique sous une politique donnée”, pas une discussion sur l’existence abstraite de solutions.
 
-```
-ContinuousAt F A0 lim + extensivity -> F(Γ_lim) = Γ_lim
-```
+### 4) Pourquoi c’est plus profond que “constructif vs non-constructif”
 
-Lemma:
-```
-continuous_implies_fixpoint_at_limit
-```
+Ce n’est pas “constructif ou pas”. Le point est :
 
----
+* Chez vous, le point fixe est **indexé** par *une politique de limite* et *une trajectoire*.
+* Donc “avoir un point fixe” n’a pas de sens tant qu’on n’a pas fixé `(L, itération, lim)`.
 
-## 4) LimitOp policy version (TheoryDynamics_Transfinite.lean)
+Vous remplacez “un fixpoint” par “le fixpoint de **ce candidat-limite canonique**”, ce qui change la sémantique de l’énoncé : c’est **un test de cohérence structurelle** du pipeline (limite + continuité + dynamique).
 
-The library also packages "continuity implies fixpoint" as a policy object:
+### 5) Ce que ça rend mesurable / auditable
 
-```
-FixpointFromContinuity L F A0 lim :=
-  ContinuousAtL L F A0 lim ->
-  F (transIterL L F A0 lim) = transIterL L F A0 lim
-```
+À partir de là, tout devient traçable comme données dépendantes :
 
-Definition:
-```
-FixpointFromContinuity
-```
+* quel `L` (union / cnUnion / jump…),
+* quelle notion de continuité (la signature exacte de `ContinuousAtL`),
+* quelle itération (`transIterL`),
+* quel certificat (ou quelle impossibilité de certificat).
 
----
+C’est exactement le niveau de précision que les présentations “classiques” ne typent pas : elles parlent du résultat (fixpoint) sans expliciter la donnée qui le fabrique (policy + continuity channel).
 
-## 5) Jump-limit fixpoint (TheoryDynamics_Transfinite_JumpFixpoint.lean)
+Si tu veux une formulation *ultra stricte* (une seule ligne, sans commentaire) du “fixpoint-data” au sens fort :
 
-For jump limit operators, fixpoints are derived from the jump continuity law:
+`FixpointData(L,F,A0,lim) := (Γ_lim = transIterL L F A0 lim) × (F Γ_lim = Γ_lim).`
 
-Lemma:
-```
-jump_fixpoint_from_continuity
-```
+Tout le reste (continuité, extensivité, jump, inclusion des stades) n’est pas “la définition”, mais l’**ingénierie de certificats** ou la preuve que ces certificats sont impossibles dans certains régimes.
