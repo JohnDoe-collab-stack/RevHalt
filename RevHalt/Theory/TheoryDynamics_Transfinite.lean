@@ -77,7 +77,6 @@ theorem chain_proof_irrel
   rfl
 
 def limitDecomp_union : LimitDecomp (L := (unionLimitOp (PropT := PropT))) := by
-  classical
   refine
     { decomp := ?decomp
       decomp_spec := ?spec
@@ -332,7 +331,6 @@ theorem limit_collapse_schema_L
     (hLim : Order.IsSuccLimit lim)
     (hAbs : ∃ β < lim, Absorbable Provable (transIterL L F A0 (β + 1))) :
     S1Rel Provable K Machine encode_halt (transIterL L F A0 lim) = ∅ := by
-  classical
   apply Set.eq_empty_iff_forall_notMem.mpr
   intro p hp
 

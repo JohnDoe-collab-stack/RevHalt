@@ -85,22 +85,21 @@ theorem S1Rel_empty_at_omega_of_absorbable_and_admissible
     exact hTri ⟨hAbs, hAdm, hRoute⟩
 
   -- 3. ¬RouteIIAt ⇒ S1Rel = ∅ (Logic: Nonempty S1Rel ⇒ RouteIIAt)
-  classical
-  by_contra hNe
-  have hNonemptyS1 :
-    (S1Rel (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
-      K Machine_TSP Enc
-      (omegaΓ (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
-        K Machine_TSP Enc Cn hIdem hProvCn A0)).Nonempty :=
-    Set.nonempty_iff_ne_empty.mpr hNe
-
+  apply Set.eq_empty_iff_forall_notMem.mpr
+  intro p hp
   have hRoute :
-    RouteIIAt (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
-      K Machine_TSP Enc
-      (omegaΓ (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
-        K Machine_TSP Enc Cn hIdem hProvCn A0) := by
-    simpa [RouteIIAt] using hNonemptyS1
-
+      RouteIIAt (Provable_TSP_WC (ChecksDerivation := ChecksDerivation))
+        K Machine_TSP Enc
+        (omegaΓ (Provable_TSP_WC (ChecksDerivation := ChecksDerivation))
+          K Machine_TSP Enc Cn hIdem hProvCn A0) := by
+    -- `RouteIIAt` is just frontier non-emptiness.
+    simpa [RouteIIAt] using
+      (show
+        (S1Rel (Provable_TSP_WC (ChecksDerivation := ChecksDerivation))
+          K Machine_TSP Enc
+          (omegaΓ (Provable_TSP_WC (ChecksDerivation := ChecksDerivation))
+            K Machine_TSP Enc Cn hIdem hProvCn A0)).Nonempty from
+        ⟨p, hp⟩)
   exact hNotRoute hRoute
 
 

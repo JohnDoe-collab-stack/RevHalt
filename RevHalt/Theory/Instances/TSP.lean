@@ -937,13 +937,11 @@ structure CanonicalizationAtOmega (ωΓ : Set PropT) : Prop where
 lemma S1Rel_empty_of_not_RouteIIAt (ωΓ : Set PropT)
     (hNotRoute : ¬ RouteIIAt Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ) :
     S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ = ∅ := by
-  by_contra h
-  -- h : S1Rel ... ≠ ∅
-  -- need: (S1Rel ...).Nonempty
+  apply Set.eq_empty_iff_forall_notMem.mpr
+  intro p hp
   have hNe : (S1Rel Provable K Machine_TSP (encode_halt_TSP encode_prop) ωΓ).Nonempty :=
-    Set.nonempty_iff_ne_empty.mpr h
-  unfold RouteIIAt at hNotRoute
-  exact hNotRoute hNe
+    ⟨p, hp⟩
+  exact hNotRoute (by simpa [RouteIIAt] using hNe)
 
 /--
   Empty S1Rel implies Pos-Completude at ω.
