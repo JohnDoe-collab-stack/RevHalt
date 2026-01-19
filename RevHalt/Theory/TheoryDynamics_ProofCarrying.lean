@@ -77,55 +77,74 @@ def WCDerivation.witness {Γ : Set PropT} {p : PropT}
     (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p) : List ℕ :=
   decodeWitness decodeList d.code
 
-/-- Helper for finding a witness in a list -/
-def findInList (Γ : Set PropT) (p : PropT) : List ℕ → Option (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
-  | [] => none
-  | k :: ks =>
-    if h : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p k = true then
-      some ⟨k, h⟩
+/--
+  Recherche récursive bornée sans allocation de liste.
+  Cherche un code valide k où `current ≤ k < bound`.
+  Diminue le fuel pour assurer la terminaison.
+-/
+def findCode (Γ : Set PropT) (p : PropT) (bound : ℕ) (current : ℕ) : Option (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p) :=
+  if h : current < bound then
+    if hCheck : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p current = true then
+      some ⟨current, hCheck⟩
     else
-      findInList Γ p ks
+      findCode Γ p bound (current + 1)
+  else
+    none
+decreasing_by exact Nat.sub_succ_lt_self _ _ h
 
 /--
   Recherche bornée (totalement constructive) d'une WCDerivation.
-  Utilise List.range pour éviter toute récursion explicite.
+  Optimisée pour ne pas allouer une liste de taille `bound`.
 -/
 def WCDerivation.findBounded
     (Γ : Set PropT) (p : PropT) (bound : ℕ) :
     Option (WCDerivation ChecksDerivation ChecksWitness decodeList Γ p) :=
-  findInList ChecksDerivation ChecksWitness decodeList Γ p (List.range bound)
+  findCode ChecksDerivation ChecksWitness decodeList Γ p bound 0
 
 /--
   Completeness of bounded search: if a valid code exists within bound, search succeeds.
 -/
-theorem findInList_complete_aux
-    (l : List ℕ)
+theorem findCode_complete
+    (bound : ℕ)
+    (current : ℕ)
     (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
-    (hMem : d.code ∈ l) :
-    (findInList ChecksDerivation ChecksWitness decodeList Γ p l).isSome := by
-  induction l with
-  | nil => contradiction
-  | cons k ks ih =>
-    unfold findInList
-    by_cases hCheck : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p k = true
+    (hBound : d.code < bound)
+    (hCurrent : current ≤ d.code) :
+    (findCode ChecksDerivation ChecksWitness decodeList Γ p bound current).isSome := by
+  -- Induction sur la distance (d.code - current)
+  generalize hDist : d.code - current = k
+  revert current
+  induction k using Nat.strong_induction_on with
+  | h k ih =>
+    intro current hCurrent hDistEq
+    unfold findCode
+    -- current < bound est vrai car current ≤ d.code < bound
+    have hLt : current < bound := Nat.lt_of_le_of_lt hCurrent hBound
+    simp [hLt]
+    by_cases hCheck : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p current = true
     · simp [hCheck]
     · simp [hCheck]
-      have hNe : k ≠ d.code := by
+      -- Si le code courant n'est pas bon, on avance
+      have hNe : current ≠ d.code := by
         intro hEq
         rw [hEq] at hCheck
         have hValid := d.valid
         rw [hValid] at hCheck
         contradiction
-      have hInKs : d.code ∈ ks := List.mem_of_ne_of_mem hNe.symm hMem
-      exact ih hInKs
+      have hNextLE : current + 1 ≤ d.code := Nat.succ_le_of_lt (Nat.lt_of_le_of_ne hCurrent hNe)
+      -- Fix: correct argument order and explicit arithmetic
+      have hNextDist : d.code - (current + 1) < k := by
+        rw [← hDistEq]
+        apply Nat.sub_succ_lt_self
+        exact Nat.lt_of_le_of_ne hCurrent hNe
+      exact ih (d.code - (current + 1)) hNextDist (current + 1) hNextLE rfl
+
 theorem WCDerivation.findBounded_complete
     (Γ : Set PropT) (p : PropT) (bound : ℕ)
     (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
     (hBound : d.code < bound) :
     (WCDerivation.findBounded ChecksDerivation ChecksWitness decodeList Γ p bound).isSome := by
-  have hMem : d.code ∈ List.range bound := List.mem_range.mpr hBound
-  unfold findBounded
-  exact findInList_complete_aux ChecksDerivation ChecksWitness decodeList (List.range bound) d hMem
+  exact findCode_complete ChecksDerivation ChecksWitness decodeList bound 0 d hBound (Nat.zero_le _)
 
 /--
   Propriété de monotonie du checker de dérivation.
