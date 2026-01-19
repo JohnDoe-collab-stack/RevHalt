@@ -48,33 +48,6 @@ structure BoundPosWC (Γ : Set PropT) (size : PropT → ℕ) : Type where
       ∃ d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p,
         d.code < B (size p)
 
-/-- Helper lemma: finding in list succeeds if valid element is present. -/
-theorem findInList_complete_aux
-    {Γ : Set PropT}
-    {ChecksDerivation : Set PropT → PropT → DerivationCode → Bool}
-    {ChecksWitness : PropT → List ℕ → Bool}
-    {decodeList : ℕ → List ℕ}
-    (p : PropT)
-    (l : List ℕ)
-    (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
-    (hMem : d.code ∈ l) :
-    (findInList ChecksDerivation ChecksWitness decodeList Γ p l).isSome := by
-  induction l with
-  | nil => contradiction
-  | cons k ks ih =>
-    unfold findInList
-    by_cases hCheck : ChecksWC ChecksDerivation ChecksWitness decodeList Γ p k = true
-    · simp [hCheck]
-    · simp [hCheck]
-      have hNe : k ≠ d.code := by
-        intro hEq
-        rw [hEq] at hCheck
-        have hValid := d.valid
-        rw [hValid] at hCheck
-        contradiction
-      have hInKs : d.code ∈ ks := List.mem_of_ne_of_mem hNe.symm hMem
-      exact ih hInKs
-
 /--
   A local completeness lemma for `findBounded`.
   If a derivation exists with code < bound, `findBounded` will find *some* derivation.
@@ -88,9 +61,7 @@ theorem findBounded_complete_local
     (d : WCDerivation ChecksDerivation ChecksWitness decodeList Γ p)
     (hd : d.code < bound) :
     (WCDerivation.findBounded ChecksDerivation ChecksWitness decodeList Γ p bound).isSome := by
-  have hMem : d.code ∈ List.range bound := List.mem_range.mpr hd
-  unfold WCDerivation.findBounded
-  exact findInList_complete_aux p (List.range bound) d hMem
+  exact WCDerivation.findBounded_complete ChecksDerivation ChecksWitness decodeList Γ p bound d hd
 
 /--
   **Find_of_Bound**: Constructive Search from Bound.
