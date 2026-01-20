@@ -1,6 +1,6 @@
 import RevHalt.Theory.TheoryDynamics_Trajectory
 import RevHalt.Theory.Instances.TSP
-import RevHalt.Theory.Instances.TSP_Canonization
+import RevHalt.Theory.Instances.TSP_Canonization_Classical
 
 namespace RevHalt.TSP
 

@@ -33,15 +33,10 @@ def SuperPolyLowerBound
         d.code ≥ B (size p)
 
 /--
-  **Theorem 3 (Metatheoretic Implication)**:
-  If a system does NOT satisfy `PolyPosWC` (i.e., short proofs do not exist for all true statements),
-  then it satisfies `SuperPolyLowerBound`.
-
-  This is essentially constructive logic: if we cannot construct a polynomial bounding function,
-  it means for any candidate polynomial, there is a counter-example.
-  Note: This requires classical logic for the direction `¬ ∀ ... → ∃ ...`.
+  Constructive direction:
+  a super-polynomial lower bound excludes `PolyPosWC`.
 -/
-theorem not_PolyPosWC_implies_LowerBound
+theorem SuperPolyLowerBound.not_PolyPosWC
     {PropT : Type}
     (Γ : Set PropT)
     (ChecksDerivation : Set PropT → PropT → ℕ → Bool)
@@ -49,26 +44,11 @@ theorem not_PolyPosWC_implies_LowerBound
     (decodeList : ℕ → List ℕ)
     (size : PropT → ℕ)
     (HasSolution : PropT → Prop)
-    (hNotPoly : ¬ Nonempty (PolyPosWC Γ ChecksDerivation ChecksWitness decodeList size HasSolution)) :
-    SuperPolyLowerBound Γ ChecksDerivation ChecksWitness decodeList size HasSolution := by
-  intro B hB
-  -- We assume for contradiction that NO such p exists (i.e. all p have short proofs for THIS B).
-  -- Then we can construct a PolyPosWC with this B, contradicting hNotPoly.
-  -- To do this classically:
-  by_contra hNoCounterExample
-  -- hNoCounterExample : ¬ ∃ p, HasSolution p ∧ ∀ d, d.code ≥ B (size p)
-  -- <=> ∀ p, ¬ (HasSolution p ∧ ∀ d, d.code ≥ B (size p))
-  -- <=> ∀ p, HasSolution p → ¬ (∀ d, d.code ≥ B (size p))
-  -- <=> ∀ p, HasSolution p → ∃ d, d.code < B (size p)
-  rw [not_exists] at hNoCounterExample
-  simp only [ge_iff_le, not_and, not_forall, not_le] at hNoCounterExample
-
-  -- Create the PolyPosWC instance
-  let witness : PolyPosWC Γ ChecksDerivation ChecksWitness decodeList size HasSolution := {
-    B := B,
-    B_poly := hB,
-    pos_short := fun p hSol => hNoCounterExample p hSol
-  }
-  exact hNotPoly (Nonempty.intro witness)
+    (hLB : SuperPolyLowerBound Γ ChecksDerivation ChecksWitness decodeList size HasSolution) :
+    ¬ Nonempty (PolyPosWC Γ ChecksDerivation ChecksWitness decodeList size HasSolution) := by
+  rintro ⟨hPoly⟩
+  rcases hLB hPoly.B hPoly.B_poly with ⟨p, hpSol, hpLB⟩
+  rcases hPoly.pos_short p hpSol with ⟨d, hdLt⟩
+  exact Nat.not_lt_of_ge (hpLB d) hdLt
 
 end RevHalt.ProofComplexity

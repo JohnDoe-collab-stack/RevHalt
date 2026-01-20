@@ -60,6 +60,7 @@ theorem PosCompleteWC_of_S1Rel_empty_3SAT
     apply (RevHalt.T1_traces_of_DetectsMono K hKMono (Machine_3SAT p)).mpr
     exact hHalts
   -- Decidable split (no classical)
+  haveI : Decidable (Provable_3SAT_WC (ChecksDerivation:=ChecksDerivation) ωΓ p) := hDec p
   by_cases hp : Provable_3SAT_WC (ChecksDerivation:=ChecksDerivation) ωΓ p
   · exact hp
   · -- if not provable, then p ∈ S1Rel, contradict empty
