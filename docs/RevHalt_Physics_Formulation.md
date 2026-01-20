@@ -1,49 +1,22 @@
-## Formulation Physique de RevHalt (Sans LaTeX)
+## Formulation Physique de RevHalt (Bulk, Bord)
 
-Ce document propose une formulation physique **opérationnelle** de l’idée RevHalt “(Bulk, Bord)” en excluant les cas nuls (**RouteII : (J \neq 0)**) et en remplaçant l’égalité “énergie totale = somme statique” par des **bilans de flux** (ce que la physique sait réellement calculer/mesurer).
+Ce document donne une formulation **physique et opérationnelle** de l’idée RevHalt “(Bulk, Bord)”, en excluant les cas nuls (**RouteII : J ≠ 0**) et en remplaçant toute égalité statique du type “énergie totale = somme” par ce que la physique sait effectivement **définir, calculer et mesurer** : des **bilans de flux**.
 
 ---
 
-### 1) Principe physique
+### 1) Principe physique (système ouvert : Bulk + Bord)
 
-En pratique (GR/QFT/thermo), un système gravitationnel pertinent (trou noir, AdS, horizon, etc.) n’est pas seulement “un bulk” : il est décrit par un couple :
+En pratique (GR, QFT sur fond courbe, thermo), un système gravitationnel pertinent (trou noir, AdS, horizon, etc.) ne se réduit pas à “un bulk”. Il est décrit par un couple :
 
 * **Bulk** : dynamique locale (équations de champ, contraintes, évolution).
-* **Bord** : **canal d’entrée/sortie** (données caractéristiques, conditions au bord, état entrant, etc.).
+* **Bord** : **interface d’échange** (conditions au bord, données caractéristiques, état entrant/sortant, sources imposées).
 
-Dans la perspective RevHalt, la différence cruciale est :
+Distinction cruciale (à rendre explicite) :
 
-* **un cadre global non dégénéré exige un bord actif**, i.e. une donnée (J) **non triviale** : **(J \neq 0)**.
+* **Bord structurel** : une limite/surface où des conditions doivent être posées pour fermer le problème (au sens PDE / charges conservées).
+* **Bord actif** : le bord porte un **input non trivial**, i.e. une donnée entrante **J**.
 
----
-
-### 2) Équation physique correcte (remplace (mc^2 + \hbar J_\text{flux}))
-
-Au lieu de postuler une “énergie totale” additive, on écrit ce que la physique utilise vraiment : des **équations de bilan**.
-
-#### 2.1 Bilan d’énergie (forme générale)
-
-On définit l’énergie du bulk par (E(t)=M(t)c^2) (par exemple, masse du trou noir / énergie ADM-Bondi selon le contexte). La loi physique globale s’écrit :
-
-```
-dE/dt  =  P_in(J)  -  P_out(E, bulk)  +  P_matter(bulk)
-```
-
-* **P_in(J)** : puissance **injectée** par le bord (dépend de la donnée non nulle (J)).
-* **P_out(...)** : puissance **rayonnée / évacuée** (dépend de l’état du bulk).
-* **P_matter(...)** : apport matière (si présent).
-
-**Ici, le “terme RevHalt” n’est pas un additif statique : c’est un flux.**
-
-#### 2.2 Ce que signifie (J) physiquement (non dégénéré)
-
-Dans les cas d’intérêt (RouteII), (J) n’est pas une abstraction : c’est un **état entrant** ou une **donnée caractéristique entrante**, par exemple :
-
-* **trou noir / infini nul passé** : spectre entrant des modes (occupation des modes “in”),
-* **AdS / bord temporel** : champs caractéristiques entrants imposés au bord,
-* **horizon / frontière nulle** : donnée libre radiative entrante sur la frontière.
-
-On impose explicitement :
+Dans la perspective RevHalt, la non-dégénérescence (RouteII) est :
 
 ```
 J ≠ 0   (bord actif / input non trivial)
@@ -51,83 +24,155 @@ J ≠ 0   (bord actif / input non trivial)
 
 ---
 
-### 3) Thermodynamique des trous noirs (cas concret exploitable)
+### 2) Loi physique correcte : bilans de flux (pas d’additivité statique)
 
-Dans le cas d’un trou noir, les bilans se traduisent directement en thermodynamique.
+#### 2.1 Choix de l’énergie E(t) (cadre-dependent, donc annoncé)
 
-#### 3.1 Énergie (masse)
+En GR, “l’énergie du bulk” n’est pas une densité locale universelle. On choisit donc une notion de charge adaptée au contexte global, par exemple :
 
-```
-d(M c^2)/dt  =  P_in(J)  -  P_out(M)
-```
+* **Asymptotiquement plat** : énergie **ADM** (spatiale) ou **Bondi** (à l’infini nul, avec pertes par rayonnement).
+* **AdS** : énergie définie via les **charges au bord** (conditions au bord non optionnelles).
+* **Quasi-local / horizon** : énergie quasi-locale associée à une surface de contrôle (convention annoncée).
 
-* **P_out(M)** : puissance Hawking (ou plus généralement flux sortant), fonction de (M) via la température (T_H).
-* **P_in(J)** : puissance entrante déterminée par l’état entrant (J) (bain, spectre, injection).
+Dans ce document, **E(t)** désigne “la charge d’énergie pertinente pour le cadre choisi”.
 
-**RouteII (J ≠ 0)** signifie : il existe un apport entrant non trivial qui modifie l’évolution de (M(t)).
+#### 2.2 Bilan d’énergie (forme générale)
 
-#### 3.2 Entropie (horizon)
-
-Pour Schwarzschild (sans rotation/charge), on peut écrire opérationnellement :
+Sur un domaine de contrôle avec surfaces de bord explicites (infini, bord AdS, horizon, etc.), la loi opérationnelle est :
 
 ```
-dS_BH/dt  =  (1/T_H) * d(M c^2)/dt
-          =  (1/T_H) * [ P_in(J) - P_out(M) ]
+dE/dt = P_in(J) - P_out(E, bulk) + P_sources(bulk)
 ```
 
-#### 3.3 Deuxième loi généralisée (GSL)
+* **P_in(J)** : puissance **entrante** imposée par le bord actif (donnée entrante J).
+* **P_out(E, bulk)** : puissance **sortante totale** (flux de matière/champs + flux gravitationnel lorsque défini, p. ex. à l’infini nul).
+* **P_sources(bulk)** : sources internes (si vous souhaitez distinguer “sources volumétriques” de “conditions au bord”; sinon on peut les regrouper dans P_in).
 
-La loi thermodynamique pertinente n’est pas “densité locale”, mais :
+Point RevHalt (verrouillé physiquement) :
 
-```
-d/dt [ S_BH + S_outside ]  ≥  0
-```
-
-Avec **J ≠ 0**, il y a un **flux d’entropie entrant** (porté par l’état entrant) qui contribue à (S_\text{outside}). Le bord devient donc un terme **mesurable/contraignable** via des bilans d’énergie et d’entropie.
-
-#### 3.4 Point fixe non dégénéré (équilibre ouvert)
-
-Un “point fixe” physique (stationnaire) non trivial n’est pas “pas de bord”, mais :
-
-```
-d(M c^2)/dt = 0    ⇔    P_in(J) = P_out(M)
-```
-
-C’est un équilibre **entrée = sortie**, donc un point fixe **avec J ≠ 0**.
+* Le “terme RevHalt” n’est pas un additif statique ; c’est l’obligation de traiter le système comme **ouvert** et donc de spécifier **les flux** (en particulier P_in via J).
 
 ---
 
-### 4) Portée formelle (pont rigide RevHalt → complexité)
+### 3) Sens physique de J (RouteII : cas non dégénérés)
 
-Ce que le projet démontre formellement (via `TheoryDynamics_ProofCarrying.lean` et `TSP_Canonization.lean`), c’est un théorème conditionnel de type “pont rigide” :
+Dans RouteII, **J** est une donnée **opérationnelle** : une **donnée entrante** (au sens “état entrant / donnée caractéristique entrante / condition imposée au bord”).
 
-```
-(Stabilité au Bord  +  Price of P)   ⇒   Collapse (P=NP)
-```
+Exemples typiques :
 
-* **Stabilité** : frontière logique vide à la limite
-  `S1Rel(ωΓ) = ∅`
-* **Price of P** : toute vérité admet une preuve polynomialement compressée
-  `PolyCompressionWC`
+* **Asymptotiquement plat (infini nul passé)** : état entrant des modes “in” (occupation/spectre entrant), ou flux entrant depuis l’infini.
+* **AdS (bord temporel)** : champs/sources imposés au bord (données entrantes), qui déterminent l’injection/extraction d’énergie et d’entropie.
+* **Frontière nulle / horizon (formalisme caractéristique)** : donnée radiative entrante sur une frontière nulle (degré de liberté libre entrant).
 
-**Conséquence logique (cartographie)** : le projet ne prouve pas P=NP, mais force l’alternative suivante pour quiconque refuse Collapse :
+Condition RouteII :
 
 ```
-¬Collapse   ⇒   (¬Stabilité)  ∨  (¬Price of P)
+J ≠ 0  (input non trivial ; le bulk seul ne ferme pas la dynamique globale)
 ```
-
-Donc, pour maintenir `P ≠ NP`, il faut nécessairement :
-
-* soit **rejeter la stabilité** (admettre un bord actif : `S1Rel(ωΓ) ≠ ∅`),
-* soit **rejeter le Price of P** (admettre que la vérité n’est pas compressible en général).
 
 ---
 
-### 5) Ce que ça apporte physiquement (sans cas nuls)
+### 4) Thermodynamique des trous noirs (cas exploitable et mesurable)
 
-Dans la lecture physique (RouteII), la contribution “RevHalt” n’est pas un terme additif arbitraire : c’est l’obligation de traiter le système comme **ouvert**, avec :
+On illustre la logique “flux” sur un trou noir, dans un régime où les bilans thermo sont opérationnels.
 
-* une **donnée entrante (J \neq 0)** (état/spectre/condition au bord),
-* des **bilans** énergie/entropie fermés uniquement quand (J) est explicitement spécifié.
+#### 4.1 Bilan d’énergie (masse)
 
-C’est exactement la forme dans laquelle la physique peut **mesurer**, **contraindre** ou **paramétrer** le bord.
+Pour un trou noir (ex. Schwarzschild) dans un régime quasi-statique :
+
+```
+d(M c^2)/dt = P_in(J) - P_out(M)
+```
+
+* **P_out(M)** : flux sortant total (incluant, en régime semi-classique, le flux de type Hawking ; plus généralement tout flux sortant défini).
+* **P_in(J)** : flux entrant contrôlé par l’état entrant / condition au bord / injection (J).
+
+RouteII (J ≠ 0) signifie : il existe un apport entrant non trivial qui **modifie** l’évolution de M(t).
+
+#### 4.2 Entropie d’horizon (Schwarzschild, quasi-statique)
+
+Sous hypothèses standard (Schwarzschild, quasi-statique, sans rotation/charge), on peut écrire :
+
+```
+dS_BH/dt = (1/T_H) * d(M c^2)/dt
+         = (1/T_H) * [ P_in(J) - P_out(M) ]
+```
+
+Remarque de robustesse :
+
+* Si rotation/charge sont présentes, des **termes de “travail”** apparaissent (ex. variation de moment angulaire et charge). Pour éviter toute collision de notation, ces grandeurs doivent être notées distinctement de votre J (par exemple “J_ang” pour le moment angulaire). Votre J reste la donnée de bord entrante RevHalt.
+
+#### 4.3 Deuxième loi généralisée (GSL, cadre semi-classique)
+
+La loi pertinente (au niveau global) est :
+
+```
+d/dt [ S_BH + S_outside ] ≥ 0
+```
+
+* **S_outside** : entropie hors horizon (champs, rayonnement, etc.).
+* Avec **J ≠ 0**, il existe en général un **flux d’entropie entrant** associé à l’état entrant (bord actif). Le bord devient donc un terme **contraignable** via bilans énergie/entropie.
+
+#### 4.4 Point fixe non dégénéré (équilibre ouvert)
+
+Un point fixe stationnaire non trivial est un équilibre **entrée = sortie** :
+
+```
+d(M c^2)/dt = 0  ⇔  P_in(J) = P_out(M)
+```
+
+Ce n’est pas “absence de bord”, c’est un **équilibre ouvert** avec J ≠ 0.
+
+---
+
+### 5) Portée formelle : dictionnaire minimal (RevHalt → complexité)
+
+Le projet établit un **théorème conditionnel** (pont rigide) dans un cadre formel (Lean). Pour éviter que ce bloc soit lu comme une analogie, on explicite un dictionnaire minimal :
+
+* **“Bord actif” (physique)** ↔ **“frontière logique non vide” (formel)**
+  Intuition : l’évolution/extension n’est pas close sans information de bord ; formellement, il subsiste un contenu de frontière.
+* **“Bord stable / se vide à la limite” (physique)** ↔ **“stabilité au bord” (formel)**
+  Intuition : la frontière cesse de porter du contenu dans une limite contrôlée ; formellement, la frontière devient vide.
+
+Énoncé conditionnel (tel que vous le formulez) :
+
+```
+(Stabilité au Bord + Price of P) ⇒ Collapse (P=NP)
+```
+
+Définitions (rappel) :
+
+```
+Stabilité : frontière logique vide à la limite
+S1Rel(ωΓ) = ∅
+
+Price of P : toute vérité admet une preuve polynomialement compressée
+PolyCompressionWC
+```
+
+Cartographie (conséquence logique) :
+
+```
+Le projet ne prouve pas P=NP.
+Il force l’alternative suivante pour refuser Collapse :
+
+¬Collapse ⇒ (¬Stabilité) ∨ (¬Price of P)
+```
+
+Lecture “RouteII” (sans cas nuls) :
+
+* Refuser Collapse impose de renoncer soit à la **stabilité** (admettre une frontière/bord actif : S1Rel(ωΓ) ≠ ∅), soit à l’hypothèse **Price of P** (admettre une non-compressibilité générale).
+
+---
+
+### 6) Apport physique (RouteII, sans cas nuls)
+
+Dans la lecture physique de RouteII, la contribution RevHalt n’est pas un terme additif arbitraire ; c’est une contrainte structurelle :
+
+* Le système doit être traité comme **ouvert**.
+* Il faut spécifier une **donnée entrante J ≠ 0** (état entrant / condition au bord / donnée caractéristique).
+* Les quantités globales (énergie, entropie généralisée) se ferment et se comparent via des **bilans de flux**, uniquement lorsque J est explicitement spécifié.
+
+Autrement dit : RevHalt impose que “Bulk seul” ne suffit pas à fermer la narration prédictive ; le **Bord** (au sens opérationnel) devient un objet mesurable/paramétrable/contraignable par des bilans.
+
+---
