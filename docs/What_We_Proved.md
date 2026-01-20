@@ -52,6 +52,8 @@ Dans `RevHalt/Theory/Instances/ThreeSAT_ProofComplexity.lean`, le projet :
   - `RevHalt.ThreeSATCanonization.SAT_PPS`
 - dérive l’endpoint :
   - `RevHalt.ThreeSATCanonization.PolyPosWC_3SAT_implies_PolyPPS`
+- et, désormais, ferme aussi l’endpoint end‑to‑end “stabilité + Price‑of‑P ⇒ PPS p‑borné” :
+  - `RevHalt.ThreeSATCanonization.PolyCompressionWC_3SAT_of_Stable_of_decidable_implies_PolyPPS`
 
 ---
 
@@ -134,5 +136,7 @@ Dans `RevHalt/Diagnostics/AxiomsReport.lean`, le projet :
 Pas encore majeur : certains endpoints “flagship” (en particulier les versions “tout‑automatique” sans hypothèses de décidabilité explicites) restent dépendants de `Classical.choice` et/ou d’axiomes Lean (voir `RevHalt/Diagnostics/AxiomsReport.lean`).
 
 En revanche, sur l’objectif A, il y a désormais une chaîne **sans `Classical.choice`** (au sens `#print axioms`) pour relier stabilité + Price‑of‑P (localisés) jusqu’à `PolyPosWC_TSP` via `..._of_decidable` (voir `RevHalt/Diagnostics/AxiomsReport_ObjA.lean`). Les dépendances résiduelles visibles côté TSP sont typiquement `propext` / `Quot.sound` (axiomes noyau/PropExt), pas du choix classique.
+
+Pour 3SAT, l’endpoint end‑to‑end existe aussi, mais l’audit `#print axioms` montre qu’il dépend encore de `Classical.choice` (via `Machine_3SAT_halts_iff` et/ou les encodages auxiliaires), ce qui le classe actuellement dans la colonne “classique” du diagnostic.
 
 Le point restant pour un “résultat majeur” est toujours la thèse nette de naturalité/robustesse : positionner `PolyCompressionWC`/`PolyPosWC` et la politique de limite par rapport à des objets standard (proof complexity / systèmes de preuve connus) sans tautologie et sans artefact d’encodage.

@@ -17,13 +17,6 @@ namespace RevHalt.ThreeSATCanonization
 open RevHalt.ProofCarrying.Witness
 open RevHalt.ThreeSAT
 
-/-- Local alias: `PolyPosWC` specialized to the 3SAT checker. -/
-def PolyPosWC_3SAT
-    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
-    (Γ : Set ℕ) : Type :=
-  RevHalt.Complexity.PolyPosWC
-    Γ ChecksDerivation ChecksWitness_3SAT decodeList SATSize IsTrue_3SAT
-
 /-- Soundness: if the WC checker accepts, then the instance is true (`IsTrue_3SAT`). -/
 theorem IsTrue_3SAT_of_ChecksWC
     {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
@@ -95,5 +88,34 @@ def PolyPosWC_3SAT_implies_PolyPPS
     (hSound := IsTrue_3SAT_of_ChecksWC (ChecksDerivation := ChecksDerivation) Γ)
     (hComplete := ChecksWC_complete_of_PolyPosWC_3SAT (ChecksDerivation := ChecksDerivation) Γ hPoly)
     (hPoly := hPoly)
+
+/--
+Objective A (end-to-end, constructive, 3SAT):
+`S1Rel = ∅` at `ωΓ` + `PolyCompressionWC_3SAT` ⇒ a polynomially bounded PPS for 3SAT,
+under an explicit decidability hypothesis on WC-provability at `ωΓ`.
+-/
+def PolyCompressionWC_3SAT_of_Stable_of_decidable_implies_PolyPPS
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
+    (K : RHKit)
+    (ωΓ : Set ℕ)
+    (hKMono : RevHalt.DetectsMono K)
+    (hDec : DecidablePred (fun p => Provable_3SAT_WC (ChecksDerivation := ChecksDerivation) ωΓ p))
+    (hEmpty :
+      S1Rel (Provable_3SAT_WC (ChecksDerivation := ChecksDerivation))
+        K Machine_3SAT (fun x => x) ωΓ = ∅)
+    (pc : PolyCompressionWC_3SAT (ChecksDerivation := ChecksDerivation) ωΓ) :
+    RevHalt.ProofComplexity.PolynomiallyBoundedPPS
+      (SAT_PPS ChecksDerivation ωΓ
+        (ChecksWC_complete_of_PolyPosWC_3SAT (ChecksDerivation := ChecksDerivation) ωΓ
+          (PolyPosWC_3SAT_of_Stable_of_decidable
+            (ChecksDerivation := ChecksDerivation)
+            K ωΓ hKMono hDec hEmpty pc)))
+      SATSize :=
+  PolyPosWC_3SAT_implies_PolyPPS
+    (ChecksDerivation := ChecksDerivation)
+    ωΓ
+    (PolyPosWC_3SAT_of_Stable_of_decidable
+      (ChecksDerivation := ChecksDerivation)
+      K ωΓ hKMono hDec hEmpty pc)
 
 end RevHalt.ThreeSATCanonization
