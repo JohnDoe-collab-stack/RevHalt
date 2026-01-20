@@ -1,4 +1,5 @@
 import RevHalt.Theory.TheoryDynamics_CanonizationWC
+import Mathlib.Data.Nat.Pairing
 
 namespace RevHalt.CanonizationWC
 
@@ -57,7 +58,7 @@ def polyCompressionWC_of_no_provable
   { B := fun _ => 0
     compress := by
       intro p hp
-      exact (False.elim ((hNo p) hp))
+      exact False.elim ((hNo p) hp)
     B_poly := by
       refine ⟨0, 0, ?_⟩
       intro n
@@ -88,8 +89,10 @@ theorem provableWC_all_nat (Γ : Set ℕ) (p : ℕ) :
       (decodeList := decodeList_nil)
       Γ p := by
   refine ⟨⟨Nat.pair p 0, ?_⟩⟩
-  simp [RevHalt.ProofCarrying.Witness.ChecksWC, ChecksDerivation_id, ChecksWitness_true,
-    RevHalt.ProofCarrying.Witness.proofPart, RevHalt.ProofCarrying.Witness.unpair_fst, Nat.unpair_pair]
+  simp [RevHalt.ProofCarrying.Witness.ChecksWC,
+        ChecksDerivation_id, ChecksWitness_true,
+        RevHalt.ProofCarrying.Witness.proofPart,
+        RevHalt.ProofCarrying.Witness.unpair_fst]
 
 theorem no_polyCompressionWC_size0 :
     ¬ Nonempty (PolyCompressionWC (PropT := ℕ)
@@ -101,6 +104,7 @@ theorem no_polyCompressionWC_size0 :
   intro h
   rcases h with ⟨pc⟩
   let p0 : ℕ := pc.B 0
+
   have hp0 :
       ProvableWC (PropT := ℕ)
         (ChecksDerivation := ChecksDerivation_id)
@@ -108,13 +112,23 @@ theorem no_polyCompressionWC_size0 :
         (decodeList := decodeList_nil)
         (Set.univ : Set ℕ) p0 :=
     provableWC_all_nat (Γ := (Set.univ : Set ℕ)) p0
+
   rcases pc.compress p0 hp0 with ⟨d, hdlt⟩
 
+  -- Extract the derivation-check part from d.valid in a stable way
+  have hAnd :
+      (ChecksDerivation_id (Set.univ : Set ℕ) p0 (proofPart d.code) = true) ∧
+      (ChecksWitness_true p0 (decodeWitness decodeList_nil d.code) = true) := by
+    have hv' :
+        (ChecksDerivation_id (Set.univ : Set ℕ) p0 (proofPart d.code) &&
+         ChecksWitness_true p0 (decodeWitness decodeList_nil d.code)) = true := by
+      simpa [RevHalt.ProofCarrying.Witness.ChecksWC] using d.valid
+    rw [Bool.and_eq_true] at hv'
+    exact hv'
+
   have hDeriv :
-      ChecksDerivation_id (Set.univ : Set ℕ) p0 (proofPart d.code) = true := by
-    have hv := d.valid
-    simpa [RevHalt.ProofCarrying.Witness.ChecksWC, ChecksDerivation_id, ChecksWitness_true,
-      RevHalt.ProofCarrying.Witness.proofPart] using hv
+      ChecksDerivation_id (Set.univ : Set ℕ) p0 (proofPart d.code) = true :=
+    hAnd.1
 
   have hEq : proofPart d.code = p0 := by
     have : decide (proofPart d.code = p0) = true := by
@@ -123,8 +137,7 @@ theorem no_polyCompressionWC_size0 :
 
   have hp0_le : p0 ≤ d.code := by
     have hProofLe : proofPart d.code ≤ d.code := by
-      simpa [RevHalt.ProofCarrying.Witness.proofPart, RevHalt.ProofCarrying.Witness.unpair_fst] using
-        (Nat.unpair_left_le d.code)
+      simpa [RevHalt.ProofCarrying.Witness.unpair_fst] using (Nat.unpair_left_le d.code)
     simpa [hEq] using hProofLe
 
   exact (Nat.not_lt_of_ge hp0_le hdlt)
