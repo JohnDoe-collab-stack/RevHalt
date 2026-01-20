@@ -92,4 +92,33 @@ def PolyPosWC_TSP_implies_PolyPPS
     (hComplete := ChecksWC_complete_of_PolyPosWC_TSP (ChecksDerivation := ChecksDerivation) Γ hPoly)
     (hPoly := hPoly)
 
+/--
+Objective A (end-to-end, constructive):
+`S1Rel = ∅` at `omegaΓ` + `PolyCompressionWC_TSP` ⇒ a polynomially bounded PPS for TSP,
+under an explicit decidability hypothesis on WC-provability at `omegaΓ`.
+-/
+def PolyCompressionWC_TSP_of_Stable_of_decidable_implies_PolyPPS
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
+    (K : RHKit)
+    (omegaΓ : Set ℕ)
+    (hKMono : RevHalt.DetectsMono K)
+    (hDec : DecidablePred (fun p => Provable_TSP_WC (ChecksDerivation := ChecksDerivation) omegaΓ p))
+    (hEmpty :
+      S1Rel (Provable_TSP_WC (ChecksDerivation := ChecksDerivation))
+        K Machine_TSP (fun x => x) omegaΓ = ∅)
+    (pc : PolyCompressionWC_TSP ChecksDerivation omegaΓ) :
+    RevHalt.ProofComplexity.PolynomiallyBoundedPPS
+      (TSP_PPS ChecksDerivation omegaΓ
+        (ChecksWC_complete_of_PolyPosWC_TSP (ChecksDerivation := ChecksDerivation) omegaΓ
+          (PolyPosWC_TSP_of_Stable_of_decidable
+            (ChecksDerivation := ChecksDerivation)
+            K omegaΓ hKMono hDec hEmpty pc)))
+      TSPSize :=
+  PolyPosWC_TSP_implies_PolyPPS
+    (ChecksDerivation := ChecksDerivation)
+    omegaΓ
+    (PolyPosWC_TSP_of_Stable_of_decidable
+      (ChecksDerivation := ChecksDerivation)
+      K omegaΓ hKMono hDec hEmpty pc)
+
 end RevHalt.TSP

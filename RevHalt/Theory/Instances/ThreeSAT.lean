@@ -26,81 +26,81 @@ def encodeList : List ℕ → ℕ
   | [] => 0
   | x :: xs => pair (x + 1) (encodeList xs)
 
--- We reuse a simple "invalid -> []" total decoder; termination via decreasing snd.
-lemma unpair_snd_lt_of_pos {n : ℕ} (hn : n > 0) (_ha : unpair_fst n > 0) : unpair_snd n < n := by
-  simp only [unpair_snd]
-  set a := (Nat.unpair n).1 with ha_def
-  set b := (Nat.unpair n).2 with hb_def
-  have heq : Nat.pair a b = n := Nat.pair_unpair n
-  -- b ≤ pair a b = n
-  have h_le : b ≤ Nat.pair a b := Nat.right_le_pair a b
-  rw [heq] at h_le
-  -- Need b < n. If b = n, then pair a b = b, which is only possible when a = 0 and b = 0
-  rcases Nat.lt_or_eq_of_le h_le with h_lt | h_eq
-  · exact h_lt
-  · exfalso
-    -- b = n and pair a b = n, so pair a b = b
-    have hpair_eq : Nat.pair a b = b := by rw [heq, h_eq]
-    -- pair a b = if a < b then b*b + a else a*a + a + b
-    simp only [Nat.pair] at hpair_eq
-    split_ifs at hpair_eq with hcmp
-    · -- hpair_eq : b * b + a = b
-      -- Since b * b + a = b and a ≥ 0, we need b * b ≤ b, i.e., b * (b - 1) ≤ 0
-      -- For natural numbers, this means b ≤ 1
-      -- Case b = 0: then a = 0
-      -- Case b = 1: then 1 + a = 1, so a = 0
-      -- Either way, a = 0, but _ha says a > 0, contradiction
-      simp only [unpair_fst, ← ha_def] at _ha
-      have hb_bound : b ≤ 1 := by
-        by_contra h
-        push_neg at h
-        -- b ≥ 2, so b * b ≥ 4 > b, contradiction with hpair_eq
-        have : b * b ≥ 2 * b := Nat.mul_le_mul_right b h
-        omega
-      rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hb_bound with hb0 | hb1
-      · simp [hb0] at hpair_eq; omega
-      · simp [hb1] at hpair_eq; omega
-    · -- hpair_eq : a * a + a + b = b
-      -- So a * a + a = 0, i.e., a * (a + 1) = 0
-      -- Since a + 1 > 0, we must have a = 0
-      simp only [unpair_fst, ← ha_def] at _ha
-      have ha0 : a = 0 := by
-        have heq : a * (a + 1) = 0 := by omega
-        cases Nat.mul_eq_zero.mp heq with
-        | inl h => exact h
-        | inr h => omega  -- a + 1 = 0 is impossible
-      omega
+/-- Fuel-bounded list decoder (total). -/
+def decodeListAux : ℕ → ℕ → List ℕ
+  | 0, _ => []
+  | fuel + 1, n =>
+      if _h : n = 0 then []
+      else
+        let a := unpair_fst n
+        let b := unpair_snd n
+        if _ha : a = 0 then []
+        else (a - 1) :: decodeListAux fuel b
 
-
-
+/-- Decode a natural to a list of naturals. -/
 def decodeList (n : ℕ) : List ℕ :=
-  if h : n = 0 then []
-  else
-    let a := unpair_fst n
-    let b := unpair_snd n
-    if ha : a = 0 then []
-    else (a - 1) :: decodeList b
-termination_by n
-decreasing_by
-  exact unpair_snd_lt_of_pos (Nat.pos_of_ne_zero h) (Nat.pos_of_ne_zero ha)
+  decodeListAux (n + 1) n
+
+lemma pair_pos {a b : ℕ} (ha : a > 0) : pair a b > 0 := by
+  simp only [pair]
+  have h := Nat.left_le_pair a b
+  omega
+
+@[simp] lemma unpair_fst_pair (a b : ℕ) : unpair_fst (pair a b) = a := by
+  simp only [unpair_fst, pair, Nat.unpair_pair]
+
+@[simp] lemma unpair_snd_pair (a b : ℕ) : unpair_snd (pair a b) = b := by
+  simp only [unpair_snd, pair, Nat.unpair_pair]
+
+lemma right_lt_pair_of_left_pos {a b : ℕ} (ha : 0 < a) : b < pair a b := by
+  by_cases h : a < b
+  · have hpair : pair a b = b * b + a := by
+      simp [pair, Nat.pair, h]
+    rw [hpair]
+    have hbPos : 0 < b := lt_trans ha h
+    have hb1 : 1 ≤ b := Nat.succ_le_iff.mp hbPos
+    have hbLeBB : b ≤ b * b := by
+      simpa [Nat.mul_one] using (Nat.mul_le_mul_left b hb1)
+    have hBBlt : b * b < b * b + a :=
+      Nat.lt_add_of_pos_right (n := b * b) (k := a) ha
+    exact lt_of_le_of_lt hbLeBB hBBlt
+  · have hpair : pair a b = a * a + a + b := by
+      simp [pair, Nat.pair, h]
+    rw [hpair]
+    have haPos' : 0 < a * a + a := Nat.add_pos_right (a * a) ha
+    have hbLt : b < (a * a + a) + b :=
+      Nat.lt_add_of_pos_left (n := b) (k := a * a + a) haPos'
+    simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using hbLt
+
+lemma decodeListAux_encodeList (xs : List ℕ) (fuel : ℕ) :
+    encodeList xs + 1 ≤ fuel →
+    decodeListAux fuel (encodeList xs) = xs := by
+  intro hFuel
+  induction xs generalizing fuel with
+  | nil =>
+      cases fuel <;> simp [encodeList, decodeListAux]
+  | cons x xs ih =>
+      cases fuel with
+      | zero =>
+          exfalso
+          exact Nat.not_succ_le_zero (encodeList (x :: xs)) (by simpa using hFuel)
+      | succ fuel' =>
+          have hne : pair (x + 1) (encodeList xs) ≠ 0 := by
+            have : pair (x + 1) (encodeList xs) > 0 := pair_pos (Nat.succ_pos x)
+            omega
+          have ha : unpair_fst (pair (x + 1) (encodeList xs)) ≠ 0 := by
+            simpa [unpair_fst_pair] using (Nat.succ_ne_zero x)
+          have hFuel' : encodeList xs + 1 ≤ fuel' := by
+            have hnLe : pair (x + 1) (encodeList xs) ≤ fuel' := by
+              exact Nat.succ_le_succ_iff.mp (by simpa [encodeList] using hFuel)
+            have hbLe : encodeList xs + 1 ≤ pair (x + 1) (encodeList xs) :=
+              Nat.succ_le_iff.mpr (right_lt_pair_of_left_pos (a := x + 1) (b := encodeList xs) (Nat.succ_pos x))
+            exact le_trans hbLe hnLe
+          have hTail := ih fuel' hFuel'
+          simp [encodeList, decodeListAux, dif_neg hne, unpair_fst_pair, unpair_snd_pair, hTail]
 
 @[simp] lemma decodeList_encodeList (xs : List ℕ) : decodeList (encodeList xs) = xs := by
-  induction xs with
-  | nil =>
-      simp [encodeList, decodeList]
-  | cons x xs ih =>
-      unfold encodeList
-      have hne : pair (x + 1) (encodeList xs) ≠ 0 := by
-        -- Nat.pair is never 0 with left component > 0
-        intro h0
-        have : (x + 1) = 0 := by
-          -- Nat.left_le_pair: a ≤ pair a b
-          apply Nat.eq_zero_of_le_zero
-          have h1 := Nat.left_le_pair (x + 1) (encodeList xs)
-          have h2 : Nat.pair (x + 1) (encodeList xs) ≤ 0 := Nat.le_of_eq h0
-          exact h1.trans h2
-        exact Nat.succ_ne_zero x this
-      simp [decodeList, dif_neg hne, unpair_fst, unpair_snd, ih]
+  exact decodeListAux_encodeList xs (encodeList xs + 1) (by exact le_rfl)
 
 -- ===== 3SAT syntax =====
 

@@ -53,6 +53,21 @@ def PolyPosWC_TSP
   RevHalt.Complexity.PolyPosWC Γ ChecksDerivation ChecksWitness_TSP decodeList TSPSize IsTrue_TSP
 
 /--
+  **PolyCompressionWC_TSP**:
+  The "Price of P" hypothesis for TSP:
+  "If a TSP instance is WC-provable, there exists a polynomial-size derivation."
+-/
+abbrev PolyCompressionWC_TSP
+    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
+    (Γ : Set ℕ) : Type :=
+  RevHalt.CanonizationWC.PolyCompressionWC
+    (PropT:=ℕ)
+    (ChecksDerivation:=ChecksDerivation)
+    (ChecksWitness:=ChecksWitness_TSP)
+    (decodeList:=decodeList)
+    Γ TSPSize
+
+/--
   **Completeness from Empty Frontier**:
   If the "Route II" frontier (S1Rel) is empty at the trajectory limit,
   then every true instance is provable (PosCompleteWC).
@@ -103,19 +118,44 @@ theorem PosCompleteWC_of_S1Rel_empty_TSP_of_decidable
     exact False.elim hIn
 
 
+--
+-- Objective A (constructive glue):
+-- turn “stability at ωΓ” + “Price of P” into the standard `PolyPosWC_TSP` object,
+-- without any classical choice (but requiring an explicit decidability hypothesis).
+--
+
 /--
-  **PolyCompressionWC_TSP**:
-  The "Price of P" hypothesis for TSP:
-  "If a TSP instance is WC-provable, there exists a polynomial-size derivation."
+  **Closure of Layer 2 (constructive)**:
+  `(S1Rel = ∅ at ωΓ)` + `PolyCompressionWC_TSP` ⇒ `PolyPosWC_TSP`,
+  under an explicit decidability hypothesis on WC-provability at `ωΓ`.
 -/
-abbrev PolyCompressionWC_TSP
-    (ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool)
-    (Γ : Set ℕ) : Type :=
-  RevHalt.CanonizationWC.PolyCompressionWC
-    (PropT:=ℕ)
-    (ChecksDerivation:=ChecksDerivation)
-    (ChecksWitness:=ChecksWitness_TSP)
-    (decodeList:=decodeList)
-    Γ TSPSize
+def PolyPosWC_TSP_of_Stable_of_decidable
+    {ChecksDerivation : Set ℕ → ℕ → DerivationCode → Bool}
+    (K : RHKit)
+    (ωΓ : Set ℕ)
+    (hKMono : RevHalt.DetectsMono K)
+    (hDec : DecidablePred (fun p => Provable_TSP_WC (ChecksDerivation:=ChecksDerivation) ωΓ p))
+    (hEmpty : S1Rel (Provable_TSP_WC (ChecksDerivation:=ChecksDerivation))
+        K Machine_TSP (fun x => x) ωΓ = ∅)
+    (pc : PolyCompressionWC_TSP ChecksDerivation ωΓ) :
+    PolyPosWC_TSP ChecksDerivation ωΓ := by
+  let pos :
+      RevHalt.CanonizationWC.PosCompleteWC
+        (PropT:=ℕ)
+        (IsTrue:=IsTrue_TSP)
+        (ChecksDerivation:=ChecksDerivation)
+        (ChecksWitness:=ChecksWitness_TSP)
+        (decodeList:=decodeList)
+        ωΓ :=
+    PosCompleteWC_of_S1Rel_empty_TSP_of_decidable
+      (ChecksDerivation:=ChecksDerivation) K ωΓ hKMono hDec hEmpty
+  exact
+    RevHalt.CanonizationWC.PolyPosWC_of_PosComplete_and_PolyCompression
+      (PropT:=ℕ) (IsTrue:=IsTrue_TSP)
+      (ChecksDerivation:=ChecksDerivation)
+      (ChecksWitness:=ChecksWitness_TSP)
+      (decodeList:=decodeList)
+      (Γ:=ωΓ) (size:=TSPSize)
+      pos pc
 
 end RevHalt.TSP
