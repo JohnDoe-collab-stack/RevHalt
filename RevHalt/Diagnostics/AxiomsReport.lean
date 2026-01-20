@@ -30,4 +30,3 @@ Run:
 #print axioms RevHalt.TSP.Collapse_TSP_of_TrajectoryChoice_and_PriceOfP
 
 end RevHalt.Diagnostics
-
