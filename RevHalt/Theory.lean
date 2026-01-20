@@ -12,6 +12,7 @@ import RevHalt.Theory.RECodePred
 
 import RevHalt.Theory.TheoryDynamics
 import RevHalt.Theory.TheoryDynamics_CanonizationWC
+import RevHalt.Theory.TheoryDynamics_PriceOfP_Nontriviality
 import RevHalt.Theory.TheoryDynamics_ComplexityBounds
 import RevHalt.Theory.TheoryDynamics_ProofCarrying
 import RevHalt.Theory.TheoryDynamics_RouteII
