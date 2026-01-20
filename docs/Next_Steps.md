@@ -3,6 +3,7 @@
 Objectif: transformer le “pipeline” actuel (dynamics + canonization + instances) en résultats plus robustes, mieux classifiés (constructif vs classique), et moins dépendants d’artefacts (choix de `K`, `Cn`, encodages, checkers WC).
 
 Références existantes:
+
 - Axiomes (mécanique): `RevHalt/Diagnostics/AxiomsReport.lean`
 - Classification actuelle: `docs/Axiom_Dependence_Report.md`
 
@@ -15,6 +16,7 @@ Le code donne déjà un pont formel du type:
 `¬Collapse -> (¬Stabilité) ∨ (¬Price of P)`.
 
 Pour que ça soit perçu comme un “grand apport” (pas juste intéressant), il faut bétonner:
+
 - (A) **Non‑trivialité de Price of P**: montrer que `PolyCompressionWC` n’est pas une hypothèse déguisée de collapse.
 - (B) **Robustesse de Stabilité**: montrer que `S1Rel … ωΓ = ∅` et le pont vers collapse sont invariants sous des variations raisonnables (encodages/checkers/politiques/instances).
 
@@ -25,7 +27,9 @@ Ces deux axes sont développés dans les sections 3) et 4).
 ## 1) Dépendance aux axiomes (résultat théorique sur la force du cadre)
 
 ### 1.1 Étendre le rapport `#print axioms`
+
 Ajouter au rapport (ou créer `RevHalt/Diagnostics/AxiomsReport_Extended.lean`) les theorems “centraux”:
+
 - Escape / fork law:
   - `RevHalt.structural_escape_transfinite`
   - `RevHalt.structural_escape_at_limit`
@@ -41,7 +45,9 @@ Ajouter au rapport (ou créer `RevHalt/Diagnostics/AxiomsReport_Extended.lean`) 
   - (et tout autre endpoint “final API” que tu veux mettre en avant)
 
 ### 1.2 Classifier “constructif vs classique” au niveau module
+
 Produire une table “fichier -> dépendance” (pas une opinion, mais basée sur `#print axioms`):
+
 - “constructif” = pas de `Classical.choice`
 - “classique” = `Classical.choice` apparaît
 - noter aussi `Lean.trustCompiler` / `Lean.ofReduceBool` quand ils apparaissent (c’est important pour les couches WC/checkers).
@@ -53,15 +59,20 @@ Livrable: un doc “module map” (ex: `docs/Axiom_Map.md`) qui liste les module
 ## 2) Réduire le “classical” quand c’est évitable (gains réels)
 
 ### 2.1 Supprimer les classiques purement “Set.Nonempty”
+
 Pattern déjà appliqué (à répéter ailleurs):
+
 - remplacer `by_contra h; have : s.Nonempty := Set.nonempty_iff_ne_empty.mpr h` par
   `apply Set.eq_empty_iff_forall_notMem.mpr; intro p hp; ...`
 
 Cibles évidentes:
+
 - occurrences de `Set.nonempty_iff_ne_empty` et `Set.not_nonempty_iff_eq_empty` dans le cœur (route II / transfinite / instances).
 
 ### 2.2 Isoler le vrai point dur: `Classical.decPred`
+
 Là où la théorie force vraiment une décision de “Provable Δ p”:
+
 - `RevHalt/Theory/TheoryDynamics_TwoSided.lean`:
   - garder la version constructive `F0_pm_monotone_of_provClosed` (déjà paramétrée par `DecidablePred`)
   - faire de la version classique `F0_pm_monotone_classical` une “instance séparée” (déjà le cas), et tracer précisément où elle est utilisée.
@@ -75,9 +86,11 @@ But: rendre explicite “ce que coûte” la version functorielle globale (sans 
 Point à clarifier dans Lean: où se situe l’hypothèse `PolyCompressionWC` par rapport à des notions standard.
 
 ### 3.0 Résultats “non‑tautologie” déjà formalisés
+
 Fichier: `RevHalt/Theory/TheoryDynamics_PriceOfP_Nontriviality.lean`
 
 Ce fichier verrouille le point suivant, au niveau des signatures Lean (pas en prose):
+
 - `RevHalt.CanonizationWC.polyCompressionWC_of_no_provable`:
   si `ProvableWC Γ p` est faux pour tout `p`, alors `PolyCompressionWC Γ size` est habité (vacuement).
   Donc `PolyCompressionWC` seul n’implique pas “vérité -> preuve”, ni un collapse.
@@ -90,15 +103,20 @@ Ce fichier verrouille le point suivant, au niveau des signatures Lean (pas en pr
   Donc `PolyCompressionWC` n’est pas une tautologie: c’est une vraie hypothèse de compression.
 
 ### 3.1 Montrer des implications “sens standard -> Price of P”
+
 Écrire des lemmes du type:
+
 - “si on a une procédure polynomiale X, alors on obtient une borne polynomiale sur les WC-derivations”.
 
 Idée (structure, pas slogan):
+
 - définir un pont “algorithme” -> “derivation checker + witness checker” -> “existence d’un code borné”.
 - isoler l’endroit exact où la majoration polynomiale est supposée.
 
 ### 3.2 Tester la robustesse de la définition de Price of P
+
 Montrer des invariances internes:
+
 - changer `encodeList/decodeList` par une équivalence -> `PolyCompressionWC` équivalent (ou au moins une implication dans un sens).
 - changer `ChecksWitness` par une variante extensionnelle -> `PolyCompressionWC` stable.
 
@@ -109,14 +127,17 @@ But: que l’hypothèse ne soit pas “fragile” au niveau du choix des codes.
 ## 4) Robustesse de “Stabilité” (S1Rel vide à omega) et du pont vers Collapse
 
 ### 4.1 Paramétrer et factoriser au maximum
+
 Objectif: pouvoir dire “le pipeline marche pour une classe d’instances”, pas seulement TSP.
 
 Travail Lean:
+
 - extraire une interface “InstanceWC” minimale:
   - type `PropT`, machine, encode_halt, notion `IsTrue`, `ChecksDerivation`, `ChecksWitness`, taille `size`
   - et prouver une version générique du endpoint “Stable + Price -> Collapse” (si ce n’est pas déjà le bon niveau d’abstraction).
 
 ### 4.2 Ajouter une 2e instance (SAT/3SAT/CLIQUE)
+
 But: démontrer que la chaîne n’est pas spécifique à TSP.
 
 Livrable: un fichier `RevHalt/Theory/Instances/<NPcomplete>_Canonization.lean` qui réutilise exactement le même schéma que TSP.
@@ -126,11 +147,13 @@ Livrable: un fichier `RevHalt/Theory/Instances/<NPcomplete>_Canonization.lean` q
 ## 5) Consolider les “résultats noyau” (ceux qui valent publication)
 
 À isoler comme objets centraux (avec noms stables + signatures propres):
+
 - “Bridge”: `Stable + Price -> Collapse` (au bon niveau d’abstraction)
 - “Fork law”: `FixpointFromContinuity -> ¬ ContinuousAtL` sous hypothèses d’escape
 - “Jump separation”: résultats qui montrent que “union-only” écrase une différence (via `jumpLimitOp`)
 
 Pour chacun:
+
 - décider un théorème “flagship” (le plus court possible)
 - lister explicitement ses hypothèses (pas de meta-texte)
 - lister `#print axioms` et la classe (constructif/classique)
@@ -144,5 +167,62 @@ Pour chacun:
   - `lake build RevHalt.Theory.Instances.TSP_Dynamics`
   - `lake build RevHalt.Theory.Instances.TSP_Canonization`
 
-- Scan des usages classiques:
   - `rg -n \"\\bclassical\\b|by_contra\\b|Classical\\.decPred\" RevHalt`
+
+---
+
+## 7) AMBITION MAJEURE (Roadmap "Major Academic Status")
+
+Objectif : Transformer le pipeline actuel en une contribution majeure incontrovertible.
+Stratégie : Bétonner les hypothèses "Price of P" (non-tautologie, naturalité) et "Stabilité" (invariance, robustesse).
+
+### A) Price of P : Naturalité et Orthogonalité
+
+#### A1. Correspondance avec Proof Complexity
+
+*Objectif : Rendre `PolyCompressionWC` lisible pour un expert classique.*
+- [ ] **Lemme de Simulation** : Prouver que si un système de preuve (S) (type Frege/EF) a des preuves polynomiales pour vérifier les témoins, alors `PolyCompressionWC` suit.
+- [ ] **Corollaire** : Placer `Price of P` sur la carte des "possible proof systems".
+
+#### A2. Non-Vacuité (Separation Model)
+
+*Objectif : Exclure que "Price of P => Collapse" soit vrai par vacuité.*
+- [ ] **Modèle de Séparation** : Construire un cadre où `ProvableWC` est riche, `PolyCompressionWC` tient, et pourtant Collapse ne tombe pas *sans* ajouter Stabilité.
+  - *Note : Le fichier `TheoryDynamics_PriceOfP_Nontriviality.lean` couvre déjà la non-tautologie de base.*
+
+#### A3. Implications Métathéoriques
+
+*Objectif : Montrer l'orthogonalité via des liens connus.*
+- [ ] RELIER `PolyCompressionWC` à des bornes connues (lower bounds).
+- [ ] MONTRER une ou deux implications propres ("Si PriceOfP alors ...").
+
+### B) Stabilité : Invariance et Robustesse
+
+#### B1. Invariance sous Encodage (Representation Independence)
+
+*Objectif : Prouver que S1Rel vide n'est pas un artefact de `encode_halt` ou `K`.*
+- [ ] **Théorème d'Invariance** : Si `encode'` est équivalent à `encode` (réduction primitive récursive), alors l'énoncé de Stabilité est préservé.
+- [ ] **Invariance Machine** : Même chose si on change le modèle machine avec overhead contrôlé.
+
+#### B2. Robustesse NP-complète (SAT/3SAT)
+
+*Objectif : Montrer que le pipeline n'est pas "TSP-specific".*
+- [ ] **Instance SAT** : Implémenter `RevHalt/Theory/Instances/SAT_Canonization.lean`.
+- [ ] **Template Générique** : (Optionnel) Créer un module `NPComplete_Template` abstrait.
+
+#### B3. Robustesse du Détecteur (Famille de Kits)
+
+*Objectif : Ne pas dépendre d'un seul `K` gadget.*
+- [ ] Prouver que tout `DetectsMono` suffit (déjà partiellement fait dans `Kit.lean`).
+
+### C) Packaging et Lisibilité
+
+1. **Théorème Principal** : Énoncé formel en 3 lignes + 1 page d'informal statement.
+2. **Section Non-Trivialité** : Intégrer les résultats de A.
+3. **Section Robustesse** : Intégrer les invariances de B.
+
+### D) Commandes et Statut Actuel
+
+- [x] **A0. Non-Tautologie** : Fait (`TheoryDynamics_PriceOfP_Nontriviality.lean`).
+- [x] **Doc. Physique** : Fait (`RevHalt_Physics_Formulation.md`).
+- [ ] **Suite** : Priorité sur B2 (SAT) et B1 (Invariance).
