@@ -73,6 +73,18 @@ Dans `RevHalt/Theory/ProofComplexity/LowerBounds_Classical.lean`, le projet :
 
 ---
 
+## 4.5 Outil de robustesse (thèse naturalité) : simulation PPS ⇒ transfert p‑borné
+
+Dans `RevHalt/Theory/ProofComplexity/Simulation.lean`, le projet :
+
+- formalise une notion de simulation polynomiale entre PPS (`PPSSimulates`) ;
+- prouve le transfert générique :
+  - `RevHalt.ProofComplexity.PolynomiallyBoundedPPS_of_simulation`.
+
+Interprétation formelle : une fois qu’on a une traduction polynomiale des preuves préservant la vérification, la propriété “p‑borné” se transfère au système simulé ; c’est la brique de base pour rendre les endpoints Objectif A robustes aux encodages/systèmes de preuve.
+
+---
+
 ## 5) “Price of P” : non‑tautologie et séparations formelles
 
 Dans `RevHalt/Theory/TheoryDynamics_PriceOfP_Nontriviality.lean`, le projet :

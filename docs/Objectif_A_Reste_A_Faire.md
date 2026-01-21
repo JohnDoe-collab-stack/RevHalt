@@ -47,6 +47,9 @@ Note (état actuel, objectif A) :
 - les endpoints “A” suivants sont censés être sans `Classical.choice` :
   - `RevHalt.TSP.PosCompleteWC_of_S1Rel_empty_TSP_of_decidable`
   - `RevHalt.TSP.PolyPosWC_TSP_of_Stable_of_decidable`
+ - état vérifié : `RevHalt/Diagnostics/AxiomsReport_ObjA.lean` rapporte désormais (au moins) `[propext]` uniquement
+   pour `RevHalt.TSP.PolyPosWC_TSP_implies_PolyPPS` et `RevHalt.ThreeSATCanonization.PolyPosWC_3SAT_implies_PolyPPS`
+   (pont Cook–Reckhow côté instances).
 
 ---
 

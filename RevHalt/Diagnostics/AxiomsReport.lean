@@ -7,6 +7,7 @@ import RevHalt.Theory.Instances.TSP_Canonization_Classical
 import RevHalt.Theory.Instances.TSP_ProofComplexity
 import RevHalt.Theory.ProofComplexity.LowerBounds
 import RevHalt.Theory.ProofComplexity.LowerBounds_Classical
+import RevHalt.Theory.ProofComplexity.Simulation
 
 namespace RevHalt.Diagnostics
 
@@ -43,5 +44,8 @@ Run:
 -- Proof complexity: constructive vs classical lower-bound implications
 #print axioms RevHalt.ProofComplexity.SuperPolyLowerBound.not_PolyPosWC
 #print axioms RevHalt.ProofComplexity.not_PolyPosWC_implies_LowerBound
+
+-- Robustness tool: simulation between PPS transfers p-boundedness
+#print axioms RevHalt.ProofComplexity.PolynomiallyBoundedPPS_of_simulation
 
 end RevHalt.Diagnostics

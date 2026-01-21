@@ -136,20 +136,24 @@ lemma decodeListAux_encodeList (xs : List ℕ) (fuel : ℕ) :
       | zero =>
           -- `encodeList (x::xs) + 1 ≤ 0` is impossible
           exfalso
-          exact Nat.not_succ_le_zero (encodeList (x :: xs)) (by simpa using hFuel)
+          have hFuel' : Nat.succ (encodeList (x :: xs)) ≤ 0 := by
+            simpa [Nat.succ_eq_add_one] using hFuel
+          exact Nat.not_succ_le_zero (encodeList (x :: xs)) hFuel'
       | succ fuel' =>
           have hne : pair (x + 1) (encodeList xs) ≠ 0 := by
             have : pair (x + 1) (encodeList xs) > 0 := pair_pos (Nat.succ_pos x)
             omega
           have ha : unpair_fst (pair (x + 1) (encodeList xs)) ≠ 0 := by
-            simpa [unpair_fst_pair] using (Nat.succ_ne_zero x)
+            -- `unpair_fst (pair (x+1) ...) = x+1`
+            simp [unpair_fst_pair]
           -- Reduce one decoding step.
           have hFuel' : encodeList xs + 1 ≤ fuel' := by
             have hnLe : pair (x + 1) (encodeList xs) ≤ fuel' := by
               -- from `pair ... + 1 ≤ fuel' + 1` we get `pair ... ≤ fuel'`
               exact Nat.succ_le_succ_iff.mp (by simpa [encodeList] using hFuel)
             have hbLe : encodeList xs + 1 ≤ pair (x + 1) (encodeList xs) :=
-              Nat.succ_le_iff.mpr (right_lt_pair_of_left_pos (a := x + 1) (b := encodeList xs) (Nat.succ_pos x))
+              Nat.succ_le_iff.mpr
+                (right_lt_pair_of_left_pos (a := x + 1) (b := encodeList xs) (Nat.succ_pos x))
             exact le_trans hbLe hnLe
           have hTail := ih fuel' hFuel'
           simp [encodeList, decodeListAux, dif_neg hne, unpair_fst_pair, unpair_snd_pair, hTail]
@@ -490,6 +494,38 @@ def encode_halt_TSP (encode_prop : ℕ → PropT) (code : TSPCode) : PropT :=
 -- SECTION 7: VERIFICATION
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+/-!
+Avoid `List.all_eq_true` here: in Mathlib it currently depends on `Quot.sound`.
+We only need the simple direction “`all = true` implies pointwise property”, and we can
+prove it by structural recursion (constructive).
+-/
+theorem all_lt_of_all_eq_true (n : ℕ) (path : List ℕ) :
+    path.all (fun x => x < n) = true → ∀ x ∈ path, x < n := by
+  intro hAll
+  induction path with
+  | nil =>
+      intro x hx
+      cases hx
+  | cons a xs ih =>
+      have hAnd : ((a < n : Bool) && xs.all (fun x => x < n)) = true := by
+        -- unfold `List.all` once (no simp lemmas)
+        dsimp [List.all] at hAll
+        exact hAll
+      have hParts : (a < n : Bool) = true ∧ xs.all (fun x => x < n) = true := by
+        -- rewrite the proposition using `Bool.and_eq_true`
+        -- `rw` is stable and does not pick up `List.all_eq_true`.
+        have hAnd' := hAnd
+        rw [Bool.and_eq_true] at hAnd'
+        exact hAnd'
+      intro x hx
+      have hx' : x = a ∨ x ∈ xs := (List.mem_cons).1 hx
+      cases hx' with
+      | inl hEq =>
+          subst hEq
+          exact (decide_eq_true_iff).1 hParts.1
+      | inr hMem =>
+          exact ih hParts.2 x hMem
+
 /-- Check that a tour is valid for an instance (decidable). -/
 def checkTour (inst : TSPInstance) (path : List ℕ) : Bool :=
   -- Check length
@@ -501,8 +537,11 @@ def checkTour (inst : TSPInstance) (path : List ℕ) : Bool :=
         -- Build tour structure
         let range_valid : ∀ x, x ∈ path → x < inst.n := by
           intro x hx
-          have h := List.all_eq_true.mp h_range x hx
-          exact decide_eq_true_iff.mp h
+          have hr :
+              ∀ z ∈ path, z < inst.n := by
+            -- `path.all (· < inst.n)` is definitional to `path.all (fun z => decide (z < inst.n))`.
+            exact all_lt_of_all_eq_true (n := inst.n) (path := path) h_range
+          exact hr x hx
         let tour : Tour inst.n := {
           path := path
           length_eq := h_len
@@ -1163,8 +1202,10 @@ theorem checkTour_sound (inst : TSPInstance) (path : List ℕ) :
   · -- valid case
     let range_valid : ∀ x, x ∈ path → x < inst.n := by
       intro x hx
-      have hr := List.all_eq_true.mp h_range x hx
-      exact decide_eq_true_iff.mp hr
+      have hr :
+          ∀ z ∈ path, z < inst.n :=
+        all_lt_of_all_eq_true (n := inst.n) (path := path) h_range
+      exact hr x hx
     let tour : Tour inst.n := {
       path := path
       length_eq := h_len

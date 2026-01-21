@@ -1,6 +1,7 @@
 import RevHalt.Theory.Instances.TSP_ProofComplexity
 import RevHalt.Theory.Instances.ThreeSAT_ProofComplexity
 import RevHalt.Theory.ProofComplexity.Correspondence
+import RevHalt.Theory.ProofComplexity.Simulation
 
 namespace RevHalt.Diagnostics
 
@@ -17,6 +18,9 @@ Run:
 #print axioms RevHalt.ProofComplexity.toPPS
 #print axioms RevHalt.ProofComplexity.PolyPosWC_implies_PolyPPS
 #print axioms RevHalt.ProofComplexity.PolyPPS_implies_PolyPosWC
+-- Robustness core: simulation => transfer of p-boundedness
+#print axioms RevHalt.ProofComplexity.PPSSimulates
+#print axioms RevHalt.ProofComplexity.PolynomiallyBoundedPPS_of_simulation
 
 -- TSP instantiation
 #print axioms RevHalt.TSP.IsTrue_TSP_of_ChecksWC
@@ -36,7 +40,8 @@ Run:
 #print axioms RevHalt.ThreeSATCanonization.PolyPosWC_3SAT_of_Stable_of_decidable
 #print axioms RevHalt.ThreeSATCanonization.PolyCompressionWC_3SAT_of_Stable_of_decidable_implies_PolyPPS
 
--- Drilldown: where does Classical.choice enter?
+-- Drilldown: confirm `Classical.choice` does not leak into Objective A endpoints.
+-- (It still appears in Mathlib's Cantor pairing facts `Nat.unpair_pair`, etc.)
 #print axioms RevHalt.TSP.decodeList
 #print axioms RevHalt.TSP.decodeTSP
 #print axioms RevHalt.TSP.checkTour
@@ -46,6 +51,24 @@ Run:
 #print axioms RevHalt.TSP.right_lt_pair_of_left_pos
 #print axioms RevHalt.TSP.Machine_TSP_halts_iff
 
+-- 3SAT drilldown
+#print axioms RevHalt.ThreeSAT.encodeList
+#print axioms RevHalt.ThreeSAT.decodeList
+#print axioms RevHalt.ThreeSAT.pair
+#print axioms RevHalt.ThreeSAT.unpairAux
+#print axioms RevHalt.ThreeSAT.unpair
+#print axioms RevHalt.ThreeSAT.pair_ne_zero
+#print axioms RevHalt.ThreeSAT.le_pow_two
+#print axioms RevHalt.ThreeSAT.unpairAux_pair
+#print axioms RevHalt.ThreeSAT.unpair_pair
+#print axioms RevHalt.ThreeSAT.unpair_fst_pair
+#print axioms RevHalt.ThreeSAT.unpair_snd_pair
+#print axioms RevHalt.ThreeSAT.decodeListAux_encodeList
+#print axioms RevHalt.ThreeSAT.decodeList_encodeList
+#print axioms RevHalt.ThreeSAT.decode3SAT
+#print axioms RevHalt.ThreeSAT.satWitness
+#print axioms RevHalt.ThreeSAT.Machine_3SAT_halts_iff
+
 -- Mathlib/Cantor pairing facts used for termination
 #print axioms Nat.pair_unpair
 #print axioms Nat.right_le_pair
@@ -53,5 +76,22 @@ Run:
 #print axioms Nat.unpair_pair
 #print axioms Nat.unpair
 #print axioms Nat.pair
+
+-- Spot-check: do core Nat lemmas already use Classical.choice?
+#print axioms Nat.le_mul_of_pos_right
+#print axioms Nat.mul_div_right
+#print axioms Nat.div_eq_of_lt
+#print axioms Nat.one_le_pow
+#print axioms Nat.succ_ne_zero
+#print axioms Nat.succ_pos
+#print axioms Nat.not_succ_le_zero
+#print axioms Nat.succ_le_succ_iff
+#print axioms Nat.succ_le_iff
+#print axioms Nat.succ_le_succ
+#print axioms Nat.add_sub_cancel
+#print axioms Nat.sub_add_cancel
+#print axioms Nat.succ_sub_one
+#print axioms pow_pos
+#print axioms Prod.ext
 
 end RevHalt.Diagnostics
