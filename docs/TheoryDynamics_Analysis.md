@@ -62,7 +62,15 @@ F(Γ) := Cn(Γ ∪ S1Rel(Γ))
 | `Absorbable(Γ)` | `∀p, p ∈ Γ → Provable(Γ, p)` | 392 |
 | `OmegaAdmissible(ωΓ)` | `Cn(ωΓ) = ωΓ ∧ ProvClosed(ωΓ)` | 944 |
 | `RouteIIAt(ωΓ)` | `S1Rel(ωΓ).Nonempty` | 1232 |
+| `RouteIIApplies(ωΓ)` | `OmegaAdmissible(ωΓ) → S1Rel(ωΓ).Nonempty` | 1250 |
 | `OmegaContinuousSet(F)` | `F(⋃Uₙ) = ⋃F(Uₙ)` pour chaînes croissantes | 304 |
+
+### 2.4 Distinction RouteIIAt / RouteIIApplies
+
+- **RouteIIAt(Γ)** : assertion directe que la frontière est non-vide à Γ
+- **RouteIIApplies(Γ)** : assertion conditionnelle — si Γ est admissible, alors la frontière est non-vide
+
+`structural_escape_explicit` utilise **RouteIIApplies** (pas seulement RouteIIAt), car la non-continuité se prouve en exploitant la façon dont RouteII interagit avec la dynamique, pas uniquement la non-vacuité brute.
 
 ---
 
@@ -80,11 +88,15 @@ Quand la théorie grandit, la frontière **rétrécit**. Mais F injecte S1 dans 
 
 ## 4. Le phénomène de collapse ordinal
 
-### 4.1 Collapse à ω
+### 4.1 Collapse à ω (conditionnel)
 
 **Théorème** (`S1Rel_omegaΓ_eq_empty_of_absorbable_succ`, ligne 1113) :
 
-Si `Absorbable(Γ₁)`, alors `S1Rel(ωΓ) = ∅`.
+```
+Absorbable(Γ₁) → S1Rel(ωΓ) = ∅
+```
+
+**Important** : Ce résultat est **conditionnel** à l'hypothèse Absorbable(Γ₁).
 
 **Preuve** :
 
@@ -95,17 +107,19 @@ Si `Absorbable(Γ₁)`, alors `S1Rel(ωΓ) = ∅`.
 5. Par monotonicité Γ₁ ⊆ ωΓ : Provable(ωΓ, p)
 6. Contradiction avec (1)
 
-### 4.2 Collapse transfinite
+### 4.2 Collapse transfinite (conditionnel)
 
 **Théorème** (`limit_collapse_schema`, Transfinite ligne 398) :
 
-Pour tout ordinal λ limite :
+Pour tout ordinal limite λ :
 
 ```
 (∃β < λ, Absorbable(Γ_{β+1})) → S1Rel(Γ_λ) = ∅
 ```
 
-Le collapse se reproduit à **tout ordinal limite** où l'absorption a eu lieu avant.
+**Lecture** : Toute limite successeur après une absorption antérieure subit le collapse.
+
+Si l'absorption **n'arrive jamais**, le schéma ne conclut rien sur S1Rel aux limites.
 
 ---
 
@@ -143,9 +157,15 @@ RouteIIAt(ωΓ) : S1(ωΓ).Nonempty
 
 ---
 
-## 6. La rupture de continuité
+## 6. L'obstruction de continuité aux limites
 
-### 6.1 Théorème principal
+### 6.1 Ce que "point fixe" veut dire ici
+
+Le projet **ne nie pas l'existence** d'un point fixe au sens de Tarski (monotonie sur treillis complet). Il montre l'échec de la stratégie **à la Kleene** : atteindre un point fixe via limite d'itération.
+
+Le point fixe pertinent pour RevHalt est le **point fixe accessible par la procédure limite** (union aux limites). `structural_escape_explicit` prouve que cette accessibilité est structurellement impossible dès que (Absorption précoce + RouteII) sont imposées.
+
+### 6.2 Théorème principal
 
 **Théorème** (`structural_escape_explicit`, Trajectory ligne 319) :
 
@@ -153,15 +173,15 @@ RouteIIAt(ωΓ) : S1(ωΓ).Nonempty
 Absorbable(Γ₁) + RouteIIApplies(ωΓ) → ¬OmegaContinuousSet(F)
 ```
 
-### 6.2 Mécanisme
+### 6.3 Mécanisme
 
 1. Si F était ω-continue, par Kleene, ωΓ serait un point fixe : F(ωΓ) = ωΓ
 2. Point fixe + hypothèses algébriques → OmegaAdmissible(ωΓ)
-3. RouteII + OmegaAdmissible → S1(ωΓ).Nonempty
+3. RouteIIApplies + OmegaAdmissible → S1(ωΓ).Nonempty
 4. Mais Absorbable → S1(ωΓ) = ∅ (collapse)
 5. Contradiction
 
-Donc les **hypothèses de Kleene ne peuvent pas être satisfaites**.
+Donc la dynamique **ne peut pas satisfaire les hypothèses de Kleene** permettant d'obtenir un point fixe par limite ω.
 
 ---
 
@@ -173,21 +193,19 @@ Dans un treillis complet, toute fonction monotone a un plus petit point fixe. Po
 
 ### 7.2 Ce que TheoryDynamics prouve
 
-**L'inverse** : les conditions qui permettraient d'obtenir ce point fixe (ω-continuité) sont **incompatibles** avec les propriétés structurelles du système (RouteII).
+**L'inverse** : les conditions qui permettraient d'obtenir ce point fixe **par limite** (ω-continuité) sont incompatibles avec les propriétés structurelles du système (RouteII + Absorption).
 
 | Tarski/Lawvere | TheoryDynamics |
 |----------------|----------------|
-| Prouve existence de points fixes | Prouve **impossibilité** de conditions pour points fixes |
+| Prouve existence de points fixes | Prouve impossibilité d'**accès** par continuité |
 | Hypothèse : F ω-continue | Conclusion : F **non** ω-continue |
-| Construction | Obstruction |
+| Construction | Obstruction de continuité aux limites |
 
 ### 7.3 Pourquoi le point fixe de Tarski n'aide pas
 
 Le treillis `Set PropT` est complet, F est monotone. Par Tarski, un point fixe existe.
 
-**Mais** : ce point fixe n'est pas ωΓ (la limite de la chaîne). Il faudrait continuer au-delà de ω.
-
-TheoryDynamics montre que cette continuation **ne résout pas le problème** : le collapse se répète à tout ordinal limite où Absorbable a tenu.
+**Mais** : ce point fixe n'est pas ωΓ (la limite de la chaîne). Toute limite successeur après une absorption antérieure subit de nouveau le collapse.
 
 ---
 
@@ -219,7 +237,7 @@ Il n'existe **aucun** ordinal limite λ où toutes les propriétés structurelle
 
 **Théorème** (`frontier_nonempty_T2`, RouteII ligne 268) :
 
-Sous les hypothèses de T2 (Soundness, NegativeComplete, semi-décidabilité), la frontière est **forcément non-vide**.
+Sous les hypothèses de T2 (Soundness, NegativeComplete, semi-décidabilité), la frontière est forcément non-vide.
 
 C'est le pont entre l'impossibilité computationnelle (T2) et la dynamique des théories.
 
@@ -237,13 +255,51 @@ Les résultats structurels (collapse, trilemme, escape) sont **constructifs** (m
 
 ---
 
-## 10. Conclusion
+## 10. Théorème principal (version robuste)
 
-TheoryDynamics établit une **obstruction catégorielle** à la convergence des systèmes dynamiques de théories. Cette obstruction :
+### 10.1 Énoncés
 
-1. **N'est pas** une reformulation de Tarski — c'est l'**inverse** (non-existence de conditions)
-2. **Explique** pourquoi les hypothèses de Kleene (ω-continuité) échouent
-3. **S'étend** à tous les ordinaux limites via le Fork Law
-4. **Connecte** T2 (impossibilité computationnelle) à une rupture structurelle
+Pour tout ordinal limite successeur λ :
 
-Le résultat principal : la tentative d'internaliser un prédicat externe (halting) dans une théorie formelle produit une dynamique qui **ne peut pas converger** vers un état stable admissible, à quelque ordinal limite que ce soit.
+**1. Collapse conditionnel à la limite** :
+
+```
+(∃β < λ, Absorbable(Γ_{β+1})) → S1Rel(Γ_λ) = ∅
+```
+
+**2. Incompatibilité avec RouteII** :
+
+Donc, si RouteIIAt(Γ_λ) (frontière non vide à la limite), alors :
+
+```
+∀β < λ, ¬Absorbable(Γ_{β+1})
+```
+
+**3. Escape** :
+
+Sous Absorbable(Γ₁) + RouteIIApplies(ωΓ), on a ¬OmegaContinuousSet(F).
+
+### 10.2 Lecture opérationnelle
+
+- **RouteII** force un régime de **non-absorption persistante**, ou bien impose de modifier l'opérateur de limite (les fichiers `Jump` cadrent cette option).
+- Dès qu'une absorption apparaît à un successeur, les limites ultérieures "lavent" la frontière (S1Rel = ∅), ce qui est incompatible avec RouteIIAt.
+
+### 10.3 Alternative structurelle
+
+Soit l'absorption survient à un certain successeur, et alors toute limite successeur ultérieure recolle la frontière à vide ;
+
+Soit RouteII est imposé aux limites, et alors aucun successeur antérieur ne peut être absorbable.
+
+---
+
+## 11. Triade majeure
+
+Les trois résultats suivants constituent le cœur de TheoryDynamics :
+
+| Résultat | Fichier | Contenu |
+|----------|---------|---------|
+| `limit_collapse_schema` | Transfinite:398 | Phénomène transfini universel, conditionnel à absorption |
+| `structural_escape_explicit` | Trajectory:319 | Obstruction d'ω-continuité sous RouteII |
+| `fork_law_False` | Transfinite:747 | Impossibilité structure + absorption + RouteII + continuité |
+
+Cette triade dit : **le passage au limite par union est le lieu de la pathologie**. C'est un diagnostic structurel sur une dynamique monotone qui échoue à être continue aux limites en présence d'une frontière anti-monotone mais réinjectée.
