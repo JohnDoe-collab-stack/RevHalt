@@ -515,8 +515,8 @@ structure OraclePick {Code PropT : Type} (S : ComplementaritySystem Code PropT)
     (encode_halt encode_not_halt : Code → PropT) (e : Code) where
   p : PropT
   cert :
-    (Rev0_K S.K (S.Machine e) ∧ p = encode_halt e) ∨
-    (KitStabilizes S.K (S.Machine e) ∧ p = encode_not_halt e)
+    PSum (Rev0_K S.K (S.Machine e) ∧ p = encode_halt e)
+         (KitStabilizes S.K (S.Machine e) ∧ p = encode_not_halt e)
 
 /-- Local S₁ for a fixed oracle pick: a single frontier sentence. -/
 def S1OneSet {PropT : Type} (pick_p : PropT) : Set PropT :=
