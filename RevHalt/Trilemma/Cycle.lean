@@ -1,4 +1,5 @@
 import RevHalt.Trilemma.Trilemma
+import RevHalt.Theory.TheoryDynamics_RouteII
 
 namespace RevHalt.Trilemma
 
@@ -69,6 +70,76 @@ def CofinalWitness (P : Nat → Prop) : Type :=
 /-- From a CofinalWitness we can derive the Cofinal property -/
 theorem cofinal_of_witness {P : Nat → Prop} (w : CofinalWitness P) : Cofinal P :=
   fun N => ⟨(w N).val, (w N).property⟩
+
+def witness_of_forall {P : Nat → Prop} (h : ∀ n, P n) : CofinalWitness P :=
+  fun N => ⟨N, Nat.le_refl N, h N⟩
+
+theorem B_all_of_continuity
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hPCdir : ProvClosedDirected Provable)
+    (hω : CnOmegaContinuous Cn) :
+    ∀ n, B (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) hIdem hProvCn n := by
+  intro n
+  simpa [B] using
+    (omegaΓ_OmegaAdmissible (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (Cn := Cn)
+      (hCnExt := hCnExt) (hIdem := hIdem) (hProvCn := hProvCn)
+      (hPCdir := hPCdir) (hω := hω)
+      (A0 := chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n))
+
+theorem C_all_of_routeII
+    {SProvable : PropT → Prop} {SNot : PropT → PropT}
+    (hSound : ∀ Γ, Soundness Provable SProvable Γ)
+    (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBar   : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn) :
+    ∀ n, C (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) hIdem hProvCn n := by
+  intro n
+  -- RouteIIAt(ωΓ) is just nonempty frontier at ωΓ.
+  have hNonempty :
+      (S1Rel Provable K Machine encode_halt
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n))).Nonempty :=
+    frontier_nonempty_of_route_II (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (SProvable := SProvable) (SNot := SNot)
+      (Γ := omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
+        (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n))
+      (hSound := hSound _) (hNegComp := hNeg) (hBarrier := hBar)
+  simpa [C, RouteIIAt] using hNonempty
+
+def witBC_of_continuity_and_routeII
+    {SProvable : PropT → Prop} {SNot : PropT → PropT}
+    (hCnExt : CnExtensive Cn)
+    (hIdem : CnIdem Cn)
+    (hProvCn : ProvClosedCn Provable Cn)
+    (hPCdir : ProvClosedDirected Provable)
+    (hω : CnOmegaContinuous Cn)
+    (hSound : ∀ Γ, Soundness Provable SProvable Γ)
+    (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBar   : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    CofinalWitness (fun n =>
+      B (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+        (Cn := Cn) (A0 := A0) hIdem hProvCn n
+      ∧
+      C (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+        (Cn := Cn) (A0 := A0) hIdem hProvCn n) := by
+  refine witness_of_forall ?_
+  intro n
+  refine ⟨?_, ?_⟩
+  · exact
+      B_all_of_continuity (Provable := Provable) (K := K) (Machine := Machine)
+        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+        hCnExt hIdem hProvCn hPCdir hω n
+  · exact
+      C_all_of_routeII (Provable := Provable) (K := K) (Machine := Machine)
+        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+        (SProvable := SProvable) (SNot := SNot)
+        hSound hNeg hBar hIdem hProvCn n
 
 theorem exists_pair_from_cofinal
     (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
