@@ -127,6 +127,12 @@ This is a structural, mechanistic statement about theory evolution, independent 
 
 ---
 
+## Limit-Operator Design Note (Jump is not magic)
+
+**Jump is a design lever, not a silver bullet.** `jumpLimitOp Cn J` changes what happens *at limits* by adding explicit completion content (`U ↦ Cn (U ∪ J U)`), and it supports standard sanity properties (e.g. stage inclusion under `CnExtensive`) plus Kleene-like lemmas of the form “`ContinuousAtL` ⇒ fixpoint”. However, the main obstruction is formulated for an arbitrary `L : LimitOp`: if one keeps the same bundle (absorption below the limit + RouteII at the limit + coherence/fixpoint accessibility requirements), a contradiction can still be forced. So changing the limit operator can help certify alternative architectures, but some bundles remain incompatible unless one weakens absorption/RouteII, enriches the state (two-sided / proof-carrying), or revises what “frontier” means at limits.
+
+---
+
 ## Fixpoint Characterization
 
 Under absorption, the operational fixpoint condition reduces to frontier nullity:
