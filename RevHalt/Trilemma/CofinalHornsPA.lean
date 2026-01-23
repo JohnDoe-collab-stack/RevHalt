@@ -45,9 +45,13 @@ def CofinalPA_along_times (PAax : Set PropT) : Prop :=
   )
 
 /--
-The main result bundle:
-If the modes are visited cofinally, and PA is visited cofinally (dynamic PA),
-then we observe each of the three Horns cofinally (and PA cofinally).
+The "Dynamic Disjunctive Totality" Theorem (Weak Bundle version).
+
+If the modes are visited cofinally by `sigma`, and PA is visited cofinally (Dynamic PA),
+then we observe each of the three Trilemma Horns cofinally, alongside PA cofinally.
+
+This establishes that Peano Arithmetic (as a recurring property) is compatible with
+the global structural instability of the Trilemma.
 -/
 theorem dynamic_trilemma_with_PA
     (PAax : Set PropT)
