@@ -235,10 +235,14 @@ theorem strict_subseq_horns
 -- 6) Cofinality transfer from sigma to horns
 -- ============================================================
 
-def CofinalK (P : Nat → Prop) : Prop :=
-  ∀ K0, ∃ k, K0 ≤ k ∧ P k
+-- ============================================================
+-- 6) Cofinality transfer from sigma to horns (FIXED)
+-- ============================================================
 
-def SigmaCofinal (m : Mode) : Prop :=
+def CofinalK (P : Nat → Prop) : Prop :=
+  ∀ N0, ∃ k, N0 ≤ k ∧ P k
+
+def SigmaCofinal (sigma : Nat → Mode) (m : Mode) : Prop :=
   CofinalK (fun k => sigma k = m)
 
 def CofinalN (P : Nat → Prop) : Prop :=
@@ -256,10 +260,11 @@ lemma le_of_strictStep (f : Nat → Nat) (h : StrictStep f) : ∀ k, k ≤ f k :
       exact Nat.le_trans this (Nat.succ_le_of_lt hk)
 
 -- ============================================================
--- Clone #0: BC branch (¬Absorbable appears cofinally often)
+-- Horn predicates MUST take sigma as an argument (FIXED)
 -- ============================================================
 
 def HornBC_at_time
+    (sigma : Nat → Mode)
     (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
     (witBC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
               (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .BC))
@@ -279,7 +284,56 @@ def HornBC_at_time
               (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
               sigma hIdem hProvCn witBC witAC witAB k) + 1)).Γ
 
+def HornAC_at_time
+    (sigma : Nat → Mode)
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (witBC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .BC))
+    (witAC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AC))
+    (witAB : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AB))
+    (n : Nat) : Prop :=
+  ∃ k,
+    n = times (Provable := Provable) (K := K) (Machine := Machine)
+          (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+          sigma hIdem hProvCn witBC witAC witAB k
+    ∧ sigma k = Mode.AC
+    ∧ ¬ OmegaAdmissible Provable Cn
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0
+            (times (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+              sigma hIdem hProvCn witBC witAC witAB k)))
+
+def HornAB_at_time
+    (sigma : Nat → Mode)
+    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+    (witBC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .BC))
+    (witAC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AC))
+    (witAB : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AB))
+    (n : Nat) : Prop :=
+  ∃ k,
+    n = times (Provable := Provable) (K := K) (Machine := Machine)
+          (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+          sigma hIdem hProvCn witBC witAC witAB k
+    ∧ sigma k = Mode.AB
+    ∧ ¬ RouteIIAt Provable K Machine encode_halt
+        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
+          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0
+            (times (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+              sigma hIdem hProvCn witBC witAC witAB k)))
+
+-- ============================================================
+-- Clone #0: BC branch (¬Absorbable appears cofinally often)
+-- ============================================================
+
 theorem cofinal_hornBC_along_times
+    (sigma : Nat → Mode)
     (hMono : ProvRelMonotone Provable)
     (hCnExt : CnExtensive Cn)
     (hIdem : CnIdem Cn)
@@ -343,28 +397,8 @@ theorem cofinal_hornBC_along_times
 -- Clone #1: AC branch (¬OmegaAdmissible appears cofinally often)
 -- ============================================================
 
-def HornAC_at_time
-    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
-    (witBC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .BC))
-    (witAC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AC))
-    (witAB : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AB))
-    (n : Nat) : Prop :=
-  ∃ k,
-    n = times (Provable := Provable) (K := K) (Machine := Machine)
-          (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-          sigma hIdem hProvCn witBC witAC witAB k
-    ∧ sigma k = Mode.AC
-    ∧ ¬ OmegaAdmissible Provable Cn
-        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
-          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0
-            (times (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-              sigma hIdem hProvCn witBC witAC witAB k)))
-
 theorem cofinal_hornAC_along_times
+    (sigma : Nat → Mode)
     (hMono : ProvRelMonotone Provable)
     (hCnExt : CnExtensive Cn)
     (hIdem : CnIdem Cn)
@@ -424,28 +458,8 @@ theorem cofinal_hornAC_along_times
 -- Clone #2: AB branch (¬RouteIIAt appears cofinally often)
 -- ============================================================
 
-def HornAB_at_time
-    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
-    (witBC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .BC))
-    (witAC : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AC))
-    (witAB : CofinalWitness (Pair (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn .AB))
-    (n : Nat) : Prop :=
-  ∃ k,
-    n = times (Provable := Provable) (K := K) (Machine := Machine)
-          (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-          sigma hIdem hProvCn witBC witAC witAB k
-    ∧ sigma k = Mode.AB
-    ∧ ¬ RouteIIAt Provable K Machine encode_halt
-        (omegaΓ Provable K Machine encode_halt Cn hIdem hProvCn
-          (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0
-            (times (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-              sigma hIdem hProvCn witBC witAC witAB k)))
-
 theorem cofinal_hornAB_along_times
+    (sigma : Nat → Mode)
     (hMono : ProvRelMonotone Provable)
     (hCnExt : CnExtensive Cn)
     (hIdem : CnIdem Cn)
