@@ -7,181 +7,142 @@ variable {PropT : Type u} {Code : Type u}
 
 section DynamicPA
 
--- 1) Context variables (declared for types, but we will pass explicitly)
-variable (Provable : Set PropT -> PropT -> Prop)
-variable (K : RHKit)
-variable (Machine : Code -> Trace)
-variable (encode_halt : Code -> PropT)
-variable (Cn : Set PropT -> Set PropT)
-variable (A0 : ThState (PropT := PropT) Provable Cn)
-variable (sigma : Nat -> Mode)
+-- 1) Context variables (declared once, no hiding)
+variable {Provable : Set PropT -> PropT -> Prop}
+variable {K : RHKit}
+variable {Machine : Code -> Trace}
+variable {encode_halt : Code -> PropT}
+variable {Cn : Set PropT -> Set PropT}
+variable {A0 : ThState (PropT := PropT) Provable Cn}
+variable {sigma : Nat -> Mode}
+variable (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
 
--- 3) Definition: PA is "in" the state Gamma (Inclusion style)
+-- 3) Definition: PA is "in" the state Gamma
 def PA_in (PAax : Set PropT) (Γ : Set PropT) : Prop :=
   PAax ⊆ Γ
 
 -- 4) PA at time n
-variable (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
-
 def PA_at (PAax : Set PropT) (n : Nat) : Prop :=
   PA_in PAax (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
 
 -- 5) PairPA: The "Strong Bundle" Condition
 def PairPA (PAax : Set PropT) (m : Mode) (n : Nat) : Prop :=
   Pair Provable K Machine encode_halt Cn A0 hIdem hProvCn m n
-  ∧ PA_at Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax n
+  ∧ PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax n
 
--- 6) Witnesses for the Strong Bundle (PairPA)
+-- 6) Witnesses conversions
 
-/--
-Helper: Convert Strong Witnesses (PairPA) to Simple Witnesses (Pair).
-This allows us to reuse the existing `times` machinery which only requires `Pair`.
-Since CofinalWitness is constructive (returns a Subtype), this projection is constructive
-and computationally preserves the witness index `n`.
--/
+/-- Helper: Convert PairPA witness to simple Pair witness.
+    We explicitly unfold PairPA using projection .1 to access the left component. -/
 def toSimpleWitness
-    (Provable : Set PropT -> PropT -> Prop) (K : RHKit) (Machine : Code -> Trace)
-    (encode_halt : Code -> PropT) (Cn : Set PropT -> Set PropT) (A0 : ThState Provable Cn)
-    (PAax : Set PropT)
-    (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
-    (m : Mode)
-    (w : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax m)) :
+    (PAax : Set PropT) (m : Mode)
+    (w : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)
+          (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) hIdem hProvCn PAax m)) :
     CofinalWitness (Pair Provable K Machine encode_halt Cn A0 hIdem hProvCn m) :=
   fun N =>
-    ⟨(w N).val, (w N).property.left, (w N).property.right.left⟩
+    ⟨ (w N).val
+    , ⟨ (w N).property.1
+      , (w N).property.2.1
+      ⟩
+    ⟩
+
+-- 7) Times unfolding stability
+
+lemma times_succ
+    (witBC : CofinalWitness (Pair Provable K Machine encode_halt Cn A0 hIdem hProvCn .BC))
+    (witAC : CofinalWitness (Pair Provable K Machine encode_halt Cn A0 hIdem hProvCn .AC))
+    (witAB : CofinalWitness (Pair Provable K Machine encode_halt Cn A0 hIdem hProvCn .AB))
+    (k : Nat) :
+    times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn witBC witAC witAB (k + 1) =
+      match sigma (k+1) with
+      | .BC => (witBC (times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn witBC witAC witAB k + 1)).val
+      | .AC => (witAC (times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn witBC witAC witAB k + 1)).val
+      | .AB => (witAB (times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn witBC witAC witAB k + 1)).val := by
+  cases h : sigma (k+1) <;> simp [times, h]
+
+-- 8) PA Cofinality on Visits
 
 /-- PA reappears cofinally often *on visits of mode m*. -/
 def CofinalPA_on_visits
     (PAax : Set PropT)
     (m : Mode)
-    (witBC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .BC))
-    (witAC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AC))
-    (witAB : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AB)) : Prop :=
-  let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC
-  let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC
-  let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB
+    (witBC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+          (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .BC))
+    (witAC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+          (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AC))
+    (witAB : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+          (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AB)) : Prop :=
+  let wBC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .BC witBC
+  let wAC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AC witAC
+  let wAB := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AB witAB
   CofinalK (fun k =>
     sigma k = m ∧
-    PA_at Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax
+    PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) hIdem hProvCn PAax
       (times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k))
 
-theorem cofinalPA_on_BC
+theorem cofinalPA_on_mode
     (PAax : Set PropT)
-    (hBC : SigmaCofinal sigma .BC)
-    (witBC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .BC))
-    (witAC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AC))
-    (witAB : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AB)) :
+    (witBC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+              (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .BC))
+    (witAC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+              (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AC))
+    (witAB : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+              (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AB))
+    (m : Mode)
+    (hm : SigmaCofinal sigma m) :
     CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
-      PAax .BC witBC witAC witAB := by
-  -- set the projected simple witnesses once
-  let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC
-  let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC
-  let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB
+      (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn
+      PAax m witBC witAC witAB := by
+  -- helpers to simplify notation
+  let wBC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .BC witBC
+  let wAC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AC witAC
+  let wAB := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AB witAB
 
-  -- unfold target
-  intro K0
-  rcases hBC K0 with ⟨k, hk_ge, hk_mode⟩
+  intro N
+  -- Obtain a visit index k >= N
+  rcases hm N with ⟨k, hk_ge, hk_mode⟩
   refine ⟨k, hk_ge, ?_⟩
   refine ⟨hk_mode, ?_⟩
 
-  -- Let t be the time selected at phase k
-  let t :=
-    times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k
+  -- We need PA at t = times ... k.
+  -- (removed unused t)
 
-  -- Show PA holds at time t using the strong witness for BC
-  -- Key point: by construction of `times`, at phase k when sigma k = BC,
-  -- the time t is exactly the `n` returned by `witBC` (at some bound), hence PA comes from the witness.
-  --
-  -- Robust way: unfold `times` only one step using `hk_mode`.
+  -- Split cases on k to unfold `times`
   cases k with
   | zero =>
-      simp [t, times, hk_mode, PA_at, PA_in]
-      exact (witBC 0).property.right.right
+      -- t = times ... 0.
+      simp only [times]
+      -- sigma 0 = m. So we use witness for m at 0.
+      rw [hk_mode]
+      cases m <;> simp
+      · exact (witBC 0).property.2.2
+      · exact (witAC 0).property.2.2
+      · exact (witAB 0).property.2.2
   | succ k' =>
-      -- Here: times (k'+1) uses witness at bound (times k' + 1)
-      simp [t, times, hk_mode, PA_at, PA_in]
-      -- after simp, goal is PA_in ... at witness-returned index:
-      -- it is exactly the PA component of the strong witness at that bound
-      let prev :=
-        times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k'
-      exact (witBC (prev + 1)).property.right.right
+      -- t = times ... (k'+1).
+      let prev := times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k'
 
-theorem cofinalPA_on_AC
-    (PAax : Set PropT)
-    (hAC : SigmaCofinal sigma .AC)
-    (witBC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .BC))
-    (witAC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AC))
-    (witAB : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AB)) :
-    CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
-      PAax .AC witBC witAC witAB := by
-  -- set the projected simple witnesses once
-  let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC
-  let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC
-  let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB
+      -- Stabilize rewrites
+      have hprev : times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k' = prev := rfl
 
-  -- unfold target
-  intro K0
-  rcases hAC K0 with ⟨k, hk_ge, hk_mode⟩
-  refine ⟨k, hk_ge, ?_⟩
-  refine ⟨hk_mode, ?_⟩
+      -- use the helper lemma to unfold times at succ with mode m
+      rw [times_succ (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+          (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn wBC wAC wAB k']
+      rw [hk_mode]
+      cases m <;> simp [hprev]
+      · exact (witBC (prev + 1)).property.2.2
+      · exact (witAC (prev + 1)).property.2.2
+      · exact (witAB (prev + 1)).property.2.2
 
-  -- Let t be the time selected at phase k
-  let t :=
-    times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k
-
-  -- Robust way: unfold `times` only one step using `hk_mode`.
-  cases k with
-  | zero =>
-      simp [t, times, hk_mode, PA_at, PA_in]
-      exact (witAC 0).property.right.right
-  | succ k' =>
-      -- Here: times (k'+1) uses witness at bound (times k' + 1)
-      simp [t, times, hk_mode, PA_at, PA_in]
-      -- after simp, goal is PA_in ... at witness-returned index:
-      -- it is exactly the PA component of the strong witness at that bound
-      let prev :=
-        times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k'
-      exact (witAC (prev + 1)).property.right.right
-
-theorem cofinalPA_on_AB
-    (PAax : Set PropT)
-    (hAB : SigmaCofinal sigma .AB)
-    (witBC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .BC))
-    (witAC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AC))
-    (witAB : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AB)) :
-    CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
-      PAax .AB witBC witAC witAB := by
-  -- set the projected simple witnesses once
-  let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC
-  let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC
-  let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB
-
-  -- unfold target
-  intro K0
-  rcases hAB K0 with ⟨k, hk_ge, hk_mode⟩
-  refine ⟨k, hk_ge, ?_⟩
-  refine ⟨hk_mode, ?_⟩
-
-  -- Let t be the time selected at phase k
-  let t :=
-    times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k
-
-  -- Robust way: unfold `times` only one step using `hk_mode`.
-  cases k with
-  | zero =>
-      simp [t, times, hk_mode, PA_at, PA_in]
-      exact (witAB 0).property.right.right
-  | succ k' =>
-      -- Here: times (k'+1) uses witness at bound (times k' + 1)
-      simp [t, times, hk_mode, PA_at, PA_in]
-      -- after simp, goal is PA_in ... at witness-returned index:
-      -- it is exactly the PA component of the strong witness at that bound
-      let prev :=
-        times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k'
-      exact (witAB (prev + 1)).property.right.right
+-- 9) Final Theorem
 
 theorem dynamic_trilemma_with_PA_Strong_final
     (PAax : Set PropT)
@@ -190,41 +151,49 @@ theorem dynamic_trilemma_with_PA_Strong_final
     (hBC : SigmaCofinal sigma .BC)
     (hAC : SigmaCofinal sigma .AC)
     (hAB : SigmaCofinal sigma .AB)
-    (witBC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .BC))
-    (witAC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AC))
-    (witAB : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AB)) :
-    let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC
-    let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC
-    let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB
+    (witBC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+              (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .BC))
+    (witAC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+              (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AC))
+    (witAB : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+              (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AB)) :
+    let wBC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .BC witBC
+    let wAC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AC witAC
+    let wAB := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AB witAB
     (CofinalN (HornBC_at_time Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB)) ∧
     (CofinalN (HornAC_at_time Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB)) ∧
     (CofinalN (HornAB_at_time Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB)) ∧
     (CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
+      (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn
       PAax .BC witBC witAC witAB) ∧
     (CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
+      (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn
       PAax .AC witBC witAC witAB) ∧
     (CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
+      (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn
       PAax .AB witBC witAC witAB) := by
-  let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC
-  let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC
-  let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB
+  let wBC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .BC witBC
+  let wAC := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AC witAC
+  let wAB := toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+               (Cn := Cn) (A0 := A0) hIdem hProvCn PAax .AB witAB
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact cofinal_hornBC_along_times Provable K Machine encode_halt Cn A0 sigma hMono hCnExt hIdem hProvCn wBC wAC wAB hBC
   · exact cofinal_hornAC_along_times Provable K Machine encode_halt Cn A0 sigma hMono hCnExt hIdem hProvCn wBC wAC wAB hAC
   · exact cofinal_hornAB_along_times Provable K Machine encode_halt Cn A0 sigma hMono hCnExt hIdem hProvCn wBC wAC wAB hAB
-  · exact cofinalPA_on_BC (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
-      PAax hBC witBC witAC witAB
-  · exact cofinalPA_on_AC (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
-      PAax hAC witBC witAC witAB
-  · exact cofinalPA_on_AB (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (sigma := sigma) (hIdem := hIdem) (hProvCn := hProvCn)
-      PAax hAB witBC witAC witAB
+  · exact cofinalPA_on_mode (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn
+      PAax witBC witAC witAB .BC hBC
+  · exact cofinalPA_on_mode (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn
+      PAax witBC witAC witAB .AC hAC
+  · exact cofinalPA_on_mode (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn
+      PAax witBC witAC witAB .AB hAB
 
 end DynamicPA
-
 end RevHalt.Trilemma
