@@ -21,25 +21,17 @@ def PA_in (PAax : Set PropT) (Γ : Set PropT) : Prop :=
   PAax ⊆ Γ
 
 -- 4) PA at time n
--- We shadow section variables to ensure explicit passing
-def PA_at
-    (Provable : Set PropT -> PropT -> Prop) (K : RHKit) (Machine : Code -> Trace)
-    (encode_halt : Code -> PropT) (Cn : Set PropT -> Set PropT) (A0 : ThState Provable Cn)
-    (PAax : Set PropT) (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn) (n : Nat) : Prop :=
+variable (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
+
+def PA_at (PAax : Set PropT) (n : Nat) : Prop :=
   PA_in PAax (chainState Provable K Machine encode_halt Cn hIdem hProvCn A0 n).Γ
 
 -- 5) PairPA: The "Strong Bundle" Condition
---    We demand that at time n, we have the Pair properties AND PA is present.
-def PairPA
-    (Provable : Set PropT -> PropT -> Prop) (K : RHKit) (Machine : Code -> Trace)
-    (encode_halt : Code -> PropT) (Cn : Set PropT -> Set PropT) (A0 : ThState Provable Cn)
-    (PAax : Set PropT) (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
-    (m : Mode) (n : Nat) : Prop :=
+def PairPA (PAax : Set PropT) (m : Mode) (n : Nat) : Prop :=
   Pair Provable K Machine encode_halt Cn A0 hIdem hProvCn m n
-  ∧ PA_at Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn n
+  ∧ PA_at Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax n
 
 -- 6) Witnesses for the Strong Bundle (PairPA)
-variable (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
 
 /--
 Helper: Convert Strong Witnesses (PairPA) to Simple Witnesses (Pair).
@@ -53,7 +45,7 @@ def toSimpleWitness
     (PAax : Set PropT)
     (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
     (m : Mode)
-    (w : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn m)) :
+    (w : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax m)) :
     CofinalWitness (Pair Provable K Machine encode_halt Cn A0 hIdem hProvCn m) :=
   fun N =>
     ⟨(w N).val, (w N).property.left, (w N).property.right.left⟩
@@ -67,15 +59,15 @@ def CofinalPA_along_times_Strong
     (sigma : Nat -> Mode)
     (PAax : Set PropT)
     (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
-    (witBC_strong : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC))
-    (witAC_strong : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC))
-    (witAB_strong : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB)) : Prop :=
+    (witBC_strong : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .BC))
+    (witAC_strong : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AC))
+    (witAB_strong : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AB)) : Prop :=
   CofinalK (fun k =>
     let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC_strong
     let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC_strong
     let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB_strong
     let t := times Provable K Machine encode_halt Cn A0 sigma hIdem hProvCn wBC wAC wAB k
-    PA_at Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn t
+    PA_at Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax t
   )
 
 /--
@@ -96,9 +88,9 @@ theorem dynamic_trilemma_with_PA_Strong
     (hBC : SigmaCofinal sigma .BC)
     (hAC : SigmaCofinal sigma .AC)
     (hAB : SigmaCofinal sigma .AB)
-    (witBC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC))
-    (witAC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC))
-    (witAB : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB)) :
+    (witBC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .BC))
+    (witAC : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AC))
+    (witAB : CofinalWitness (PairPA Provable K Machine encode_halt Cn A0 hIdem hProvCn PAax .AB)) :
     let wBC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .BC witBC
     let wAC := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AC witAC
     let wAB := toSimpleWitness Provable K Machine encode_halt Cn A0 PAax hIdem hProvCn .AB witAB
