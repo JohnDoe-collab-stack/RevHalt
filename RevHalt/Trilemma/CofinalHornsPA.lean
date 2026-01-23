@@ -137,7 +137,7 @@ theorem cofinalPA_on_mode
       rw [times_succ (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
           (Cn := Cn) (A0 := A0) (sigma := sigma) hIdem hProvCn wBC wAC wAB k']
       rw [hk_mode]
-      cases m <;> simp [hprev]
+      cases m <;> simp []
       · exact (witBC (prev + 1)).property.2.2
       · exact (witAC (prev + 1)).property.2.2
       · exact (witAB (prev + 1)).property.2.2
