@@ -306,3 +306,5 @@ theorem collatz_AB_indices_bounded
 end Collatz
 
 end RevHalt.Trilemma
+
+#print axioms RevHalt.Trilemma.Collatz.collatz_AB_indices_bounded
