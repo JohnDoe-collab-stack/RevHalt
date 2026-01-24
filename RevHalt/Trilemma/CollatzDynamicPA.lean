@@ -50,6 +50,247 @@ def sigmaOf (seed : Nat) : Nat → Mode :=
 
 end Collatz
 
+namespace Collatz
+
+/-- Composition d’itérations : `iter (a+b) seed = iter b (iter a seed)`. -/
+lemma iter_add (a b seed : Nat) : iter (a + b) seed = iter b (iter a seed) := by
+  induction a generalizing seed with
+  | zero =>
+      simp [iter]
+  | succ a ih =>
+      -- (succ a) + b = succ (a + b) et iter (succ n) seed = iter n (step seed)
+      simp [Nat.succ_add, iter, ih]
+
+/-- Calcul explicite : `iter 3 1 = 1` (cycle 1→4→2→1). -/
+lemma iter_three_one : iter 3 1 = 1 := by
+  simp [iter, step]
+
+/-- Période 3 à partir de 1 : `iter (d+3) 1 = iter d 1`. -/
+lemma iter_period3_one (d : Nat) : iter (d + 3) 1 = iter d 1 := by
+  have h3 : iter 3 1 = 1 := iter_three_one
+  calc
+    iter (d + 3) 1 = iter (3 + d) 1 := by
+      simp [Nat.add_comm]
+    _ = iter d (iter 3 1) := by
+      simpa using (iter_add (a := 3) (b := d) (seed := 1))
+    _ = iter d 1 := by
+      simp [h3]
+
+/-- Si `iter T seed = 1`, alors `iter (T+d) seed = iter d 1`. -/
+lemma iter_after_hits_one {seed T d : Nat} (h : iter T seed = 1) :
+    iter (T + d) seed = iter d 1 := by
+  calc
+    iter (T + d) seed = iter d (iter T seed) := by
+      simpa using (iter_add (a := T) (b := d) (seed := seed))
+    _ = iter d 1 := by
+      simp [h]
+
+/-- Stabilité de `sigmaOf` par +3 une fois 1 atteint. -/
+lemma sigmaOf_add3_after_hits_one {seed T d : Nat} (h : iter T seed = 1) :
+    sigmaOf seed (T + (d + 3)) = sigmaOf seed (T + d) := by
+  have hiter :
+      iter (T + (d + 3)) seed = iter (T + d) seed := by
+    calc
+      iter (T + (d + 3)) seed = iter (d + 3) 1 := by
+        simpa [Nat.add_assoc] using (iter_after_hits_one (seed := seed) (T := T) (d := d + 3) h)
+      _ = iter d 1 := by
+        simpa using (iter_period3_one d)
+      _ = iter (T + d) seed := by
+        simpa using (iter_after_hits_one (seed := seed) (T := T) (d := d) h).symm
+  simp [sigmaOf, hiter]
+
+/--
+Une fois `1` atteint au temps `T`, `sigmaOf seed (T+d)` vaut `BC` ou `AC` pour tout `d`.
+-/
+theorem sigmaOf_after_hits_one_add (seed T : Nat) (h : iter T seed = 1) :
+    ∀ d, sigmaOf seed (T + d) = Mode.BC ∨ sigmaOf seed (T + d) = Mode.AC := by
+  intro d
+  refine Nat.strong_induction_on d ?_
+  intro d ih
+  cases d with
+  | zero =>
+      left
+      simp [sigmaOf, h]
+  | succ d1 =>
+      cases d1 with
+      | zero =>
+          right
+          have hiter : iter (T + 1) seed = 4 := by
+            calc
+              iter (T + 1) seed = iter 1 (iter T seed) := by
+                simpa using (iter_add (a := T) (b := 1) (seed := seed))
+              _ = iter 1 1 := by simp [h]
+              _ = 4 := by simp [iter, step]
+          simp [sigmaOf, hiter]
+      | succ d2 =>
+          cases d2 with
+          | zero =>
+              right
+              have hiter : iter (T + 2) seed = 2 := by
+                calc
+                  iter (T + 2) seed = iter 2 (iter T seed) := by
+                    simpa using (iter_add (a := T) (b := 2) (seed := seed))
+                  _ = iter 2 1 := by simp [h]
+                  _ = 2 := by simp [iter, step]
+              simp [sigmaOf, hiter]
+          | succ d3 =>
+              -- d = d3 + 3
+              have hd3lt :
+                  d3 < Nat.succ (Nat.succ (Nat.succ d3)) := by
+                have h1 : d3 < Nat.succ d3 := Nat.lt_succ_self d3
+                have h2 : Nat.succ d3 < Nat.succ (Nat.succ d3) := Nat.lt_succ_self (Nat.succ d3)
+                have h3 : Nat.succ (Nat.succ d3) < Nat.succ (Nat.succ (Nat.succ d3)) :=
+                  Nat.lt_succ_self (Nat.succ (Nat.succ d3))
+                exact Nat.lt_trans h1 (Nat.lt_trans h2 h3)
+
+              have ihd :
+                  sigmaOf seed (T + d3) = Mode.BC ∨ sigmaOf seed (T + d3) = Mode.AC :=
+                ih d3 hd3lt
+
+              have hs0 :
+                  sigmaOf seed (T + (d3 + 3)) = sigmaOf seed (T + d3) :=
+                sigmaOf_add3_after_hits_one (seed := seed) (T := T) (d := d3) h
+
+              have hs :
+                  sigmaOf seed (T + Nat.succ (Nat.succ (Nat.succ d3))) = sigmaOf seed (T + d3) := by
+                simpa [Nat.succ_eq_add_one, Nat.add_assoc] using hs0
+
+              cases ihd with
+              | inl hBC =>
+                  exact Or.inl (hs.trans hBC)
+              | inr hAC =>
+                  exact Or.inr (hs.trans hAC)
+
+/--
+Forme “à partir de k ≥ T” : si `iter T seed = 1`, alors pour tout `k ≥ T`,
+`sigmaOf seed k` vaut `BC` ou `AC`.
+-/
+theorem sigmaOf_after_hits_one_ge (seed T : Nat) (h : iter T seed = 1) :
+    ∀ k, T ≤ k → sigmaOf seed k = Mode.BC ∨ sigmaOf seed k = Mode.AC := by
+  intro k hk
+  rcases Nat.exists_eq_add_of_le hk with ⟨d, rfl⟩
+  simpa [Nat.add_assoc] using sigmaOf_after_hits_one_add (seed := seed) (T := T) h d
+
+end Collatz
+
+namespace Collatz
+
+/-- Propriété “positive” : à partir d’un rang, on ne voit plus que BC ou AC. -/
+def EventuallyBCorAC (seed : Nat) : Prop :=
+  ∃ N, ∀ k, N ≤ k → sigmaOf seed k = Mode.BC ∨ sigmaOf seed k = Mode.AC
+
+/-- Arrivée à 1 ⇒ à partir de T, seulement BC ou AC (donc AB s’éteint “positivement”). -/
+theorem eventuallyBCorAC_of_hits_one (seed T : Nat) (h : iter T seed = 1) :
+    EventuallyBCorAC seed := by
+  refine ⟨T, ?_⟩
+  intro k hk
+  -- on réécrit k = T + d
+  rcases Nat.exists_eq_add_of_le hk with ⟨d, rfl⟩
+  -- et on applique ton lemme de stabilité
+  simpa [Nat.add_assoc] using (sigmaOf_after_hits_one_add (seed := seed) (T := T) h d)
+
+/-- Calcul : à l’instant T+1 on est sur 4, donc sigma = AC. -/
+lemma sigmaOf_T_add_one_eq_AC (seed T : Nat) (h : iter T seed = 1) :
+    sigmaOf seed (T + 1) = Mode.AC := by
+  have hiter : iter (T + 1) seed = 4 := by
+    calc
+      iter (T + 1) seed = iter 1 (iter T seed) := by
+        simpa using (iter_add (a := T) (b := 1) (seed := seed))
+      _ = iter 1 1 := by simp [h]
+      _ = 4 := by simp [iter, step]
+  simp [sigmaOf, hiter]
+
+/-- Calcul : à l’instant T+2 on est sur 2, donc sigma = AC. -/
+lemma sigmaOf_T_add_two_eq_AC (seed T : Nat) (h : iter T seed = 1) :
+    sigmaOf seed (T + 2) = Mode.AC := by
+  have hiter : iter (T + 2) seed = 2 := by
+    calc
+      iter (T + 2) seed = iter 2 (iter T seed) := by
+        simpa using (iter_add (a := T) (b := 2) (seed := seed))
+      _ = iter 2 1 := by simp [h]
+      _ = 2 := by simp [iter, step]
+  simp [sigmaOf, hiter]
+
+/-- Arrivée à 1 ⇒ sigma(T + 3n) = BC pour tout n. -/
+lemma sigmaOf_T_add_three_mul_eq_BC (seed T n : Nat) (h : iter T seed = 1) :
+    sigmaOf seed (T + 3 * n) = Mode.BC := by
+  induction n with
+  | zero =>
+      simp [sigmaOf, h]
+  | succ n ih =>
+      have hs :=
+        sigmaOf_add3_after_hits_one (seed := seed) (T := T) (d := 3 * n) h
+      calc
+        sigmaOf seed (T + 3 * (n + 1))
+            = sigmaOf seed (T + ((3 * n) + 3)) := by
+                simp [Nat.mul_succ]
+        _ = sigmaOf seed (T + 3 * n) := by
+                simpa [Nat.add_assoc] using hs
+        _ = Mode.BC := ih
+
+/-- Arrivée à 1 ⇒ sigma(T + (3n+1)) = AC pour tout n. -/
+lemma sigmaOf_T_add_three_mul_add1_eq_AC (seed T n : Nat) (h : iter T seed = 1) :
+    sigmaOf seed (T + (3 * n + 1)) = Mode.AC := by
+  induction n with
+  | zero =>
+      simpa [Nat.mul_zero, Nat.zero_add, Nat.add_assoc] using
+        (sigmaOf_T_add_one_eq_AC (seed := seed) (T := T) h)
+  | succ n ih =>
+      have hs :=
+        sigmaOf_add3_after_hits_one (seed := seed) (T := T) (d := (3 * n + 1)) h
+      have hrew : 3 * (n + 1) + 1 = (3 * n + 1) + 3 := by
+        simp [Nat.mul_succ,Nat.add_left_comm, Nat.add_comm]
+      calc
+        sigmaOf seed (T + (3 * (n + 1) + 1))
+            = sigmaOf seed (T + ((3 * n + 1) + 3)) := by
+                simp [hrew, Nat.add_assoc]
+        _ = sigmaOf seed (T + (3 * n + 1)) := by
+                simpa [Nat.add_assoc] using hs
+        _ = Mode.AC := ih
+
+/-- Arrivée à 1 ⇒ sigma(T + (3n+2)) = AC pour tout n. -/
+lemma sigmaOf_T_add_three_mul_add2_eq_AC (seed T n : Nat) (h : iter T seed = 1) :
+    sigmaOf seed (T + (3 * n + 2)) = Mode.AC := by
+  induction n with
+  | zero =>
+      simpa [Nat.mul_zero, Nat.zero_add, Nat.add_assoc] using
+        (sigmaOf_T_add_two_eq_AC (seed := seed) (T := T) h)
+  | succ n ih =>
+      have hs :=
+        sigmaOf_add3_after_hits_one (seed := seed) (T := T) (d := (3 * n + 2)) h
+      have hrew : 3 * (n + 1) + 2 = (3 * n + 2) + 3 := by
+        simp [Nat.mul_succ,Nat.add_left_comm, Nat.add_comm]
+      calc
+        sigmaOf seed (T + (3 * (n + 1) + 2))
+            = sigmaOf seed (T + ((3 * n + 2) + 3)) := by
+                simp [hrew, Nat.add_assoc]
+        _ = sigmaOf seed (T + (3 * n + 2)) := by
+                simpa [Nat.add_assoc] using hs
+        _ = Mode.AC := ih
+
+/-- Arrivée à 1 ⇒ BC est cofinal (au sens SigmaCofinal) pour sigmaOf. -/
+theorem sigmaOf_SigmaCofinal_BC_of_hits_one (seed T : Nat) (h : iter T seed = 1) :
+    SigmaCofinal (sigmaOf seed) Mode.BC := by
+  intro N0
+  refine ⟨T + 3 * N0, ?_, ?_⟩
+  · have hN0 : N0 ≤ 3 * N0 := Nat.le_mul_of_pos_left N0 (by decide : 0 < 3)
+    exact Nat.le_trans hN0 (Nat.le_add_left _ _)
+  · simpa [Nat.add_assoc] using
+      (sigmaOf_T_add_three_mul_eq_BC (seed := seed) (T := T) (n := N0) h)
+
+/-- Arrivée à 1 ⇒ AC est cofinal (au sens SigmaCofinal) pour sigmaOf. -/
+theorem sigmaOf_SigmaCofinal_AC_of_hits_one (seed T : Nat) (h : iter T seed = 1) :
+    SigmaCofinal (sigmaOf seed) Mode.AC := by
+  intro N0
+  refine ⟨T + (3 * N0 + 1), ?_, ?_⟩
+  · have hN0 : N0 ≤ 3 * N0 := Nat.le_mul_of_pos_left N0 (by decide : 0 < 3)
+    have hN0' : N0 ≤ 3 * N0 + 1 := Nat.le_trans hN0 (Nat.le_succ _)
+    exact Nat.le_trans hN0' (Nat.le_add_left _ _)
+  · simpa [Nat.add_assoc] using
+      (sigmaOf_T_add_three_mul_add1_eq_AC (seed := seed) (T := T) (n := N0) h)
+
+end Collatz
+
 
 /-
   Instance "Collatz + DynamicPA Strong" :
