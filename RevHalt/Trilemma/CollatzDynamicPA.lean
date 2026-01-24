@@ -59,13 +59,13 @@ def EventuallyNotAB (seed : Nat) : Prop :=
 
 end Collatz
 
-/-- Un alias pratique pour σ (évite les conflits de définitions). -/
+/-- Alias pratique pour σ (évite les conflits d’abbrev). -/
 abbrev sigmaCollatz (seed : Nat) : Nat → Mode := Collatz.sigmaOf seed
 
-/- ============================================================================
+/- =====================================================================
    EXTINCTION DE AB (objectif) :
    Trilemme + Consistance (pont PA→RouteIIAt) + PA installé ⇒ AB s’éteint.
-============================================================================ -/
+===================================================================== -/
 section ABExtinction
 
 -- Contexte RevHalt / Trilemma
@@ -83,13 +83,13 @@ variable (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
 variable (hMono : ProvRelMonotone Provable)
 variable (hCnExt : CnExtensive Cn)
 
--- Paramètres Collatz
+-- Paramètre Collatz
 variable (seed : Nat)
 
 -- Axiomes PA internes
 variable (PAax : Set PropT)
 
--- (3) Hypothèse positive : PA installé après un rang, sur la chaîne (temps nat).
+-- (3) Hypothèse positive : PA installé après un rang (sur le temps nat).
 def PA_Eventually : Prop :=
   ∃ N, ∀ n, N ≤ n →
     PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
@@ -100,8 +100,7 @@ def PA_Eventually : Prop :=
 def PA_implies_RouteIIAt : Prop :=
   ∀ t,
     PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax t
-    →
+      (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax t →
     RouteIIAt (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (omegaΓ (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
         (Cn := Cn) (hIdem := hIdem) (hProvCn := hProvCn)
@@ -157,26 +156,25 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
       (sigma := sigmaCollatz seed) hIdem hProvCn wBC wAC wAB k
 
-  -- Fait clé : k ≤ times ... k (donc N ≤ t si N ≤ k).
+  -- Fait clé : k ≤ times ... k, via StrictStep + le_of_strictStep.
+  let f : Nat → Nat :=
+    fun m =>
+      times (Provable := Provable) (K := K) (Machine := Machine)
+        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+        (sigma := sigmaCollatz seed) hIdem hProvCn wBC wAC wAB m
+
+  have hstep : StrictStep f := by
+    intro m
+    -- times_strictMono : times m < times (m+1)
+    simpa [f] using
+      (times_strictMono (Provable := Provable) (K := K) (Machine := Machine)
+        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+        (sigma := sigmaCollatz seed) (hIdem := hIdem) (hProvCn := hProvCn)
+        wBC wAC wAB m)
+
   have hk_le_t : k ≤ t := by
-    -- strictStep : ∀k, times k < times (k+1)
-    have hstep :
-        ∀ m,
-          times (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-              (sigma := sigmaCollatz seed) hIdem hProvCn wBC wAC wAB m
-            <
-          times (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-              (sigma := sigmaCollatz seed) hIdem hProvCn wBC wAC wAB (m + 1) :=
-      fun m =>
-        times_strictMono (Provable := Provable) (K := K) (Machine := Machine)
-          (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-          (sigma := sigmaCollatz seed) hIdem hProvCn wBC wAC wAB m
-    exact le_of_strictStep (f := fun m =>
-        times (Provable := Provable) (K := K) (Machine := Machine)
-          (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-          (sigma := sigmaCollatz seed) hIdem hProvCn wBC wAC wAB m) hstep k
+    have hk_le_fk : k ≤ f k := le_of_strictStep f hstep k
+    simpa [t, f] using hk_le_fk
 
   have hN_le_t : N ≤ t := Nat.le_trans hkN hk_le_t
 
@@ -194,7 +192,7 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
             (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) t)) :=
     hBridge t hPA_t
 
-  -- Côté trilemme : si σ k = AB, alors ¬RouteIIAt au même endroit (sur t = times ... k).
+  -- Côté trilemme : si σ k = AB, strict_subseq_horns donne ¬RouteIIAt au même endroit (sur times ... k).
   have hNotRoute_raw :=
     strict_subseq_horns (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
@@ -207,44 +205,25 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
           (Cn := Cn) (hIdem := hIdem) (hProvCn := hProvCn)
           (chainState (Provable := Provable) (K := K) Machine (encode_halt := encode_halt)
             (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) t)) := by
-    -- spécialise la branche AB et aligne (times ... k) avec t
-    have htmp := hNotRoute_raw
-    -- sigmaCollatz seed k = AB est exactement hkAB
-    -- (hkAB : Collatz.sigmaOf seed k = Mode.AB)
-    -- et sigmaCollatz seed = Collatz.sigmaOf seed
-    -- donc simp sait réduire le match.
-    simpa [sigmaCollatz, t] using (by simpa [sigmaCollatz] using (by simpa [hkAB] using htmp))
+    -- hkAB force la branche AB du `match sigma k with ...`
+    simpa [sigmaCollatz, t, hkAB] using hNotRoute_raw
 
-  -- Contradiction
+  -- Contradiction : RouteIIAt ∧ ¬RouteIIAt.
   exact hNotRoute hRoute
 
-end ABExtinction
-
-
-/- ============================================================================
-   (Optionnel) Ton théorème Strong “cornes + PA sur visites” peut rester à part.
-   Il ne sert pas à l’extinction AB (objectif ci-dessus).
-============================================================================ -/
-section CollatzDynamicPA
-
-variable {Provable : Set PropT -> PropT -> Prop}
-variable {K : RHKit}
-variable {Machine : Code -> Trace}
-variable {encode_halt : Code → PropT}
-variable {Cn : Set PropT → Set PropT}
-variable {A0 : ThState (PropT := PropT) Provable Cn}
-
-variable (hIdem : CnIdem Cn) (hProvCn : ProvClosedCn Provable Cn)
-
-variable (seed : Nat)
-variable (PAax : Set PropT)
-
-theorem collatz_dynamicPA_Strong
+/-
+  Corollaire (ta formulation “quantité finie” au sens constructif) :
+  Il existe une borne B telle que tout k avec σ k = AB satisfait k < B.
+-/
+theorem collatz_AB_indices_bounded_of_trilemma_and_consistency
     (hMono : ProvRelMonotone Provable)
     (hCnExt : CnExtensive Cn)
-    (hBC : SigmaCofinal (sigmaCollatz seed) Mode.BC)
-    (hAC : SigmaCofinal (sigmaCollatz seed) Mode.AC)
-    (hAB : SigmaCofinal (sigmaCollatz seed) Mode.AB)
+    (hPAev : PA_Eventually (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
+      (PAax := PAax))
+    (hBridge : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
+      (PAax := PAax))
     (witBC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)
               (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
               (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.BC))
@@ -254,39 +233,22 @@ theorem collatz_dynamicPA_Strong
     (witAB : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)
               (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
               (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.AB)) :
-    let wBC :=
-      toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine)
-        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-        (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.BC witBC
-    let wAC :=
-      toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine)
-        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-        (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.AC witAC
-    let wAB :=
-      toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine)
-        (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-        (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.AB witAB
-    (CofinalN (HornBC_at_time Provable K Machine encode_halt Cn A0 (sigmaCollatz seed)
-      hIdem hProvCn wBC wAC wAB)) ∧
-    (CofinalN (HornAC_at_time Provable K Machine encode_halt Cn A0 (sigmaCollatz seed)
-      hIdem hProvCn wBC wAC wAB)) ∧
-    (CofinalN (HornAB_at_time Provable K Machine encode_halt Cn A0 (sigmaCollatz seed)
-      hIdem hProvCn wBC wAC wAB)) ∧
-    (CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (sigma := sigmaCollatz seed)
-      hIdem hProvCn PAax Mode.BC witBC witAC witAB) ∧
-    (CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (sigma := sigmaCollatz seed)
-      hIdem hProvCn PAax Mode.AC witBC witAC witAB) ∧
-    (CofinalPA_on_visits (Provable := Provable) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (sigma := sigmaCollatz seed)
-      hIdem hProvCn PAax Mode.AB witBC witAC witAB) := by
-  exact dynamic_trilemma_with_PA_Strong_final
-    (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-    (Cn := Cn) (A0 := A0) (sigma := sigmaCollatz seed)
-    (hIdem := hIdem) (hProvCn := hProvCn)
-    PAax hMono hCnExt hBC hAC hAB witBC witAC witAB
+    ∃ B, ∀ k, sigmaCollatz seed k = Mode.AB → k < B := by
+  have hev : Collatz.EventuallyNotAB seed :=
+    collatz_eventuallyNotAB_of_trilemma_and_consistency
+      (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
+      (hMono := hMono) (hCnExt := hCnExt) (seed := seed) (PAax := PAax)
+      hPAev hBridge witBC witAC witAB
 
-end CollatzDynamicPA
+  rcases hev with ⟨B, hB⟩
+  refine ⟨B, ?_⟩
+  intro k hkAB
+  have : ¬ B ≤ k := by
+    intro hBk
+    exact (hB k hBk) hkAB
+  exact Nat.lt_of_not_ge this
+
+end ABExtinction
 
 end RevHalt.Trilemma
