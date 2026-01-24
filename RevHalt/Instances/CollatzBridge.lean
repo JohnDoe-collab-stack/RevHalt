@@ -13,11 +13,13 @@
 import RevHalt.Trilemma.GenericExtinction
 import RevHalt.Instances.CollatzWitnesses
 import RevHalt.Trilemma.CofinalHornsPA
+import RevHalt.Theory.TheoryDynamics_RouteII
 
 namespace RevHalt.Instances
 
 open RevHalt.Trilemma.Generic
 open RevHalt.Trilemma -- For PA_in
+open RevHalt -- For RouteII lemmas
 
 lemma bridge_proof : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) (PAax := PAax) := by
@@ -38,11 +40,27 @@ lemma bridge_proof : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machi
     refine ⟨0, ?_⟩
     exact hPAt hp
 
-  -- 2) Deduce RouteIIAt (Frontier Nonempty) from PA_in
-  -- This step requires the system to satisfy the "Barrier" (Route II)
-  -- effectively claiming that if PA is in the limit theory, the frontier cannot be empty.
-  -- This lemma would be `RouteIIAt_of_PA_in_omega`.
-  exact (sorry : PA_in _ _ → _) hPAω
+  -- 2) Use Route II to prove Frontier Nonempty
+  -- We assume properties of the Logic (Soundness, NegComplete, Barrier).
+  apply frontier_nonempty_of_route_II (Provable := Provable)
+      (SProvable := fun _ => True) -- Placeholder (Truth)
+      (SNot := id)                 -- Placeholder (Negation)
+  · -- Soundness
+    intro p hp
+    -- In real proof: PA |- p -> True(p).
+    -- Here: Provable = Mem. True = True.
+    trivial
+  · -- Negative Complete
+    intro e hNotRev
+    -- In real proof: !Rev0 -> PA |- !H(e).
+    -- Trivial Logic (Mem) cannot prove !H(e).
+    -- So this step requires a Stronger Logic (or assumption).
+    sorry
+  · -- Barrier
+    intro hBiv
+    -- Bivalence -> False (Undecidability).
+    -- Trivial Logic is Decidable. So Barrier fails here.
+    sorry
 
 #print axioms bridge_proof
 
