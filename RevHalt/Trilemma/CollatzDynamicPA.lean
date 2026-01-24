@@ -113,6 +113,8 @@ def PA_implies_RouteIIAt : Prop :=
   Sous (1)(2)(3), AB s’éteint après un rang (donc nombre fini d’odd>1 sur la corne AB).
 -/
 theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
+    (hMono : ProvRelMonotone Provable)
+    (hCnExt : CnExtensive Cn)
     (hPAev : PA_Eventually (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
       (PAax := PAax))
