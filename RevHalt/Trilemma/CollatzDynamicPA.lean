@@ -7,20 +7,15 @@
   - Démontrer une extinction *positive* de AB (borne explicite) à partir de :
       (1) Trilemme (via strict_subseq_horns / HornAB_at_time)
       (2) Consistance structurante : Pont  (PA_at t → RouteIIAt sur omegaΓ(chainState t))
-      (3) PA installé après un rang : ∃N, ∀n≥N, PA_at n
+      (3) (SUPPRIMÉ) PA installé après un rang -> DÉRIVÉ de l'existence d'un witness PA.
   - Aucune hypothèse "si ça atteint 1".
   - Pas de Classical, pas de noncomputable.
   - Pas de mod6 : classification par (x=1) puis parité.
-
-  Idée formelle :
-  - Si k est grand et σ k = AB, alors le trilemme donne ¬RouteIIAt au temps (times ... k).
-  - Si PA est installé après N et si k≥N, alors (times ... k) ≥ k ≥ N,
-    donc PA_at (times ... k), donc RouteIIAt par le pont.
-  - Contradiction ⇒ σ k ≠ AB pour tout k≥N, donc AB est fini (au sens "plus jamais").
 -/
 
 import RevHalt.Trilemma.CofinalHornsSimple
 import RevHalt.Trilemma.CofinalHornsPA
+import RevHalt.Theory.TheoryDynamics
 
 namespace RevHalt.Trilemma
 
@@ -89,14 +84,7 @@ variable (seed : Nat)
 -- Axiomes PA internes
 variable (PAax : Set PropT)
 
--- (3) Hypothèse positive : PA installé après un rang (sur le temps nat).
-def PA_Eventually : Prop :=
-  ∃ N, ∀ n, N ≤ n →
-    PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-      (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax n
-
--- (2) Hypothèse de consistance structurante (pont) :
--- PA présent à l’instant t ⇒ RouteIIAt sur omegaΓ(chainState t).
+-- (2) Pont : PA_at t ⇒ RouteIIAt(omegaΓ(chainState t))
 def PA_implies_RouteIIAt : Prop :=
   ∀ t,
     PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
@@ -107,16 +95,64 @@ def PA_implies_RouteIIAt : Prop :=
         (chainState (Provable := Provable) (K := K) Machine (encode_halt := encode_halt)
           (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) t))
 
+/--
+  Lemme local de monotonie pour chainState.
+  Dérivé de `chainState_step_hom` (TheoryDynamics.lean) par induction.
+-/
+lemma chainState_mono
+    (hCnExt : CnExtensive Cn)
+    {t u : Nat} (htu : t ≤ u) :
+    (chainState (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+       (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) t).Γ ⊆
+    (chainState (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+       (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) u).Γ := by
+  induction htu with
+  | refl => exact Set.Subset.refl _
+  | step h ih =>
+      apply Set.Subset.trans ih
+      -- Apply the step homomorphism which is an inclusion.
+      -- The index 'm' is inferred from the goal Γ_m ⊆ Γ_{m+1}
+      apply chainState_step_hom (Provable := Provable) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn)
+              hIdem hProvCn hCnExt A0
+
+/-- Monotonie de `PA_at` dérivée de la monotonie de `chainState`. -/
+lemma PA_at_mono
+    (hCnExt : CnExtensive Cn)
+    {t u : Nat} (htu : t ≤ u)
+    (hPA : PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+            (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax t) :
+    PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax u := by
+  -- PA_at PAax n <=> PAax ⊆ (chainState ... n).Γ
+  -- Donc si Γ(t) ⊆ Γ(u), alors PAax ⊆ Γ(t) => PAax ⊆ Γ(u)
+  exact Set.Subset.trans hPA (chainState_mono hIdem hProvCn hCnExt htu)
+
+
+/-- PA est “installé après un rang” dès qu’il apparaît une fois (par monotonie). -/
+lemma PA_Eventually_of_exists
+    (hCnExt : CnExtensive Cn)
+    {t0 : Nat}
+    (hPA0 :
+      PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+        (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax t0) :
+    ∃ N, ∀ n, N ≤ n →
+      PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+        (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax n := by
+  refine ⟨t0, ?_⟩
+  intro n hn
+  exact PA_at_mono (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+    (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) (hCnExt := hCnExt)
+    (PAax := PAax) hn hPA0
+
 /-
-  THÉORÈME (objectif) :
-  Sous (1)(2)(3), AB s’éteint après un rang (donc nombre fini d’odd>1 sur la corne AB).
+  THÉORÈME FINAL (objectif) :
+  Plus d'hypothèse `PA_Eventually` externe !
+  On la déduit de `witBC` + monotonie de chainState.
 -/
 theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
     (hMono : ProvRelMonotone Provable)
     (hCnExt : CnExtensive Cn)
-    (hPAev : PA_Eventually (Provable := Provable) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
-      (PAax := PAax))
     (hBridge : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
       (PAax := PAax))
@@ -131,7 +167,21 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
               (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.AB)) :
     Collatz.EventuallyNotAB seed := by
 
-  -- witnesses "simples" pour `times` et `strict_subseq_horns`
+  -- 0) Extraire une occurrence de PA_at depuis un witness PairPA (ici BC, N=0 suffit)
+  rcases witBC 0 with ⟨t0, _, ht0⟩
+  have hPA0 :
+      PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+        (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax t0 :=
+    ht0.2
+
+  -- 1) En déduire PA_Eventually grâce à la monotonie
+  rcases (PA_Eventually_of_exists (Provable := Provable) (K := K) (Machine := Machine)
+            (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+            (hIdem := hIdem) (hProvCn := hProvCn) (hCnExt := hCnExt)
+            (PAax := PAax) hPA0)
+    with ⟨N, hPA⟩
+
+  -- 2) witnesses "simples" pour `times` et `strict_subseq_horns`
   let wBC :=
     toSimpleWitness (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
@@ -145,18 +195,15 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
       (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.AB witAB
 
-  rcases hPAev with ⟨N, hPA⟩
+  -- 3) On reprend exactement la preuve structurelle
   refine ⟨N, ?_⟩
-  intro k hkN
-  intro hkAB
+  intro k hkN hkAB
 
-  -- t := times ... k
   let t :=
     times (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
       (sigma := sigmaCollatz seed) hIdem hProvCn wBC wAC wAB k
 
-  -- Fait clé : k ≤ times ... k, via StrictStep + le_of_strictStep.
   let f : Nat → Nat :=
     fun m =>
       times (Provable := Provable) (K := K) (Machine := Machine)
@@ -165,7 +212,6 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
 
   have hstep : StrictStep f := by
     intro m
-    -- times_strictMono : times m < times (m+1)
     simpa [f] using
       (times_strictMono (Provable := Provable) (K := K) (Machine := Machine)
         (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
@@ -178,21 +224,14 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
 
   have hN_le_t : N ≤ t := Nat.le_trans hkN hk_le_t
 
-  -- PA_at t puis RouteIIAt par le pont
   have hPA_t :
       PA_at (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
         (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax t :=
     hPA t hN_le_t
 
-  have hRoute :
-      RouteIIAt (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-        (omegaΓ (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-          (Cn := Cn) (hIdem := hIdem) (hProvCn := hProvCn)
-          (chainState (Provable := Provable) (K := K) Machine (encode_halt := encode_halt)
-            (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) t)) :=
+  have hRoute :=
     hBridge t hPA_t
 
-  -- Côté trilemme : si σ k = AB, strict_subseq_horns donne ¬RouteIIAt au même endroit (sur times ... k).
   have hNotRoute_raw :=
     strict_subseq_horns (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
@@ -205,22 +244,16 @@ theorem collatz_eventuallyNotAB_of_trilemma_and_consistency
           (Cn := Cn) (hIdem := hIdem) (hProvCn := hProvCn)
           (chainState (Provable := Provable) (K := K) Machine (encode_halt := encode_halt)
             (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) t)) := by
-    -- hkAB force la branche AB du `match sigma k with ...`
     simpa [sigmaCollatz, t, hkAB] using hNotRoute_raw
 
-  -- Contradiction : RouteIIAt ∧ ¬RouteIIAt.
   exact hNotRoute hRoute
 
 /-
-  Corollaire (ta formulation “quantité finie” au sens constructif) :
-  Il existe une borne B telle que tout k avec σ k = AB satisfait k < B.
+  Corollaire (borne explicite) également mis à jour pour ne plus prendre hPAev.
 -/
 theorem collatz_AB_indices_bounded_of_trilemma_and_consistency
     (hMono : ProvRelMonotone Provable)
     (hCnExt : CnExtensive Cn)
-    (hPAev : PA_Eventually (Provable := Provable) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
-      (PAax := PAax))
     (hBridge : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machine := Machine)
       (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
       (PAax := PAax))
@@ -239,7 +272,7 @@ theorem collatz_AB_indices_bounded_of_trilemma_and_consistency
       (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
       (hMono := hMono) (hCnExt := hCnExt) (seed := seed) (PAax := PAax)
-      hPAev hBridge witBC witAC witAB
+      hBridge witBC witAC witAB
 
   rcases hev with ⟨B, hB⟩
   refine ⟨B, ?_⟩
