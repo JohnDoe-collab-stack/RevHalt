@@ -3,31 +3,44 @@
 
   Phase 2 Skeleton Data:
   - Defines the *types* and *constants* required for the instance.
-  - Currently implemented as Computable Placeholders (using `sorry` or dummy types).
-  - This allows compilation without `noncomputable`.
-  - Goal of Phase 2: Replace `sorry` with actual logic.
+  - Implements Concrete Collatz Machine and Standard Kit.
+  - Remaining logic (Witnesses, A0) is `sorry` (to be proved).
 -/
 
 import RevHalt.Trilemma.CofinalHornsSimple
 import RevHalt.Trilemma.CofinalHornsPA
 import RevHalt.Theory.TheoryDynamics
+import RevHalt.Base.Kit
 
 namespace RevHalt.Instances
 
 open RevHalt.Trilemma
+open RevHalt
 
--- 1) Base Types (Placeholder: Nat)
+-- 1) Base Types
 def PropT : Type := Nat
 def Code : Type := Nat
 
--- 2) Parameters
-def Provable : Set PropT → PropT → Prop := fun _ _ => False -- Dummy
-def K : RHKit := sorry -- Placeholder
-def Machine : Code → Trace := fun _ _ => False -- Dummy
-def encode_halt : Code → PropT := fun c => c -- Dummy
-def Cn : Set PropT → Set PropT := id -- Dummy
+-- 2) Parameters: Collatz Machine & Standard Kit
 
--- 3) Initial State
+/-- Collatz Step Function -/
+def CollatzStep (n : Nat) : Nat :=
+  if n % 2 = 0 then n / 2 else 3 * n + 1
+
+/-- Collatz Machine Trace: halts if it reaches 1. -/
+def Machine (n : Code) : Trace :=
+  fun k => ∃ m, m < k ∧ (Nat.iterate CollatzStep m n = 1)
+
+/-- Standard Kit: projection to simple existence. -/
+def StandardKit : RHKit :=
+  { Proj := fun T => ∃ n, T n }
+
+def K : RHKit := StandardKit
+def encode_halt : Code → PropT := id
+def Cn : Set PropT → Set PropT := id
+
+-- Placeholder logic (Subject to filling in Phase 2)
+def Provable : Set PropT → PropT → Prop := fun _ _ => False
 def A0 : ThState (PropT := PropT) Provable Cn := sorry
 def PAax : Set PropT := ∅
 

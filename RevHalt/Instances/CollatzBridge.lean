@@ -3,6 +3,11 @@
 
   Isolation of the Consistency Bridge proof.
   Goal: Prove `PA_implies_RouteIIAt`.
+
+  Implementation:
+  Applies the Generic Route II theorem (`frontier_nonempty_of_route_II`).
+  Requires proving Soundness, NegativeCompleteness, and Barrier
+  for the specific `Provable` and `Machine`.
 -/
 
 import RevHalt.Trilemma.GenericExtinction
