@@ -110,11 +110,10 @@ lemma chainState_mono
   | refl => exact Set.Subset.refl _
   | step h ih =>
       apply Set.Subset.trans ih
-      -- Apply the step homomorphism which is an inclusion.
-      -- The index 'm' is inferred from the goal Γ_m ⊆ Γ_{m+1}
+      -- Robust call: expliciting structure arguments to avoid unification issues
       apply chainState_step_hom (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn)
-              hIdem hProvCn hCnExt A0
+        (encode_halt := encode_halt) (Cn := Cn)
+        hIdem hProvCn hCnExt A0
 
 /-- Monotonie de `PA_at` dérivée de la monotonie de `chainState`. -/
 lemma PA_at_mono
@@ -141,9 +140,10 @@ lemma PA_Eventually_of_exists
         (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) PAax n := by
   refine ⟨t0, ?_⟩
   intro n hn
-  exact PA_at_mono (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
-    (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) (hCnExt := hCnExt)
-    (PAax := PAax) hn hPA0
+  have mono := PA_at_mono (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn)
+      (PAax := PAax) (hCnExt := hCnExt) (t := t0) (u := n)
+  exact mono hn hPA0
 
 /-
   THÉORÈME FINAL (objectif) :
