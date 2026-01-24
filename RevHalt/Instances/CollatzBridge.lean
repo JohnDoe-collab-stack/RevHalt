@@ -5,15 +5,15 @@
   Goal: Prove `PA_implies_RouteIIAt`.
 -/
 
-import RevHalt.Trilemma.CollatzDynamicPA -- Import definition of PA_implies_RouteIIAt (via Generic)
-import RevHalt.Instances.CollatzWitnesses -- Import limits/context
+import RevHalt.Trilemma.GenericExtinction
+import RevHalt.Instances.CollatzWitnesses
 
 namespace RevHalt.Instances
 
 open RevHalt.Trilemma.Generic
 
-axiom bridge_proof : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) (PAax := PAax)
+lemma bridge_proof : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (Cn := Cn) (A0 := A0) (hIdem := hIdem) (hProvCn := hProvCn) (PAax := PAax) := sorry
 
 #print axioms bridge_proof
 

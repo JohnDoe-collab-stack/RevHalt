@@ -1,48 +1,53 @@
 /-
   CollatzWitnesses.lean
 
-  Isolation of the Witness construction.
-  Goal: Provide `Machine`, `encode_halt`, `Cn`, `A0` and prove `CofinalWitness` for BC, AC, AB.
+  Phase 2 Skeleton Data:
+  - Defines the *types* and *constants* required for the instance.
+  - Currently implemented as Computable Placeholders (using `sorry` or dummy types).
+  - This allows compilation without `noncomputable`.
+  - Goal of Phase 2: Replace `sorry` with actual logic.
 -/
 
 import RevHalt.Trilemma.CofinalHornsSimple
 import RevHalt.Trilemma.CofinalHornsPA
+import RevHalt.Theory.TheoryDynamics
 
 namespace RevHalt.Instances
 
-universe u
+open RevHalt.Trilemma
 
--- Placeholder definitions to match the types expected by CollatzDynamicPA
--- You would replace these with actual constructions.
-axiom PropT : Type u
-axiom Code : Type u
-axiom Provable : Set PropT → PropT → Prop
-axiom K : RHKit
-axiom Machine : Code → Trace
-axiom encode_halt : Code → PropT
-axiom Cn : Set PropT → Set PropT
-axiom A0 : ThState (PropT := PropT) Provable Cn
-axiom PAax : Set PropT
+-- 1) Base Types (Placeholder: Nat)
+def PropT : Type := Nat
+def Code : Type := Nat
 
--- Axioms for Structure (assumed to be true for the constructed system)
-axiom hIdem : CnIdem Cn
-axiom hProvCn : ProvClosedCn Provable Cn
+-- 2) Parameters
+def Provable : Set PropT → PropT → Prop := fun _ _ => False -- Dummy
+def K : RHKit := sorry -- Placeholder
+def Machine : Code → Trace := fun _ _ => False -- Dummy
+def encode_halt : Code → PropT := fun c => c -- Dummy
+def Cn : Set PropT → Set PropT := id -- Dummy
 
--- The Witnesses
-axiom witBC : Trilemma.CofinalWitness (Trilemma.PairPA (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-              (hIdem := hIdem) (hProvCn := hProvCn) PAax Trilemma.Mode.BC)
+-- 3) Initial State
+def A0 : ThState (PropT := PropT) Provable Cn := sorry
+def PAax : Set PropT := ∅
 
-axiom witAC : Trilemma.CofinalWitness (Trilemma.PairPA (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-              (hIdem := hIdem) (hProvCn := hProvCn) PAax Trilemma.Mode.AC)
+-- 4) Structural Proofs (Placeholders)
+def hIdem : CnIdem Cn := sorry
+def hProvCn : ProvClosedCn Provable Cn := sorry
+def hMono : ProvRelMonotone Provable := sorry
+def hCnExt : CnExtensive Cn := sorry
 
-axiom witAB : Trilemma.CofinalWitness (Trilemma.PairPA (Provable := Provable) (K := K) (Machine := Machine)
-              (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
-              (hIdem := hIdem) (hProvCn := hProvCn) PAax Trilemma.Mode.AB)
+-- 5) Witnesses (Placeholders)
+def witBC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)
+            (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+            (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.BC) := sorry
 
-#print axioms witBC
-#print axioms witAC
-#print axioms witAB
+def witAC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)
+            (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+            (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.AC) := sorry
+
+def witAB : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)
+            (encode_halt := encode_halt) (Cn := Cn) (A0 := A0)
+            (hIdem := hIdem) (hProvCn := hProvCn) PAax Mode.AB) := sorry
 
 end RevHalt.Instances
