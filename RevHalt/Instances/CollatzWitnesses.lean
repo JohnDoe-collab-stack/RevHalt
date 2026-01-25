@@ -36,7 +36,19 @@ def Machine (n : Code) : Trace :=
 def StandardKit : RHKit :=
   { Proj := fun T => ∃ n, T n }
 
-def K : RHKit := StandardKit
+open RevHalt.Categorical
+
+lemma DetectsUpFixed_StandardKit_Aux : DetectsUpFixed StandardKit := by
+  intro T _
+  dsimp [StandardKit]
+  rfl
+
+abbrev K : RHKit := StandardKit
+
+theorem DetectsUpFixed_StandardKit : DetectsUpFixed K := by
+  intro T _
+  rfl
+
 def encode_halt : Code → PropT := id
 
 -- 3) Standard Logic (Placeholder due to missing library definitions)

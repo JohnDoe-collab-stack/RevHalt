@@ -20,26 +20,23 @@ import RevHalt.Theory.TheoryDynamics
 import RevHalt.Trilemma.GenericExtinction
 import RevHalt.Theory.TheoryDynamics_RouteII
 import RevHalt.Theory.Impossibility
+import Mathlib.Computability.PartrecCode
+import Mathlib.Computability.Partrec
 
 namespace RevHalt.Instances
 
+open Nat.Partrec
 open RevHalt.Trilemma
 open RevHalt.Trilemma.Generic
-open RevHalt.Theory
 
 -- 1) Universal Machine Setup (for T2)
 -- We need to map Universal Code to PropT (Nat)
-variable (UniversalCode : Type) [Inhabited UniversalCode]
-variable (UniversalMachine : UniversalCode → Trace)
-variable (UniversalEncodeHalt : UniversalCode → PropT)
--- In reality this is Nat.Partrec.Code, but we keep it abstract/aliased to avoid large imports if possible
--- Actually we imported PartrecCode via Impossibility, so we can use standard Code.
-
+-- 1) Universal Machine Setup (for T2)
 abbrev UCode := Nat.Partrec.Code
 abbrev UMachine : UCode → Trace := RevHalt.Machine
--- We need an encoding of UCode into PropT (Nat). Usually Gödel numbering.
--- For now, we assume such an encoding exists.
-variable (encode_U : UCode → PropT)
+
+-- We need an encoding of UCode into PropT (Nat).
+axiom encode_U : UCode → PropT
 
 -- 2) The Richness Bridge Axiom
 -- "If Collatz is decidable by Γ, then Universal Machine is decidable by Γ"
@@ -61,7 +58,7 @@ axiom hSound_U : ∀ Γ, Soundness Provable SProvable_PA Γ
 axiom hNegComp_U : NegativeComplete K UMachine encode_U SProvable_PA SNot_PA
 -- We need the semi-decider witness for Universal Negation
 axiom f_U : UCode → (Nat →. Nat)
-axiom hf_U : Nat.Partrec.Partrec₂ f_U
+axiom hf_U : Partrec (fun p : UCode × Nat => f_U p.1 p.2)
 axiom hsemidec_U : ∀ c, SProvable_PA (SNot_PA (encode_U c)) ↔ (∃ x : Nat, x ∈ (f_U c) 0)
 
 -- 4) The Proof
@@ -91,7 +88,7 @@ theorem bridge_proof :
   -- We'll assume the ImpossibleSystem structure exists for PA.
   let S_PA : ImpossibleSystem PropT := {
     Provable := SProvable_PA
-    FalseT := 0 -- Placeholder
+    FalseT := (0 : Nat) -- PropT is Nat
     Not := SNot_PA
     consistent := sorry -- PA consistency
     absurd := sorry -- PA logic
@@ -105,7 +102,7 @@ theorem bridge_proof :
   -- Apply T2
   apply frontier_empty_T2_full (Provable := Provable) (K := K) (encode_halt := encode_U)
     S_PA
-    (RevHalt.Base.Kit.DetectsUpFixed_StandardKit) -- K is StandardKit
+    (DetectsUpFixed_StandardKit) -- K is StandardKit
     hEmptyUniversal
     hSound_omega
     hNegComp_U

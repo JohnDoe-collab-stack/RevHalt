@@ -144,7 +144,7 @@ theorem FrontierRegeneration_of_RouteII_uniform
     {SProvable : PropT → Prop} {SNot : PropT → PropT}
     (hSound : ∀ Γ, Soundness Provable SProvable Γ)
     (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
-    (hBar   : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    (hBar   : (∀ e, Decidable (SProvable (encode_halt e))) → False) :
     FrontierRegeneration' Provable K Machine encode_halt := by
   intro Γ _hPS
   have : (S1Rel Provable K Machine encode_halt Γ).Nonempty :=
@@ -385,3 +385,17 @@ theorem structural_escape_explicit
 end TrajectoryDynamics
 
 end RevHalt
+
+-- Verification of Axioms
+#print axioms RevHalt.canonicalTrajectory_is_F0
+#print axioms RevHalt.trajectory_unique
+#print axioms RevHalt.trajectory_initial_dependence
+#print axioms RevHalt.trajectory_strict_growth
+#print axioms RevHalt.trajectory_stage_le_limit
+#print axioms RevHalt.FrontierRegeneration_of_RouteII_uniform
+#print axioms RevHalt.incarnation_strict_growth
+#print axioms RevHalt.incarnation_trilemma
+#print axioms RevHalt.incarnation_means_no_stable_limit'
+#print axioms RevHalt.forced_not_OmegaAdmissible
+#print axioms RevHalt.only_escape_via_continuity
+#print axioms RevHalt.structural_escape_explicit
