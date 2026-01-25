@@ -59,7 +59,7 @@ def SNot_PA : PropT → PropT := sorry
 
 def hSound_PA : ∀ Γ, Soundness Provable SProvable_PA Γ := sorry
 def hNegComp_PA : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA := sorry
-def hBarrier_PA : (∀ e, SProvable_PA (encode_halt e) ∨ SProvable_PA (SNot_PA (encode_halt e))) → False := sorry
+def hBarrier_PA : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False := sorry
 
 -- 5) Witnesses
 def witBC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)

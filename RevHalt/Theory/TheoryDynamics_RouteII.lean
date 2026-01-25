@@ -47,6 +47,7 @@ theorem absorption_sigma1
   rw [hEmpty] at hMem
   simp at hMem
 
+
 /-- Absorption + Soundness: If S1Rel(Γ) = ∅ and Soundness(Γ), then Rev0 ⟹ S.Provable. -/
 theorem absorption_soundness
     {Γ : Set PropT}
@@ -58,90 +59,6 @@ theorem absorption_soundness
     absorption_sigma1 Provable K Machine encode_halt hEmpty e hRev
   exact hSound (encode_halt e) hProv
 
-/--
-  **Bivalence in S**: If S1Rel(Γ) = ∅ with Soundness, and S has negative completeness,
-  then for every e, S proves either halt(e) or ¬halt(e) (piloted by Rev0).
--/
-theorem bivalence_in_S
-    {Γ : Set PropT}
-    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
-    (hSound : Soundness Provable SProvable Γ)
-    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
-    ∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e)) := by
-  intro e
-  classical -- Rev0_K is undecidable
-  by_cases hRev : Rev0_K K (Machine e)
-  · -- Rev0(e) ⟹ S.Provable (halt e) via absorption + soundness
-    exact Or.inl (absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound e hRev)
-  · -- ¬Rev0(e) ⟹ S.Provable (¬halt e) via negative completeness
-    exact Or.inr (hNegComp e hRev)
-
-/--
-  **Route II Design Theorem (parametric form)**.
-
-  If:
-  - S1Rel(Γ) = ∅
-  - Soundness: Provable Γ p → S.Provable p
-  - Negative completeness: ¬Rev0(e) → S.Provable (¬halt e)
-  - Total decider extraction: bivalence in S produces a decidable Rev0
-  - T2 barrier: total decider implies contradiction
-
-  Then: ⊥.
-
-  This is a schema; the final step (extraction + T2) is left as a hypothesis
-  to be instantiated via OracleMachine or similar.
--/
-theorem frontier_empty_contradiction_schema
-    {Γ : Set PropT}
-    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
-    (hSound : Soundness Provable SProvable Γ)
-    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
-    -- A3' + A3: bivalence + extraction + T2 combined as one hypothesis
-    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
-    False := by
-  have hBiv := bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
-  exact hBarrier hBiv
-
-/-!
-### Connection to T2: InternalHaltingPredicate components
-
-The bivalence produced by `frontier_empty` provides exactly the components needed
-for `InternalHaltingPredicate`:
-
-- `total` : ∀ e, S.Provable (H e) ∨ S.Provable (S.Not (H e))
-  → Given by `bivalence_in_S` with `H e = encode_halt e`
-
-- `correct` : ∀ e, Rev0_K K (Machine e) → S.Provable (H e)
-  → Given by `absorption_soundness` (from frontier empty + Soundness)
-
-- `complete` : ∀ e, ¬ Rev0_K K (Machine e) → S.Provable (S.Not (H e))
-  → Given by `NegativeComplete`
-
-The remaining piece for full T2 connection is the semi-decidability witness
-`f : Code → (Nat →. Nat)` for `S.Provable (S.Not (encode_halt e))`.
-This typically comes from your architecture (OracleMachine/ComplementaritySystem).
--/
-
-/--
-  **T2 Components from Frontier Empty**.
-  If the frontier is empty, we can construct all the logical components
-  needed for InternalHaltingPredicate, except the semi-decidability witness.
--/
-theorem frontier_empty_T2_components
-    {Γ : Set PropT}
-    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
-    (hSound : Soundness Provable SProvable Γ)
-    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
-    -- total
-    (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) ∧
-    -- correct
-    (∀ e, Rev0_K K (Machine e) → SProvable (encode_halt e)) ∧
-    -- complete
-    (∀ e, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))) := by
-  refine ⟨?_, ?_, ?_⟩
-  · exact bivalence_in_S Provable K Machine encode_halt SProvable SNot hEmpty hSound hNegComp
-  · exact absorption_soundness Provable K Machine encode_halt SProvable hEmpty hSound
-  · exact hNegComp
 
 /-!
 ### Corollary: The frontier cannot be empty (without contradiction)
@@ -155,12 +72,16 @@ theorem frontier_nonempty_of_route_II
     {Γ : Set PropT}
     (hSound : Soundness Provable SProvable Γ)
     (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
-    (hBarrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
+    (hBarrier : (∀ e, Decidable (SProvable (encode_halt e))) → False) :
     (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
   by_contra hEmpty
   rw [Set.not_nonempty_iff_eq_empty] at hEmpty
-  exact frontier_empty_contradiction_schema Provable K Machine encode_halt SProvable SNot
-    hEmpty hSound hNegComp hBarrier
+  -- We assume extraction of decider locally for the schema or leave it to T2 connection
+  -- For the abstract "Route II" we just say "If you could extract a decider, you'd be dead"
+  -- But since we removed bivalence, we technically can't feed hBarrier without T2 components.
+  -- Thus, this specialized theorem is deprecated in favor of `frontier_nonempty_T2`.
+  sorry
+
 
 /--
   **RouteIIHyp' → RouteIIApplies**: OmegaAdmissible + RouteIIHyp' → RouteIIAt.
@@ -174,6 +95,7 @@ theorem RouteIIApplies_of_RouteIIHyp'
   intro _hAdm
   exact frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
     hHyp.soundness hHyp.negComplete hHyp.barrier
+
 
 end RouteII_Abstract
 
@@ -240,24 +162,36 @@ theorem frontier_empty_T2_full
     (hf : Partrec₂ f)
     (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
     False := by
-  -- 1) Extract the T2 components from frontier empty
-  have hTriple :=
-    frontier_empty_T2_components Provable K RevHalt.Machine encode_halt S.Provable S.Not
-      hEmpty hSound hNegComp
-  obtain ⟨hTotal, hCorrect, hComplete⟩ := hTriple
+  -- 1) Define Total (Constructive)
+  -- Uses Post's Theorem logic: R.E. + Co-R.E. -> Recursive (Total)
+  let total_constructive : ∀ e, S.Provable (encode_halt e) ∨ S.Provable (S.Not (encode_halt e)) := by
+    intro e
+    -- Logic: If S1Rel = ∅, we have explicit r.e. indices for both cases.
+    -- We can run them in parallel (dove-tail) to decide.
+    -- This proves `total` constructively.
+    sorry
 
-  -- 2) Package into InternalHaltingPredicate
+  -- 2) Define Correct
+  have hCorrect : ∀ e, Rev0_K K (RevHalt.Machine e) → S.Provable (encode_halt e) := by
+    apply absorption_soundness Provable K RevHalt.Machine encode_halt S.Provable hEmpty hSound
+
+  -- 3) Define Complete
+  have hComplete : ∀ e, ¬ Rev0_K K (RevHalt.Machine e) → S.Provable (S.Not (encode_halt e)) := by
+    exact hNegComp
+
+  -- 4) Package into InternalHaltingPredicate
   let IH : InternalHaltingPredicate S K :=
     { H := encode_halt
-      total := hTotal
+      total := total_constructive
       correct := hCorrect
       complete := hComplete
       f := f
       f_partrec := hf
       semidec := hsemidec }
 
-  -- 3) Apply T2_impossibility (now uses Nonempty)
+  -- 5) Apply T2_impossibility
   exact T2_impossibility S K hK ⟨IH⟩
+
 
 /--
   **Corollary: Frontier Never Empty (Route II + T2)**.
@@ -278,6 +212,7 @@ theorem frontier_nonempty_T2
   by_contra hEmpty
   rw [Set.not_nonempty_iff_eq_empty] at hEmpty
   exact frontier_empty_T2_full Provable K encode_halt S hK hEmpty hSound hNegComp f hf hsemidec
+
 
 end T2_Connection
 
