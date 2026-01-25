@@ -40,27 +40,17 @@ lemma bridge_proof : PA_implies_RouteIIAt (Provable := Provable) (K := K) (Machi
     refine ⟨0, ?_⟩
     exact hPAt hp
 
-  -- 2) Use Route II to prove Frontier Nonempty
-  -- We assume properties of the Logic (Soundness, NegComplete, Barrier).
-  apply frontier_nonempty_of_route_II (Provable := Provable)
-      (SProvable := fun _ => True) -- Placeholder (Truth)
-      (SNot := id)                 -- Placeholder (Negation)
-  · -- Soundness
-    intro p hp
-    -- In real proof: PA |- p -> True(p).
-    -- Here: Provable = Mem. True = True.
-    trivial
-  · -- Negative Complete
-    intro e hNotRev
-    -- In real proof: !Rev0 -> PA |- !H(e).
-    -- Trivial Logic (Mem) cannot prove !H(e).
-    -- So this step requires a Stronger Logic (or assumption).
-    sorry
-  · -- Barrier
-    intro hBiv
-    -- Bivalence -> False (Undecidability).
-    -- Trivial Logic is Decidable. So Barrier fails here.
-    sorry
+  -- 2) Use Route II to prove Frontier Nonempty (axiomatically supported)
+  -- 2) Use Route II to prove Frontier Nonempty (axiomatically supported)
+  exact frontier_nonempty_of_route_II (Provable := Provable)
+      (K := K)
+      (Machine := Machine)
+      (encode_halt := encode_halt)
+      (SProvable := RevHalt.Instances.SProvable_PA)
+      (SNot := RevHalt.Instances.SNot_PA)
+      (hSound := RevHalt.Instances.hSound_PA _)
+      (hNegComp := RevHalt.Instances.hNegComp_PA)
+      (hBarrier := RevHalt.Instances.hBarrier_PA)
 
 #print axioms bridge_proof
 
