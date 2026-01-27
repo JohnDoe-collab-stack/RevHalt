@@ -71,9 +71,6 @@ structure CollatzWitnessesData where
   -- Standard logic properties (PA layer)
   SProvable_PA : PropT → Prop
   SNot_PA : PropT → PropT
-  hSound_PA : ∀ Γ, Soundness Provable SProvable_PA Γ
-  hNegComp_PA : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA
-  hBarrier_PA : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False
 
   -- Witnesses
   witBC : CofinalWitness (PairPA (Provable := Provable) (K := K) (Machine := Machine)
@@ -153,9 +150,6 @@ def A0_min : ThState (PropT := PropT) Provable_min Cn_min := by
 structure CollatzWitnessesAssumptions where
   SProvable_PA : PropT → Prop
   SNot_PA : PropT → PropT
-  hSound_PA : ∀ Γ, Soundness Provable_min SProvable_PA Γ
-  hNegComp_PA : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA
-  hBarrier_PA : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False
   witBC : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
             (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
             (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.BC)
@@ -312,41 +306,43 @@ lemma PairPA_all_min_AB
 structure CollatzWitnessesAssumptionsD where
   SProvable_PA : PropT → Prop
   SNot_PA : PropT → PropT
-  hSound_PA : ∀ Γ, Soundness Provable_min SProvable_PA Γ
-  hNegComp_PA : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA
-  hDec_PA : ∀ e, Decidable (SProvable_PA (encode_halt e))
-  hBarrier_PA : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False
-  hPCdir : ProvClosedDirected Provable_min
-  hω : CnOmegaContinuous Cn_min
+  witBC : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
+            (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
+            (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.BC)
+  witAC : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
+            (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
+            (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.AC)
+  witAB : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
+            (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
+            (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.AB)
 
 def CollatzWitnessesAssumptionsD_min
     (SProvable_PA : PropT → Prop)
     (SNot_PA : PropT → PropT)
-    (hSound_PA : ∀ Γ, Soundness Provable_min SProvable_PA Γ)
-    (hNegComp_PA : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
-    (hDec_PA : ∀ e, Decidable (SProvable_PA (encode_halt e)))
-    (hBarrier_PA : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False) :
+    (witBC : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
+              (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.BC))
+    (witAC : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
+              (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.AC))
+    (witAB : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
+              (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
+              (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.AB)) :
     CollatzWitnessesAssumptionsD :=
   { SProvable_PA := SProvable_PA
     SNot_PA := SNot_PA
-    hSound_PA := hSound_PA
-    hNegComp_PA := hNegComp_PA
-    hDec_PA := hDec_PA
-    hBarrier_PA := hBarrier_PA
-    hPCdir := provClosedDirected_min
-    hω := cnOmegaContinuous_min }
+    witBC := witBC
+    witAC := witAC
+    witAB := witAB }
 
 def CollatzWitnessesAssumptionsD.toWitnesses (A : CollatzWitnessesAssumptionsD) :
     CollatzWitnessesAssumptions := by
   refine {
     SProvable_PA := A.SProvable_PA
     SNot_PA := A.SNot_PA
-    hSound_PA := A.hSound_PA
-    hNegComp_PA := A.hNegComp_PA
-    hBarrier_PA := A.hBarrier_PA
-    witBC := witness_of_forall (PairPA_all_min_BC A.hPCdir A.hω A.hSound_PA A.hNegComp_PA A.hDec_PA A.hBarrier_PA)
-    witAC := witness_of_forall (PairPA_all_min_AC A.hSound_PA A.hNegComp_PA A.hDec_PA A.hBarrier_PA)
-    witAB := witness_of_forall (PairPA_all_min_AB A.hPCdir A.hω)
+    witBC := A.witBC
+    witAC := A.witAC
+    witAB := A.witAB
   }
 
 def CollatzWitnessesMinimal (A : CollatzWitnessesAssumptions) : CollatzWitnessesData := by
@@ -361,9 +357,6 @@ def CollatzWitnessesMinimal (A : CollatzWitnessesAssumptions) : CollatzWitnesses
     A0 := A0_min
     SProvable_PA := A.SProvable_PA
     SNot_PA := A.SNot_PA
-    hSound_PA := A.hSound_PA
-    hNegComp_PA := A.hNegComp_PA
-    hBarrier_PA := A.hBarrier_PA
     witBC := A.witBC
     witAC := A.witAC
     witAB := A.witAB
