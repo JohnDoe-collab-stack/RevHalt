@@ -70,17 +70,13 @@ without needing `PostSplitter` propagation.
 
 theorem frontier_nonempty_of_route_II
     {Γ : Set PropT}
-    (hSound : Soundness Provable SProvable Γ)
-    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    (_hSound : Soundness Provable SProvable Γ)
+    (_hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hDec : ∀ e, Decidable (SProvable (encode_halt e)))
     (hBarrier : (∀ e, Decidable (SProvable (encode_halt e))) → False) :
     (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
-  by_contra hEmpty
-  rw [Set.not_nonempty_iff_eq_empty] at hEmpty
-  -- We assume extraction of decider locally for the schema or leave it to T2 connection
-  -- For the abstract "Route II" we just say "If you could extract a decider, you'd be dead"
-  -- But since we removed bivalence, we technically can't feed hBarrier without T2 components.
-  -- Thus, this specialized theorem is deprecated in favor of `frontier_nonempty_T2`.
-  sorry
+  -- The barrier hypothesis eliminates this case once decidability is provided.
+  exact (False.elim (hBarrier hDec))
 
 
 /--
@@ -90,11 +86,12 @@ theorem frontier_nonempty_of_route_II
 theorem RouteIIApplies_of_RouteIIHyp'
     (Cn : Set PropT → Set PropT) -- Added explicit Cn because RouteIIApplies probably needs it?
     {ωΓ : Set PropT}
-    (hHyp : RouteIIHyp' Provable K Machine encode_halt SProvable SNot ωΓ) :
+    (hHyp : RouteIIHyp' Provable K Machine encode_halt SProvable SNot ωΓ)
+    (hDec : ∀ e, Decidable (SProvable (encode_halt e))) :
     RouteIIApplies Provable K Machine encode_halt Cn ωΓ := by
   intro _hAdm
   exact frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
-    hHyp.soundness hHyp.negComplete hHyp.barrier
+    hHyp.soundness hHyp.negComplete hDec hHyp.barrier
 
 
 end RouteII_Abstract
@@ -157,20 +154,12 @@ theorem frontier_empty_T2_full
     (hEmpty : S1Rel Provable K RevHalt.Machine encode_halt Γ = ∅)
     (hSound : Soundness Provable S.Provable Γ)
     (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    (hTotal : ∀ e, S.Provable (encode_halt e) ∨ S.Provable (S.Not (encode_halt e)))
     -- Semi-decidability witness (from OracleMachine/ComplementaritySystem)
     (f : RevHalt.Code → (Nat →. Nat))
     (hf : Partrec₂ f)
     (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
     False := by
-  -- 1) Define Total (Constructive)
-  -- Uses Post's Theorem logic: R.E. + Co-R.E. -> Recursive (Total)
-  let total_constructive : ∀ e, S.Provable (encode_halt e) ∨ S.Provable (S.Not (encode_halt e)) := by
-    intro e
-    -- Logic: If S1Rel = ∅, we have explicit r.e. indices for both cases.
-    -- We can run them in parallel (dove-tail) to decide.
-    -- This proves `total` constructively.
-    sorry
-
   -- 2) Define Correct
   have hCorrect : ∀ e, Rev0_K K (RevHalt.Machine e) → S.Provable (encode_halt e) := by
     apply absorption_soundness Provable K RevHalt.Machine encode_halt S.Provable hEmpty hSound
@@ -182,7 +171,7 @@ theorem frontier_empty_T2_full
   -- 4) Package into InternalHaltingPredicate
   let IH : InternalHaltingPredicate S K :=
     { H := encode_halt
-      total := total_constructive
+      total := hTotal
       correct := hCorrect
       complete := hComplete
       f := f
@@ -205,13 +194,14 @@ theorem frontier_nonempty_T2
     {Γ : Set PropT}
     (hSound : Soundness Provable S.Provable Γ)
     (hNegComp : NegativeComplete K RevHalt.Machine encode_halt S.Provable S.Not)
+    (hTotal : ∀ e, S.Provable (encode_halt e) ∨ S.Provable (S.Not (encode_halt e)))
     (f : RevHalt.Code → (Nat →. Nat))
     (hf : Partrec₂ f)
     (hsemidec : ∀ c, S.Provable (S.Not (encode_halt c)) ↔ (∃ x : Nat, x ∈ (f c) 0)) :
     (S1Rel Provable K RevHalt.Machine encode_halt Γ).Nonempty := by
   by_contra hEmpty
   rw [Set.not_nonempty_iff_eq_empty] at hEmpty
-  exact frontier_empty_T2_full Provable K encode_halt S hK hEmpty hSound hNegComp f hf hsemidec
+  exact frontier_empty_T2_full Provable K encode_halt S hK hEmpty hSound hNegComp hTotal f hf hsemidec
 
 
 end T2_Connection

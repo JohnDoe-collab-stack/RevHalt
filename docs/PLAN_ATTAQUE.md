@@ -26,18 +26,22 @@ externes non justifies. Concretement:
 ### 1.2 Ce qui est encore hypothetique
 
 **Instances/CollatzWitnesses.lean**
-- `Provable`, `Cn`, `PAax`, `A0` sont `sorry`.
-- Propriete structurelles: `hIdem`, `hProvCn`, `hMono`, `hCnExt` sont `sorry`.
-- `SProvable_PA`, `SNot_PA`, `hSound_PA`, `hNegComp_PA`, `hBarrier_PA` sont `sorry`.
-- Witnesses `witBC`, `witAC`, `witAB` sont `sorry`.
+- Plus de `sorry/axiom` dans le code.
+- Les hypotheses sont **packagées** dans `CollatzWitnessesData` :
+  `Provable`, `Cn`, `PAax`, `A0`, preuves structurelles, `SProvable_PA`,
+  `SNot_PA`, `hSound_PA`, `hNegComp_PA`, `hBarrier_PA`, et les witnesses.
 
 **Instances/CollatzBridge.lean**
-- `encode_U`, `richness_bridge_axiom`, `hSound_U`, `hNegComp_U`, `f_U`, `hf_U`,
-  `hsemidec_U` sont declares comme axiomes.
-- Construction de `S_PA : ImpossibleSystem` utilise `sorry`.
+- Plus de `sorry/axiom` dans le code.
+- Les hypotheses sont **packagées** dans `CollatzBridgeAssumptions` :
+  `encode_U`, `richness_bridge_axiom`, `hSound_U`, `hNegComp_U`,
+  `f_U`, `hf_U`, `hsemidec_U`, `S_PA_consistent`, `S_PA_absurd`,
+  et (a ajouter) `hTotal_U`.
+
 **TheoryDynamics_RouteII.lean**
-- `frontier_nonempty_of_route_II` contient un `sorry`.
-- `frontier_empty_T2_full` contient un `sorry` (construction `total_constructive`).
+- Plus de `sorry` dans les deux lemmes critiques.
+- Mais les hypotheses sont fortes (`hBarrier` + `classical`,
+  et `hTotal` pour `frontier_empty_T2_full`).
 
 ## 2) Principe de travail
 

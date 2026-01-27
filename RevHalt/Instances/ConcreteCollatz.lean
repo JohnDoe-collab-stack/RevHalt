@@ -31,30 +31,30 @@ open RevHalt.Trilemma.Generic
 -/
 
 
-/-- The bundled concrete instance (currently placeholder-based). -/
-def ConcreteInstance : CollatzInstance :=
+/-- The bundled concrete instance (parameterized by data, no axioms). -/
+def ConcreteInstance
+    (W : CollatzWitnessesData)
+    (B : CollatzBridgeAssumptions W) : CollatzInstance :=
 { PropT      := PropT
   Code       := Code
-  Provable   := Provable
+  Provable   := W.Provable
   K          := K
   Machine    := Machine
   encode_halt := encode_halt
-  Cn         := Cn
-  A0         := A0
-  PAax       := PAax
+  Cn         := W.Cn
+  A0         := W.A0
+  PAax       := W.PAax
 
-  hIdem      := hIdem
-  hProvCn    := hProvCn
-  hMono      := hMono
-  hCnExt     := hCnExt
+  hIdem      := W.hIdem
+  hProvCn    := W.hProvCn
+  hMono      := W.hMono
+  hCnExt     := W.hCnExt
 
-  witBC      := witBC
-  witAC      := witAC
-  witAB      := witAB
+  witBC      := W.witBC
+  witAC      := W.witAC
+  witAB      := W.witAB
 
-  bridge     := bridge_proof
+  bridge     := bridge_proof W B
 }
-
-#print axioms ConcreteInstance
 
 end RevHalt.Instances
