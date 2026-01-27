@@ -217,6 +217,48 @@ lemma C_all_min
       (hSound _) hNeg hDec hBar
   simpa [C, RouteIIAt] using hNonempty
 
+-- ProvClosed is directed for Provable_min (constructive)
+lemma provClosedDirected_min : ProvClosedDirected Provable_min := by
+  intro U hProvClosed _hMono p hp
+  -- hp : Derive (⋃ U n) p
+  induction hp with
+  | ax hp' =>
+      exact hp'
+  | succ hp' ih =>
+      rename_i p
+      rcases ih with ⟨n, hn⟩
+      -- Use prov-closedness of U n to keep closure under succ
+      have hprov : Derive (U n) (p + 1) := Derive.succ (Derive.ax hn)
+      have hmem : p + 1 ∈ U n := hProvClosed n (p + 1) hprov
+      exact ⟨n, hmem⟩
+
+lemma derive_of_union
+    (U : ℕ → Set PropT) :
+    ∀ p, Derive {x | ∃ n, x ∈ U n} p → ∃ n, Derive (U n) p := by
+  intro p hp
+  induction hp with
+  | ax hp' =>
+      rcases hp' with ⟨n, hn⟩
+      exact ⟨n, Derive.ax hn⟩
+  | succ hp' ih =>
+      rcases ih with ⟨n, hn⟩
+      exact ⟨n, Derive.succ hn⟩
+
+-- Cn_min is omega-continuous (constructive)
+lemma cnOmegaContinuous_min : CnOmegaContinuous Cn_min := by
+  intro U _hMono
+  ext p
+  constructor
+  · intro hp
+    rcases derive_of_union U p hp with ⟨n, hn⟩
+    exact ⟨n, hn⟩
+  · intro hp
+    rcases hp with ⟨n, hn⟩
+    have hsubset : U n ⊆ {x | ∃ m, x ∈ U m} := by
+      intro x hx
+      exact ⟨n, hx⟩
+    exact derive_mono hsubset p hn
+
 lemma PA_at_all_min :
     ∀ n, PA_at (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (Cn := Cn_min) (A0 := A0_min) (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min n := by
@@ -277,6 +319,23 @@ structure CollatzWitnessesAssumptionsD where
   hPCdir : ProvClosedDirected Provable_min
   hω : CnOmegaContinuous Cn_min
 
+def CollatzWitnessesAssumptionsD_min
+    (SProvable_PA : PropT → Prop)
+    (SNot_PA : PropT → PropT)
+    (hSound_PA : ∀ Γ, Soundness Provable_min SProvable_PA Γ)
+    (hNegComp_PA : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
+    (hDec_PA : ∀ e, Decidable (SProvable_PA (encode_halt e)))
+    (hBarrier_PA : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False) :
+    CollatzWitnessesAssumptionsD :=
+  { SProvable_PA := SProvable_PA
+    SNot_PA := SNot_PA
+    hSound_PA := hSound_PA
+    hNegComp_PA := hNegComp_PA
+    hDec_PA := hDec_PA
+    hBarrier_PA := hBarrier_PA
+    hPCdir := provClosedDirected_min
+    hω := cnOmegaContinuous_min }
+
 def CollatzWitnessesAssumptionsD.toWitnesses (A : CollatzWitnessesAssumptionsD) :
     CollatzWitnessesAssumptions := by
   refine {
@@ -309,5 +368,9 @@ def CollatzWitnessesMinimal (A : CollatzWitnessesAssumptions) : CollatzWitnesses
     witAC := A.witAC
     witAB := A.witAB
   }
+
+def CollatzWitnessesData_of_AssumptionsD (A : CollatzWitnessesAssumptionsD) :
+    CollatzWitnessesData :=
+  CollatzWitnessesMinimal (A.toWitnesses)
 
 end RevHalt.Instances

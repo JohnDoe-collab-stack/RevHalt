@@ -57,4 +57,10 @@ def ConcreteInstance
   bridge     := bridge_proof W B
 }
 
+def ConcreteInstance_min
+    (A : CollatzWitnessesAssumptionsD)
+    (B : CollatzBridgeAssumptions (RevHalt.Instances.CollatzWitnessesData_of_AssumptionsD A)) :
+    CollatzInstance :=
+  ConcreteInstance (RevHalt.Instances.CollatzWitnessesData_of_AssumptionsD A) B
+
 end RevHalt.Instances

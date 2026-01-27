@@ -60,6 +60,44 @@ structure CollatzBridgeAssumptions (W : CollatzWitnessesData) where
   S_PA_absurd :
     ∀ p, W.SProvable_PA p → W.SProvable_PA (W.SNot_PA p) → W.SProvable_PA (0 : Nat)
 
+def CollatzBridgeAssumptions_of_AssumptionsD
+    (A : CollatzWitnessesAssumptionsD)
+    (encode_U : UCode → PropT)
+    (richness_bridge_axiom : ∀ {Γ : Set PropT},
+      S1Rel (CollatzWitnessesData_of_AssumptionsD A).Provable K Machine encode_halt Γ = ∅ →
+      S1Rel (CollatzWitnessesData_of_AssumptionsD A).Provable K UMachine encode_U Γ = ∅)
+    (hSound_U : ∀ Γ, Soundness (CollatzWitnessesData_of_AssumptionsD A).Provable
+      (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA Γ)
+    (hNegComp_U : NegativeComplete K UMachine encode_U
+      (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
+      (CollatzWitnessesData_of_AssumptionsD A).SNot_PA)
+    (hTotal_U : ∀ e, (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (encode_U e) ∨
+      (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
+        ((CollatzWitnessesData_of_AssumptionsD A).SNot_PA (encode_U e)))
+    (f_U : UCode → (Nat →. Nat))
+    (hf_U : Partrec (fun p : UCode × Nat => f_U p.1 p.2))
+    (hsemidec_U :
+      ∀ c, (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
+        ((CollatzWitnessesData_of_AssumptionsD A).SNot_PA (encode_U c)) ↔
+        (∃ x : Nat, x ∈ (f_U c) 0))
+    (S_PA_consistent : ¬ (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (0 : Nat))
+    (S_PA_absurd :
+      ∀ p, (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA p →
+        (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
+          ((CollatzWitnessesData_of_AssumptionsD A).SNot_PA p) →
+        (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (0 : Nat)) :
+    CollatzBridgeAssumptions (CollatzWitnessesData_of_AssumptionsD A) :=
+  { encode_U := encode_U
+    richness_bridge_axiom := richness_bridge_axiom
+    hSound_U := hSound_U
+    hNegComp_U := hNegComp_U
+    hTotal_U := hTotal_U
+    f_U := f_U
+    hf_U := hf_U
+    hsemidec_U := hsemidec_U
+    S_PA_consistent := S_PA_consistent
+    S_PA_absurd := S_PA_absurd }
+
 -- 4) The Proof
 
 theorem bridge_proof
