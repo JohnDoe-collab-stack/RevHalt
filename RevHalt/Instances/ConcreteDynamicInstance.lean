@@ -26,10 +26,15 @@ This eliminates the need to postulate the 3 cofinal witnesses separately.
 def CollatzWitnessesAssumptionsD_of_dynamic
     (SProvable_PA : PropT -> Prop)
     (SNot_PA : PropT -> PropT)
-    (hSound : forall G, Soundness Provable_min SProvable_PA G)
+    (hSound :
+      forall n : Nat,
+        Soundness Provable_min SProvable_PA
+          (omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
+            (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n)))
     (hNeg   : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
-    (hDec   : forall e, Decidable (SProvable_PA (encode_halt e)))
-    (hBar   : (forall e, Decidable (SProvable_PA (encode_halt e))) -> False) :
+    (hBar   :
+      (forall e : Code,
+        SProvable_PA (encode_halt e) ∨ SProvable_PA (SNot_PA (encode_halt e))) -> False) :
     CollatzWitnessesAssumptionsD :=
   let witBC : CofinalWitness
       (PairPA (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
@@ -39,7 +44,7 @@ def CollatzWitnessesAssumptionsD_of_dynamic
       (PairPA_all_min_BC
         (hPCdir := provClosedDirected_min) (hω := cnOmegaContinuous_min)
         (SProvable_PA := SProvable_PA) (SNot_PA := SNot_PA)
-        (hSound := hSound) (hNeg := hNeg) (hDec := hDec) (hBar := hBar))
+        (hSound := hSound) (hNeg := hNeg) (hBar := hBar))
   let witAC : CofinalWitness
       (PairPA (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
         (Cn := Cn_min) (A0 := A0_min) (hIdem := hIdem_min) (hProvCn := hProvCn_min)
@@ -47,7 +52,7 @@ def CollatzWitnessesAssumptionsD_of_dynamic
     witness_of_forall
       (PairPA_all_min_AC
         (SProvable_PA := SProvable_PA) (SNot_PA := SNot_PA)
-        (hSound := hSound) (hNeg := hNeg) (hDec := hDec) (hBar := hBar))
+        (hSound := hSound) (hNeg := hNeg) (hBar := hBar))
   let witAB : CofinalWitness
       (PairPA (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
         (Cn := Cn_min) (A0 := A0_min) (hIdem := hIdem_min) (hProvCn := hProvCn_min)
@@ -64,28 +69,31 @@ def CollatzWitnessesAssumptionsD_of_dynamic
 def ConcreteBridgeDynamicAssumptionsD_of_dynamic
     (SProvable_PA : PropT -> Prop)
     (SNot_PA : PropT -> PropT)
-    (hSound : forall G, Soundness Provable_min SProvable_PA G)
+    (hSound :
+      forall n : Nat,
+        Soundness Provable_min SProvable_PA
+          (omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
+            (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n)))
     (hNeg   : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
-    (hDec   : forall e, Decidable (SProvable_PA (encode_halt e)))
-    (hBar   : (forall e, Decidable (SProvable_PA (encode_halt e))) -> False) :
+    (hBar   :
+      (forall e : Code,
+        SProvable_PA (encode_halt e) ∨ SProvable_PA (SNot_PA (encode_halt e))) -> False) :
     ConcreteBridgeDynamicAssumptionsD :=
   let A := CollatzWitnessesAssumptionsD_of_dynamic
-    (SProvable_PA := SProvable_PA) (SNot_PA := SNot_PA) hSound hNeg hDec hBar
+    (SProvable_PA := SProvable_PA) (SNot_PA := SNot_PA) hSound hNeg hBar
   { A := A
     hSound := by
-      intro G
+      intro t
       -- W.Provable = Provable_min for the minimal package.
-      simpa [CollatzWitnessesData_of_AssumptionsD, CollatzWitnessesMinimal] using (hSound G)
+      simpa [CollatzWitnessesData_of_AssumptionsD, CollatzWitnessesMinimal] using (hSound t)
     hNegComp := by
       -- Same comment: the fields are definitional reductions to the minimal package.
       simpa [CollatzWitnessesData_of_AssumptionsD, CollatzWitnessesMinimal] using hNeg
-    hDec := by
-      intro e
-      simpa [CollatzWitnessesData_of_AssumptionsD, CollatzWitnessesMinimal] using (hDec e)
     hBarrier := by
-      intro hdecAll
-      -- `hdecAll` is definitional equal to the assumed decidability.
-      exact hBar (fun e => by simpa using (hdecAll e)) }
+      intro htotal
+      -- `htotal` is definitional equal to the assumed bivalence on the minimal package.
+      refine hBar (fun e => ?_)
+      simpa [CollatzWitnessesData_of_AssumptionsD, CollatzWitnessesMinimal] using (htotal e) }
 
 
 /-!
@@ -95,14 +103,19 @@ def ConcreteBridgeDynamicAssumptionsD_of_dynamic
 theorem collatz_conjecture_of_dynamic
     (SProvable_PA : PropT -> Prop)
     (SNot_PA : PropT -> PropT)
-    (hSound : forall G, Soundness Provable_min SProvable_PA G)
+    (hSound :
+      forall n : Nat,
+        Soundness Provable_min SProvable_PA
+          (omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
+            (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n)))
     (hNeg   : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
-    (hDec   : forall e, Decidable (SProvable_PA (encode_halt e)))
-    (hBar   : (forall e, Decidable (SProvable_PA (encode_halt e))) -> False) :
+    (hBar   :
+      (forall e : Code,
+        SProvable_PA (encode_halt e) ∨ SProvable_PA (SNot_PA (encode_halt e))) -> False) :
     forall seed : Nat, exists n, Collatz.iter n (seed + 1) = 1 := by
   let D :=
     ConcreteBridgeDynamicAssumptionsD_of_dynamic
-      (SProvable_PA := SProvable_PA) (SNot_PA := SNot_PA) hSound hNeg hDec hBar
+      (SProvable_PA := SProvable_PA) (SNot_PA := SNot_PA) hSound hNeg hBar
   exact RevHalt.Trilemma.App.collatz_conjecture_of_instance (I := ConcreteInstance_of_dynamic_D D)
 
 end RevHalt.Instances

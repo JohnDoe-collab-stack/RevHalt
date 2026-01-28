@@ -144,7 +144,9 @@ theorem FrontierRegeneration_of_RouteII_uniform
     {SProvable : PropT → Prop} {SNot : PropT → PropT}
     (hSound : ∀ Γ, Soundness Provable SProvable Γ)
     (hNeg   : NegativeComplete K Machine encode_halt SProvable SNot)
-    (hBar   : (∀ e, Decidable (SProvable (encode_halt e))) → False) :
+    (hBar   :
+      (∀ e : Code,
+        SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
     FrontierRegeneration' Provable K Machine encode_halt := by
   intro Γ _hPS
   have : (S1Rel Provable K Machine encode_halt Γ).Nonempty :=

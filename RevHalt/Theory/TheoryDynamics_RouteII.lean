@@ -59,6 +59,30 @@ theorem absorption_soundness
     absorption_sigma1 Provable K Machine encode_halt hEmpty e hRev
   exact hSound (encode_halt e) hProv
 
+/-!
+### Bivalence in S from empty frontier
+
+If `S1Rel(Γ) = ∅`, then any Rev-certified halting sentence must be provable
+relative to Γ, hence provable in `SProvable` by soundness. Negative completeness
+gives the other branch for the ¬Rev case.
+
+To package this as a plain `∨`, we case-split on `Rev0_K ...`, which is not
+decidable in general, hence the `classical` step.
+-/
+
+theorem bivalence_in_S
+    {Γ : Set PropT}
+    (hEmpty : S1Rel Provable K Machine encode_halt Γ = ∅)
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot) :
+    ∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e)) := by
+  intro e
+  classical
+  by_cases hRev : Rev0_K K (Machine e)
+  · exact Or.inl (absorption_soundness (Provable := Provable) (K := K) (Machine := Machine)
+      (encode_halt := encode_halt) (SProvable := SProvable) (Γ := Γ) hEmpty hSound e hRev)
+  · exact Or.inr (hNegComp e hRev)
+
 
 /-!
 ### Corollary: The frontier cannot be empty (without contradiction)
@@ -70,13 +94,17 @@ without needing `PostSplitter` propagation.
 
 theorem frontier_nonempty_of_route_II
     {Γ : Set PropT}
-    (_hSound : Soundness Provable SProvable Γ)
-    (_hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
-    (hDec : ∀ e, Decidable (SProvable (encode_halt e)))
-    (hBarrier : (∀ e, Decidable (SProvable (encode_halt e))) → False) :
+    (hSound : Soundness Provable SProvable Γ)
+    (hNegComp : NegativeComplete K Machine encode_halt SProvable SNot)
+    (hBarrier : (∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False) :
     (S1Rel Provable K Machine encode_halt Γ).Nonempty := by
-  -- The barrier hypothesis eliminates this case once decidability is provided.
-  exact (False.elim (hBarrier hDec))
+  by_contra hNE
+  rw [Set.not_nonempty_iff_eq_empty] at hNE
+  have hBiv :
+      ∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e)) :=
+    bivalence_in_S (Provable := Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
+      (SProvable := SProvable) (SNot := SNot) (Γ := Γ) hNE hSound hNegComp
+  exact hBarrier hBiv
 
 
 /--
@@ -86,12 +114,12 @@ theorem frontier_nonempty_of_route_II
 theorem RouteIIApplies_of_RouteIIHyp'
     (Cn : Set PropT → Set PropT) -- Added explicit Cn because RouteIIApplies probably needs it?
     {ωΓ : Set PropT}
-    (hHyp : RouteIIHyp' Provable K Machine encode_halt SProvable SNot ωΓ)
-    (hDec : ∀ e, Decidable (SProvable (encode_halt e))) :
+    (hHyp : RouteIIHyp' Provable K Machine encode_halt SProvable SNot ωΓ) :
     RouteIIApplies Provable K Machine encode_halt Cn ωΓ := by
   intro _hAdm
-  exact frontier_nonempty_of_route_II Provable K Machine encode_halt SProvable SNot
-    hHyp.soundness hHyp.negComplete hDec hHyp.barrier
+  exact frontier_nonempty_of_route_II (Provable := Provable) (K := K) (Machine := Machine)
+    (encode_halt := encode_halt) (SProvable := SProvable) (SNot := SNot) (Γ := ωΓ)
+    hHyp.soundness hHyp.negComplete hHyp.barrier
 
 
 end RouteII_Abstract

@@ -193,10 +193,13 @@ lemma B_all_min
 
 lemma C_all_min
     {SProvable_PA : PropT → Prop} {SNot_PA : PropT → PropT}
-    (hSound : ∀ Γ, Soundness Provable_min SProvable_PA Γ)
+    (hSound :
+      ∀ n : Nat,
+        Soundness Provable_min SProvable_PA
+          (omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
+            (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n)))
     (hNeg   : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
-    (hDec   : ∀ e, Decidable (SProvable_PA (encode_halt e)))
-    (hBar   : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False) :
+    (hBar   : (∀ e : Code, SProvable_PA (encode_halt e) ∨ SProvable_PA (SNot_PA (encode_halt e))) → False) :
     ∀ n, C (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (Cn := Cn_min) (A0 := A0_min) hIdem_min hProvCn_min n := by
   intro n
@@ -208,7 +211,7 @@ lemma C_all_min
       (encode_halt := encode_halt) (SProvable := SProvable_PA) (SNot := SNot_PA)
       (Γ := omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
         (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n))
-      (hSound _) hNeg hDec hBar
+      (hSound n) hNeg hBar
   simpa [C, RouteIIAt] using hNonempty
 
 -- ProvClosed is directed for Provable_min (constructive)
@@ -272,27 +275,33 @@ lemma PairPA_all_min_BC
     (hPCdir : ProvClosedDirected Provable_min)
     (hω : CnOmegaContinuous Cn_min)
     {SProvable_PA : PropT → Prop} {SNot_PA : PropT → PropT}
-    (hSound : ∀ Γ, Soundness Provable_min SProvable_PA Γ)
+    (hSound :
+      ∀ n : Nat,
+        Soundness Provable_min SProvable_PA
+          (omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
+            (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n)))
     (hNeg   : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
-    (hDec   : ∀ e, Decidable (SProvable_PA (encode_halt e)))
-    (hBar   : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False) :
+    (hBar   : (∀ e : Code, SProvable_PA (encode_halt e) ∨ SProvable_PA (SNot_PA (encode_halt e))) → False) :
     ∀ n, PairPA (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (Cn := Cn_min) (A0 := A0_min) (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.BC n := by
   intro n
   refine ⟨?_, PA_at_all_min n⟩
-  exact ⟨B_all_min hPCdir hω n, C_all_min hSound hNeg hDec hBar n⟩
+  exact ⟨B_all_min hPCdir hω n, C_all_min hSound hNeg hBar n⟩
 
 lemma PairPA_all_min_AC
     {SProvable_PA : PropT → Prop} {SNot_PA : PropT → PropT}
-    (hSound : ∀ Γ, Soundness Provable_min SProvable_PA Γ)
+    (hSound :
+      ∀ n : Nat,
+        Soundness Provable_min SProvable_PA
+          (omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
+            (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n)))
     (hNeg   : NegativeComplete K Machine encode_halt SProvable_PA SNot_PA)
-    (hDec   : ∀ e, Decidable (SProvable_PA (encode_halt e)))
-    (hBar   : (∀ e, Decidable (SProvable_PA (encode_halt e))) → False) :
+    (hBar   : (∀ e : Code, SProvable_PA (encode_halt e) ∨ SProvable_PA (SNot_PA (encode_halt e))) → False) :
     ∀ n, PairPA (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (Cn := Cn_min) (A0 := A0_min) (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.AC n := by
   intro n
   refine ⟨?_, PA_at_all_min n⟩
-  exact ⟨A_all_min n, C_all_min hSound hNeg hDec hBar n⟩
+  exact ⟨A_all_min n, C_all_min hSound hNeg hBar n⟩
 
 lemma PairPA_all_min_AB
     (hPCdir : ProvClosedDirected Provable_min)

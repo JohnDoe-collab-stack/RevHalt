@@ -27,19 +27,30 @@ No universal machine / compiler is used here.
 def ConcreteInstance_min_dynamic
     (A : CollatzWitnessesAssumptionsD)
     (hSound :
-      ∀ Γ,
+      ∀ t : Nat,
         Soundness
           (CollatzWitnessesData_of_AssumptionsD A).Provable
           (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
-          Γ)
+          (omegaΓ
+            (CollatzWitnessesData_of_AssumptionsD A).Provable K Machine encode_halt
+            (CollatzWitnessesData_of_AssumptionsD A).Cn
+            (CollatzWitnessesData_of_AssumptionsD A).hIdem
+            (CollatzWitnessesData_of_AssumptionsD A).hProvCn
+            (chainState
+              (CollatzWitnessesData_of_AssumptionsD A).Provable K Machine encode_halt
+              (CollatzWitnessesData_of_AssumptionsD A).Cn
+              (CollatzWitnessesData_of_AssumptionsD A).hIdem
+              (CollatzWitnessesData_of_AssumptionsD A).hProvCn
+              (CollatzWitnessesData_of_AssumptionsD A).A0 t)))
     (hNegComp :
       NegativeComplete K Machine encode_halt
         (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
         (CollatzWitnessesData_of_AssumptionsD A).SNot_PA)
-    (hDec :
-      ∀ e, Decidable ((CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (encode_halt e)))
     (hBarrier :
-      (∀ e, Decidable ((CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (encode_halt e))) → False) :
+      (∀ e : Code,
+        (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (encode_halt e) ∨
+        (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
+          ((CollatzWitnessesData_of_AssumptionsD A).SNot_PA (encode_halt e))) → False) :
     CollatzInstance :=
   let W := CollatzWitnessesData_of_AssumptionsD A
   { PropT       := PropT
@@ -58,28 +69,38 @@ def ConcreteInstance_min_dynamic
     witBC       := W.witBC
     witAC       := W.witAC
     witAB       := W.witAB
-    bridge      := bridge_proof_dynamic W hSound hNegComp hDec hBarrier }
+    bridge      := bridge_proof_dynamic W hSound hNegComp hBarrier }
 
 /-- Packaged dynamic assumptions: enough to build a concrete CollatzInstance. -/
 structure ConcreteBridgeDynamicAssumptionsD where
   A : CollatzWitnessesAssumptionsD
   hSound :
-    ∀ Γ,
+    ∀ t : Nat,
       Soundness
         (CollatzWitnessesData_of_AssumptionsD A).Provable
         (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
-        Γ
+        (omegaΓ
+          (CollatzWitnessesData_of_AssumptionsD A).Provable K Machine encode_halt
+          (CollatzWitnessesData_of_AssumptionsD A).Cn
+          (CollatzWitnessesData_of_AssumptionsD A).hIdem
+          (CollatzWitnessesData_of_AssumptionsD A).hProvCn
+          (chainState
+            (CollatzWitnessesData_of_AssumptionsD A).Provable K Machine encode_halt
+            (CollatzWitnessesData_of_AssumptionsD A).Cn
+            (CollatzWitnessesData_of_AssumptionsD A).hIdem
+            (CollatzWitnessesData_of_AssumptionsD A).hProvCn
+            (CollatzWitnessesData_of_AssumptionsD A).A0 t))
   hNegComp :
     NegativeComplete K Machine encode_halt
       (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
       (CollatzWitnessesData_of_AssumptionsD A).SNot_PA
-  hDec :
-    ∀ e, Decidable ((CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (encode_halt e))
   hBarrier :
-    (∀ e, Decidable ((CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (encode_halt e))) → False
+    (∀ e : Code,
+      (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (encode_halt e) ∨
+      (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA
+        ((CollatzWitnessesData_of_AssumptionsD A).SNot_PA (encode_halt e))) → False
 
 def ConcreteInstance_of_dynamic_D (D : ConcreteBridgeDynamicAssumptionsD) : CollatzInstance :=
-  ConcreteInstance_min_dynamic D.A D.hSound D.hNegComp D.hDec D.hBarrier
+  ConcreteInstance_min_dynamic D.A D.hSound D.hNegComp D.hBarrier
 
 end RevHalt.Instances
-

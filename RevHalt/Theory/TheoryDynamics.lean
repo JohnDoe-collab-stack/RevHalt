@@ -1240,7 +1240,9 @@ def RouteIIAt (ωΓ : Set PropT) : Prop :=
 structure RouteIIHyp' (SProvable : PropT → Prop) (SNot : PropT → PropT) (ωΓ : Set PropT) : Prop where
   soundness : ∀ p, Provable ωΓ p → SProvable p
   negComplete : ∀ e : Code, ¬ Rev0_K K (Machine e) → SProvable (SNot (encode_halt e))
-  barrier : (∀ e, Decidable (SProvable (encode_halt e))) → False
+  -- Barrier: the system cannot uniformly decide halting predicates.
+  -- We express this as impossibility of total bivalence on the halting encoding.
+  barrier : (∀ e, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False
 
 /--
   **Route II applies to admissible states**: The key coupling.

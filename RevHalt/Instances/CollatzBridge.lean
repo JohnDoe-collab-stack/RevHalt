@@ -170,10 +170,14 @@ theorem bridge_proof
 
 theorem bridge_proof_dynamic
     (W : CollatzWitnessesData)
-    (hSound : ∀ Γ, Soundness W.Provable W.SProvable_PA Γ)
+    (hSound :
+      ∀ t : Nat,
+        Soundness W.Provable W.SProvable_PA
+          (omegaΓ W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn
+            (chainState W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn W.A0 t)))
     (hNegComp : NegativeComplete K Machine encode_halt W.SProvable_PA W.SNot_PA)
-    (hDec : ∀ e, Decidable (W.SProvable_PA (encode_halt e)))
-    (hBarrier : (∀ e, Decidable (W.SProvable_PA (encode_halt e))) → False) :
+    (hBarrier :
+      (∀ e : Code, W.SProvable_PA (encode_halt e) ∨ W.SProvable_PA (W.SNot_PA (encode_halt e))) → False) :
     PA_implies_RouteIIAt
       (Provable := W.Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (Cn := W.Cn) (A0 := W.A0) (hIdem := W.hIdem) (hProvCn := W.hProvCn) W.PAax := by
@@ -185,9 +189,8 @@ theorem bridge_proof_dynamic
     apply frontier_nonempty_of_route_II
       (Provable := W.Provable) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (SProvable := W.SProvable_PA) (SNot := W.SNot_PA)
-    · exact hSound _
+    · exact hSound t
     · exact hNegComp
-    · exact hDec
     · exact hBarrier
   simpa [RouteIIAt] using hNonempty
 
