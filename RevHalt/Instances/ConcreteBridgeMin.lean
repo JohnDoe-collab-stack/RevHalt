@@ -27,7 +27,7 @@ def ConcreteInstance_min_with_bridge
     (encode_U : UCode → PropT)
     (compile : UCode → Code)
     (hEncode : ∀ c, encode_U c = encode_halt (compile c))
-    (hSim : ∀ c, Rev0_K K (UMachine c) → Rev0_K K (Machine (compile c)))
+    (hUpEqv : ∀ c, UpEqv (UMachine c) (Machine (compile c)))
     (hSound_U : ∀ Γ, Soundness (CollatzWitnessesData_of_AssumptionsD A).Provable
       (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA Γ)
     (hNegComp_U : NegativeComplete K UMachine encode_U
@@ -51,7 +51,7 @@ def ConcreteInstance_min_with_bridge
     CollatzInstance :=
   ConcreteInstance (CollatzWitnessesData_of_AssumptionsD A)
     (CollatzBridgeAssumptions_of_AssumptionsD A
-      encode_U compile hEncode hSim
+      encode_U compile hEncode hUpEqv
       hSound_U hNegComp_U hTotal_U f_U hf_U hsemidec_U
       S_PA_consistent S_PA_absurd)
 
@@ -63,7 +63,7 @@ structure ConcreteBridgeAssumptionsD where
   encode_U : UCode → PropT
   compile : UCode → Code
   hEncode : ∀ c, encode_U c = encode_halt (compile c)
-  hSim : ∀ c, Rev0_K K (UMachine c) → Rev0_K K (Machine (compile c))
+  hUpEqv : ∀ c, UpEqv (UMachine c) (Machine (compile c))
   hSound_U : ∀ Γ, Soundness (CollatzWitnessesData_of_AssumptionsD A).Provable
     (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA Γ
   hNegComp_U : NegativeComplete K UMachine encode_U
@@ -86,7 +86,7 @@ structure ConcreteBridgeAssumptionsD where
       (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (0 : Nat)
 
 def ConcreteInstance_of_D (D : ConcreteBridgeAssumptionsD) : CollatzInstance :=
-  ConcreteInstance_min_with_bridge D.A D.encode_U D.compile D.hEncode D.hSim
+  ConcreteInstance_min_with_bridge D.A D.encode_U D.compile D.hEncode D.hUpEqv
     D.hSound_U D.hNegComp_U D.hTotal_U D.f_U D.hf_U D.hsemidec_U
     D.S_PA_consistent D.S_PA_absurd
 

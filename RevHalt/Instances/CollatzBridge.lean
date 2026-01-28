@@ -31,11 +31,14 @@ structure CollatzBridgeAssumptions (W : CollatzWitnessesData) where
   -- Encoding of Universal code into PropT
   encode_U : UCode → PropT
 
-  -- Concrete reduction UMachine -> Collatz machine (Rev-side only).
-  -- We keep this minimal: it is exactly what is needed to transport membership in S1Rel.
+  -- Concrete reduction UMachine -> Collatz machine, stated at the Rev observation layer.
+  --
+  -- The project’s “Rev” principle only allows using the `up`-geometry of traces:
+  -- if two traces are observationally equivalent (UpEqv), then `Rev0_K` cannot
+  -- distinguish them.
   compile : UCode → Code
   hEncode : ∀ c, encode_U c = encode_halt (compile c)
-  hSim : ∀ c, Rev0_K K (UMachine c) → Rev0_K K (Machine (compile c))
+  hUpEqv : ∀ c, UpEqv (UMachine c) (Machine (compile c))
 
   -- Universal Machine hypotheses (Route II / T2)
   hSound_U : ∀ Γ, Soundness W.Provable W.SProvable_PA Γ
@@ -56,9 +59,8 @@ def CollatzBridgeAssumptions_of_AssumptionsD
     (encode_U : UCode → PropT)
     (compile : UCode → Code)
     (hEncode : ∀ c, encode_U c = encode_halt (compile c))
-    (hSim :
-      ∀ c, Rev0_K K (UMachine c) →
-        Rev0_K K (Machine (compile c)))
+    (hUpEqv :
+      ∀ c, UpEqv (UMachine c) (Machine (compile c)))
     (hSound_U : ∀ Γ, Soundness (CollatzWitnessesData_of_AssumptionsD A).Provable
       (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA Γ)
     (hNegComp_U : NegativeComplete K UMachine encode_U
@@ -83,7 +85,7 @@ def CollatzBridgeAssumptions_of_AssumptionsD
   { encode_U := encode_U
     compile := compile
     hEncode := hEncode
-    hSim := hSim
+    hUpEqv := hUpEqv
     hSound_U := hSound_U
     hNegComp_U := hNegComp_U
     hTotal_U := hTotal_U
@@ -116,7 +118,12 @@ theorem bridge_proof
       apply Set.eq_empty_iff_forall_notMem.mpr
       intro p hp
       obtain ⟨c, hpEq, hRev, hNprov⟩ := hp
-      have hRev' : Rev0_K K (Machine (B.compile c)) := B.hSim c hRev
+      have hRev' : Rev0_K K (Machine (B.compile c)) := by
+        -- Transport the Rev verdict along the UpEqv simulation.
+        have hIff :
+            Rev0_K K (UMachine c) ↔ Rev0_K K (Machine (B.compile c)) :=
+          revK_congr_of_UpEqv (K := K) DetectsUpFixed_StandardKit (B.hUpEqv c)
+        exact hIff.mp hRev
       have hNprov' : ¬ W.Provable
           (omegaΓ W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn
             (chainState W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn W.A0 t))
@@ -183,23 +190,5 @@ theorem bridge_proof_dynamic
     · exact hDec
     · exact hBarrier
   simpa [RouteIIAt] using hNonempty
-
--- 5) Trivial compile helper (constructive, not universal)
-def compile_trivial : UCode → Code := fun _ => 1
-
-def encode_U_trivial : UCode → PropT := fun _ => encode_halt 1
-
-lemma encode_U_trivial_eq (c : UCode) :
-    encode_U_trivial c = encode_halt (compile_trivial c) := by
-  rfl
-
-lemma sim_trivial : ∀ c, Rev0_K K (UMachine c) → Rev0_K K (Machine (compile_trivial c)) := by
-  intro _ _
-  -- Collatz halts on 1, hence Rev0_K is true.
-  have hHalts : Halts (Machine 1) := by
-    refine ⟨1, ?_⟩
-    refine ⟨0, Nat.zero_lt_succ 0, ?_⟩
-    simp
-  exact (revK_iff_halts K DetectsUpFixed_StandardKit (Machine 1)).2 hHalts
 
 end RevHalt.Instances
