@@ -456,3 +456,29 @@ La blackbox structurelle des LLM vient du fait que l’objet réel est un diagra
 * Scheduling : choix d’une chaîne cofinale ; seul endroit où un ordinal intervient.
 
 ---
+
+### Proposition (critère de “pas de blackbox”)
+
+Soit $\mathcal H$ la (2-)catégorie des histoires et $S:\mathcal H\to\mathcal X$ la sémantique (exécution comme diagramme).
+Soit $q:\mathcal H\to Q$ une projection/résumé (quotient par commutations, “déjà-vu”, compression, etc.).
+
+On dit que **le résumé est fidèle** si et seulement s’il existe $\widetilde S:Q\to\mathcal X$ tel que
+$$
+S \cong \widetilde S\circ q
+$$
+(isomorphisme naturel : la sémantique ne dépend que du résumé).
+
+**Alors :**
+
+* Si $S$ factorise par $q$, il n’y a **pas** de blackbox structurelle relativement à ce résumé : deux histoires $h_1, h_2$ avec $q(h_1)=q(h_2)$ induisent le même comportement (même $S(h)$ à isomorphisme près).
+* Si $S$ **ne** factorise pas par $q$, la blackbox est **structurelle** : il existe $h_1, h_2$ tels que $q(h_1)=q(h_2)$ mais $S(h_1)\not\cong S(h_2)$. Autrement dit, le comportement dépend du **chemin** dans $\mathcal H$, pas seulement du résumé.
+
+---
+
+### Corollaire (pour “union → continuité → point fixe”)
+
+Prends $q=\mathrm{Occ}$ ou $q=\mathrm{up}$ (projection cumulative : “apparu au moins une fois”).
+Si la dynamique réelle ne factorise pas par ce $q$ (cas typique des LLM à modes/sauts), alors toute stabilisation obtenue par “continuité + point fixe” concerne **$\widetilde S$ sur le résumé** (la projection cumulative), et non la dynamique $S$ sur $\mathcal H$.
+Donc “union → continuité → fixpoint” produit une **stabilité de projection**, pas une stabilité du milieu.
+
+---
