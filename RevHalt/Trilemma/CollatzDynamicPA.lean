@@ -90,9 +90,9 @@ lemma iter_two_pow_mul (k m : Nat) :
       have hmod : (2 ^ (k + 1) * m) % 2 = 0 := by
         -- `2^(k+1)*m = 2*(2^k*m)` is visibly a multiple of 2.
         have : 2 ^ (k + 1) * m = 2 * (2 ^ k * m) := by
-          simp [Nat.pow_succ, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+          simp [Nat.pow_succ, Nat.mul_left_comm, Nat.mul_comm]
         -- Rewrite and let `simp` close the mod-2 goal.
-        simpa [this]
+        simp [this]
       have hstep : step (2 ^ (k + 1) * m) = (2 ^ (k + 1) * m) / 2 :=
         step_of_mod2_eq_zero hmod
       have hdiv : (2 ^ (k + 1) * m) / 2 = 2 ^ k * m := by
@@ -100,7 +100,7 @@ lemma iter_two_pow_mul (k m : Nat) :
         calc
           (2 ^ (k + 1) * m) / 2
               = ((2 ^ k * m) * 2) / 2 := by
-                  simp [Nat.pow_succ, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+                  simp [Nat.pow_succ, Nat.mul_left_comm, Nat.mul_comm]
           _ = 2 ^ k * m := by
                   simp
       -- One step reduces to the k-step claim.
@@ -204,7 +204,7 @@ theorem collatz_reaches_one_of_AB_indices_bounded
   cases hx0_cases with
   | inl hx1 =>
       refine ⟨B, ?_⟩
-      simpa [x0, hx1]
+      simp [x0, hx1]
   | inr _ =>
       -- Decompose x0 as `2^k * m` with m odd.
       rcases Nat.exists_eq_two_pow_mul_odd hx0_ne_zero with ⟨k, m, hmOdd, hx0⟩
@@ -218,7 +218,7 @@ theorem collatz_reaches_one_of_AB_indices_bounded
                 = Collatz.iter k x0 := by
                     simpa [x0] using (Collatz.iter_add B k seed)
             _ = Collatz.iter k (2 ^ k * m) := by
-                    simpa [hx0]
+                    simp [hx0]
             _ = m := by
                     simpa using (Collatz.iter_two_pow_mul k m)
         -- Show sigmaOf seed (B+k) = AB, using oddness and `m ≠ 1`.
@@ -240,7 +240,7 @@ theorem collatz_reaches_one_of_AB_indices_bounded
             = Collatz.iter k x0 := by
                 simpa [x0] using (Collatz.iter_add B k seed)
         _ = Collatz.iter k (2 ^ k) := by
-                simpa [hx0_pow]
+                simp [hx0_pow]
         _ = 1 := by
                 simpa using (Collatz.iter_two_pow k)
 
