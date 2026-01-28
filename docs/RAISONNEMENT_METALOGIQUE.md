@@ -1,3 +1,9 @@
+Résumé — Unicité de l’arrêt sous géométrie d’observation (principe Rev)
+
+Nous considérons les exécutions comme des traces T : ℕ → Prop et introduisons une géométrie d’observation via un opérateur de clôture up : Trace → Trace, défini par up T n := ∃ k ≤ n, T k. Les traces canoniques (ou closes) sont les points fixes de up, et l’équivalence d’observation est donnée par UpEqv T T' := ∀ n, up T n ↔ up T' n. Un Kit K est un observateur K.Proj : Trace → Prop dont on ne requiert la correction que localement, sur les seules traces canoniques : pour toute trace close S, K.Proj S ↔ ∃ n, S n.
+
+La contribution centrale n’est pas la clôture en elle-même, mais le principe d’unicité qu’elle induit dès qu’on impose une discipline d’observation : parmi les prédicats globaux P : Trace → Prop qui (i) sont invariants par UpEqv (ne distinguent que ce que up distingue) et (ii) coïncident avec l’existence sur les traces closes, il existe un unique candidat. Ce candidat est extensionnellement l’arrêt standard Halts. L’opérateur Rev(K, T) := K.Proj (up T) réalise alors le mécanisme canonique d’extension : à partir d’un observateur seulement spécifié sur les canoniques, Rev fabrique le seul verdict global compatible avec la géométrie d’observation. Ainsi, Rev ne décide pas l’arrêt ; il le capture en le rendant inévitable dès que l’on fixe ce que l’observation a le droit de distinguer.
+
 # Raisonnement metalogique (clarifie, autocontenu, et reference)
 
 Ce document synthétise le raisonnement **metalogique** et son **raccord Lean**.
@@ -88,17 +94,19 @@ a tous les temps ulterieurs.
 **Etape 9 — Contradiction finale.**  
 Pour un `k` tel que `sigma k = AB`, on pose `t = times k`.  
 Alors :
-  - par Etape 8, `PA_at t`;
-  - par le **bridge**, `RouteIIAt` a `t`;
-  - par Etape 5 (mode AB), `¬ RouteIIAt` a `t`.  
+
+- par Etape 8, `PA_at t`;
+- par le **bridge**, `RouteIIAt` a `t`;
+- par Etape 5 (mode AB), `¬ RouteIIAt` a `t`.  
 Contradiction, donc **EventuallyNotAB**.
 
 **Etape 10 — Raccord metalogique.**  
 La couche transfinie (`TheoryDynamics_Transfinite.lean`) donne un
 schema de **contradiction structurelle** entre :
-  - `Absorbable` (A),  
-  - `OmegaAdmissible` (B),  
-  - `RouteIIAt` (C).  
+
+- `Absorbable` (A),  
+- `OmegaAdmissible` (B),  
+- `RouteIIAt` (C).  
 C'est exactement le trilemme encode par A/B/C.  
 Ainsi, la couche metalogique **alimente** le trilemme local, et
 la chaine Etapes 1–9 propage cette contrainte vers l'extinction generique.

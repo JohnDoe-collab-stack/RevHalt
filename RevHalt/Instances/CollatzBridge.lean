@@ -31,11 +31,11 @@ structure CollatzBridgeAssumptions (W : CollatzWitnessesData) where
   -- Encoding of Universal code into PropT
   encode_U : UCode → PropT
 
-  -- Richness Bridge:
-  -- Empty Collatz frontier => Empty Universal frontier (same Γ)
-  richness_bridge_axiom {Γ : Set PropT} :
-    S1Rel W.Provable K Machine encode_halt Γ = ∅ →
-    S1Rel W.Provable K UMachine encode_U Γ = ∅
+  -- Concrete reduction UMachine -> Collatz machine (Rev-side only).
+  -- We keep this minimal: it is exactly what is needed to transport membership in S1Rel.
+  compile : UCode → Code
+  hEncode : ∀ c, encode_U c = encode_halt (compile c)
+  hSim : ∀ c, Rev0_K K (UMachine c) → Rev0_K K (Machine (compile c))
 
   -- Universal Machine hypotheses (Route II / T2)
   hSound_U : ∀ Γ, Soundness W.Provable W.SProvable_PA Γ
@@ -81,26 +81,9 @@ def CollatzBridgeAssumptions_of_AssumptionsD
         (CollatzWitnessesData_of_AssumptionsD A).SProvable_PA (0 : Nat)) :
     CollatzBridgeAssumptions (CollatzWitnessesData_of_AssumptionsD A) :=
   { encode_U := encode_U
-    richness_bridge_axiom := by
-      intro Γ hEmpty
-      -- Show emptiness of U frontier from Collatz frontier emptiness.
-      apply Set.eq_empty_iff_forall_not_mem.mpr
-      intro p hp
-      obtain ⟨c, hpEq, hRev, hNprov⟩ := hp
-      have hRev' : Rev0_K K (Machine (compile c)) := hSim c hRev
-      have hNprov' : ¬ (CollatzWitnessesData_of_AssumptionsD A).Provable Γ
-          (encode_halt (compile c)) := by
-        simpa [hEncode c] using hNprov
-      have hMem :
-          encode_halt (compile c) ∈
-            S1Rel (CollatzWitnessesData_of_AssumptionsD A).Provable K Machine encode_halt Γ :=
-        mem_S1Rel_of_witness (Provable := (CollatzWitnessesData_of_AssumptionsD A).Provable)
-          (K := K) (Machine := Machine) (encode_halt := encode_halt)
-          Γ (compile c) hRev' hNprov'
-      -- Contradiction with emptiness
-      have : False := by
-        simpa [hEmpty] using hMem
-      exact this.elim
+    compile := compile
+    hEncode := hEncode
+    hSim := hSim
     hSound_U := hSound_U
     hNegComp_U := hNegComp_U
     hTotal_U := hTotal_U
@@ -123,12 +106,33 @@ theorem bridge_proof
   by_contra hEmptyCollatz
   rw [Set.not_nonempty_iff_eq_empty] at hEmptyCollatz
 
-  -- 1) Use Bridge to switch to Universal
+  -- 1) Use the concrete reduction to switch emptiness from Collatz to Universal.
   have hEmptyUniversal :
       S1Rel W.Provable K UMachine B.encode_U
         (omegaΓ W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn
           (chainState W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn W.A0 t)) = ∅ :=
-    B.richness_bridge_axiom hEmptyCollatz
+    by
+      -- Show emptiness of U frontier from Collatz frontier emptiness (same Γ).
+      apply Set.eq_empty_iff_forall_notMem.mpr
+      intro p hp
+      obtain ⟨c, hpEq, hRev, hNprov⟩ := hp
+      have hRev' : Rev0_K K (Machine (B.compile c)) := B.hSim c hRev
+      have hNprov' : ¬ W.Provable
+          (omegaΓ W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn
+            (chainState W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn W.A0 t))
+          (encode_halt (B.compile c)) := by
+        simpa [B.hEncode c] using hNprov
+      have hMem :
+          encode_halt (B.compile c) ∈
+            S1Rel W.Provable K Machine encode_halt
+              (omegaΓ W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn
+                (chainState W.Provable K Machine encode_halt W.Cn W.hIdem W.hProvCn W.A0 t)) :=
+        mem_S1Rel_of_witness (Provable := W.Provable)
+          (K := K) (Machine := Machine) (encode_halt := encode_halt)
+          _ (B.compile c) hRev' hNprov'
+      have : False := by
+        simpa [hEmptyCollatz] using hMem
+      exact this.elim
 
   -- 2) Use T2 on Universal to derive False
   let S_PA : ImpossibleSystem PropT := {
@@ -195,7 +199,7 @@ lemma sim_trivial : ∀ c, Rev0_K K (UMachine c) → Rev0_K K (Machine (compile_
   have hHalts : Halts (Machine 1) := by
     refine ⟨1, ?_⟩
     refine ⟨0, Nat.zero_lt_succ 0, ?_⟩
-    simp [Machine, CollatzStep]
+    simp
   exact (revK_iff_halts K DetectsUpFixed_StandardKit (Machine 1)).2 hHalts
 
 end RevHalt.Instances
