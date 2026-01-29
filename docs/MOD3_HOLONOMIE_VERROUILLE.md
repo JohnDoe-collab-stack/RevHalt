@@ -659,3 +659,87 @@ Localement il peut y avoir du flip, mais sur le futur cofinal réellement réali
 | **(SR1)** Structurel | $[\mathrm{Flip}_3] = 0$ | Trivialisable par jauge |
 | **(SR1-C)** Canonique | Forme normale existe | Jauge canonique $g$ fournie |
 | **(SR1-∞)** Asymptotique | Restriction cofinale triviale | Stabilisation dynamique |
+
+---
+
+# PARTIE III — Théorèmes Consolidés et Théorème de Non-Réduction
+
+---
+
+## 30. Théorème A — Flip = holonomie primitive
+
+**Énoncé.** Sous (P3) et (INV3), pour toute 2-cellule $\alpha : p \Rightarrow q$ basée en $h$ :
+$$\mathrm{Hol}_3(\alpha) \cap (\mathrm{Prim}_3(h) \times \mathrm{Prim}_3(h)) = \{(u, \mathrm{Mono}_3(\alpha)(u)) \mid u \in \mathrm{Prim}_3(h)\}$$
+
+et $\mathrm{Mono}_3(\alpha) \in \{\mathrm{id}, \tau_h\}$.
+
+**Vérification** :
+
+1. (INV3) → $T_p, T_q$ bijectifs sur $\mathrm{Prim}_3$ → $T_q^{-1} T_p \in \mathrm{Aut}(\mathrm{Prim}_3(h))$
+2. $|\mathrm{Prim}_3(h)| = 2$ → $\mathrm{Aut} = \{\mathrm{id}, \tau_h\}$ → alternative forcée
+3. La restriction d'holonomie = graphe de $T_q^{-1} T_p$. $\square$
+
+> **Point clé** : le contenu n'est pas "il existe une transposition". C'est que la dépendance au chemin **se rigidifie** sur un bit et devient **composable** via les 2-cellules.
+
+---
+
+## 31. Théorème B — Additivité 2D : le flip est un cocycle $\mathbb{Z}/2$
+
+**Énoncé.** Pour toute composition définie $\beta \circ \alpha$ :
+$$\mathrm{Flip}_3(\beta \circ \alpha) = \mathrm{Flip}_3(\beta) \oplus \mathrm{Flip}_3(\alpha)$$
+
+> **Lecture** : comparer deux totals revient à suivre une chaîne de 2-cellules ; la différence cachée "mod 3" est la **parité** des flips.
+
+---
+
+## 32. Théorème C — Auto-régulation ⟺ trivialisation du cocycle
+
+**Définition.** Le système est **auto-régulé** si le flip est un cobord : $\exists g$ tel que :
+$$\mathrm{Flip}_3(\alpha) = g(q) \oplus g(p) \quad \forall \alpha : p \Rightarrow q$$
+
+**Critère exact.** Auto-régulation ⟺ $\forall \text{ boucle } \ell, \mathrm{Flip}_3(\ell) = 0$
+
+**Conséquence.** Quand auto-régulation tient, on peut construire un état réparé qui **tue l'holonomie** sur $\mathrm{Prim}_3$.
+
+---
+
+## 33. Ce qui est réellement nouveau (invisible au 1D)
+
+| Niveau | Ce qu'il voit |
+|--------|---------------|
+| **Mod 3 (1D)** | Seulement $F_3(h) \in V_3$ sur les objets |
+| **Flip (2D)** | $\mathrm{Flip}_3(\alpha)$ sur les 2-cellules |
+
+Le flip est une **variable structurelle** qui mesure *comment l'ordre (chemin) agit sur l'invisible*. Ce n'est pas un fait arithmétique de plus — c'est une donnée **2D intrinsèque**.
+
+---
+
+## 34. Théorème de Non-Réduction (le résultat méta)
+
+**Énoncé.** Il n'existe pas de résumé 1D $q$ fidèle à $O_3$ tel que $\mathrm{Flip}_3$ factorise par $q$.
+
+**Formellement** : il existe une 2-cellule $\alpha : p \Rightarrow q$ telle que :
+
+- Les données 1D "mod 3" sont identiques sur $p$ et $q$
+- Mais $\mathrm{Flip}_3(\alpha) = 1$
+
+$$\mathrm{Flip}_3 \text{ ne factorise pas par } q_{O_3}$$
+
+**Conséquence** : L'auto-régulation non triviale est un phénomène **2D intrinsèque**, donc **invisible** à la seule arithmétique mod 3.
+
+---
+
+## 35. Pourquoi l'indépendance (Gödel) n'est pas le bon concept ici
+
+| Situation | Bon concept |
+|-----------|-------------|
+| Flip inexprimable dans langage 1D | **Hors langage** (pas de question d'indépendance) |
+| Flip exprimable mais non reconstructible | **Non-factorisation** (plus direct que Gödel) |
+
+Le théorème de non-réduction est **plus fort** qu'une indépendance logique : il dit que **structurellement**, aucune fonction 1D ne peut reconstruire le flip 2D.
+
+---
+
+## Résumé final (une phrase)
+
+> À résolution 3, la dynamique porte un **bit primitif** dont la dépendance au chemin se manifeste comme un **flip** attaché aux **2-cellules** ; ce flip est un cocycle $\mathbb{Z}/2$, et l'**auto-régulation** est exactement sa trivialisation — structure 2D **invisible** au seul "mod 3" 1D, et **non-réductible** par construction.
