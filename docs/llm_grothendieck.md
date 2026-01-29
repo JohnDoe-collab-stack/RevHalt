@@ -763,3 +763,110 @@ Donc $\mathrm{Hol}(p, q)$ contient des paires $(x, x')$ avec $x \neq x'$ (diffé
 ## 14.7. Phrase de clôture
 
 > **"mod $n$" est un cas-limite de "résolution d'observation".** Le contenu structurel n'est pas le quotient lui-même, mais la géométrie qu'il induit : fibres d'ambiguïté et holonomie des chemins. C'est cette interaction (observable × dépendance au chemin) qui explique à la fois les invariants finitaires (tailles de fibres) et les résidus non canoniques (holonomie).
+
+---
+
+# Encadré — "Extension de Grothendieck" : du régime étale (monodromie) au régime dynamique (holonomie relative)
+
+## 15.0. Énoncé-slogan
+
+> Le formalisme "histoires–observables" contient la **monodromie grothendieckienne** comme cas particulier, et l'**étend** à des dynamiques non inversibles (outils, budgets, modes, effets de bord) via une **holonomie relationnelle** relative à une observable.
+
+---
+
+## 15.1. Données (rappel)
+
+On dispose de :
+
+| Donnée | Description |
+|--------|-------------|
+| $\mathcal{H}_2$ | 2-géométrie d'histoires (extensions + 2-cellules de commutation) |
+| $S : \mathcal{H}_2 \to \mathcal{X}$ | Sémantique |
+| $O : \mathcal{X} \to V$ | Observable |
+| $\mathrm{Fibre}(h)$ | Micro-états compatibles avec $O(S(h))$ |
+| $T_p$ | Transport le long du chemin $p$ |
+| $\mathrm{Hol}(p, q)$ | Holonomie associée à une 2-cellule $p \Rightarrow q$ |
+
+---
+
+## 15.2. Cas Grothendieck (régime "étale/inversible")
+
+On dit qu'on est dans le **régime grothendieckien** si les trois conditions suivantes sont satisfaites.
+
+### (G1) Transports inversibles sur fibres
+
+Pour tout chemin $p$ et toute base $h$, le transport $T_p : \mathrm{Fibre}(h) \to \mathrm{Fibre}(k)$ (où $p : h \to k$) est une **bijection**.
+
+### (G2) Les 2-cellules engendrent des déformations "sans perte"
+
+Les 2-cellules $W$ qu'on déclare neutres (commutations admissibles) sont suffisantes pour identifier les déformations pertinentes de scheduling (ce qui joue le rôle des "homotopies" admissibles).
+
+### (G3) Observation localement constante le long des déformations
+
+Sur une 2-cellule $p \Rightarrow q$, l'observable est compatible (au niveau des objets) : les deux chemins aboutissent au même niveau observable, et ce qui reste à comparer est l'action sur la fibre.
+
+---
+
+**Alors**, pour tout carré $p \Rightarrow q$ basé en $h$, l'holonomie se rigidifie en une vraie **monodromie** :
+
+$\mathrm{Hol}(p, q)$ est le graphe de l'automorphisme unique :
+$$
+\mathrm{Mono}(p, q) := T_q^{-1} \circ T_p \in \mathrm{Aut}(\mathrm{Fibre}(h)).
+$$
+
+En particulier, les déformations admissibles (chemins modulo $W$) **agissent sur la fibre** : on retrouve une représentation "boucles → automorphismes", i.e. l'archétype de la monodromie à la Grothendieck.
+
+> **Lecture.** Dans ce régime, $\mathrm{Hol}$ n'ajoute rien "contre Grothendieck" : il le **reproduit exactement** (monodromie = action groupoïdale sur la fibre).
+
+---
+
+## 15.3. Extension (régime dynamique : non inversible, relationnel, agentique)
+
+Le cadre **étend Grothendieck** dès qu'on relâche (G1), ce qui est inévitable dès qu'on a :
+
+| Source de non-inversibilité | Exemple |
+|-----------------------------|---------|
+| Effets de bord | Appels outils, IO, API |
+| Budgets et modes | Compteurs, policies, garde-fous |
+| Sémantique probabiliste | Sampling, distributions |
+| Transitions irréversibles | Écriture fichier, envoi réseau |
+
+Dans ce **régime dynamique**, on n'a plus une action par automorphismes, mais on a encore une notion intrinsèque :
+$$
+\mathrm{Hol}(p, q) \subseteq \mathrm{Fibre}(h) \times \mathrm{Fibre}(h)
+$$
+qui mesure l'obstruction de recollage "sans twist" de la partie cachée sous l'observable $O$.
+
+**Ce qui est nouveau** (et qui n'est pas dans le schéma étale standard) :
+
+| Aspect | Régime Grothendieck | Régime dynamique |
+|--------|---------------------|------------------|
+| Monodromie | Représentation de groupe | Correspondance relationnelle |
+| Attachée à | Revêtement / faisceau | 2-cellules (commutations admissibles) |
+| Paramétrée par | Structure globale | Observable (résolution) |
+
+---
+
+## 15.4. Extension "par relativisation" : l'observable comme paramètre
+
+Le deuxième axe d'extension (indépendant de l'inversibilité) est :
+
+| Grothendieck | Ce cadre |
+|--------------|----------|
+| Fixe un revêtement/faisceau et étudie sa monodromie | Fixe d'abord une observable $O$ (résolution) |
+| | puis construit : $q_{\mathcal{O}}$ (quotient sur objets), $\mathrm{Fibre}$ (invisible), $\mathrm{Hol}$ (invisible + chemin) |
+
+> **Slogan.** "mod $n$" n'est plus un quotient externe : c'est un **choix d'observable** $O_n$. La non-canonicité résiduelle est exactement l'holonomie sur la fibre invisible à $O_n$.
+
+---
+
+## 15.5. Conclusion opérationnelle (ce que l'extension apporte)
+
+| Cas | Comportement de $\mathrm{Hol}$ |
+|-----|-------------------------------|
+| **Grothendieckien** | $\mathrm{Hol}$ se réduit à $\mathrm{Mono}$ (action par automorphismes) |
+| **Agentique** | $\mathrm{Hol}$ reste défini et détecte ce que la théorie étale ne capture pas |
+
+> **Autrement dit** : on étend Grothendieck **non en arithmétique**, mais en **"géométrie de processus"** et en **monodromie non inversible**, paramétrée par l'observable.
+
+> **Caractérisation de platitude.** $\mathrm{Hol}$ est la diagonale sur toutes les 2-cellules neutres $\Longleftrightarrow$ le système est **"plat"** relativement à $O$, donc toute dépendance au chemin est éliminable par $q_{\mathcal{O}}$.
