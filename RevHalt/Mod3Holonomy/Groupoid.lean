@@ -1,34 +1,25 @@
 /-
   RevHalt.Mod3Holonomy.Groupoid
 
-  The scheduling groupoid Π(h,k) and the Flip functor to B(ℤ/2)
+  Strict formalization of the Scheduling Groupoid Π(h,k) for any Mod3Theory.
 
-  Reference: docs/MOD3_HOLONOMIE_VERROUILLE.md §18-22
+  Reference: docs/MOD3_HOLONOMIE_VERROUILLE.md §18
 -/
 
 import RevHalt.Mod3Holonomy.Basic
 import RevHalt.Mod3Holonomy.Cocycle
-import Mathlib.CategoryTheory.Category.Basic
-import Mathlib.CategoryTheory.Groupoid
 
 namespace RevHalt.Mod3Holonomy
 
-open CategoryTheory
+variable [Mod3Theory]
 
-/-! ## The Scheduling Groupoid
+/-! ## The Scheduling Groupoid Structure -/
 
-The scheduling groupoid Π(h,k) has:
-- Objects: paths (totals) p : h → k
-- Morphisms: 2-cells α : p ⇒ q (deformations)
-- All morphisms are invertible (localization)
-
-We model this abstractly as a groupoid with transports as objects.
--/
-
-/-- A 2-cell between two transports -/
+/-- A 2-cell (deformation) between two paths exists only if they have same Total -/
 structure TwoCell where
-  source : Transport
-  target : Transport
+  source : Path
+  target : Path
+  compatible : total source = total target
   deriving DecidableEq
 
 /-- The flip of a 2-cell -/
@@ -36,57 +27,37 @@ def TwoCell.getFlip (α : TwoCell) : ZMod 2 :=
   flip α.source α.target
 
 /-- Identity 2-cell -/
-def TwoCell.id (T : Transport) : TwoCell := ⟨T, T⟩
+def TwoCell.id (p : Path) : TwoCell :=
+  { source := p, target := p, compatible := rfl }
 
 /-- Composition of 2-cells -/
-def TwoCell.comp (α β : TwoCell) (_ : α.target = β.source) : TwoCell :=
-  ⟨α.source, β.target⟩
+def TwoCell.comp (α β : TwoCell) (h : α.target = β.source) : TwoCell :=
+  { source := α.source
+  , target := β.target
+  , compatible := by rw [α.compatible, h, β.compatible] }
 
-/-- Flip is additive under composition -/
+/-! ## Flip Functoriality -/
+
 theorem TwoCell.getFlip_comp (α β : TwoCell) (h : α.target = β.source) :
     (TwoCell.comp α β h).getFlip = α.getFlip + β.getFlip := by
   simp only [TwoCell.getFlip, TwoCell.comp]
-  -- Need to show: flip α.source β.target = flip α.source α.target + flip α.target β.target
-  have := flip_additive α.source α.target β.target
-  rw [← h]
-  exact this
+  rw [←h]
+  apply flip_additive
 
-/-! ## B(ℤ/2) : The classifying groupoid
+/-! ## Cohomology Class and Non-Reduction -/
 
-B(ℤ/2) has one object and Aut(*) = ℤ/2.
-The Flip functor sends each 2-cell to its flip value.
--/
+/-- A generic gauge on Paths -/
+def Gauge := Path → ZMod 2
 
-/-- The Flip map is a groupoid homomorphism to ℤ/2 -/
-theorem flip_functor_additive : ∀ α β : TwoCell, ∀ h : α.target = β.source,
-    (TwoCell.comp α β h).getFlip = α.getFlip + β.getFlip :=
-  TwoCell.getFlip_comp
+/-- A trivializing 1D gauge (depends only on Total) -/
+def Gauge1D := Total1D → ZMod 2
 
-/-- Flip of identity is 0 -/
-theorem flip_functor_id (T : Transport) : (TwoCell.id T).getFlip = 0 := by
-  simp only [TwoCell.getFlip, TwoCell.id, flip_id]
-
-/-! ## Cohomology Class
-
-The flip defines a class [Flip₃] ∈ H¹(Π(h,k); ℤ/2).
-This class is zero iff there exists a gauge g such that
-Flip(α) = g(target) - g(source) for all α.
--/
-
-/-- A gauge is a function from transports to ℤ/2 -/
-def Gauge := Transport → ZMod 2
-
-/-- Flip is a coboundary iff there exists a gauge -/
+/-- Is Cobalt (SR1): Flip is a coboundary on Paths (always true here) -/
 def IsCoboundary : Prop :=
   ∃ g : Gauge, ∀ α : TwoCell, α.getFlip = g α.target - g α.source
 
-/-- If flip is a coboundary, loops have zero flip -/
-theorem coboundary_implies_loops_zero (_ : IsCoboundary) :
-    ∀ T : Transport, (TwoCell.id T).getFlip = 0 :=
-  fun T => flip_functor_id T
-
-/-- Loops have zero flip (automatic from definition) -/
-theorem loop_flip_zero (T : Transport) : (TwoCell.id T).getFlip = 0 :=
-  flip_functor_id T
+/-- Is Reducible (Non-Reduction negation): Flip factors through Total -/
+def IsReducible : Prop :=
+  ∃ g1 : Gauge1D, ∀ α : TwoCell, α.getFlip = g1 (total α.target) - g1 (total α.source)
 
 end RevHalt.Mod3Holonomy

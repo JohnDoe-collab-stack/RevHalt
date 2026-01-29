@@ -23,3 +23,5 @@ import RevHalt.Mod3Holonomy.Basic
 import RevHalt.Mod3Holonomy.Cocycle
 import RevHalt.Mod3Holonomy.Groupoid
 import RevHalt.Mod3Holonomy.SelfRepair
+import RevHalt.Mod3Holonomy.Repaired
+import RevHalt.Mod3Holonomy.Asymptotic

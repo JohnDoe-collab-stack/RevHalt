@@ -1,119 +1,94 @@
 /-
   RevHalt.Mod3Holonomy.SelfRepair
 
-  Self-regulation regimes (SR0, SR1) and the loop criterion
+  Strict formalization of Self-Regulation (SR1) and Non-Reduction
+  generic over any [Mod3Theory] model.
 
-  Reference: docs/MOD3_HOLONOMIE_VERROUILLE.md §23-29, §32
+  Reference: docs/MOD3_HOLONOMIE_VERROUILLE.md §23, §25, §34
 -/
 
 import RevHalt.Mod3Holonomy.Basic
 import RevHalt.Mod3Holonomy.Cocycle
 import RevHalt.Mod3Holonomy.Groupoid
 import Mathlib.Data.ZMod.Basic
-import Mathlib.Tactic.FinCases
 
 namespace RevHalt.Mod3Holonomy
 
-/-! ## Self-Repair Regimes
+variable [Mod3Theory]
 
-(SR0) Strong: Flip ≡ 0 (flat)
-(SR1) Structural: [Flip] = 0 in H¹ (trivializable by gauge)
--/
+/-! ## SR0: Strong Self-Regulation (Flatness) (§23.1) -/
 
-/-- (SR0) Strong self-regulation: all flips are zero -/
+/-- (SR0) Strong self-regulation: all flips are zero (Flat) -/
 def StrongSelfRepair : Prop :=
-  ∀ T₁ T₂ : Transport, flip T₁ T₂ = 0
+  ∀ p q : Path, flip p q = 0
 
-/-- (SR1) Self-regulation: flip is a coboundary (uses Groupoid.IsCoboundary) -/
-def SelfRepair : Prop := IsCoboundary
+/-! ## SR1: Auto-Regulation (Structural) (§23.2) -/
 
-/-- Strong implies structural -/
-theorem strong_implies_structural : StrongSelfRepair → SelfRepair := by
-  intro h
+/-- (SR1) is exactly IsCoboundary -/
+abbrev StructuralSelfRepair := IsCoboundary
+
+/-- SR0 implies SR1 -/
+theorem strong_implies_sr1 (h : StrongSelfRepair) : StructuralSelfRepair := by
   use fun _ => 0
   intro α
   simp only [TwoCell.getFlip, h α.source α.target, sub_self]
 
-/-! ## Loop Criterion
+/-! ## Theorem C: SR1 always holds (§32) -/
 
-SR1 ⟺ all loops have flip = 0
-
-For our model where loops are identity 2-cells, this is automatic.
--/
-
-/-- All identity cells have zero flip (Theorem C - trivial direction) -/
-theorem loops_have_zero_flip : ∀ T : Transport, (TwoCell.id T).getFlip = 0 :=
-  loop_flip_zero
-
-/-! ## Confluence implies Self-Repair
-
-If there exists a normal form N and all transports can be connected to N,
-then we have a canonical gauge.
--/
-
-/-- A normal form provides a canonical gauge -/
-def normalFormGauge (N : Transport) (connect : Transport → Transport → ZMod 2) : Gauge :=
-  fun T => connect T N
-
-/-! ## ZMod 2 Helpers (Constructive) -/
-
-lemma zmod2_neg (x : ZMod 2) : -x = x := by fin_cases x <;> decide
-lemma zmod2_add_self (x : ZMod 2) : x + x = 0 := by fin_cases x <;> decide
-lemma zmod2_sub_eq_add (x y : ZMod 2) : x - y = x + y := by rw [sub_eq_add_neg, zmod2_neg]
-
-/-! ## Theorem C: SR1 ⟺ Loop-even
-
-For any path-connected groupoid, SR1 holds we construct the gauge explicitly.
--/
-
-/-- Theorem C: In our model, SR1 always holds -/
-theorem selfRepair_holds : SelfRepair := by
-  use fun T => flip T 1  -- gauge: flip to identity transport
+/-- Theorem C: The Flip class is zero in H¹(Π(h,k)) -/
+theorem selfRepair_holds : IsCoboundary := by
+  use fun p => transport p
   intro α
-  simp only [TwoCell.getFlip]
-  rw [zmod2_sub_eq_add, add_comm]
-  -- Goal: flip S T = flip S 1 + flip T 1
-  -- We know: flip S 1 = flip S T + flip T 1 (flip_additive)
-  have h := flip_additive α.source α.target 1
+  simp only [TwoCell.getFlip, flip, monodromy]
 
-  -- Add flip T 1 to both sides:
-  -- flip S 1 + flip T 1 = (flip S T + flip T 1) + flip T 1
-  have h_step1 : flip α.source 1 + flip α.target 1 = (flip α.source α.target + flip α.target 1) + flip α.target 1 := by
-    rw [h]
+/-! ## Mechanics of Regulation (§25) -/
 
-  -- Re-associate: (flip S T + flip T 1) + flip T 1 = flip S T + (flip T 1 + flip T 1)
-  have h_step2 : (flip α.source α.target + flip α.target 1) + flip α.target 1 = flip α.source α.target + (flip α.target 1 + flip α.target 1) := by
-    exact add_assoc _ _ _
+/-! ### (C) Normal Form Trivialization
+    If there is a canonical "Normal Form" Path N and canonical connectors
+    to N, then we can construct the gauge explicitly from the connectors.
+-/
 
-  -- Use reduction: flip T 1 + flip T 1 = 0
-  have h_step3 : flip α.target 1 + flip α.target 1 = 0 := zmod2_add_self _
+/-- A Normal Form system provides a canonical gauge derived from connectors to N -/
+structure NormalFormSystem (N : Path) where
+  /-- The gauge defined by the connector flip to N -/
+  connector_flip : Path → ZMod 2
+  /-- Consistency: The gauge trivializes the flip -/
+  consistent : ∀ α : TwoCell, α.getFlip = connector_flip α.target - connector_flip α.source
 
-  -- Combine
-  rw [h_step2, h_step3, add_zero] at h_step1
-  exact h_step1.symm
+/-- Theorem: A Normal Form system induces SR1 -/
+theorem normal_form_implies_sr1 (N : Path) (sys : NormalFormSystem N) :
+    IsCoboundary := by
+  use sys.connector_flip
+  exact sys.consistent
 
-/-- Normal form gauge trivializes the flip -/
-theorem normalForm_trivializes (N : Transport) (connect : Transport → Transport → ZMod 2)
-    (hconnect : ∀ T, connect T N = flip T N) :
-    ∀ T₁ T₂ : Transport, flip T₁ T₂ = (normalFormGauge N connect) T₂ -
-                                       (normalFormGauge N connect) T₁ := by
-  intro T₁ T₂
-  simp only [normalFormGauge, hconnect]
-  rw [zmod2_sub_eq_add, add_comm]
-  -- goal: flip T1 T2 = flip T1 N + flip T2 N
-  -- know: flip T1 N = flip T1 T2 + flip T2 N
-  have h := flip_additive T₁ T₂ N
+/-! ## Non-Reduction Theorem (Conditional) -/
 
-  -- Add flip T2 N to both sides
-  have h_step1 : flip T₁ N + flip T₂ N = (flip T₁ T₂ + flip T₂ N) + flip T₂ N := by
-    rw [h]
+/-- The condition of Non-Reduction: There is no 1D gauge that recovers the transport -/
+def NonReduction : Prop := ¬ IsReducible
 
-  have h_step2 : (flip T₁ T₂ + flip T₂ N) + flip T₂ N = flip T₁ T₂ + (flip T₂ N + flip T₂ N) := by
-    exact add_assoc _ _ _
+/-- Theorem: A model has Non-Reduction IF there is hidden state -/
+theorem non_reduction_condition (p q : Path) (h_total : total p = total q)
+    (h_transport : transport p ≠ transport q) : NonReduction := by
+  intro h_red
+  rcases h_red with ⟨g1, hg1⟩
+  let α : TwoCell := { source := p, target := q, compatible := h_total }
+  have h_flip := hg1 α
+  simp only [TwoCell.getFlip, flip, monodromy] at h_flip
+  rw [h_total, sub_self] at h_flip
+  have h_diff : transport q - transport p = 0 := h_flip
+  rw [sub_eq_zero] at h_diff
+  exact h_transport h_diff.symm
 
-  have h_step3 : flip T₂ N + flip T₂ N = 0 := zmod2_add_self _
+/-! ## Canonical Theorem Aliases (Part III) -/
 
-  rw [h_step2, h_step3, add_zero] at h_step1
-  exact h_step1.symm
+/-- Theorem A (§30): Flip is Holonomy -/
+-- Represented by the definition of 'flip' in Basic.lean mapping to Monodromy.
+abbrev theorem_A := @monodromy
+
+/-- Theorem B (§31): Additivity -/
+abbrev theorem_B := @flip_additive
+
+/-- Theorem C (§32): SR1 holds -/
+abbrev theorem_C := @selfRepair_holds
 
 end RevHalt.Mod3Holonomy
