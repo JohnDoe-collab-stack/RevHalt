@@ -557,32 +557,43 @@ Si $E_{\text{train}}$ est présent, alors différents schedulings (chaînes cofi
 
 Pour que le cadre ci-dessus soit un **théorème** (et non seulement un programme sémantique), on fixe les conventions suivantes :
 
-### 1. Complétion : poset quotient
+### 1. Deux niveaux : analyse 2D / complétion Scott
 
-La complétion `Idl(H)` s'applique au **poset quotient** $\mathcal H / \sim$, où $h \sim h'$ ssi il existe une 2-cellule entre eux. Autrement dit, on identifie les chemins déclarés commutants avant de prendre les idéaux.
+On distingue deux niveaux :
 
-### 2. Équivalence dans X
+* **(i) Analyse 2D** : on garde la 2-structure (carrés de commutation) pour étudier la sensibilité au chemin.
+* **(ii) Complétion** : `Idl(H)` s'applique au **poset quotient** $\mathcal H / \sim$ obtenu en identifiant les chemins reliés par 2-cellules (commutations neutres).
 
-L'isomorphisme $\cong$ dans $\mathcal X$ est :
-* **Déterministe** : égalité stricte $S(h_1) = S(h_2)$
-* **Probabiliste** : égalité en loi (même distribution sur les observables)
-* **Relationnel** : bisimulation faible (indiscernabilité sous toute suite de tests)
+### 2. Équivalence sur les observables
 
-Par défaut, on choisit **égalité en loi** (le plus courant pour les LLM).
+L'isomorphisme $\cong$ dans $\mathcal X$ est défini **relativement à une famille d'observables $\mathcal O$** :
+$$
+S(h_1) \cong S(h_2) \quad\Longleftrightarrow\quad \forall i,\; O_i(S(h_1)) \stackrel{\text{loi}}{=} O_i(S(h_2)).
+$$
+Par défaut, « même loi sur les observables fixées ».
 
 ### 3. Extension $\widehat S$ sur Idl(H)
 
 On suppose :
-* $\mathcal X$ admet les **colimites filtrées** (ou est un dcpo),
-* $S$ est **Scott-continue** (préserve les sup dirigées).
 
-L'extension est alors définie par : $\widehat S(J) := \bigsqcup_{h \in J} S(h)$.
+* $\mathcal X$ admet les **colimites filtrées**,
+* $S$ les préserve (Scott-continuité catégorique).
 
-### 4. Cohérence de l'indépendance $I_h$
+L'extension est alors définie par :
+$$
+\widehat S(J) := \mathrm{colim}_{h \in J}\, S(h).
+$$
 
-On impose la **stabilité par restriction** : si $(e_1, e_2) \in I_h$ (commutent à $h$), alors $(e_1, e_2) \in I_{h'}$ pour tout préfixe $h' \leq h$.
+### 4. Cohérence de l'indépendance $I_h$ : diamants locaux
 
-Intuition : l'indépendance peut se **perdre** (un événement crée une dépendance), mais ne s'**invente** pas.
+On n'impose **pas** la monotonicité de $I_h$. La condition de cohérence est :
+
+> **Diamants locaux.** Si à un préfixe $h$ les extensions $h \xrightarrow{e_1} h_1$ et $h \xrightarrow{e_2} h_2$ existent, alors :
+>
+> * **(i)** soit il existe $h_{12}$ tel que $h_1 \xrightarrow{e_2} h_{12}$ et $h_2 \xrightarrow{e_1} h_{12}$, et on déclare une 2-cellule (commutation),
+> * **(ii)** soit l'un des deux prolongements échoue (dépendance effective : l'ordre importe).
+
+Intuition : l'indépendance peut se **perdre** en avançant (ex. lecture A produit la requête de B), ou se **gagner** (contrainte levée). Elle n'est pas monotone.
 
 ### 5. Poids élargis
 
