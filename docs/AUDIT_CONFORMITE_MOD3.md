@@ -38,7 +38,16 @@
 
 ---
 
-## 4. Théorème C : Auto-Régulation (SR1) (§23, §32)
+## 4. SR0 et Auto-Régulation (§23.1, §24)
+
+| Énoncé Document | Théorème Lean (`SelfRepair.lean`) | Conformité | Critique |
+| :--- | :--- | :--- | :--- |
+| **SR0 (Strong)** | `StrongSelfRepair` | ✅ | Défini comme "Totalement Plat" (Flip=0 partout). |
+| **SR0 $\implies$ SR1** | `strong_implies_sr1` | ✅ | Prouvé formellement. |
+| **Critère de Boucle** | `AutoregulationHypothesis` | ✅ | "Toute boucle de déformation a une parité nulle". |
+| **Boucle $\implies$ Repair** | `autoregulation_implies_repair` | ✅ | Théorème pivot structurel. |
+
+## 5. Théorème C : Auto-Régulation (SR1) (§32)
 
 | Énoncé Document | Théorème Lean (`SelfRepair.lean`) | Conformité | Critique |
 | :--- | :--- | :--- | :--- |
@@ -47,18 +56,28 @@
 
 ---
 
-## 5. Théorème de Non-Réduction (§34)
+## 6. Théorème de Non-Réduction (§34)
 
 | Énoncé Document | Définition Lean (`SelfRepair.lean`) | Conformité | Critique |
 | :--- | :--- | :--- | :--- |
 | "Ne factorise pas par 1D" | `NonReduction := ¬ IsReducible` | ✅ | Défini négativement : le Flip n'est pas un cobord de `Gauge1D`. |
 | Condition d'Existence | `non_reduction_condition` | ✅ | Prouve que si $\exists p,q, \text{Total}(p)=\text{Total}(q) \land T(p) \neq T(q)$, alors Non-Réduction est vraie. |
+| **Théorèmes A,B,C** | `theorem_A`, `theorem_B`, `theorem_C` | ✅ | Aliases explicites vers `monodromy`, `flip_additive`, `selfRepair_holds`. |
+
+---
+
+## 7. Réparation (Théorèmes 2 et 6)
+
+| Énoncé Document | Théorème Lean (`Repaired.lean`) | Conformité | Observations |
+| :--- | :--- | :--- | :--- |
+| **Repair kills Holonomy** | `repair_kills_flip` | ✅ | $T'$ (corrigé) a une holonomie nulle. |
+| **Repair $\iff$ Coboundary** | `repair_implies_coboundary` | ✅ | Théorème 6 complet (les deux sens). |
 
 ---
 
 ## Conclusion de l'Audit
 
-La formalisation actuelle est **strictement conforme** au document de référence.
+La formalisation actuelle est **strictement conforme** au document de référence, incluant même les structures fines (SR0 vs SR1, Boucles).
 
 1. **Architecture Typeclass** : L'utilisation de `class Mod3Theory` permet de modéliser abstractement n'importe quel système respectant les axiomes (P3, INV3, FUN3), sans figer le modèle sur un cas trivial.
 2. **Séparation Syntaxe/Sémantique** : La distinction nette entre `Path` (objet du groupoïde) et `Total1D` (observable) permet de formuler correctement le théorème de Non-Réduction, qui était impossible dans la version précédente (où Path = Valeur).
