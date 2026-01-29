@@ -482,3 +482,71 @@ Si la dynamique réelle ne factorise pas par ce $q$ (cas typique des LLM à mode
 Donc “union → continuité → fixpoint” produit une **stabilité de projection**, pas une stabilité du milieu.
 
 ---
+
+---
+
+## Encadré à ajouter : Poids comme observable de la sémantique
+
+On suppose que l’espace d’états cible (\mathcal X) **contient** une composante “poids” (\mathcal W) (et éventuellement d’autres composantes : mémoire, mode, ressources, état d’optimizer, etc.). On fixe une projection
+[
+\pi_W:\mathcal X\to \mathcal W.
+]
+Pour une exécution (S:\mathcal H\to \mathcal X), on définit l’**observable poids**
+[
+W := \pi_W\circ S:\mathcal H\to \mathcal W.
+]
+Ainsi, “les poids” ne sont pas un *dedans* mystérieux : ce sont un **output** (une observable) de l’histoire.
+
+Les événements (E_{\text{train}}) sont alors précisément ceux dont l’action sur (\mathcal X) modifie la composante (\mathcal W).
+
+---
+
+## Corollaire : “les poids suffisent” est une propriété de factorisation (et se falsifie)
+
+Dire que “les poids suffisent à expliquer le comportement” (relativement à une famille d’observables (O)) signifie :
+
+> il existe (\widetilde S_W:\mathcal W\to\mathcal X) (ou plus faiblement (\widetilde O_W:\mathcal W\to \text{Obs})) tel que
+> [
+> S \cong \widetilde S_W\circ W
+> \quad\text{(ou)}\quad
+> O\circ S \cong \widetilde O_W\circ W.
+> ]
+
+**Test falsifiable :** s’il existe (h_1,h_2) tels que
+[
+W(h_1)=W(h_2)
+\quad\text{mais}\quad
+O(S(h_1))\neq O(S(h_2)),
+]
+alors les poids **ne suffisent pas** : il existe une dépendance à une autre composante de l’état (mode/policy, mémoire, ressources, RNG, état d’optimizer, etc.) ou au **chemin** dans (\mathcal H) que (W) n’encode pas.
+
+---
+
+## Quotient “anti–boîte noire” canonique (relatif à des observables)
+
+Fixe une famille d’observables (\mathcal O={O_i:\mathcal X\to \text{Obs}*i}). Définis une relation sur les histoires :
+[
+h \sim*{\mathcal O} h'
+\quad\Longleftrightarrow\quad
+\forall i,; O_i(S(h)) \cong O_i(S(h')).
+]
+Alors le quotient (q_{\mathcal O}:\mathcal H\to \mathcal H/{\sim_{\mathcal O}}) est, par construction, un **résumé maximalement compressif** qui élimine la boîte noire **pour (\mathcal O)** : on a automatiquement une factorisation
+[
+(O_i\circ S) \cong \widetilde O_i \circ q_{\mathcal O}
+\quad\text{pour tout }i.
+]
+La “boîte noire” devient donc exactement : *avoir choisi un résumé (q) plus grossier que (q_{\mathcal O})* (ou avoir demandé des observables trop fines).
+
+---
+
+## Lien avec “Ord = scheduling” quand les poids sont outputs
+
+Si (E_{\text{train}}) est présent, alors différents schedulings (chaînes cofinales dans (\mathcal H)) peuvent produire des trajectoires de poids différentes. Les ordinaux pertinents ne sont toujours pas posés : ils réapparaissent comme **types d’ordre de linéarisations cofinales** admissibles par la dynamique d’updates (et par les contraintes de commutation/conflit).
+
+---
+
+### Ce que cet encadré clarifie, net
+
+* **Oui**, dans ton cadre, les poids ne sont pas la boîte noire : ce sont un output (W(h)).
+* La question “boîte noire” devient : *peut-on remplacer l’histoire par un résumé petit (q) (idéalement bien plus petit que (W)) sans perdre la sémantique pertinente ?*
+* Et ça se formule **exactement** en factorisation.
