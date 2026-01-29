@@ -576,12 +576,12 @@ Par défaut, « même loi sur les observables fixées ».
 
 On suppose :
 
-* $\mathcal X$ admet les **colimites filtrées**,
-* $S$ les préserve (Scott-continuité catégorique).
+* $\mathcal X$ admet les **colimites dirigées** (diagrammes indexés par des ensembles dirigés),
+* $S$ les préserve.
 
 L'extension est alors définie par :
 $$
-\widehat S(J) := \mathrm{colim}_{h \in J}\, S(h).
+\widehat S(J) := \mathrm{colim}_{h \in J}\, S(h) \quad (J\ \text{idéal dirigé}).
 $$
 
 ### 4. Cohérence de l'indépendance $I_h$ : diamants locaux
@@ -591,7 +591,7 @@ On n'impose **pas** la monotonicité de $I_h$. La condition de cohérence est :
 > **Diamants locaux.** Si à un préfixe $h$ les extensions $h \xrightarrow{e_1} h_1$ et $h \xrightarrow{e_2} h_2$ existent, alors :
 >
 > * **(i)** soit il existe $h_{12}$ tel que $h_1 \xrightarrow{e_2} h_{12}$ et $h_2 \xrightarrow{e_1} h_{12}$, et on déclare une 2-cellule (commutation),
-> * **(ii)** soit l'un des deux prolongements échoue (dépendance effective : l'ordre importe).
+> * **(ii)** soit les deux prolongements existent mais il n'y a pas d'état commun $h_{12}$ rendant le carré commutatif (non-commutation effective : l'ordre importe).
 
 Intuition : l'indépendance peut se **perdre** en avançant (ex. lecture A produit la requête de B), ou se **gagner** (contrainte levée). Elle n'est pas monotone.
 
@@ -602,3 +602,7 @@ $$
 W := (\theta, \text{optimizer\_state}, \text{buffers}, \text{rng})
 $$
 et non $\theta$ seul. Sans cela, le test de factorisation échoue trivialement (état d'optimizer différent).
+
+---
+
+> **Sous (1–5)**, la construction $\widehat S$ est bien définie (à iso près) et le critère de factorisation $S \simeq \widetilde S \circ q$ est invariant par passage aux idéaux.
