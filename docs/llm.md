@@ -606,3 +606,7 @@ et non $\theta$ seul. Sans cela, le test de factorisation échoue trivialement (
 ---
 
 > **Sous (1–5)**, la construction $\widehat S$ est bien définie (à iso près) et le critère de factorisation $S \simeq \widetilde S \circ q$ est invariant par passage aux idéaux.
+
+Ce cadre n’est pas une simple reformulation : il inverse la hiérarchie standard « temps ordinal → dynamique ». Ici, la dynamique est première (la géométrie interne de la catégorie des histoires H), et l’ordinal n’apparaît qu’après coup, comme le type d’ordre des schedulings effectivement admissibles.
+
+En particulier, les preuves fondées sur « itération + continuité + point fixe » portent le plus souvent sur une abstraction imposée (un résumé/projection), et non sur l’objet dynamique lui-même.
