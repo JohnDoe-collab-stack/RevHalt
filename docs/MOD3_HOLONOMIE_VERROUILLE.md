@@ -551,3 +551,111 @@ Les assertions suivantes sont équivalentes :
 | **Invariant universel** | Foncteur $\mathrm{Flip}_3 : \Pi(h, k) \to \mathbf{B}(\mathbb{Z}/2)$ |
 | **Obstruction** | $[\mathrm{Flip}_3] \in H^1(\Pi(h, k); \mathbb{Z}/2)$ |
 | **Repair global** | $\Longleftrightarrow [\mathrm{Flip}_3] = 0$ |
+
+---
+
+## 23. Auto-régulation du flip mod 3 : deux notions de "self-repair"
+
+### 23.1. (SR0) Auto-régulation forte (platitude)
+
+Le système est **déjà plat** sur la primitive :
+$$\forall\alpha : p \Rightarrow q, \quad \mathrm{Mono}_3(\alpha) = \mathrm{id} \quad (\text{donc } \mathrm{Flip}_3(\alpha) = 0)$$
+
+Il n'y a **rien à réparer** : la 2D ne tord pas le bit primitif.
+
+### 23.2. (SR1) Auto-régulation par jauge interne (trivialisable)
+
+Le flip existe localement, mais **la structure impose** qu'il soit un cobord :
+$$[\mathrm{Flip}_3] = 0 \in H^1(\Pi(h, k); \mathbb{Z}/2)$$
+
+Il existe $g : \mathrm{Obj}(\Pi(h, k)) \to \mathbb{Z}/2$ telle que pour tout $\gamma : p \to q$ :
+$$\mathrm{Flip}_3(\gamma) = g(q) \oplus g(p)$$
+
+C'est le sens mathématique de "ça se répare tout seul" **sans** ajouter une variable externe.
+
+> **Point crucial** : (SR1) n'est pas un "plus faible SR0". C'est un autre régime : la torsion est là, mais **globalement trivialisable**.
+
+---
+
+## 24. Théorème : critères équivalents d'auto-régulation (SR1)
+
+Les trois assertions sont équivalentes :
+
+1. **(Cobord)** Il existe $g$ tel que $\mathrm{Flip}_3(\gamma) = g(q) \oplus g(p)$ pour tout $\gamma : p \to q$
+
+2. **(Aucune boucle impaire)** Pour un (donc tout) total de base $p$ :
+   $$\forall \text{ boucle } \ell \text{ basée en } p, \quad \mathrm{Flip}_3(\ell) = 0$$
+
+3. **(Pas de quotient $\mathbb{Z}/2$)** $\pi_1(\Pi(h, k), p)$ n'a **aucune** surjection vers $\mathbb{Z}/2$
+
+**Preuve** :
+
+- $(1) \Rightarrow (2)$ : si $\ell : p \to p$ boucle, alors $\mathrm{Flip}_3(\ell) = g(p) \oplus g(p) = 0$
+- $(2) \Rightarrow (1)$ : fixer $p_0$, poser $g(p) := \mathrm{Flip}_3(\gamma_{p_0 \to p})$ (bien défini par (2))
+- $(2) \Leftrightarrow (3)$ : $\mathrm{Flip}_3$ est un morphisme $\pi_1 \to \mathbb{Z}/2$, trivial iff pas de quotient $\mathbb{Z}/2$. $\square$
+
+> **Donc** : dès que la "topologie de scheduling" ne permet pas un quotient $\mathbb{Z}/2$, tout flip mod 3 est forcé à être trivializable.
+
+---
+
+## 25. Trois mécanismes naturels d'auto-régulation
+
+### (A) Simple connexité / absence de boucles
+
+Si $\pi_1(\Pi(h, k), p) = 1$, alors (2) est automatique, donc (SR1) toujours.
+
+### (B) Parité forcée par relations de cohérence
+
+Si la présentation de $\Pi(h, k)$ impose que **toutes** les boucles génératrices soient de flip $0$, alors (2) tient. C'est : "toutes les anomalies viennent par paires".
+
+### (C) Forme normale (confluence 2D) → jauge canonique
+
+S'il existe un choix canonique $N \in \mathrm{Obj}(\Pi(h, k))$ (forme normale) et, pour tout $p$, un morphisme $\gamma_p : p \to N$ tel que toute déformation vers $N$ soit cohérente (confluence), alors :
+$$g(p) := \mathrm{Flip}_3(\gamma_p)$$
+
+est canonique, et (SR1) s'ensuit. L'auto-régulation vient d'une **normalisation interne du scheduling**.
+
+---
+
+## 26. Auto-régulation asymptotique (cofinalité)
+
+On peut n'avoir la trivialisation que "sur l'avenir effectif".
+
+Soit $J \subseteq \mathcal{H}$ un idéal cofinal (régime/queue d'exécution). Restreignons $\Pi(h, k)$ aux paths dans $J$, notée $\Pi_J(h, k)$.
+
+**Auto-régulation asymptotique** :
+$$[\mathrm{Flip}_3]_{|\Pi_J(h,k)} = 0$$
+
+Localement il peut y avoir du flip, mais sur le futur cofinal réellement réalisé, la classe devient triviale.
+
+---
+
+## 27. Test pratique : comment décider si "ça se répare tout seul"
+
+1. Choisir une famille génératrice de boucles $\{\ell_i\}$ de $\pi_1(\Pi(h, k), p)$
+2. Calculer $\mathrm{Flip}_3(\ell_i) \in \mathbb{Z}/2$
+3. **Décision** :
+
+| Résultat | Conclusion |
+|----------|------------|
+| $\forall i, \mathrm{Flip}_3(\ell_i) = 0$ | (SR1) : self-repair possible sans variable extra |
+| $\exists i, \mathrm{Flip}_3(\ell_i) = 1$ | Obstruction intrinsèque : aucune jauge globale |
+
+---
+
+## 28. Ce que tu gagnes conceptuellement
+
+- "mod 3" n'est pas juste une projection : c'est une **résolution** qui laisse subsister un résidu **2D** (le flip)
+- L'auto-régulation n'est pas psychologique : c'est la nullité d'une **classe $\mathbb{Z}/2$** sur le groupoïde des totals
+- Tu sais exactement quand on peut "se passer du total" sans perte : **quand le résidu 2D est trivializable (SR1)**, ou au moins sur un cofinal (asymptotique)
+
+---
+
+## 29. Résumé des régimes d'auto-régulation
+
+| Régime | Condition | Signification |
+|--------|-----------|---------------|
+| **(SR0)** Fort | $\mathrm{Flip}_3 \equiv 0$ | Plat — aucun twist |
+| **(SR1)** Structurel | $[\mathrm{Flip}_3] = 0$ | Trivialisable par jauge |
+| **(SR1-C)** Canonique | Forme normale existe | Jauge canonique $g$ fournie |
+| **(SR1-∞)** Asymptotique | Restriction cofinale triviale | Stabilisation dynamique |
