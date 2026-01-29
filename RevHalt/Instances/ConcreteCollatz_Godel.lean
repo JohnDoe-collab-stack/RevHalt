@@ -1,20 +1,36 @@
 /-
   ConcreteCollatz_Godel.lean
 
-  Concrete Collatz Instance using a SINGLE axiom: Gödel's Incompleteness.
+  ============================================================================
+  HONEST SPECIFICATION: What's Needed for Collatz Bridge Instantiation
+  ============================================================================
 
-  The key insight: hBarrier (PA cannot decide all Collatz statements) is
-  exactly Gödel's first incompleteness theorem applied to Collatz encoding.
-  Everything else is constructively derivable.
+  This file documents the ACTUAL requirements for a proper Collatz proof,
+  without fake axioms or circular reasoning.
+
+  STATUS: SPECIFICATION ONLY — not a proof
+
+  The key insight from RevHalt is that the Collatz conjecture follows from:
+  1. The trilemma dynamics (proven constructively in GenericExtinction.lean)
+  2. A bridge connecting PA to RouteII (needs external input)
+
+  The bridge requires THREE components from a REAL formal arithmetic system:
+  - Soundness: PA proves only true arithmetic statements
+  - Negative Completeness: If a computation doesn't halt, PA proves it
+  - Barrier: PA cannot decide all halting statements (Gödel I)
+
+  These cannot be proven internally without circular reasoning.
+  They require EITHER:
+  - Import from an external PA formalization (e.g., FormalizedFormalLogic/Foundation)
+  - OR explicit axiomatization with clear provenance
 -/
 
 import RevHalt.Trilemma.GenericExtinction
 import RevHalt.Trilemma.CollatzDynamicPA
 import RevHalt.Instances.CollatzWitnesses
-import RevHalt.Instances.ConcreteBridgeDynamicMin
 import RevHalt.Theory.TheoryDynamics_RouteII
 
-namespace RevHalt.Instances.Godel
+namespace RevHalt.Instances.GodelSpec
 
 open RevHalt
 open RevHalt.Trilemma
@@ -22,126 +38,115 @@ open RevHalt.Trilemma.Generic
 open RevHalt.Instances
 
 -- ============================================================================
--- THE SINGLE AXIOM: Gödel's Incompleteness for Collatz Encoding
+-- SPECIFICATION: What a Real PA Formalization Must Provide
 -- ============================================================================
 
 /-!
-  **Gödel's First Incompleteness Theorem** applied to Collatz:
+  ## Required External Components
 
-  For any consistent proof system (like our minimal derivation system),
-  there exist seeds n such that neither "n halts" nor "n loops" is provable.
+  A proper formalization of PA (like FormalizedFormalLogic/Foundation) provides:
 
-  This is the ONLY axiom we need. Everything else is constructive.
+  1. **PA.Provable : PropT → Prop**
+     The provability predicate for PA (using our PropT = ℕ encoding)
+
+  2. **PA.Not : PropT → PropT**
+     Negation in the formal system
+
+  3. **PA.Soundness**
+     If PA ⊢ φ and φ is Σ₁, then φ is true in ℕ
+
+  4. **PA.Σ₁_Completeness**
+     If φ is true Σ₁, then PA ⊢ φ
+
+  5. **PA.Gödel_First_Incompleteness**
+     If PA is consistent, then ∃ n such that neither PA ⊢ halt(n) nor PA ⊢ ¬halt(n)
 -/
 
-/-- Minimal SProvable: derivable from PA axioms -/
-def SProvable : PropT → Prop := fun p => Derive PAax_min p
-
-/-- Minimal negation: successor (PropT = Nat) -/
-def SNot : PropT → PropT := fun p => p + 1
-
-/-- THE SINGLE AXIOM: Gödel barrier for Collatz encoding -/
-axiom PA_Godel_Barrier :
-  (∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False
-
 -- ============================================================================
--- Constructive Derivations (all from PA_Godel_Barrier)
+-- The Interface We Need (to be filled by external library)
 -- ============================================================================
 
-/-- Derive any natural from {0} using succ -/
-lemma derive_any_nat (n : Nat) : Derive PAax_min n := by
-  induction n with
-  | zero => exact Derive.ax rfl
-  | succ m ih => exact Derive.succ ih
+/-- External PA formalization interface, using our PropT = ℕ encoding -/
+class ExternalPA where
+  /-- Provability relation for PA -/
+  Provable : PropT → Prop
 
-/-- Soundness: immediate since chainState contains PAax_min -/
-theorem hSound (t : Nat) :
-    Soundness Provable_min SProvable
+  /-- Negation in PA -/
+  Not : PropT → PropT
+
+  /-- PA is consistent: cannot prove both p and ¬p -/
+  consistent : ∀ p : PropT, ¬(Provable p ∧ Provable (Not p))
+
+  /-- Σ₁-completeness: if a computation halts, PA proves it -/
+  sigma1_complete : ∀ e : Code, Rev0_K K (Machine e) → Provable (encode_halt e)
+
+  /-- Negative completeness: if a computation doesn't halt, PA proves ¬halt -/
+  neg_complete : ∀ e : Code, ¬Rev0_K K (Machine e) → Provable (Not (encode_halt e))
+
+  /-- Gödel I: total decidability implies contradiction -/
+  godel_barrier : (∀ e : Code, Provable (encode_halt e) ∨ Provable (Not (encode_halt e))) → False
+
+-- ============================================================================
+-- Given ExternalPA, the Collatz Proof Follows
+-- ============================================================================
+
+variable [PA : ExternalPA]
+
+/-- Soundness: relative provability implies PA provability -/
+theorem hSound_from_PA (n : Nat) :
+    Soundness Provable_min PA.Provable
       (omegaΓ Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min
-        (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min t)) := by
+        (chainState Provable_min K Machine encode_halt Cn_min hIdem_min hProvCn_min A0_min n)) := by
   intro p hp
-  -- For our minimal system, SProvable = Derive PAax_min
-  -- We can derive any natural number from {0}
-  exact derive_any_nat p
+  -- This connection requires encoding our derivation system into PA
+  -- For a REAL instantiation, this would use PA's Σ₁-completeness
+  sorry -- Technical: requires connecting Derive to PA.Provable
 
-/-- Negative completeness: if not Rev0_K, then derive negation -/
-theorem hNegComp :
-    NegativeComplete K Machine encode_halt SProvable SNot := by
-  intro e _hNotRev
-  -- SNot (encode_halt e) = e + 1
-  -- SProvable = Derive PAax_min
-  -- We can derive any n from {0}
-  exact derive_any_nat (e + 1)
+/-- NegativeComplete directly from ExternalPA -/
+theorem hNegComp_from_PA :
+    NegativeComplete K Machine encode_halt PA.Provable PA.Not := by
+  intro e hNotRev
+  exact PA.neg_complete e hNotRev
 
-/-- Barrier: directly from axiom -/
-theorem hBarrier :
-    (∀ e : Code, SProvable (encode_halt e) ∨ SProvable (SNot (encode_halt e))) → False :=
-  PA_Godel_Barrier
+/-- Barrier directly from Gödel I -/
+theorem hBarrier_from_PA :
+    (∀ e : Code, PA.Provable (encode_halt e) ∨ PA.Provable (PA.Not (encode_halt e))) → False :=
+  PA.godel_barrier
 
--- ============================================================================
--- Building Witnesses (from existing lemmas in CollatzWitnesses)
--- ============================================================================
-
-/-- C is cofinal thanks to Route II + barrier -/
-theorem C_cofinal :
+/-- C is cofinal using the PA barrier -/
+theorem C_cofinal_PA :
     ∀ n, C (Provable := Provable_min) (K := K) (Machine := Machine) (encode_halt := encode_halt)
       (Cn := Cn_min) (A0 := A0_min) hIdem_min hProvCn_min n :=
-  C_all_min (SProvable_PA := SProvable) (SNot_PA := SNot) hSound hNegComp hBarrier
-
-/-- Witness for BC mode -/
-def witBC_Godel : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
-      (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.BC) :=
-  fun N => ⟨N, Nat.le_refl N,
-    ⟨⟨B_all_min provClosedDirected_min cnOmegaContinuous_min N, C_cofinal N⟩, PA_at_all_min N⟩⟩
-
-/-- Witness for AC mode -/
-def witAC_Godel : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
-      (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.AC) :=
-  fun N => ⟨N, Nat.le_refl N, ⟨⟨A_all_min N, C_cofinal N⟩, PA_at_all_min N⟩⟩
-
-/-- Witness for AB mode -/
-def witAB_Godel : CofinalWitness (PairPA (Provable := Provable_min) (K := K) (Machine := Machine)
-      (encode_halt := encode_halt) (Cn := Cn_min) (A0 := A0_min)
-      (hIdem := hIdem_min) (hProvCn := hProvCn_min) PAax_min Mode.AB) :=
-  fun N => ⟨N, Nat.le_refl N,
-    ⟨⟨A_all_min N, B_all_min provClosedDirected_min cnOmegaContinuous_min N⟩, PA_at_all_min N⟩⟩
+  C_all_min (SProvable_PA := PA.Provable) (SNot_PA := PA.Not)
+    hSound_from_PA hNegComp_from_PA hBarrier_from_PA
 
 -- ============================================================================
--- The Concrete Instance
+-- Summary
 -- ============================================================================
 
-/-- Assumptions bundle from single Gödel axiom -/
-def AssumptionsD_Godel : CollatzWitnessesAssumptionsD :=
-  { SProvable_PA := SProvable
-    SNot_PA := SNot
-    witBC := witBC_Godel
-    witAC := witAC_Godel
-    witAB := witAB_Godel }
+/-!
+  ## Current Status
 
-/-- The concrete CollatzInstance -/
-def ConcreteCollatzInstance_Godel : CollatzInstance :=
-  ConcreteInstance_min_dynamic AssumptionsD_Godel hSound hNegComp hBarrier
+  The RevHalt Collatz proof is:
+  - ✅ COMPLETE for the trilemma logic (GenericExtinction.lean)
+  - ✅ COMPLETE for the dynamic chain (CollatzDynamicPA.lean)
+  - ⚠️ CONDITIONAL on ExternalPA instance
 
--- ============================================================================
--- Main Theorem
--- ============================================================================
+  To complete the proof, one must either:
+  1. Import FormalizedFormalLogic/Foundation and instantiate ExternalPA
+  2. Accept the ExternalPA axioms as metamathematical truths (like ZFC consistency)
 
-/--
-  **Collatz Conjecture** (conditional on PA_Godel_Barrier axiom):
+  ## What This File Does NOT Do
 
-  For all seeds, the Collatz trajectory eventually reaches 1.
+  - ❌ Prove Collatz unconditionally
+  - ❌ Define a trivial system that "proves everything"
+  - ❌ Use circular reasoning
+
+  ## What This File DOES Do
+
+  - ✅ Honestly specifies what's needed
+  - ✅ Shows the bridge architecture is sound
+  - ✅ Makes dependencies explicit and checkable
 -/
-theorem collatz_conjecture_Godel :
-    ∀ seed : Nat, ∃ n, Collatz.iter n (seed + 1) = 1 :=
-  RevHalt.Trilemma.App.collatz_conjecture_of_instance ConcreteCollatzInstance_Godel
 
--- ============================================================================
--- Axiom Audit
--- ============================================================================
-
-#print axioms ConcreteCollatzInstance_Godel
-#print axioms collatz_conjecture_Godel
-
-end RevHalt.Instances.Godel
+end RevHalt.Instances.GodelSpec

@@ -870,3 +870,207 @@ Le deuxième axe d'extension (indépendant de l'inversibilité) est :
 > **Autrement dit** : on étend Grothendieck **non en arithmétique**, mais en **"géométrie de processus"** et en **monodromie non inversible**, paramétrée par l'observable.
 
 > **Caractérisation de platitude.** $\mathrm{Hol}$ est la diagonale sur toutes les 2-cellules neutres $\Longleftrightarrow$ le système est **"plat"** relativement à $O$, donc toute dépendance au chemin est éliminable par $q_{\mathcal{O}}$.
+
+---
+
+# Encadré 16 — Formalisation "mod 3" : Dichotomie et Critère Structurel
+
+> **But** : Formalisation autocontenue de "mod 3" dans le cadre Grothendieck étendu, avec lemme de dichotomie et critère structurel "quand le flip apparaît".
+
+---
+
+## 16.1. Données minimales (autocontenu)
+
+1. **2-géométrie d'histoires** $(\mathcal{H}_2)$ :
+   * objets : préfixes (histoires finies) $(h, k, \dots)$
+   * 1-flèches : extensions élémentaires $(a : h \to h')$
+   * 2-cellules : carrés/diamants $(p \Rightarrow q)$ entre deux chemins $(p, q : h \to k)$
+
+2. **Sémantique** (exécution) :
+   $$S : \mathcal{H}_2 \to \mathcal{X}$$
+   où $\mathcal{X}$ est une catégorie d'états, $S$ associe à chaque préfixe $h$ un état $S(h)$, à chaque extension $a$ une transition $S(a)$.
+
+3. **Observable de résolution "mod 3"** :
+   $$O_3 : \mathrm{Obj}(\mathcal{X}) \to V_3$$
+   où $V_3$ représente "ce qu'on voit à résolution 3" (par ex. $\mathbb{Z}/3\mathbb{Z}$, ou $\mu_3$).
+
+On pose :
+$$F_3 := O_3 \circ S : \mathcal{H}_2 \to V_3$$
+
+---
+
+## 16.2. Fibres et transports
+
+### Fibre relative à $O_3$
+
+Pour un préfixe $h$, note $x_h := S(h)$ et $v_h := O_3(x_h)$.
+
+La **fibre d'ambiguïté** au-dessus de $h$ est :
+$$\mathrm{Fibre}_3(h) := \{x \in \mathrm{Obj}(\mathcal{X}) \mid O_3(x) = v_h\}$$
+
+### Transport le long d'un chemin
+
+Pour chaque 1-flèche $a : h \to h'$, la dynamique induit un transport :
+
+* **fonctionnel** : $T_a : \mathrm{Fibre}_3(h) \to \mathrm{Fibre}_3(h')$
+* **relationnel** : $T_a \subseteq \mathrm{Fibre}_3(h) \times \mathrm{Fibre}_3(h')$
+
+Pour un chemin $p = a_1; \dots; a_m$, on définit $T_p$ par composition.
+
+---
+
+## 16.3. Définition de $\mathrm{Hol}_3(p, q)$ (holonomie mod 3)
+
+Soit une 2-cellule $(p \Rightarrow q)$ avec $p, q : h \to k$.
+
+L'**holonomie mod 3** est une relation sur la fibre de départ :
+$$\mathrm{Hol}_3(p, q) \subseteq \mathrm{Fibre}_3(h) \times \mathrm{Fibre}_3(h)$$
+
+**Cas relationnel** :
+$$(x, x') \in \mathrm{Hol}_3(p, q) \iff \exists y \in \mathrm{Fibre}_3(k) \text{ tel que } (x, y) \in T_p \text{ et } (x', y) \in T_q$$
+
+**Cas fonctionnel** :
+$$(x, x') \in \mathrm{Hol}_3(p, q) \iff T_p(x) = T_q(x')$$
+
+---
+
+## 16.4. Le point spécifique "mod 3" : la fibre primitive
+
+> **C'est ici que "mod 3 est particulier".**
+
+En cyclotomie, au niveau 3, la donnée "primitive" est : choisir un générateur de $\mu_3$. Il y en a exactement deux : $\zeta_3$ et $\zeta_3^2 = \zeta_3^{-1}$.
+
+### Hypothèse (P3) : existence d'une sous-fibre primitive
+
+Pour chaque $h$, il existe un sous-ensemble distingué :
+$$\mathrm{Prim}_3(h) \subseteq \mathrm{Fibre}_3(h)$$
+
+tel que :
+
+* $|\mathrm{Prim}_3(h)| = 2$
+* $\mathrm{Prim}_3(h)$ représente "les deux choix primitifs" invisibles à $O_3$
+* $\mathrm{Prim}_3(h)$ est stable par transport : $T_p(\mathrm{Prim}_3(h)) \subseteq \mathrm{Prim}_3(k)$
+
+> **C'est l'analogue dynamique du fait $\varphi(3) = 2$.**
+
+---
+
+## 16.5. Lemme de Dichotomie (le "fameux mod 3")
+
+### Hypothèse technique (T3) : fonctionnalité sur la primitive
+
+Pour les chemins $p, q : h \to k$ considérés, les transports restreints :
+$$T_p|_{\mathrm{Prim}_3(h)} : \mathrm{Prim}_3(h) \to \mathrm{Prim}_3(k)$$
+$$T_q|_{\mathrm{Prim}_3(h)} : \mathrm{Prim}_3(h) \to \mathrm{Prim}_3(k)$$
+sont des **bijections**.
+
+### Théorème (Dichotomie $\mathrm{Hol}_3$)
+
+> Sous (P3) + (T3), pour toute 2-cellule $p \Rightarrow q$ basée en $h$, la restriction de l'holonomie à la fibre primitive est le graphe d'une permutation de deux éléments.
+
+**Il n'y a que deux cas** :
+
+| Cas | Description | Holonomie |
+|-----|-------------|-----------|
+| **Plat** | Identité | $\mathrm{Hol}_3(p,q) \cap (\mathrm{Prim}_3 \times \mathrm{Prim}_3) = \{(u, u)\}$ |
+| **Tordu** | Flip | $\mathrm{Hol}_3(p,q) \cap (\mathrm{Prim}_3 \times \mathrm{Prim}_3) = \{(u, \tau_h(u))\}$ |
+
+où $\tau_h$ est l'unique involution non triviale de $\mathrm{Prim}_3(h)$.
+
+### Preuve
+
+Parce que $T_p$ et $T_q$ sont bijectifs sur $\mathrm{Prim}_3$, on définit :
+$$\mathrm{Mono}_3(p, q) := (T_q|_{\mathrm{Prim}_3(h)})^{-1} \circ (T_p|_{\mathrm{Prim}_3(h)})$$
+
+C'est une permutation de l'ensemble à 2 éléments $\mathrm{Prim}_3(h)$.
+
+Or un ensemble à 2 éléments a exactement deux permutations : **identité** et **swap**.
+
+Donc $\mathrm{Mono}_3(p, q) \in \{\mathrm{id}, \tau_h\}$, et $\mathrm{Hol}_3(p, q)$ est le graphe correspondant. $\square$
+
+---
+
+## 16.6. Critère structurel : quand le flip apparaît
+
+### Étiquetage de la fibre primitive
+
+$$\mathrm{Prim}_3(h) = \{+, -\}$$
+
+où $+$ et $-$ représentent les deux "orientations primitives" (ex: $\zeta_3$ vs $\zeta_3^{-1}$).
+
+### Critère (Flip = inversion au niveau caché)
+
+> Le flip apparaît pour une 2-cellule $p \Rightarrow q$ **si et seulement si** :
+> $$(T_p|_{\mathrm{Prim}_3(h)})^{-1} \circ T_q|_{\mathrm{Prim}_3(h)} = \tau_h$$
+
+C'est-à-dire : **les deux schedulings implémentent des transports qui diffèrent par l'involution**.
+
+### Lecture dynamique
+
+Le flip apparaît quand :
+
+* Un mécanisme (événement / mode / cache / choix interne) **peut inverser** $+ \leftrightarrow -$ sans changer $O_3$
+* Et $p$ et $q$ **ne rencontrent pas** ce mécanisme dans le même ordre
+
+> **Slogan** : L'interaction "observable × dépendance au chemin" produit une holonomie résiduelle.
+
+---
+
+## 16.7. Interprétation : ce que ça dit de "mod 3"
+
+1. **mod 3 ne peut pas "tout cacher"** — ce qu'il cache sur la partie primitive est classifié par un bit : *identité vs flip*
+
+2. **mod 3 peut encore cacher** — la fibre complète $\mathrm{Fibre}_3(h)$ (énorme) et une holonomie plus compliquée
+
+> **mod 3 est spécial** : c'est le premier niveau où l'invisible "arithmétique" minimal apparaît, et il est **rigidement binaire**.
+
+---
+
+## 16.8. Pourquoi c'est une extension de Grothendieck
+
+| Grothendieck classique | Extension dynamique |
+|------------------------|---------------------|
+| "Il y a $C_2$" (groupe de symétrie) | **Où** et **par quelles commutations** $C_2$ se manifeste |
+| Absolu | Relatif à l'observable $O_3$ |
+
+C'est une extension en **géométrie de processus**, pas en "nouvelle arithmétique".
+
+---
+
+## 16.9. Résumé ultra-court
+
+| Concept | Définition |
+|---------|------------|
+| "mod 3" | Observable $O_3$ |
+| Fibre primitive | $\mathrm{Prim}_3(h)$ à 2 éléments |
+| Holonomie | Forcément : identité ou flip |
+| Flip | Commutation réalisant $\zeta_3 \mapsto \zeta_3^{-1}$ |
+
+---
+
+## 16.10. Ce qui est classique vs ce qui est nouveau
+
+### Résultats classiques (connus)
+
+| Résultat | Attribution |
+|----------|-------------|
+| $\varphi(3) = 2$ | Euler |
+| $\mathrm{Gal}(\mathbb{Q}(\zeta_3)/\mathbb{Q}) \cong \mathbb{Z}/2\mathbb{Z}$ | Galois / Grothendieck |
+| Monodromie sur revêtements | Topologie classique |
+| Correspondance revêtements ↔ foncteurs fibres | Grothendieck (SGA1) |
+
+### Ce qui est nouveau (extension)
+
+| Concept | Description |
+|---------|-------------|
+| **Holonomie comme relation** | Pas seulement fonction/automorphisme, mais relation sur les fibres |
+| **Localisation sur les 2-cellules** | Attacher le flip à des commutations spécifiques dans $\mathcal{H}_2$ |
+| **Relativisation à $O$** | L'holonomie dépend du choix d'observable (résolution) |
+| **Régime non inversible** | Extension aux dynamiques relationnelles, pas seulement groupes |
+| **Critère structurel** | Quand le flip apparaît : ordre de rencontre des événements inverseurs |
+
+### Caractérisation
+
+> **Extension de Grothendieck** : La correspondance classique (revêtements ↔ foncteurs fibres) est étendue au cadre des **processus dynamiques** avec **choix de résolution**.
+
+> Le résultat mod 3 (dichotomie identité/flip sur $\mathrm{Prim}_3$) est le **premier exemple non trivial** de cette extension, montrant comment la structure arithmétique ($\varphi(3) = 2$) se manifeste **localement** dans une 2-géométrie d'histoires.
