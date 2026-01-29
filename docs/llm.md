@@ -550,3 +550,44 @@ Si $E_{\text{train}}$ est présent, alors différents schedulings (chaînes cofi
 * **Oui**, dans ce cadre, les poids ne sont pas la boîte noire : ce sont un output $W(h)$.
 * La question "boîte noire" devient : *peut-on remplacer l'histoire par un résumé petit $q$ (idéalement bien plus petit que $W$) sans perdre la sémantique pertinente ?*
 * Et ça se formule **exactement** en factorisation.
+
+---
+
+## Hypothèses techniques (verrouillage)
+
+Pour que le cadre ci-dessus soit un **théorème** (et non seulement un programme sémantique), on fixe les conventions suivantes :
+
+### 1. Complétion : poset quotient
+
+La complétion `Idl(H)` s'applique au **poset quotient** $\mathcal H / \sim$, où $h \sim h'$ ssi il existe une 2-cellule entre eux. Autrement dit, on identifie les chemins déclarés commutants avant de prendre les idéaux.
+
+### 2. Équivalence dans X
+
+L'isomorphisme $\cong$ dans $\mathcal X$ est :
+* **Déterministe** : égalité stricte $S(h_1) = S(h_2)$
+* **Probabiliste** : égalité en loi (même distribution sur les observables)
+* **Relationnel** : bisimulation faible (indiscernabilité sous toute suite de tests)
+
+Par défaut, on choisit **égalité en loi** (le plus courant pour les LLM).
+
+### 3. Extension $\widehat S$ sur Idl(H)
+
+On suppose :
+* $\mathcal X$ admet les **colimites filtrées** (ou est un dcpo),
+* $S$ est **Scott-continue** (préserve les sup dirigées).
+
+L'extension est alors définie par : $\widehat S(J) := \bigsqcup_{h \in J} S(h)$.
+
+### 4. Cohérence de l'indépendance $I_h$
+
+On impose la **stabilité par restriction** : si $(e_1, e_2) \in I_h$ (commutent à $h$), alors $(e_1, e_2) \in I_{h'}$ pour tout préfixe $h' \leq h$.
+
+Intuition : l'indépendance peut se **perdre** (un événement crée une dépendance), mais ne s'**invente** pas.
+
+### 5. Poids élargis
+
+L'observable $W$ inclut l'**état d'apprentissage complet** :
+$$
+W := (\theta, \text{optimizer\_state}, \text{buffers}, \text{rng})
+$$
+et non $\theta$ seul. Sans cela, le test de factorisation échoue trivialement (état d'optimizer différent).
