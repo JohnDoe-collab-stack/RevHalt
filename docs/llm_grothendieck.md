@@ -1074,3 +1074,118 @@ C'est une extension en **géométrie de processus**, pas en "nouvelle arithméti
 > **Extension de Grothendieck** : La correspondance classique (revêtements ↔ foncteurs fibres) est étendue au cadre des **processus dynamiques** avec **choix de résolution**.
 
 > Le résultat mod 3 (dichotomie identité/flip sur $\mathrm{Prim}_3$) est le **premier exemple non trivial** de cette extension, montrant comment la structure arithmétique ($\varphi(3) = 2$) se manifeste **localement** dans une 2-géométrie d'histoires.
+
+---
+
+## 16.11. Ce que la théorie "fait comprendre" sur la division par 3
+
+> Ce n'est pas arithmétique, c'est **structurel** : on isole **ce que "÷3 / mod 3" casse**, **où** ça casse, et **quel invariant minimal manque**.
+
+### "Diviser par 3" = choisir une observable, pas appliquer une opération
+
+"mod 3" est un **choix d'observable** $O_3$. Le quotient $q_{O_3}$ ne dit pas "la vérité sur le système", il dit **ce qui est visible à résolution 3**. Tout le reste est dans les **fibres** $\mathrm{Fibre}(h)$.
+
+> **Compréhension nouvelle** : l'obstacle "division par 3" n'est pas un mur logique, c'est *un effet de compression*.
+
+### Deux causes indépendantes des difficultés "avec 3"
+
+| Cause | Description |
+|-------|-------------|
+| **(A) Aliasing** | Perte d'info : beaucoup d'histoires deviennent indiscernables sous $O_3$ (taille/structure des fibres) |
+| **(B) Holonomie** | Dépendance à l'ordre, invisible au quotient : $\mathrm{Hol}(p,q)$ sur les 2-cellules |
+
+> Les problèmes avec 3 viennent soit de *ce que 3 efface*, soit de *comment l'ordre des événements agit sur ce que 3 efface* — **deux phénomènes disjoints**.
+
+### Le "truc caché" par mod 3 n'est pas un nombre : c'est un torseur
+
+"mod 3" crée automatiquement :
+
+* une **fibre d'ambiguïté** (espace de relèvements)
+* une **action/holonomie** des déformations admissibles sur cette fibre
+
+La donnée correcte n'est pas "classe mod 3", mais :
+
+> **(classe mod 3) + (position dans la fibre / classe d'holonomie)**
+
+L'arithmétique mod 3 ne peut pas "voir" cette variable parce qu'elle vit **au niveau des chemins** (2D), pas au niveau des états quotients.
+
+### Critère exact de quand mod 3 est insuffisant
+
+| Situation | Conséquence |
+|-----------|-------------|
+| $\mathrm{Hol}$ **trivial** | Raisonner mod 3 est **canonique** (pas de variable cachée active) |
+| $\mathrm{Hol}$ **tordu** (flip) | Information **structurellement cachée** que toute approche mod 3 pure perdra |
+
+> Ce n'est pas (seulement) parce que 3 n'est pas inversible — c'est parce qu'il y a une **holonomie résiduelle** qui survit au quotient.
+
+### La réparation minimale
+
+Une fois les 2-cellules où apparaît le twist localisées :
+
+* **enrichir l'observable** $O_3$ en ajoutant le bit/trit qui paramètre l'orbite d'holonomie
+* de sorte que l'holonomie devienne triviale sur l'observable enrichie
+
+> "On introduit la bonne variable cachée et d'un coup la 'division par 3' cesse d'être un trou noir."
+
+---
+
+## 16.12. Formulation rigoureuse : Théorème + Corollaires + Vérification
+
+### Hypothèses nécessaires
+
+**(H0) Transport fonctoriel** : Pour chaque 1-flèche $a : h \to h'$, un transport $T_a$, et pour un chemin $p = a_1; \dots; a_m$, $T_p := T_{a_m} \circ \cdots \circ T_{a_1}$. Si les $T_a$ sont bijectifs sur $\mathrm{Prim}_3$, alors $T_p^{-1}$ existe.
+
+**(H1) Fibre primitive mod 3** : Pour chaque préfixe $h$, $|\mathrm{Prim}_3(h)| = 2$, et pour chaque chemin $p : h \to k$, la restriction $T_p : \mathrm{Prim}_3(h) \xrightarrow{\sim} \mathrm{Prim}_3(k)$ est une bijection.
+
+**(H2) Holonomie relationnelle** : Pour une 2-cellule $p \Rightarrow q$ avec $p, q : h \to k$ :
+$$(x, x') \in \mathrm{Hol}_3(p, q) \iff \exists y \in \mathrm{Fibre}_{O_3}(k) \text{ tel que } (x, y) \in T_p \text{ et } (x', y) \in T_q$$
+
+---
+
+### Théorème (Holonomie primitive mod 3 = flip unique)
+
+Pour toute 2-cellule $p \Rightarrow q$ de source $h$, l'application :
+$$g_{p,q,h} := (T_q|_{\mathrm{Prim}})^{-1} \circ (T_p|_{\mathrm{Prim}}) : \mathrm{Prim}_3(h) \to \mathrm{Prim}_3(h)$$
+
+est un automorphisme de l'ensemble à 2 éléments. Donc :
+$$g_{p,q,h} \in \{\mathrm{id}, \tau_h\}$$
+
+où $\tau_h$ est l'unique involution non triviale. On définit $\mathrm{Flip}(p, q) \in \{0, 1\}$ par $g_{p,q,h} = \tau_h^{\mathrm{Flip}(p,q)}$.
+
+**Preuve** :
+
+1. **Étape A** : $\mathrm{Hol}_3(p,q) \cap (\mathrm{Prim}_3 \times \mathrm{Prim}_3) = \mathrm{Graph}((T_q)^{-1} \circ T_p)$ (par définition relationnelle + bijectivité)
+2. **Étape B** : Sur 2 éléments, $\mathrm{Aut}(\mathrm{Prim}_3(h)) = \{\mathrm{id}, \tau_h\}$. $\square$
+
+---
+
+### Corollaire 1 : Parité de flips
+
+Pour une chaîne de 2-cellules $t \Rightarrow t_1 \Rightarrow \cdots \Rightarrow t_r \Rightarrow t'$ :
+$$(T_{t'}|_{\mathrm{Prim}})^{-1} \circ (T_t|_{\mathrm{Prim}}) = \tau_h^{\sum_i \mathrm{Flip}(t_i, t_{i+1}) \pmod{2}}$$
+
+Toute la dépendance au choix de total se réduit à une **parité** $\mathbb{Z}/2$.
+
+---
+
+### Corollaire 2 : Repair tue l'holonomie (condition exacte)
+
+**Condition de cohérence** : Le flip doit satisfaire une loi de 2-cocycle (valeurs dans $\mathbb{Z}/2$). La parité totale ne doit pas dépendre de la décomposition en carrés.
+
+**Si** cette condition est satisfaite et le cocycle est trivialisable, alors il existe $\phi$ tel que :
+$$\phi(p) \oplus \phi(q) = \mathrm{Flip}(p, q) \quad \forall\, 2\text{-cellule } p \Rightarrow q$$
+
+On définit le transport enrichi :
+$$\widetilde{T}_p(u, s) := (T_p(u), s \oplus \phi(p))$$
+
+Et l'holonomie devient **diagonale** (triviale) dans l'espace enrichi $\mathcal{X} \times \{\pm 1\}$.
+
+---
+
+### Verdict de rigueur
+
+| Composant | Statut |
+|-----------|--------|
+| Théorème Flip/Prim mod 3 | ✓ Rigoureux sous (H0–H2) |
+| Formule $\mathrm{Hol} \cap (\mathrm{Prim} \times \mathrm{Prim}) = \{(u, \tau(u))\}$ | ✓ Correct pour flip=1 |
+| Repair global | ✓ Si flip = 2-cocycle trivialisable |
