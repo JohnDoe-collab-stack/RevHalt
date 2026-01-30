@@ -186,66 +186,96 @@ $$\boxed{\mathrm{Flip}_3(\beta \circ \alpha) = \mathrm{Flip}_3(\beta) \oplus \ma
 
 ---
 
-## 8. Théorème de repair : tuer l'holonomie (rendre canonique à résolution 3)
+## 8. Repair : trivialiser l’holonomie par **changement de base** (gauge / basis change)
 
-> Le "repair" est une extension minimale d'état (ajout d'un bit) qui compense exactement le twist.
+### 8.1. Donnée : $\mathrm{Flip}_3$ sur les 2-cellules et jauge $\phi$ sur les totals
 
-### 8.1. Donnée de repair (potentiel)
+On fixe $(h,k)$ et la catégorie des déformations $\mathrm{Def}(h,k)$ :
 
-On cherche une application :
-$$\phi : \{\text{chemins de } \mathcal{H}_2\} \to \mathbb{Z}/2$$
+- objets : les totals $p : h \to k$,
+- morphismes : les 2-cellules $\alpha : p \Rightarrow q$.
 
-telle que pour toute 2-cellule $\alpha : p \Rightarrow q$ :
+Sous (P3)+(INV3)+(FUN3), chaque $\alpha : p \Rightarrow q$ induit
+$$
+\mathrm{Mono}_3(\alpha) := T_q^{-1}T_p \in \mathrm{Aut}(\mathrm{Prim}_3(h))\cong \mathbb Z/2,
+$$
+et donc un bit
+$$
+\mathrm{Flip}_3(\alpha)\in\mathbb Z/2
+\quad\text{tel que}\quad
+\mathrm{Mono}_3(\alpha)=\tau_h^{\mathrm{Flip}_3(\alpha)}
+$$
+où $\tau_h$ est l’unique involution non triviale de $\mathrm{Prim}_3(h)$ (le swap).
 
-$$\boxed{\mathrm{Flip}_3(\alpha) = \phi(p) \oplus \phi(q)}$$
+**Condition de réparabilité (trivialisation / cobord).**
+On dit que $\mathrm{Flip}_3$ est **trivialisable** sur $\mathrm{Def}(h,k)$ s’il existe une jauge
+$$
+\phi:\mathrm{Obj}(\mathrm{Def}(h,k))\to \mathbb Z/2
+\quad(\text{donc } \phi(p)\text{ sur chaque total }p)
+$$
+telle que pour toute 2-cellule $\alpha : p \Rightarrow q$,
+$$
+\boxed{\ \mathrm{Flip}_3(\alpha)=\phi(p)\oplus \phi(q)\ } \tag{Repair}
+$$
+C’est exactement la forme "$\mathrm{Flip}=\delta\phi$" (cobord).
 
-C'est exactement dire : "le flip est un **cobord**" (un coboundaire) : il se lit comme différence de potentiel entre deux totals.
+> **Note :** ici $\phi$ vit sur les *totals* (objets du groupoïde), comme dans `Repaired.lean`.
 
-### 8.2. Construction "réparée"
+### 8.2. Définition : transport corrigé (basis change)
 
-Définis la fibre primitive réparée :
-$$\widetilde{\mathrm{Prim}}_3(h) := \mathrm{Prim}_3(h) \times \mathbb{Z}/2$$
+On définit le **transport corrigé** le long d’un total $p : h \to k$ par
+$$
+\boxed{\ T_p^{\sharp} := \tau_k^{\phi(p)}\circ T_p : \mathrm{Prim}_3(h)\to \mathrm{Prim}_3(k)\ } \tag{CT}
+$$
+(c’est un changement de base sur la fibre d’arrivée).
 
-Définis le transport réparé le long d'un chemin $p : h \to k$ :
-$$\widetilde{T}_p(u, s) := (T_p(u), s \oplus \phi(p))$$
+- Si $\phi(p)=0$ : $T_p^{\sharp}=T_p$,
+- Si $\phi(p)=1$ : $T_p^{\sharp}=\tau_k\circ T_p$ (on "retourne" la base primitive à l’arrivée).
 
-C'est bijectif (car $T_p$ l'est).
+**Correspondance avec la notation additive (Lean).**
+Si l’on identifie $\mathrm{Prim}_3(\cdot)$ à un torsor $\{0,1\}$ et $\tau(x)=x+1$, alors (CT) se lit :
+$$
+T_p^{\sharp}(u)=T_p(u)+\phi(p)
+$$
+ce qui correspond à ton schéma `corrected_transport(φ,p,u) = transport(p,u) - φ(p)` (même chose en $\mathbb Z/2$).
 
-### Théorème 2 (Repair tue l'holonomie primitive)
+### 8.3. Théorème : le transport corrigé tue l’holonomie primitive
 
-Si $\phi$ satisfait $\mathrm{Flip}_3(\alpha) = \phi(p) \oplus \phi(q)$ pour toute $\alpha : p \Rightarrow q$, alors pour toute 2-cellule $\alpha : p \Rightarrow q$ :
+Soit $\alpha : p \Rightarrow q$ une 2-cellule. La monodromie corrigée est
+$$
+\mathrm{Mono}_3^{\sharp}(\alpha):=(T_q^{\sharp})^{-1}T_p^{\sharp}\in \mathrm{Aut}(\mathrm{Prim}_3(h)).
+$$
 
-$$\boxed{\widetilde{T}_q^{-1} \circ \widetilde{T}_p = \mathrm{id} \quad \text{sur } \widetilde{\mathrm{Prim}}_3(h)}$$
+**Théorème (Repair = trivialisation).**
+Si $\phi$ satisfait (Repair), alors pour toute $\alpha : p \Rightarrow q$,
+$$
+\boxed{\ \mathrm{Mono}_3^{\sharp}(\alpha)=\mathrm{id}\ }
+\qquad\text{donc}\qquad
+\boxed{\ \mathrm{Hol}_3(\alpha)\cap(\mathrm{Prim}\times\mathrm{Prim}) = \{(u,u)\}\ \text{après correction.}}
+$$
 
-Donc l'holonomie devient **strictement diagonale** après repair : plus de flip, plus de dépendance au chemin sur la partie primitive.
+**Preuve (verrouillée).**
+En utilisant $(\tau_k^{b})^{-1}=\tau_k^{b}$ et la définition $T_p^{\sharp}=\tau_k^{\phi(p)}T_p$,
+$$
+\mathrm{Mono}_3^{\sharp}(\alpha)
+=(T_q^{\sharp})^{-1}T_p^{\sharp}
+= T_q^{-1}\tau_k^{\phi(q)}\tau_k^{\phi(p)}T_p
+= T_q^{-1}\tau_k^{\phi(p)\oplus\phi(q)}T_p.
+$$
+Or, sur des fibres à 2 éléments, on a la naturalité automatique
+$$
+T_q^{-1}\tau_k = \tau_h T_q^{-1},
+$$
+(car conjuguer l’unique involution non triviale donne l’unique involution non triviale), donc
+$$
+T_q^{-1}\tau_k^{b}T_p
+=\tau_h^{b} T_q^{-1}T_p
+=\tau_h^{b} \tau_h^{\mathrm{Flip}(\alpha)}
+=\tau_h^{b\oplus \mathrm{Flip}(\alpha)}.
+$$
+Avec $b=\phi(p)\oplus\phi(q)=\mathrm{Flip}(\alpha)$ (condition Repair), on obtient $\tau_h^{0}=\mathrm{id}$. $\square$
 
-### Preuve (calcul explicite)
-
-On a :
-$$\widetilde{T}_p(u, s) = (T_p(u), s \oplus \phi(p))$$
-
-Et :
-$$\widetilde{T}_q^{-1}(v, t) = \bigl(T_q^{-1}(v), t \oplus \phi(q)\bigr)$$
-
-(car inverser $s \mapsto s \oplus \phi(q)$ revient à re-xorer $\phi(q)$).
-
-Donc :
-$$\widetilde{T}_q^{-1} \widetilde{T}_p(u, s) = \Bigl(T_q^{-1} T_p(u), s \oplus \phi(p) \oplus \phi(q)\Bigr) = \Bigl(\mathrm{Mono}_3(\alpha)(u), s \oplus \mathrm{Flip}_3(\alpha)\Bigr)$$
-
-en utilisant la condition $\phi(p) \oplus \phi(q) = \mathrm{Flip}_3(\alpha)$.
-
-Or $\mathrm{Flip}_3(\alpha) = 0$ iff $\mathrm{Mono}_3(\alpha) = \mathrm{id}$, et $\mathrm{Flip}_3(\alpha) = 1$ iff $\mathrm{Mono}_3(\alpha) = \tau_h$. Dans les deux cas, la correction sur le second bit **compense exactement** l'effet sur le premier. Le résultat est l'identité sur $(u, s)$. $\square$
-
-> **Point clé** : le repair transforme le résidu "holonomie" en artefact de jauge dès que $\phi$ existe.
-
-### 8.3. Critère exact : canonisable / non canonisable
-
-| Situation | Conséquence |
-|-----------|-------------|
-| $\phi$ **existe** | Flip trivialisable → résolution 3 canonique (pas besoin de choisir un total) |
-| $\phi$ **n'existe pas** | Obstruction intrinsèque (classe $\mathbb{Z}/2$ non nulle) |
-
----
+> **Point clé :** on ne "compense" pas un swap en XORant un second bit ; on **reparamètre les transports** (basis change) de manière à rendre toutes les commutations plates sur la primitive.
 
 ## 9. Ce que "mod 3" révèle ici (formulation sans ambiguïté)
 
@@ -519,23 +549,36 @@ Concrètement : une boucle = une suite de commutations ramenant $p$ à $p$. **Le
 
 ---
 
-## 21. Repair = trivialisation de la classe $[\mathrm{Flip}_3]$
+## 21. Repair global $\Longleftrightarrow$ trivialisation cohomologique (version groupoïde)
 
-"Repair global" = enrichir l'état par un bit de jauge de sorte que **toutes** les déformations admissibles deviennent neutres sur la fibre réparée.
+On considère la groupoïdification $\Pi(h,k)$ de $\mathrm{Def}(h,k)$ (on inverse formellement les 2-cellules). Le flip définit un foncteur
+$$
+\mathrm{Flip}_3:\Pi(h,k)\to \mathbf{B}(\mathbb Z/2),
+$$
+donc une classe
+$$
+[\mathrm{Flip}_3]\in H^1(\Pi(h,k);\mathbb Z/2).
+$$
 
-### Théorème 6 (Repair global $\Longleftrightarrow$ classe nulle)
+### Théorème (Repair global $\iff [\mathrm{Flip}_3]=0$)
 
 Les assertions suivantes sont équivalentes :
 
-1. **(Repair global)** Il existe une extension par un bit qui tue l'holonomie sur $\mathrm{Prim}_3$ pour toutes les 2-cellules admises
-2. **(Jauge)** Il existe $g : \mathrm{Obj}(\Pi(h, k)) \to \mathbb{Z}/2$ telle que $\mathrm{Flip}_3(\gamma) = g(q) \oplus g(p)$ pour tout $\gamma : p \to q$
-3. **(Obstruction nulle)** $\boxed{[\mathrm{Flip}_3] = 0 \text{ dans } H^1(\Pi(h, k); \mathbb{Z}/2)}$
+1. **(Trivialisation / jauge)** Il existe $\phi:\mathrm{Obj}(\Pi(h,k))\to\mathbb Z/2$ telle que pour tout morphisme $\gamma:p\to q$ dans $\Pi(h,k)$,
+   $$
+   \mathrm{Flip}_3(\gamma)=\phi(p)\oplus\phi(q).
+   $$
+2. **(Classe nulle)** $[\mathrm{Flip}_3]=0$ dans $H^1(\Pi(h,k);\mathbb Z/2)$.
+3. **(Repair effectif)** En définissant pour chaque total $p$ le transport corrigé $T_p^{\sharp}=\tau^{\phi(p)}\circ T_p$, on a
+   $$
+   (T_q^{\sharp})^{-1}T_p^{\sharp}=\mathrm{id}
+   \quad\text{pour toute 2-cellule } \alpha:p\Rightarrow q.
+   $$
 
-**Preuve** :
-
-- $(2) \Leftrightarrow (3)$ : définition de $H^1$ comme cocycles modulo jauge
-- $(2) \Rightarrow (1)$ : on reconstruit $\widetilde{\mathrm{Prim}}_3 = \mathrm{Prim}_3 \times \mathbb{Z}/2$ et on corrige par $g$
-- $(1) \Rightarrow (2)$ : si l'holonomie est tuée, le bit de repair attaché à chaque total est une jauge $g$. $\square$
+**Preuve.**
+(1)$\Leftrightarrow$(2) : définition de $H^1$ comme foncteurs modulo jauge.
+(1)$\Rightarrow$(3) : c’est exactement le calcul de §8.3.
+(3)$\Rightarrow$(1) : si toutes les monodromies sont rendues triviales, la "base choice" attachée à chaque total fournit une jauge $\phi$ reconstruisant $\mathrm{Flip}$ par différence $\phi(p)\oplus\phi(q)$. $\square$
 
 > **Point clé** : ce n'est pas un "détail" — tu as une obstruction intrinsèque, calculable, qui vit au niveau 2D et contrôle exactement la canonisation.
 

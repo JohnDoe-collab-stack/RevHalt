@@ -14,13 +14,17 @@ namespace RevHalt.Mod3Holonomy
 
 variable [Mod3Theory]
 
-/-! ## 1. Repaired (Corrected) Transport
+/-! ## 1. Repaired (Corrected) Transport (Basis Change)
 
-We correct the transport by the gauge difference.
-T'_p(u) = T_p(u) - φ(p)
+We do not extend the state by a naive product bit; we perform a gauge/basis change
+on primitive transports. The correction twists the transport itself by the unique
+nontrivial involution (swap) according to φ(p).
+This trivializes monodromy iff Flip = δφ.
+
+T'_p(u) = T_p(u) - φ(p)  (Additive notation for: T' = τ^(-φ) ∘ T)
 -/
 
-/-- The corrected transport using a gauge φ -/
+/-- The corrected transport using a gauge φ (Basis Change) -/
 def corrected_transport (φ : Gauge) (p : Path) (u : ZMod 2) : ZMod 2 :=
   u + transport p - φ p
 
