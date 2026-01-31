@@ -126,7 +126,8 @@ def AutoRegulated {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V
     (J : Set (Cell (P := P))) : Prop :=
   ∃ φ : Gauge P S,
     ∀ c, c ∈ J →
-      let ⟨h, _, p, q, ⟨_⟩⟩ := c
+      -- Fixing the variable binding for robustness (k is needed for p, q types)
+      let ⟨h, k, p, q, ⟨_⟩⟩ := c
       CorrectedHolonomy sem obs target_obs φ p q
         = FiberIdentity obs target_obs (P := P) (h := h)
 
