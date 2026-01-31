@@ -1,102 +1,138 @@
-# Formules d’Holonomie : Cadre LLM / Grothendieck Étendu (version corrigée)
+# Formules d’Holonomie — Cadre Histoires/Observables (fondationnel)
 
-Notations minimales :
+## 1) Primitives : 2-géométrie des histoires (pas de temps externe)
 
-* α : p ⇒ q est une 2-cellule, avec p, q : h → k (même source h, même but k).
-* Fibre(h) = micro-états compatibles avec l’observable au point h.
-* Transport le long d’un chemin p :
+On se donne une 2-structure d’histoires 𝓗₂ :
 
-  * en général : Tp ⊆ Fibre(h) × Fibre(k) (correspondance / relation)
-  * en régime réversible : Tp : Fibre(h) → Fibre(k) (bijection)
+* Objets : préfixes d’histoires h, k, …
+* 1-flèches : chemins (totals/schedulings) p : h → k
+* 2-cellules : déformations/commutations admissibles α : p ⇒ q entre chemins parallèles p, q : h → k
 
----
-
-## 1) Cadre général (dynamique non-inversible : relationnel / probabiliste)
-
-**Holonomie (relation sur la fibre de départ)**
-Hol(α) ⊆ Fibre(h) × Fibre(h)
-
-**Condition d’appartenance**
-(x, x') ∈ Hol(α)  ⇔  ∃ y ∈ Fibre(k) : (x, y) ∈ Tp  ET  (x', y) ∈ Tq
-
-Lecture : “x transporté par p” et “x' transporté par q” peuvent **recoller** au même micro-état final y.
-
-Remarque (importante) : ici Hol dépend de la 2-cellule α (donc de la paire (p,q) *et* de leur statut de ‘déformation admissible’).
+> Le “temps/ordinal” n’est pas une donnée : c’est un invariant dérivé des linéarisations cofinales de cette géométrie (shadow).
 
 ---
 
-## 2) Cadre réversible (régime étale / Grothendieck)
+## 2) Sémantique + observable : ce qui est vu / ce qui est caché
 
-Hypothèse : Tp et Tq sont des **bijections** Fibre(h) → Fibre(k). Alors Tq⁻¹ existe.
+* Sémantique (exécution) : S : 𝓗₂ → 𝓧
+* Observable (résolution) : O : 𝓧 → V
+* Observation induite sur les histoires : F := O ∘ S : 𝓗₂ → V
 
-**Monodromie (automorphisme de la fibre de départ)**
-Mono(α) = Tq⁻¹ ∘ Tp  ∈ Aut(Fibre(h))
+### Fibre d’ambiguïté (partie cachée relative à O)
 
-Lecture : “aller par p puis revenir par l’inverse de q”.
+Pour un objet h, définis :
 
-Fait utile : dans ce régime bijectif, Hol(α) devient le **graphe** de Mono(α) :
+* v_h := F(h)
+* Fibre(h) := { x ∈ Obj(𝓧) | O(x) = v_h }
 
-* (x, x') ∈ Hol(α) ⇔ x' = Mono(α)(x)
-
----
-
-## 3) Cas “mod 3” (holonomie primitive binaire)
-
-On suppose une observable O₃ et une sous-fibre primitive stable :
-
-**Sous-fibre primitive**
-
-* Prim₃(h) ⊆ Fibre₃(h)
-* |Prim₃(h)| = 2
-* stabilité + réversibilité sur la primitive : pour tout p : h → k,
-  Tp|Prim : Prim₃(h) → Prim₃(k) est une bijection
-
-**Monodromie primitive**
-Mono₃(α) = (Tq|Prim)⁻¹ ∘ (Tp|Prim)  ∈ Aut(Prim₃(h)) ≅ ℤ/2
-
-**Critère de flip (correction d’ordre)**
-Le flip apparaît ssi la monodromie primitive est l’involution non triviale τₕ :
-
-* Mono₃(α) = τₕ
-* équivalemment : (Tq|Prim)⁻¹ ∘ (Tp|Prim) = τₕ
-
-⚠️ Correction clé : ce n’est **pas** (Tp|Prim)⁻¹ ∘ (Tq|Prim).
-La convention “verrouillée” (et cohérente) est Mono = Tq⁻¹∘Tp.
-
-**Caractérisation par un bit**
-
-* Flip(α) ∈ ℤ/2
-* Mono₃(α) = τₕᴾᵘⁱˢˢᵃⁿᶜᵉ(Flip(α))  (donc Flip=0 → id, Flip=1 → τₕ)
+> Fibre(h) = “tout ce que l’observable O ne distingue pas” au niveau de h.
 
 ---
 
-## 4) Propriétés structurelles (2D → cocycle, repair, obstruction)
+## 3) Transport (général : non-inversible / relationnel)
 
-### 4.1 Additivité (pasting vertical = XOR)
+Pour chaque chemin p : h → k, le transport sur la partie cachée est **une correspondance** :
 
-Si α : p ⇒ q et β : q ⇒ r, alors :
+* T_p ⊆ Fibre(h) × Fibre(k)
 
-* Mono₃(β ∘ α) = Mono₃(β) ∘ Mono₃(α)
-* donc Flip(β ∘ α) = Flip(β) ⊕ Flip(α)
+Lecture : (x, y) ∈ T_p signifie “en suivant p depuis le micro-état x (compatible avec O au départ), on peut atteindre le micro-état y (compatible avec O à l’arrivée)”.
 
-### 4.2 Repair (trivialisation cohomologique)
+Compatibilité minimale (composition relationnelle) :
 
-On considère le groupoïde Π(h,k) des “totals” et de leurs déformations (2-cellules inversées formellement).
+* T_id = Id
+* T_{p ∘ r} = T_p ∘ T_r  (composition de relations)
 
-Le flip définit une classe :
+> Ici, on ne suppose ni déterminisme, ni bijectivité, ni existence d’un inverse.
 
-* [Flip] ∈ H¹(Π(h,k); ℤ/2)
+---
 
-**Condition exacte de réparabilité (trivialisation)**
-Il existe une jauge φ sur les objets (totals) telle que pour toute 2-cellule α : p ⇒ q :
+## 4) Définition fondamentale : holonomie relative à l’observable
 
-* Flip(α) = φ(p) ⊕ φ(q)
+Soit une 2-cellule α : p ⇒ q avec p, q : h → k.
 
-(équivalent à [Flip] = 0)
+### Holonomie (relation sur la fibre de départ)
 
-### 4.3 “Non-réduction” (formulation correcte : non-factorisation / boîte noire structurelle)
+On définit :
 
-Si [Flip] ≠ 0 dans H¹(Π(h,k); ℤ/2), alors :
+* Hol_O(α) ⊆ Fibre(h) × Fibre(h)
 
-* il n’existe **pas** de résumé/projection 1D qui “oublie la 2D” (les déformations) et permette de reconstruire Flip ;
-* autrement dit, toute projection 1D qui identifie les histories au niveau des objets (quotient observable) laisse subsister une variable 2D (Flip) non récupérable : **boîte noire structurelle à cette résolution**.
+par la condition d’appartenance :
+
+* (x, x′) ∈ Hol_O(α)  ⇔  ∃ y ∈ Fibre(k) tel que (x, y) ∈ T_p et (x′, y) ∈ T_q
+
+Lecture : “p depuis x et q depuis x′ peuvent recoller au même micro-état final y”, même si O ne distingue pas p et q.
+
+> C’est **ça** l’holonomie : la dépendance au chemin de la partie cachée, attachée aux 2-cellules, sans aucune hypothèse d’inversibilité.
+
+---
+
+## 5) Trivialité / torsion (définition interne)
+
+Pour une 2-cellule α : p ⇒ q :
+
+* Holonomie faible : Δ ⊆ Hol_O(α)
+  (tout x peut se recoller à lui-même : pas forcément unique)
+* Holonomie strictement triviale : Hol_O(α) = Δ
+  (recollage sans twist : si ça recolle, c’est avec le même x)
+* Holonomie tordue : ∃ x ≠ x′ avec (x, x′) ∈ Hol_O(α)
+  (le chemin “ne change rien observablement”, mais tord l’invisible)
+
+où Δ = { (x, x) | x ∈ Fibre(h) }.
+
+---
+
+## 6) Où le “quotient” intervient (après coup, et seulement sur les objets)
+
+Le quotient canonique relatif à O (sur les objets/préfixes) identifie les histoires indiscernables **au niveau observable** :
+
+* h ~_O h′  ⇔  F(h) = F(h′)   (ou famille d’observables)
+
+Cela produit un quotient sur objets (1D) qui capture “ce que O voit”.
+
+Mais l’holonomie Hol_O vit au niveau **2D (chemins/2-cellules)** et mesure précisément ce que ce quotient **ne capture pas** : l’action du scheduling sur l’invisible.
+
+---
+
+## 7) Cas spécial dérivé : quand une “monodromie” existe (optionnel)
+
+Ce n’est **pas** la base. C’est un **cas particulier** où l’holonomie se rigidifie en fonction.
+
+### 7.1. Cas fonctionnel (déterministe sur fibres)
+
+Si chaque T_p est une fonction Fibre(h) → Fibre(k), alors :
+
+* (x, x′) ∈ Hol_O(α)  ⇔  T_p(x) = T_q(x′)
+
+### 7.2. Cas bijectif (réversible sur une fibre stable)
+
+Si, sur une sous-fibre stable F₀(h) ⊆ Fibre(h), les T_p sont bijectifs, alors on peut définir :
+
+* Mono_O(α) := (T_q|*{F₀})⁻¹ ∘ (T_p|*{F₀})  ∈ Aut(F₀(h))
+
+et Hol_O(α) restreinte à F₀(h) devient le **graphe** de Mono_O(α).
+
+> Important : ceci est un **raffinement** quand les hypothèses le permettent, pas une définition générale.
+
+---
+
+## 8) Auto-régulation (version générale, sans exiger l’inversibilité de la dynamique)
+
+L’auto-régulation porte sur les **déformations admissibles** (les 2-cellules) et l’holonomie qu’elles induisent sur l’invisible.
+
+* Fixe h, k.
+  Définis Def(h, k) : objets = chemins p : h → k ; morphismes = 2-cellules α : p ⇒ q.
+
+### Principe (canonisation interne)
+
+Le système est “auto-régulé” (à résolution O, sur le domaine considéré) s’il existe une **jauge** qui rend plates les déformations, c.-à-d. qui transforme les transports (ou la représentation induite quand elle existe) de sorte que, pour toute 2-cellule α : p ⇒ q, l’holonomie devienne strictement diagonale sur la partie pertinente.
+
+* En régime bijectif (quand une représentation ρ existe), cela se formule classiquement comme “ρ est un cobord”.
+* En régime purement relationnel, la formulation correcte reste : “il existe une reparamétrisation interne qui diagonalise Hol_O(α) (sur la fibre pertinente) pour toutes les 2-cellules admissibles”.
+
+> Donc : l’inversibilité n’est pas requise pour **définir** Hol_O ; elle n’est requise que si tu veux remplacer l’holonomie-relation par une **action** (automorphismes) et parler de classes H¹ au sens groupoïde.
+
+---
+
+### Résumé (une ligne)
+
+**Holonomie relative à O** = relation Hol_O(α) sur Fibre(h) définie par “recollage au même y” le long de deux chemins p, q reliés par une 2-cellule α : p ⇒ q ; tout le reste (monodromie, H¹, etc.) est **dérivé** quand des hypothèses supplémentaires le justifient.
