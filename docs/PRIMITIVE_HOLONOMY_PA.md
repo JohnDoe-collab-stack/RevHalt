@@ -1,111 +1,181 @@
-# Peano (PA) dans ton cadre : les quotients qu’il *impose* réellement
 
-## Pré-setup (pour fixer le langage)
+# PA sous holonomie primitive : arithmétique comme quotient d’une 2-géométrie de preuves (version verrouillée)
 
-* On a une 2-géométrie implicite **H₂(PA)** :
+## 0) Objet
 
-  * **objets** : contextes/énoncés (ou “préfixes de théorie”)
-  * **1-flèches** : dérivations/preuves finies (totals 1D)
-  * **2-cellules** : déformations admissibles de preuves (permutations de pas, normalisations, macro-pas vs micro-pas, etc.)
-* L’**observable canonique** de PA (ton “O”) est :
+But : reformuler l’arithmétique de Peano (PA) dans le cadre :
 
-  * **O(φ) = provable(φ)** (ou plus fin : la classe de φ modulo “PA ⊢ φ ↔ ψ”)
-* La **fibre** = tout ce que cet observable ne voit pas : *preuves, traces, ordres, coûts, modèles, etc.*
+* 2-géométrie primitive des histoires (preuves),
+* sémantique relationnelle non-inversible,
+* observable O (le “visible”),
+* fibres (le “caché”),
+* holonomie Hol_O(α) = Tₚ ○ (T_q)†,
+* auto-régulation cofinale vs obstruction structurelle,
+* non-réduction : aucun “shot 1D” ne capture la torsion 2D.
 
----
-
-## Quotient 1 — Canonisation des *numéraux* par la chaîne du successeur
-
-**PA fixe une présentation canonique de chaque entier standard** :
-
-* les “numéraux” sont **0, S(0), S(S(0)), …**
-* et PA fournit les axiomes qui rendent cette présentation rigide (structure de base de S et 0).
-
-➡️ Dans ton langage : PA choisit un **représentant canonique** (une “timeline” privilégiée) pour coder ℕ *au niveau syntaxique*.
+Ici, “PA” n’est pas pris comme fondement ultime : c’est **un quotient** (un choix d’observable + un oubli de fibre + une linéarisation).
 
 ---
 
-## Quotient 2 — L’égalité comme *quotient* des constructions
+## 1) Primitive : H₂ des preuves
 
-PA fait de “=“ un **quotient** :
+On définit une 2-catégorie (ou bicatégorie) **H₂ᴾᴬ** :
 
-* deux termes/constructions sont identifiés dès que PA prouve leur égalité.
+* **Objets** h : préfixes de dérivations (états partiels de preuve, contextes, piles d’objectifs, etc.).
+* **1-flèches** p : h → k : *totals* = dérivations complètes (un scheduling de règles) menant de h à k.
+* **2-cellules** α : p ⇒ q : *moves admissibles* entre dérivations parallèles (commutations, permutations de sous-preuves, réassociations, conversions de “même preuve” au sens structurel).
 
-Exemple fidèle à ton intuition :
-
-* “(1+1)+1”, “1+(1+1)”, “S(S(S(0)))” deviennent **la même valeur** *au niveau observable* “valeur arithmétique”, parce que PA fournit (via ses axiomes + preuves) le mécanisme qui écrase ces chemins de construction.
-
-➡️ Ton cadre : **plusieurs histoires** (constructions) → **un même point observable** (classe d’égalité) ; la différence de chemin migre dans la **fibre**.
+Point clé : ces 2-cellules existent **avant** tout quotient. Elles sont la géométrie primitive des “façons de prouver”.
 
 ---
 
-## Quotient 3 — Observable “théorème” : compression maximale des preuves
+## 2) Micro-états et sémantique relationnelle (sans inversibilité)
 
-PA met au premier plan l’assertion “⊢ φ”.
-Donc, dès que tu regardes via l’observable “théorème”, **toute la 2D des preuves** (déformations, choix d’ordre, stratégie, taille) devient invisible.
+On fixe un espace de micro-états **X** qui encode ce qu’une preuve “contient vraiment”, par exemple :
 
-➡️ Ton cadre :
+* structure de l’arbre de preuve,
+* choix de règles et leur ordre,
+* témoins explicites (si présents),
+* traces de réduction, normalisation, stratégie,
+* ressources consommées (longueur, profondeur, coût).
 
-* **O = provabilité**
-* **Fibre(φ)** = l’espace de micro-histoires (preuves distinctes) compatibles avec la même observation “⊢ φ”.
+On prend **Relₓ** : une catégorie à un seul objet X, morphismes = relations R ⊆ X×X.
 
-C’est exactement ton “quotient avant tout”.
+Une sémantique minimale est un foncteur sur le 1-squelette :
 
----
+* à chaque total p : h→k, on associe une relation S₁(p) ⊆ X×X.
 
-## Quotient 4 — Induction = *repair finitaire* d’un futur cofinal standard
-
-L’induction (dans PA) agit comme une **machine de repair** qui:
-
-* prend une propriété prouvée au point-base (0)
-* * un pas stable sous S
-* et **canonise** une infinité de cas (tous les numéraux) dans une preuve finie.
-
-➡️ Dans ton langage :
-
-* tu as un **futur cofinal standard** (la chaîne Sⁿ(0))
-* et l’induction est un **opérateur de trivialisation** sur ce futur (un repair finitaire qui fait “comme si” tu avais parcouru cofinalement l’avenir).
+On n’impose pas que les 2-cellules α soient “neutres” sémantiquement : elles servent d’index 2D de comparaison (quels p et q on compare), pas de quotient déjà appliqué.
 
 ---
 
-## Quotient 5 — Sémantique 1er ordre : “valeur” = ce qui est invariant sous équivalence élémentaire
+## 3) Observable “arithmétique” et fibres
 
-PA fixe un type d’observable sémantique très précis : **les invariants du premier ordre**.
+On fixe une observable :
 
-Forme propre dans ton langage :
+* **O : X → V**
 
-* prends une observable sémantique **O(M) = Th₁(M)** (théorie du modèle en logique 1er ordre, ou au moins ses conséquences pertinentes).
-* alors la **fibre** est gigantesque : tous les micro-états (modèles / extensions / réalisations) qui partagent la même face observable de premier ordre.
+où V est ce que PA retient comme “visible”. Choix standard (le plus fidèle à l’usage de PA) :
 
-➡️ Ce n’est pas un “détail modèle-théorique” : c’est *structurellement* ton schéma “observable → fibre”.
+* V = “énoncés/propositions arithmétiques” (ou jugements) ;
+* O(x) = “l’énoncé final obtenu par la dérivation”.
 
----
+On suppose donnée, pour chaque préfixe h, une valeur visible vₕ ∈ V issue de l’exécution observée (pas un temps).
 
-## Quotient 6 — Finite-trace : la finitude comme régime qui fabrique l’obstruction cofinale (Gödel)
+Définition de la fibre (ambiguïté) :
 
-PA choisit un régime où les objets “certifiés” sont ceux qui admettent une **trace finie** (preuve finie).
+* F(h) = { x ∈ X | O(x) = vₕ }
 
-Dans ton cadre (et c’est là que ça devient *vraiment* ton sujet) :
-
-* Il existe des phénomènes où l’“être vrai cofinalement sur le futur standard” est une notion naturelle,
-* et où l’observable “preuve finie” est plus grossier.
-
-➡️ Traduction fidèle à ton formalisme :
-
-* tu as deux observables :
-
-  * **O₁ = provabilité finie**
-  * **O₂ = vérité cofinale sur le futur standard**
-* l’obstruction de Gödel, c’est exactement : **O₂ voit une stabilisation cofinale** que **O₁ ne trivialise pas** par un unique 1D-shot.
-
-C’est ton “OU” :
-
-* soit l’holonomie relative à O₁ devient trivializable sur un futur cofinal pertinent,
-* soit il y a une **obstruction structurelle cofinale**.
+Interprétation : toutes les preuves/micro-traces compatibles avec le même visible.
 
 ---
 
-# La phrase “qui va plus loin” (et qui dit vraiment ce que PA *fait*)
+## 4) Transport sur fibres
 
-**PA est une politique de canonisation :**
-il choisit un observable (provabilité / invariants 1er ordre) et organise un quotient qui écrase la multiplicité des histoires (preuves, constructions, stratégies) en points “théorèmes/valeurs”, en déportant la 2D dans la fibre — puis l’obstruction (Gödel) apparaît exactement quand la trivialisation finitaire ne recolle pas cofinalement.
+Pour un total p : h → k :
+
+* Tₚ = S₁(p) ∩ (F(h)×F(k)) ⊆ F(h)×F(k)
+
+Tₚ décrit comment une dérivation p transporte du micro-état compatible avec h vers un micro-état compatible avec k, tout en restant indiscernable du point de vue de O.
+
+---
+
+## 5) Holonomie primitive sur PA (définition canonique)
+
+Pour une 2-cellule α : p ⇒ q (avec p,q : h→k), l’holonomie relative à l’observable arithmétique O est :
+
+* Hol_O(α) ⊆ F(h)×F(h)
+
+définie par :
+
+* (x,x′) ∈ Hol_O(α) ssi ∃y ∈ F(k) tel que (x,y) ∈ Tₚ et (x′,y) ∈ T_q
+
+Forme relationnelle :
+
+* Hol_O(α) = Tₚ ○ (T_q)†
+
+Lecture : deux dérivations visiblement identiques (même énoncé final) peuvent recoller au même but tout en venant de micro-états initiaux différents : **c’est la dépendance au chemin sur la fibre**.
+
+---
+
+## 6) Ce que “PA” fait réellement : le visible comme quotient
+
+Dans ce cadre, “faire de l’arithmétique à la PA” correspond à :
+
+* choisir O = “on ne garde que l’énoncé final”,
+* travailler essentiellement dans V (le quotient),
+* ignorer la fibre F(h) (la géométrie des preuves),
+* et donc ignorer l’holonomie, sauf quand elle “fuit” sous forme de phénomènes (incomplétude, non-standard, etc.).
+
+Ce n’est pas un jugement de valeur : c’est une description structurale de PA comme **compression 1D**.
+
+---
+
+## 7) Point ω / Gödel : la divergence comme holonomie + non-réduction
+
+On distingue deux “observables” (deux façons de lire “vrai”) :
+
+* O_proof : “prouvable par une dérivation finie admissible” (ce que capture PA).
+* O_omega : “validé par une famille cofinale de vérifications finies” (intuition ω : tous les cas finis vus séparément).
+
+Dans ton langage :
+
+* O_proof est un quotient qui ne voit que les totals finitaires admis.
+* O_omega lit un futur cofinal de vérifications (un idéal de l’avenir effectif).
+
+Le phénomène Gödel/ω se lit ainsi :
+
+* le visible O_proof ne capture pas certains recollages cofinalement valides pour O_omega,
+* donc il existe une obstruction 2D : un résidu dépendant du chemin (de la notion de total admissible) qui ne se réécrit pas en une simple donnée 1D.
+
+Formulation “non-réduction” (sans rhétorique) :
+
+* il n’existe pas de “shot 1D” q (résumé des totals) tel que l’holonomie Hol_O factorise par q.
+* autrement dit : la différence “standard/cofinal” vs “dérivable finie” n’est pas un manque d’information arithmétique, c’est une donnée 2D.
+
+---
+
+## 8) Auto-régulation cofinale appliquée à PA
+
+On fixe un futur cofinal pertinent J, qui représente “ce qu’on laisse grandir” :
+
+* profondeur d’induction,
+* taille de dérivation,
+* élargissement contrôlé des moves admissibles,
+* normalisation/stratégies, etc.
+
+On pose alors la question centrale (ton OU) :
+
+* soit l’holonomie relative à O devient **trivialisable sur J** (auto-régulation cofinale),
+* soit il existe une **obstruction structurelle cofinale** (résidu irréductible).
+
+Réparation relationnelle (sans inversibilité) :
+
+* une jauge φ(p) ⊆ F(k)×F(k) sur chaque total p : h→k,
+* transport corrigé Tₚ^♯ = Tₚ ○ φ(p),
+* holonomie corrigée Hol_O^♯(α) = Tₚ^♯ ○ (T_q^♯)†.
+
+Auto-régulation cofinale sur J :
+
+* ∃φ tel que ∀α dans J, Hol_O^♯(α) = Δ_F(h).
+
+Sinon :
+
+* ∀φ, ∃α dans J tel que Hol_O^♯(α) ≠ Δ_F(h).
+
+Lecture : “on peut canoniser la preuve (au sens fibre) cofinalement” ou “non, il y a un twist structurel”.
+
+---
+
+## 9) Ce que ton cadre apporte à PA (en une phrase)
+
+PA n’est plus “le monde des entiers” : c’est un **quotient visible** d’une 2-géométrie de preuves ; ton holonomie primitive explique exactement où et comment le quotient perd le contrôle, et reformule Gödel/ω comme une obstruction 2D (ou une non-trivialisabilité cofinale).
+
+---
+
+## 10) Slogan
+
+Arithmétique “à la PA” = regarder seulement O (le visible).
+Ton cadre = remettre la primitive (H₂, fibres, holonomie relationnelle) **avant** le quotient, puis demander : trivialisation cofinale ou obstruction ?
+
+---
