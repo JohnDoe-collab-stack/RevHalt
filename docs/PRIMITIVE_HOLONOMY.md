@@ -33,6 +33,30 @@ On définit une 2-catégorie **H₂** (supposée **stricte** pour simplifier l'e
 
 ---
 
+## 1bis) Cofinalité et “shadow” du temps (définitions minimales)
+
+On note Reach(h, k) la relation “k est atteignable depuis h” :
+
+* Reach(h, k) ⇔ il existe au moins un total p : h → k.
+
+Un “futur pertinent” est modélisé par un sous-ensemble C ⊆ Obj(H₂) tel que :
+
+* Cofinal(C) ⇔ pour tout préfixe h, il existe k ∈ C avec Reach(h, k).
+
+Intuition : C capture “l’avenir effectif” (ou la zone d’exécution qui finit par être atteinte).
+
+**Shadow du temps.**
+Une “timeline” n’est pas primitive ; c’est un choix de linéarisation, c’est-à-dire une suite (ou chaîne) de préfixes qui est cofinale :
+
+* une chaîne cofinale est une sélection h₀, h₁, h₂, … telle que :
+
+  * Reach(hᵢ, hᵢ₊₁) pour tout i,
+  * et pour tout h, il existe i tel que Reach(h, hᵢ).
+
+Donc l’ordinal/temps est un invariant dérivé : le “shadow” d’un choix de chaîne cofinale dans la géométrie interne des histoires.
+
+---
+
 ## 2) Sémantique non-inversible : codomaine relationnel (sans forcer la neutralité des 2-cellules)
 
 On fixe un ensemble X de **micro-états**.
@@ -139,6 +163,36 @@ Holonomie corrigée :
 Sinon **obstruction structurelle cofinale** :
 
 > ∀φ, ∃α dans J tel que Hol_O^♯(α) ≠ Δ_F(h)
+
+---
+
+## 8) Shot 1D et non-réduction (définition + témoin)
+
+On appelle **shot 1D** (ou “résumé 1D”) toute application q qui compresse un total en un code :
+
+* q : {totals p : h → k} → Q
+
+où Q est un ensemble de codes (une “valeur 1D” attachée au chemin).
+
+On dit que **l’holonomie factorise par un shot 1D** s’il existe une règle H telle que, pour toute 2-cellule α : p ⇒ q (avec p, q : h → k) :
+
+* Hol_O(α) dépend seulement du couple ( q(p), q(q) ).
+
+Formellement :
+
+* il existe H : Q×Q → Rel(F(h)) tel que, pour toute α : p ⇒ q,
+
+  * Hol_O(α) = H( q(p), q(q) ).
+
+**Témoin de non-réduction (critère minimal).**
+Si l’on peut exhiber deux 2-cellules α₁ : p₁ ⇒ q₁ et α₂ : p₂ ⇒ q₂ telles que :
+
+* q(p₁) = q(p₂) et q(q₁) = q(q₂),
+* mais Hol_O(α₁) ≠ Hol_O(α₂),
+
+alors **aucune** factorisation de Hol_O par ce shot q n’est possible.
+
+Interprétation : toute compression 1D qui “oublie” le 2D peut identifier des chemins qui ont pourtant des holonomies différentes ; l’holonomie est donc une donnée intrinsèquement 2D, non récupérable depuis un code 1D en général.
 
 ---
 
