@@ -43,7 +43,7 @@ Relₓ est la catégorie à un seul objet X, dont les endomorphismes sont les re
 **Donnée sémantique minimale (conforme à ta nouveauté).**
 Une sémantique est un foncteur sur le **1-squelette** :
 
-> **S₁ : (H₂)₁ → Relₓ est un foncteur** (il respecte identité et composition des 1-flèches ; si H₂ est faible, c'est un pseudo-foncteur, mais l'idée reste : S respecte la structure 1D).
+> **S₁ : (H₂)₁ → Relₓ** respecte l’identité et la composition des 1-flèches (au sens strict sur le 1-squelette).
 
 * à chaque objet h, on associe (implicitement) “être à h” comme contexte d’exécution,
 * à chaque total p : h→k, S₁(p) ⊆ X×X est une relation de transition.
@@ -65,11 +65,12 @@ Fixe une observable (résolution) :
 Pour chaque préfixe h, on suppose donnée :
 
 > **vₕ ∈ V**, la valeur visible fixée au préfixe h (donnée par l’exécution observée).
+>
+> vₕ est une donnée observable de l’exécution (trace/résolution), pas un index temporel.
 
 **Fibre d’ambiguïté au-dessus de h (relatif à O) :**
 
 > F(h) := { x ∈ X | O(x) = vₕ }
-
 > Important : **O** définit les fibres, mais **le temps n’apparaît nulle part** et on n'exige aucune "naturalité" d'un état interne σ(h).
 
 ---
@@ -95,7 +96,6 @@ définie par :
 Forme “calcul relationnel” (sans inversibilité) :
 
 > Hol_O(α) = Tₚ ○ (T_q)†
-
 > C’est bien **holonomie primitive**, avant quotient, avant groupoïdification, et sans hypothèse d’inverse.
 
 ### Trois régimes (toujours 100% relationnel)

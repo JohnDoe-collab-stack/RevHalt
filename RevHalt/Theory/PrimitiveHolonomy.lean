@@ -114,7 +114,7 @@ def CorrectedTransport {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S 
 
 /-- Corrected holonomy: Hol♯(p,q) = T♯_p ∘ (T♯_q)†  -/
 def CorrectedHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    {h k : P} (gauge : Gauge P S) {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) : Relation S :=
+    {h k : P} (gauge : Gauge P S) {p q : HistoryGraph.Path h k} (_α : HistoryGraph.Deformation p q) : Relation S :=
   relComp (CorrectedTransport sem obs target_obs gauge p)
           (relConverse (CorrectedTransport sem obs target_obs gauge q))
 
