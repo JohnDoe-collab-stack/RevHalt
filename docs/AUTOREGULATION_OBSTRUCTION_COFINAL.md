@@ -56,7 +56,7 @@ def AutoRegulated {S : Type w} {V : Type w}
         CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x'
 ```
 
-Lecture brute (sans paraphrase) : il existe une **seule** jauge `φ` telle que, pour toute cellule `c ∈ J`,
+Lecture brute (sans paraphrase) : il existe une jauge `φ` (la même pour toute cellule `c ∈ J`) telle que,
 la relation `CorrectedHolonomy ... φ α` est exactement la diagonale (`↔ x = x'`).
 
 ### 1.3 Obstruction locale (sur un ensemble fixé `J`, version positive à témoins)
