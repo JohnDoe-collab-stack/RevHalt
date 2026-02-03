@@ -29,7 +29,7 @@ class HistoryGraph (P : Type u) where
 
 namespace PrimitiveHolonomy
 
-variable {P : Type u} [HistoryGraph P]
+variable {P : Type u}
 
 /--
 ## 2. Non-Inversible Semantics: Relational Domain
@@ -67,6 +67,41 @@ def Fiber {S V : Type w} (obs : S → V) (target_obs : P → V) (h : P) : Set S 
 /-- The type of points in the fiber above `h`. -/
 abbrev FiberPt {S V : Type w} (obs : S → V) (target_obs : P → V) (h : P) : Type w :=
   { x : S // x ∈ Fiber (P := P) obs target_obs h }
+
+/-- Fiber diagonal Δ_{F(h)}. -/
+def FiberIdentity {S V : Type w} (obs : S → V) (target_obs : P → V) (h : P) :
+    Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) :=
+  relId
+
+structure LagState (Y B : Type w) where
+  visible : Y
+  hidden : B
+
+def lagObs {Y B : Type w} : LagState Y B → Y := LagState.visible
+
+theorem hidden_ne_of_ne {Y B : Type w} {target_obs : P → Y} {h : P}
+    {x x' : FiberPt (P := P) (obs := (lagObs (Y := Y) (B := B))) target_obs h} (hx : x ≠ x') :
+    x.1.hidden ≠ x'.1.hidden :=
+by
+  intro hhidden
+  apply hx
+  apply Subtype.ext
+  cases x with
+  | mk xs hxmem =>
+    cases x' with
+    | mk xs' hxmem' =>
+      cases xs with
+      | mk vis hid =>
+        cases xs' with
+        | mk vis' hid' =>
+          have hvis : vis = vis' := hxmem.trans hxmem'.symm
+          cases hvis
+          cases hhidden
+          rfl
+
+section WithHistoryGraph
+
+variable [HistoryGraph P]
 
 /-- Transport restricted to fibers. -/
 def Transport {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
@@ -112,15 +147,9 @@ theorem holonomy_def {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S �
     Transport sem obs target_obs p x y ∧ Transport sem obs target_obs q x' y :=
 by rfl
 
-/--
+/-!
 ## 5. "Lag" (Delayed Repercussion)
 -/
-structure LagState (Y B : Type w) where
-  visible : Y
-  hidden : B
-
-def lagObs {Y B : Type w} : LagState Y B → Y := LagState.visible
-
 /-- `x` is compatible with the observed value at `k` along `p` iff `p` can reach the fiber at `k` from `x`. -/
 def Compatible {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     {h k : P} (p : HistoryGraph.Path h k)
@@ -145,6 +174,34 @@ theorem lag_of_witness {S V : Type w} (sem : Semantics P S) (obs : S → V) (tar
     LagEvent sem obs target_obs α step :=
 by
   refine ⟨x, x', hx, hHol, hstep.1, hstep.2⟩
+
+/--
+Step-dependence on the hidden component (product scenario `X = Y×B`, `O(y,b)=y`):
+two states in the same fiber with different `hidden` values cannot both remain compatible
+with the same observed next step.
+-/
+def StepDependsOnHidden {Y B : Type w} (sem : Semantics P (LagState Y B))
+    (target_obs : P → Y) {h k : P} (step : HistoryGraph.Path h k) : Prop :=
+  ∀ x x' : FiberPt (P := P) (obs := (lagObs (Y := Y) (B := B))) target_obs h,
+    x.1.hidden ≠ x'.1.hidden →
+      ¬ (Compatible sem lagObs target_obs step x ∧ Compatible sem lagObs target_obs step x')
+
+theorem lag_of_twist_and_hidden_step
+    {Y B : Type w} (sem : Semantics P (LagState Y B)) (target_obs : P → Y)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    (hDep : StepDependsOnHidden (P := P) sem target_obs step)
+    (x x' : FiberPt (P := P) (obs := (lagObs (Y := Y) (B := B))) target_obs h)
+    (hx : x ≠ x')
+    (hHol : HolonomyRel sem lagObs target_obs α x x')
+    (hCompat : Compatible sem lagObs target_obs step x) :
+    LagEvent sem lagObs target_obs α step :=
+by
+  have hHidden : x.1.hidden ≠ x'.1.hidden := hidden_ne_of_ne (P := P) (x := x) (x' := x') hx
+  have hNotCompat : ¬ Compatible sem lagObs target_obs step x' := by
+    intro hx'
+    exact (hDep x x' hHidden) ⟨hCompat, hx'⟩
+  exact lag_of_witness (P := P) sem lagObs target_obs α step x x' hx hHol ⟨hCompat, hNotCompat⟩
 
 /--
 ## 6. Auto-Regulation "Cofinal"
@@ -191,11 +248,6 @@ def CellLivesIn {P : Type u} [HistoryGraph P] (J : Set P) (c : Cell (P := P)) : 
 /-- Set of 2-cells whose endpoints lie in `J`. -/
 def CellsOver (C : Set P) : Set (Cell (P := P)) :=
   { c | CellSrc c ∈ C ∧ CellTgt c ∈ C }
-
-/-- Fiber diagonal Δ_{F(h)}. -/
-def FiberIdentity {S V : Type w} (obs : S → V) (target_obs : P → V) (h : P) :
-    Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) :=
-  relId
 
 /-- Holonomy is weak iff Δ ⊆ Hol. -/
 def WeakHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
@@ -272,6 +324,8 @@ def AutoRegulatedCofinal
   {S V : Type w}
   (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
   ∃ C : Set P, Cofinal C ∧ AutoRegulated sem obs target_obs (CellsOver C)
+
+end WithHistoryGraph
 
 end PrimitiveHolonomy
 
