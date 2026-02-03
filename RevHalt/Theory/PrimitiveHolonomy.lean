@@ -97,9 +97,7 @@ theorem holonomy_congr {S : Type w} {V : Type w}
     (Hp : Transport sem₁ obs target_obs p = Transport sem₂ obs target_obs p)
     (Hq : Transport sem₁ obs target_obs q = Transport sem₂ obs target_obs q) :
     HolonomyRel sem₁ obs target_obs α = HolonomyRel sem₂ obs target_obs α := by
-  -- Rewrite the RHS transports to the LHS ones; no extensionality is needed.
-  unfold HolonomyRel
-  rw [← Hp, ← Hq]
+  simp [HolonomyRel, Hp, Hq]
 
 theorem holonomy_def {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
@@ -247,6 +245,9 @@ def AutoRegulatedCofinal
 
 end PrimitiveHolonomy
 
+
+
+#print axioms PrimitiveHolonomy.holonomy_congr
 #print axioms PrimitiveHolonomy.holonomy_def
 #print axioms PrimitiveHolonomy.AutoRegulated
 #print axioms PrimitiveHolonomy.Reach
@@ -272,33 +273,6 @@ def FactorsHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
     ∀ (c : Cell (P := P)),
       let ⟨h, _, p, q', ⟨α⟩⟩ := c
       HolonomyRel sem obs target_obs α = H h (q p) (q q')
-
-/-- Forward direction: if holonomy factors through a 1D summary,
-    then equal codes force equal holonomy. -/
-theorem factors_eq_of_codes
-  {P : Type u} [HistoryGraph P] {S V : Type w}
-  (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-  {Q : Type uQ} (q : Summary (P := P) Q)
-  (fact : FactorsHolonomy (P := P) sem obs target_obs q)
-  {h k : P}
-  {p₁ q₁ : HistoryGraph.Path h k} (α₁ : HistoryGraph.Deformation p₁ q₁)
-  {p₂ q₂ : HistoryGraph.Path h k} (α₂ : HistoryGraph.Deformation p₂ q₂)
-  (hp : q p₁ = q p₂) (hq : q q₁ = q q₂) :
-  HolonomyRel (P := P) sem obs target_obs α₁ =
-  HolonomyRel (P := P) sem obs target_obs α₂ :=
-by
-  rcases fact with ⟨H, Hfact⟩
-  let c1 : Cell (P := P) := ⟨h, k, p₁, q₁, ⟨α₁⟩⟩
-  let c2 : Cell (P := P) := ⟨h, k, p₂, q₂, ⟨α₂⟩⟩
-  have e1 : HolonomyRel (P := P) sem obs target_obs α₁ = H h (q p₁) (q q₁) := Hfact c1
-  have e2 : HolonomyRel (P := P) sem obs target_obs α₂ = H h (q p₂) (q q₂) := Hfact c2
-  calc
-    HolonomyRel (P := P) sem obs target_obs α₁
-        = H h (q p₁) (q q₁) := e1
-    _   = H h (q p₂) (q q₂) := by
-          -- rewrite the codes; no propositional extensionality is needed
-          rw [hp, hq]
-    _   = HolonomyRel (P := P) sem obs target_obs α₂ := e2.symm
 
 /-- Witness-killer: if two 2-cells have the same limit codes but different holonomy,
     then NO factorization through that 1D shot exists. -/
