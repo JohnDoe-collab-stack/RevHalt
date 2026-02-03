@@ -1,4 +1,4 @@
-# Holonomie Primitive : la 2-géométrie avant le quotient (version verrouillée, corrigée)
+# Holonomie Primitive : la 2-géométrie avant le quotient
 
 ## 0) Convention de calcul (pour lever toute ambiguïté)
 
@@ -29,7 +29,7 @@ On définit une 2-catégorie **H₂** (supposée **stricte** pour simplifier l'e
 * **1-flèches** (p : h → k) : totals/schedulings (chemins).
 * **2-cellules** (α : p ⇒ q) : moves de commutation admissibles (déformations 2D **prises comme primitives**).
 
-> Ici, **le temps ordinal n’existe pas** : une “timeline” est un **choix** de 1-flèche (éventuellement cofinale pour parler d’“avenir effectif”).
+> Ici, **le temps ordinal n’existe pas** : une “timeline” est un **choix de chaîne cofinale** (cf. 1bis) ; le “temps ordinal” est son shadow dérivé.
 
 ---
 
@@ -68,6 +68,8 @@ Relₓ est la catégorie à un seul objet X, dont les endomorphismes sont les re
 Une sémantique est un foncteur sur le **1-squelette** :
 
 > **S₁ : (H₂)₁ → Relₓ** respecte l’identité et la composition des 1-flèches (au sens strict sur le 1-squelette).
+
+Tous les objets h de (H₂)₁ sont envoyés sur l’unique objet X de Relₓ ; la dépendance en h passe uniquement par les fibres F(h) ⊆ X.
 
 * à chaque objet h, on associe (implicitement) “être à h” comme contexte d’exécution,
 * à chaque total p : h→k, S₁(p) ⊆ X×X est une relation de transition.
@@ -144,6 +146,8 @@ Si X = Y×B et O(y, b) = y, alors :
 
 Fixe un futur cofinal pertinent J, et ne regarde que les 2-cellules α qui vivent dans J.
 
+Ici, “α vit dans J” signifie : si α : p ⇒ q avec p, q : h → k, alors h ∈ J et k ∈ J.
+
 **Jauge (repair) relationnelle** : à chaque total p : h→k, on associe :
 
 > φ(p) ⊆ F(k)×F(k)
@@ -180,9 +184,9 @@ On dit que **l’holonomie factorise par un shot 1D** s’il existe une règle H
 
 Formellement :
 
-* il existe H : Q×Q → Rel(F(h)) tel que, pour toute α : p ⇒ q,
+* il existe une famille (Hₕ)_{h} avec Hₕ : Q×Q → Rel(F(h)) telle que, pour toute α : p ⇒ q,
 
-  * Hol_O(α) = H( q(p), q(q) ).
+  * Hol_O(α) = Hₕ( q(p), q(q) ).
 
 **Témoin de non-réduction (critère minimal).**
 Si l’on peut exhiber deux 2-cellules α₁ : p₁ ⇒ q₁ et α₂ : p₂ ⇒ q₂ telles que :

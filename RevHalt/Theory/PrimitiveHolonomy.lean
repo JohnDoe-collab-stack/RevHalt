@@ -36,48 +36,67 @@ variable {P : Type u} [HistoryGraph P]
 
 Target domain: Rel(S).
 -/
-def Relation (S : Type w) := S → S → Prop
+def Relation (A : Type u) (B : Type v) := A → B → Prop
 
-def relComp {S : Type w} (R1 R2 : Relation S) : Relation S :=
-  fun x z ↦ ∃ y, R1 x y ∧ R2 y z
+def relComp {A : Type u} {B : Type v} {C : Type w} (R : Relation A B) (S : Relation B C) : Relation A C :=
+  fun a c ↦ ∃ b, R a b ∧ S b c
 
-def relId {S : Type w} : Relation S :=
+def relId {A : Type u} : Relation A A :=
   fun x y ↦ x = y
 
-def relConverse {S : Type w} (R : Relation S) : Relation S :=
-  fun x y ↦ R y x
+def relConverse {A : Type u} {B : Type v} (R : Relation A B) : Relation B A :=
+  fun b a ↦ R a b
 
 structure Semantics (P : Type u) [HistoryGraph P] (S : Type w) where
-  /-- Reachable states for each history prefix. -/
-  obj : P → Set S
   /-- Transition relation for each scheduling. -/
-  sem : {h k : P} → HistoryGraph.Path h k → Relation S
-  /-- Consistency: Transitions only occur between reachable states. -/
-  sem_dom : ∀ {h k} (p : HistoryGraph.Path h k) x y, sem p x y → x ∈ obj h ∧ y ∈ obj k
+  sem : {h k : P} → HistoryGraph.Path h k → Relation S S
   sem_id : ∀ h, sem (HistoryGraph.idPath h) = relId
   sem_comp : ∀ {h k l} (p : HistoryGraph.Path h k) (q : HistoryGraph.Path k l),
     sem (HistoryGraph.compPath p q) = relComp (sem p) (sem q)
 
 
 
-/-- The fiber is the set of *reachable* states compatible with the observation. -/
-def Fiber {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V) (h : P) : Set S :=
-  { x | x ∈ sem.obj h ∧ obs x = target_obs h }
+/-- Fiber of ambiguity above `h` (relative to the observable). -/
+def Fiber {S V : Type w} (obs : S → V) (target_obs : P → V) (h : P) : Set S :=
+  { x | obs x = target_obs h }
+
+/-- The type of points in the fiber above `h`. -/
+abbrev FiberPt {S V : Type w} (obs : S → V) (target_obs : P → V) (h : P) : Type w :=
+  { x : S // x ∈ Fiber (P := P) obs target_obs h }
 
 /-- Transport restricted to fibers. -/
 def Transport {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    {h k : P} (p : HistoryGraph.Path h k) : Relation S :=
-  fun x y ↦ sem.sem p x y ∧ x ∈ Fiber sem obs target_obs h ∧ y ∈ Fiber sem obs target_obs k
+    {h k : P} (p : HistoryGraph.Path h k) :
+    Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs k) :=
+  fun x y ↦ sem.sem p x.1 y.1
+
+/-- Transport written in the "document style": a relation on the ambient `S`, explicitly restricted to fibers. -/
+def TransportDoc {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} (p : HistoryGraph.Path h k) : Relation S S :=
+  fun x y ↦ sem.sem p x y ∧ obs x = target_obs h ∧ obs y = target_obs k
+
+theorem transport_eq_transportDoc {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} (p : HistoryGraph.Path h k)
+    (x : FiberPt (P := P) obs target_obs h) (y : FiberPt (P := P) obs target_obs k) :
+  Transport sem obs target_obs p x y ↔ TransportDoc sem obs target_obs p x.1 y.1 :=
+by
+  -- `x.2` and `y.2` are exactly the fiber equalities.
+  simpa [Transport, TransportDoc, Fiber, FiberPt] using
+    (show sem.sem p x.1 y.1 ↔ sem.sem p x.1 y.1 ∧ obs x.1 = target_obs h ∧ obs y.1 = target_obs k from
+      ⟨fun hp ↦ ⟨hp, x.2, y.2⟩, fun hdoc ↦ hdoc.1⟩)
 
 /-- Defines holonomy relative to a 2-cell. -/
 def HolonomyRel {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    {h k : P} {p q : HistoryGraph.Path h k} (_α : HistoryGraph.Deformation p q) : Relation S :=
+    {h k : P} {p q : HistoryGraph.Path h k} (_α : HistoryGraph.Deformation p q) :
+    Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) :=
   relComp (Transport sem obs target_obs p) (relConverse (Transport sem obs target_obs q))
 
 theorem holonomy_def {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) (x x' : S) :
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : FiberPt (P := P) obs target_obs h) :
   HolonomyRel sem obs target_obs α x x' ↔
-  ∃ y, Transport sem obs target_obs p x y ∧ Transport sem obs target_obs q x' y :=
+  ∃ y : FiberPt (P := P) obs target_obs k,
+    Transport sem obs target_obs p x y ∧ Transport sem obs target_obs q x' y :=
 by rfl
 
 /--
@@ -98,23 +117,20 @@ Audit Reform: Gauge is a "Fiber Preserving Repair".
 Ideally it maps Fiber(k) to Fiber(k).
 We define a predicate `IsFiberPreserving`.
 -/
-def Gauge (P : Type u) [HistoryGraph P] (S : Type w) :=
-  {h k : P} → HistoryGraph.Path h k → Relation S
-
-def IsFiberPreserving {S : Type w} {V : Type w}
-    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    (G : Gauge P S) : Prop :=
-  ∀ {h k} (p : HistoryGraph.Path h k) x y,
-    G p x y → x ∈ Fiber sem obs target_obs k ∧ y ∈ Fiber sem obs target_obs k
+def Gauge {S V : Type w} (obs : S → V) (target_obs : P → V) :=
+  {h k : P} → HistoryGraph.Path h k →
+    Relation (FiberPt (P := P) obs target_obs k) (FiberPt (P := P) obs target_obs k)
 
 /-- Corrected transport along a total p: first do Transport, then apply the gauge at the target. -/
 def CorrectedTransport {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    {h k : P} (gauge : Gauge P S) (p : HistoryGraph.Path h k) : Relation S :=
+    {h k : P} (gauge : Gauge (P := P) obs target_obs) (p : HistoryGraph.Path h k) :
+    Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs k) :=
   relComp (Transport sem obs target_obs p) (gauge p)
 
 /-- Corrected holonomy: Hol♯(p,q) = T♯_p ∘ (T♯_q)†  -/
 def CorrectedHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    {h k : P} (gauge : Gauge P S) {p q : HistoryGraph.Path h k} (_α : HistoryGraph.Deformation p q) : Relation S :=
+    {h k : P} (gauge : Gauge (P := P) obs target_obs) {p q : HistoryGraph.Path h k} (_α : HistoryGraph.Deformation p q) :
+    Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) :=
   relComp (CorrectedTransport sem obs target_obs gauge p)
           (relConverse (CorrectedTransport sem obs target_obs gauge q))
 
@@ -122,9 +138,41 @@ def CorrectedHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S �
 abbrev Cell {P : Type u} [HistoryGraph P] :=
   Σ h k : P, Σ p q : HistoryGraph.Path h k, PLift (HistoryGraph.Deformation p q)
 
-/-- Fiber diagonal (enough as-is constructively). -/
-def FiberIdentity {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V) {h : P} : Relation S :=
-  fun x y ↦ x = y ∧ x ∈ Fiber sem obs target_obs h
+/-- Source prefix of a 2-cell. -/
+def CellSrc {P : Type u} [HistoryGraph P] : Cell (P := P) → P
+| ⟨h, _, _, _, _⟩ => h
+
+/-- Target prefix of a 2-cell. -/
+def CellTgt {P : Type u} [HistoryGraph P] : Cell (P := P) → P
+| ⟨_, k, _, _, _⟩ => k
+
+/-- “c lives in J” means its endpoints are in `J`. -/
+def CellLivesIn {P : Type u} [HistoryGraph P] (J : Set P) (c : Cell (P := P)) : Prop :=
+  CellSrc c ∈ J ∧ CellTgt c ∈ J
+
+/-- Set of 2-cells whose endpoints lie in `J`. -/
+def CellsOver (C : Set P) : Set (Cell (P := P)) :=
+  { c | CellSrc c ∈ C ∧ CellTgt c ∈ C }
+
+/-- Fiber diagonal Δ_{F(h)}. -/
+def FiberIdentity {S V : Type w} (obs : S → V) (target_obs : P → V) (h : P) :
+    Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) :=
+  relId
+
+/-- Holonomy is weak iff Δ ⊆ Hol. -/
+def WeakHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) : Prop :=
+  ∀ x : FiberPt (P := P) obs target_obs h, HolonomyRel sem obs target_obs α x x
+
+/-- Holonomy is flat (strong) iff Hol = Δ. -/
+def FlatHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) : Prop :=
+  ∀ x x' : FiberPt (P := P) obs target_obs h, HolonomyRel sem obs target_obs α x x' ↔ x = x'
+
+/-- Holonomy is twisted iff ∃ x ≠ x' with (x,x') ∈ Hol. -/
+def TwistedHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) : Prop :=
+  ∃ x x' : FiberPt (P := P) obs target_obs h, x ≠ x' ∧ HolonomyRel sem obs target_obs α x x'
 
 /--
 Definition of Auto-Regulation on a set J of deformations.
@@ -132,12 +180,11 @@ Definition of Auto-Regulation on a set J of deformations.
 -/
 def AutoRegulated {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     (J : Set (Cell (P := P))) : Prop :=
-  ∃ φ : Gauge P S,
-    IsFiberPreserving sem obs target_obs φ ∧
+  ∃ φ : Gauge (P := P) obs target_obs,
     ∀ c, c ∈ J →
-      let ⟨h, _, _, _, ⟨α⟩⟩ := c
-      CorrectedHolonomy sem obs target_obs φ α
-        = FiberIdentity sem obs target_obs (h := h)
+      let ⟨_h, _, _, _, ⟨α⟩⟩ := c
+      ∀ x x',
+        CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x'
 
 /--
 ## 7. Constructive Verification
@@ -146,17 +193,17 @@ theorem is_constructive : True := trivial
 
 /- 1) Préordre interne des préfixes : h ≤ k ssi Reach h k (∃ total). -/
 def Reach (h k : P) : Prop :=
-  ∃ _ : HistoryGraph.Path h k, True
+  Nonempty (HistoryGraph.Path h k)
 
 theorem reach_refl (h : P) : Reach h h :=
-  ⟨HistoryGraph.idPath h, trivial⟩
+  ⟨HistoryGraph.idPath h⟩
 
 theorem reach_trans {h k l : P} : Reach h k → Reach k l → Reach h l :=
 by
   intro hk kl
-  rcases hk with ⟨p, _⟩
-  rcases kl with ⟨q, _⟩
-  exact ⟨HistoryGraph.compPath p q, trivial⟩
+  rcases hk with ⟨p⟩
+  rcases kl with ⟨q⟩
+  exact ⟨HistoryGraph.compPath p q⟩
 
 /- 2) Cofinalité (futur ouvert interne) sur (P, Reach). -/
 def Cofinal (C : Set P) : Prop :=
@@ -180,15 +227,6 @@ structure Scheduling (A : Type) [Preorder A] where
   cofinal : ∀ h : P, ∃ i : A, Reach h (c i)
 
 /- 5) Auto-régulation cofinale : on restreint les 2-cellules à un futur cofinal. -/
-
-def CellSrc {P : Type u} [HistoryGraph P] : Cell (P := P) → P
-| ⟨h, _, _, _, _⟩ => h
-
-def CellTgt {P : Type u} [HistoryGraph P] : Cell (P := P) → P
-| ⟨_, k, _, _, _⟩ => k
-
-def CellsOver (C : Set P) : Set (Cell (P := P)) :=
-  { c | CellSrc c ∈ C ∧ CellTgt c ∈ C }
 
 -- Rappel : AutoRegulated est déjà défini chez toi.
 -- On ajoute la version “cofinalement” :
@@ -219,10 +257,11 @@ abbrev Summary {P : Type u} [HistoryGraph P] (Q : Type uQ) :=
 def FactorsHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
     (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     {Q : Type uQ} (q : Summary (P := P) Q) : Prop :=
-  ∃ H : Q → Q → Relation S,
+  ∃ H : ∀ h : P, Q → Q →
+        Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h),
     ∀ (c : Cell (P := P)),
-      let ⟨_, _, p, q', ⟨α⟩⟩ := c
-      HolonomyRel sem obs target_obs α = H (q p) (q q')
+      let ⟨h, _, p, q', ⟨α⟩⟩ := c
+      HolonomyRel sem obs target_obs α = H h (q p) (q q')
 
 /-- Witness-killer: if two 2-cells have the same limit codes but different holonomy,
     then NO factorization through that 1D shot exists. -/
@@ -244,8 +283,8 @@ by
   -- Apply factorization to both cells
   let c1 : Cell (P := P) := ⟨h, k, p₁, q₁, ⟨α₁⟩⟩
   let c2 : Cell (P := P) := ⟨h, k, p₂, q₂, ⟨α₂⟩⟩
-  have e1 : HolonomyRel sem obs target_obs α₁ = H (q p₁) (q q₁) := Hfact c1
-  have e2 : HolonomyRel sem obs target_obs α₂ = H (q p₂) (q q₂) := Hfact c2
+  have e1 : HolonomyRel sem obs target_obs α₁ = H h (q p₁) (q q₁) := Hfact c1
+  have e2 : HolonomyRel sem obs target_obs α₂ = H h (q p₂) (q q₂) := Hfact c2
   -- Rewrite and contradict
   have : HolonomyRel sem obs target_obs α₁ = HolonomyRel sem obs target_obs α₂ := by
     rw [e1, e2, hp, hq]
