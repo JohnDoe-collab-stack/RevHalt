@@ -381,6 +381,9 @@ end PrimitiveHolonomy
 #print axioms PrimitiveHolonomy.holonomy_def
 #print axioms PrimitiveHolonomy.lag_of_witness
 #print axioms PrimitiveHolonomy.Compatible
+#print axioms PrimitiveHolonomy.hidden_ne_of_ne
+#print axioms PrimitiveHolonomy.StepDependsOnHidden
+#print axioms PrimitiveHolonomy.lag_of_twist_and_hidden_step
 #print axioms PrimitiveHolonomy.Transport
 #print axioms PrimitiveHolonomy.LagEvent
 #print axioms PrimitiveHolonomy.AutoRegulated
@@ -388,6 +391,11 @@ end PrimitiveHolonomy
 #print axioms PrimitiveHolonomy.Cofinal
 #print axioms PrimitiveHolonomy.Scheduling
 #print axioms PrimitiveHolonomy.AutoRegulatedCofinal
+#print axioms PrimitiveHolonomy.Obstruction
+#print axioms PrimitiveHolonomy.ObstructionCofinal
+#print axioms PrimitiveHolonomy.not_AutoRegulated_of_Obstruction
+#print axioms PrimitiveHolonomy.LocallyAutoRegulated
+#print axioms PrimitiveHolonomy.locallyAutoRegulated_of_AutoRegulated
 
 namespace PrimitiveHolonomy
 
