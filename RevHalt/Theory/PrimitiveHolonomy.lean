@@ -91,6 +91,14 @@ def HolonomyRel {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) 
     Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) :=
   relComp (Transport sem obs target_obs p) (relConverse (Transport sem obs target_obs q))
 
+theorem holonomy_congr {S : Type w} {V : Type w}
+    (sem₁ sem₂ : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (Hp : Transport sem₁ obs target_obs p = Transport sem₂ obs target_obs p)
+    (Hq : Transport sem₁ obs target_obs q = Transport sem₂ obs target_obs q) :
+    HolonomyRel sem₁ obs target_obs α = HolonomyRel sem₂ obs target_obs α := by
+  simp [HolonomyRel, Hp, Hq]
+
 theorem holonomy_def {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
     (x x' : FiberPt (P := P) obs target_obs h) :
