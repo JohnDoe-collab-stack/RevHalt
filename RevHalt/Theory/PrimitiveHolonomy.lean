@@ -38,6 +38,10 @@ Target domain: Rel(S).
 -/
 def Relation (A : Type u) (B : Type v) := A → B → Prop
 
+/-- Pointwise equivalence of relations (axiom-free stand-in for relation equality). -/
+def RelEq {A : Type u} {B : Type v} (R S : Relation A B) : Prop :=
+  ∀ x y, R x y ↔ S x y
+
 def relComp {A : Type u} {B : Type v} {C : Type w} (R : Relation A B) (S : Relation B C) : Relation A C :=
   fun a c ↦ ∃ b, R a b ∧ S b c
 
@@ -273,7 +277,7 @@ def FactorsHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
         Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h),
     ∀ (c : Cell (P := P)),
       let ⟨h, _, p, q', ⟨α⟩⟩ := c
-      HolonomyRel sem obs target_obs α = H h (q p) (q q')
+      RelEq (HolonomyRel sem obs target_obs α) (H h (q p) (q q'))
 
 /-- Forward direction: if holonomy factors through a 1D summary,
     then equal codes force equal holonomy. -/
@@ -286,20 +290,20 @@ theorem factors_eq_of_codes
   {p₁ q₁ : HistoryGraph.Path h k} (α₁ : HistoryGraph.Deformation p₁ q₁)
   {p₂ q₂ : HistoryGraph.Path h k} (α₂ : HistoryGraph.Deformation p₂ q₂)
   (hp : q p₁ = q p₂) (hq : q q₁ = q q₂) :
-  HolonomyRel (P := P) sem obs target_obs α₁ =
-  HolonomyRel (P := P) sem obs target_obs α₂ :=
+  RelEq (HolonomyRel (P := P) sem obs target_obs α₁)
+        (HolonomyRel (P := P) sem obs target_obs α₂) :=
 by
   rcases fact with ⟨H, Hfact⟩
   let c1 : Cell (P := P) := ⟨h, k, p₁, q₁, ⟨α₁⟩⟩
   let c2 : Cell (P := P) := ⟨h, k, p₂, q₂, ⟨α₂⟩⟩
-  have e1 : HolonomyRel (P := P) sem obs target_obs α₁ = H h (q p₁) (q q₁) := Hfact c1
-  have e2 : HolonomyRel (P := P) sem obs target_obs α₂ = H h (q p₂) (q q₂) := Hfact c2
-  calc
-    HolonomyRel (P := P) sem obs target_obs α₁
-        = H h (q p₁) (q q₁) := e1
-    _   = H h (q p₂) (q q₂) := by
-          rw [hp, hq]
-    _   = HolonomyRel (P := P) sem obs target_obs α₂ := e2.symm
+  have e1 : RelEq (HolonomyRel (P := P) sem obs target_obs α₁) (H h (q p₁) (q q₁)) := Hfact c1
+  have e2 : RelEq (HolonomyRel (P := P) sem obs target_obs α₂) (H h (q p₂) (q q₂)) := Hfact c2
+  intro x x'
+  have h1 : HolonomyRel (P := P) sem obs target_obs α₁ x x' ↔ H h (q p₁) (q q₁) x x' := e1 x x'
+  have h2 : HolonomyRel (P := P) sem obs target_obs α₂ x x' ↔ H h (q p₂) (q q₂) x x' := e2 x x'
+  have hmid : H h (q p₁) (q q₁) x x' ↔ H h (q p₂) (q q₂) x x' := by
+    rw [hp, hq]
+  exact h1.trans (hmid.trans h2.symm)
 
 /-- Witness-killer: if two 2-cells have the same limit codes but different holonomy,
     then NO factorization through that 1D shot exists. -/
@@ -313,20 +317,11 @@ theorem witness_no_factor {P : Type u} [HistoryGraph P] {S V : Type w}
   -- Codes match strictly
   (hp : q p₁ = q p₂) (hq : q q₁ = q q₂)
   -- Holonomies differ
-  (hne : HolonomyRel sem obs target_obs α₁ ≠ HolonomyRel sem obs target_obs α₂) :
+  (hne : ¬ RelEq (HolonomyRel sem obs target_obs α₁) (HolonomyRel sem obs target_obs α₂)) :
   ¬ FactorsHolonomy sem obs target_obs q :=
 by
   intro fact
-  rcases fact with ⟨H, Hfact⟩
-  -- Apply factorization to both cells
-  let c1 : Cell (P := P) := ⟨h, k, p₁, q₁, ⟨α₁⟩⟩
-  let c2 : Cell (P := P) := ⟨h, k, p₂, q₂, ⟨α₂⟩⟩
-  have e1 : HolonomyRel sem obs target_obs α₁ = H h (q p₁) (q q₁) := Hfact c1
-  have e2 : HolonomyRel sem obs target_obs α₂ = H h (q p₂) (q q₂) := Hfact c2
-  -- Rewrite and contradict
-  have : HolonomyRel sem obs target_obs α₁ = HolonomyRel sem obs target_obs α₂ := by
-    rw [e1, e2, hp, hq]
-  exact hne this
+  exact hne (factors_eq_of_codes (P := P) sem obs target_obs q fact (α₁ := α₁) (α₂ := α₂) hp hq)
 
 /-- Global non-reduction statement (for holonomy itself): no 1D shot can capture it. -/
 def NonReducibleHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
