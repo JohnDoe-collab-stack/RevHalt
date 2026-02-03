@@ -54,9 +54,9 @@ def relConverse {A : Type u} {B : Type v} (R : Relation A B) : Relation B A :=
 structure Semantics (P : Type u) [HistoryGraph P] (S : Type w) where
   /-- Transition relation for each scheduling. -/
   sem : {h k : P} → HistoryGraph.Path h k → Relation S S
-  sem_id : ∀ h, sem (HistoryGraph.idPath h) = relId
+  sem_id : ∀ h, RelEq (sem (HistoryGraph.idPath h)) relId
   sem_comp : ∀ {h k l} (p : HistoryGraph.Path h k) (q : HistoryGraph.Path k l),
-    sem (HistoryGraph.compPath p q) = relComp (sem p) (sem q)
+    RelEq (sem (HistoryGraph.compPath p q)) (relComp (sem p) (sem q))
 
 
 
