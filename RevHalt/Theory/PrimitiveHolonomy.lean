@@ -121,6 +121,31 @@ structure LagState (Y B : Type w) where
 
 def lagObs {Y B : Type w} : LagState Y B → Y := LagState.visible
 
+/-- `x` is compatible with the observed value at `k` along `p` iff `p` can reach the fiber at `k` from `x`. -/
+def Compatible {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} (p : HistoryGraph.Path h k)
+    (x : FiberPt (P := P) obs target_obs h) : Prop :=
+  ∃ y : FiberPt (P := P) obs target_obs k, Transport sem obs target_obs p x y
+
+/-- Lag event: two distinct states are related by holonomy now, but only one stays compatible later. -/
+def LagEvent {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k') : Prop :=
+  ∃ x x' : FiberPt (P := P) obs target_obs h,
+    x ≠ x' ∧ HolonomyRel sem obs target_obs α x x' ∧
+    Compatible sem obs target_obs step x ∧ ¬ Compatible sem obs target_obs step x'
+
+theorem lag_of_witness {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    (x x' : FiberPt (P := P) obs target_obs h)
+    (hx : x ≠ x')
+    (hHol : HolonomyRel sem obs target_obs α x x')
+    (hstep : Compatible sem obs target_obs step x ∧ ¬ Compatible sem obs target_obs step x') :
+    LagEvent sem obs target_obs α step :=
+by
+  refine ⟨x, x', hx, hHol, hstep.1, hstep.2⟩
+
 /--
 ## 6. Auto-Regulation "Cofinal"
 
@@ -254,6 +279,10 @@ end PrimitiveHolonomy
 
 #print axioms PrimitiveHolonomy.holonomy_congr
 #print axioms PrimitiveHolonomy.holonomy_def
+#print axioms PrimitiveHolonomy.lag_of_witness
+#print axioms PrimitiveHolonomy.Compatible
+#print axioms PrimitiveHolonomy.Transport
+#print axioms PrimitiveHolonomy.LagEvent
 #print axioms PrimitiveHolonomy.AutoRegulated
 #print axioms PrimitiveHolonomy.Reach
 #print axioms PrimitiveHolonomy.Cofinal
