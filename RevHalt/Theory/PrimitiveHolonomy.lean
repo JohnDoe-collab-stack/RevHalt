@@ -325,6 +325,52 @@ def AutoRegulatedCofinal
   (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
   ∃ C : Set P, Cofinal C ∧ AutoRegulated sem obs target_obs (CellsOver C)
 
+/-- A positive (witnessed) notion of obstruction: every gauge fails by producing a twisted corrected holonomy. -/
+def Obstruction {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (J : Set (Cell (P := P))) : Prop :=
+  ∀ φ : Gauge (P := P) obs target_obs,
+    ∃ c, c ∈ J ∧
+      let ⟨h, _, _, _, ⟨α⟩⟩ := c
+      ∃ x x' : FiberPt (P := P) obs target_obs h,
+        x ≠ x' ∧ CorrectedHolonomy sem obs target_obs φ α x x'
+
+/-- Cofinal obstruction: there exists a cofinal future where every gauge fails (with a witness). -/
+def ObstructionCofinal {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
+  ∃ C : Set P, Cofinal C ∧ Obstruction sem obs target_obs (CellsOver C)
+
+theorem not_AutoRegulated_of_Obstruction {S : Type w} {V : Type w}
+    {sem : Semantics P S} {obs : S → V} {target_obs : P → V} {J : Set (Cell (P := P))} :
+    Obstruction (P := P) sem obs target_obs J → ¬ AutoRegulated (P := P) sem obs target_obs J :=
+by
+  intro hObs hAuto
+  rcases hAuto with ⟨φ, hφ⟩
+  rcases hObs φ with ⟨c, hcJ, hw⟩
+  -- unpack the cell and use the diagonal property to contradict the twist witness
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  have hDiag : ∀ x x', CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x' :=
+    hφ ⟨h, k, p, q, ⟨α⟩⟩ hcJ
+  rcases hw with ⟨x, x', hxne, hxHol⟩
+  have : x = x' := (hDiag x x').1 hxHol
+  exact hxne this
+
+/-- Local (per-2-cell) repair: each cell has some gauge that makes its corrected holonomy diagonal. -/
+def LocallyAutoRegulated {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (J : Set (Cell (P := P))) : Prop :=
+  ∀ c, c ∈ J →
+    ∃ φ : Gauge (P := P) obs target_obs,
+      let ⟨_h, _, _, _, ⟨α⟩⟩ := c
+      ∀ x x', CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x'
+
+theorem locallyAutoRegulated_of_AutoRegulated {S : Type w} {V : Type w}
+    {sem : Semantics P S} {obs : S → V} {target_obs : P → V} {J : Set (Cell (P := P))} :
+    AutoRegulated (P := P) sem obs target_obs J → LocallyAutoRegulated (P := P) sem obs target_obs J :=
+by
+  rintro ⟨φ, hφ⟩
+  intro c hcJ
+  refine ⟨φ, ?_⟩
+  -- exactly the same diagonal witness, but per-cell
+  exact hφ c hcJ
+
 end WithHistoryGraph
 
 end PrimitiveHolonomy
