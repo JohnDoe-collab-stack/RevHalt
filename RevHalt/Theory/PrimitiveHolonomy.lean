@@ -316,6 +316,13 @@ structure Scheduling (A : Type uQ) [Preorder A] where
   mono : ∀ {i j : A}, i ≤ j → Reach (c i) (c j)
   cofinal : ∀ h : P, ∃ i : A, Reach h (c i)
 
+/-- A scheduling presents a cofinal set of prefixes: its range. -/
+theorem cofinal_range_of_scheduling {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) :
+    Cofinal (P := P) (Set.range s.c) := by
+  intro h
+  rcases s.cofinal h with ⟨i, hi⟩
+  refine ⟨s.c i, ⟨i, rfl⟩, hi⟩
+
 /- 5) Auto-régulation cofinale : on restreint les 2-cellules à un futur cofinal. -/
 
 -- Rappel : AutoRegulated est déjà défini chez toi.
@@ -338,6 +345,44 @@ def Obstruction {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) 
 def ObstructionCofinal {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
   ∃ C : Set P, Cofinal C ∧ Obstruction sem obs target_obs (CellsOver C)
 
+/-- Cells whose endpoints lie on the range of a given scheduling `s`. -/
+abbrev CellsAlong {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Set (Cell (P := P)) :=
+  CellsOver (Set.range s.c)
+
+/-- Auto-regulation restricted to the cofinal future presented by `s`. -/
+def AutoRegulatedAlong
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Prop :=
+  AutoRegulated sem obs target_obs (CellsAlong (P := P) s)
+
+/-- Obstruction restricted to the cofinal future presented by `s`. -/
+def ObstructionAlong
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Prop :=
+  Obstruction sem obs target_obs (CellsAlong (P := P) s)
+
+theorem autoRegulatedCofinal_of_autoRegulatedAlong
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) :
+    AutoRegulatedAlong (P := P) sem obs target_obs s → AutoRegulatedCofinal (P := P) sem obs target_obs := by
+  intro hAlong
+  refine ⟨Set.range s.c, ?_, ?_⟩
+  · exact cofinal_range_of_scheduling (P := P) s
+  · simpa [AutoRegulatedAlong, CellsAlong] using hAlong
+
+theorem obstructionCofinal_of_obstructionAlong
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) :
+    ObstructionAlong (P := P) sem obs target_obs s → ObstructionCofinal (P := P) sem obs target_obs := by
+  intro hAlong
+  refine ⟨Set.range s.c, ?_, ?_⟩
+  · exact cofinal_range_of_scheduling (P := P) s
+  · simpa [ObstructionAlong, CellsAlong] using hAlong
+
 theorem not_AutoRegulated_of_Obstruction {S : Type w} {V : Type w}
     {sem : Semantics P S} {obs : S → V} {target_obs : P → V} {J : Set (Cell (P := P))} :
     Obstruction (P := P) sem obs target_obs J → ¬ AutoRegulated (P := P) sem obs target_obs J :=
@@ -352,6 +397,43 @@ by
   rcases hw with ⟨x, x', hxne, hxHol⟩
   have : x = x' := (hDiag x x').1 hxHol
   exact hxne this
+
+/-- The converse direction is constructive: a global gauge implies no obstruction witness. -/
+theorem not_Obstruction_of_AutoRegulated {S : Type w} {V : Type w}
+    {sem : Semantics P S} {obs : S → V} {target_obs : P → V} {J : Set (Cell (P := P))} :
+    AutoRegulated (P := P) sem obs target_obs J → ¬ Obstruction (P := P) sem obs target_obs J :=
+by
+  intro hAuto hObs
+  exact (not_AutoRegulated_of_Obstruction (P := P) (sem := sem) (obs := obs) (target_obs := target_obs)
+    (J := J) hObs) hAuto
+
+theorem not_AutoRegulatedAlong_of_ObstructionAlong
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) :
+    ObstructionAlong (P := P) sem obs target_obs s → ¬ AutoRegulatedAlong (P := P) sem obs target_obs s :=
+by
+  intro hObs hAuto
+  have hObs' : Obstruction (P := P) sem obs target_obs (CellsAlong (P := P) s) := by
+    simpa [ObstructionAlong] using hObs
+  have hAuto' : AutoRegulated (P := P) sem obs target_obs (CellsAlong (P := P) s) := by
+    simpa [AutoRegulatedAlong] using hAuto
+  exact (not_AutoRegulated_of_Obstruction (P := P) (sem := sem) (obs := obs) (target_obs := target_obs)
+    (J := CellsAlong (P := P) s) hObs') hAuto'
+
+theorem not_ObstructionAlong_of_AutoRegulatedAlong
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) :
+    AutoRegulatedAlong (P := P) sem obs target_obs s → ¬ ObstructionAlong (P := P) sem obs target_obs s :=
+by
+  intro hAuto hObs
+  have hAuto' : AutoRegulated (P := P) sem obs target_obs (CellsAlong (P := P) s) := by
+    simpa [AutoRegulatedAlong] using hAuto
+  have hObs' : Obstruction (P := P) sem obs target_obs (CellsAlong (P := P) s) := by
+    simpa [ObstructionAlong] using hObs
+  exact (not_Obstruction_of_AutoRegulated (P := P) (sem := sem) (obs := obs) (target_obs := target_obs)
+    (J := CellsAlong (P := P) s) hAuto') hObs'
 
 /-- Local (per-2-cell) repair: each cell has some gauge that makes its corrected holonomy diagonal. -/
 def LocallyAutoRegulated {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
