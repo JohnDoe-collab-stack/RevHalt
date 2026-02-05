@@ -485,58 +485,6 @@ namespace PrimitiveHolonomy
 abbrev Summary {P : Type u} [HistoryGraph P] (Q : Type uQ) :=
   ∀ {h k : P}, HistoryGraph.Path h k → Q
 
-/-!
-## 8. Ordinals as Shadows (explicit, constructive)
-
-`Scheduling` uses `∃` for cofinality:
-
-* `cofinal : ∀ h, ∃ i, Reach h (c i)`
-
-Constructively, this does **not** produce a definable function picking an index `i`.
-So a `Scheduling` does not induce a canonical (single-valued) `Summary`.
-
-What *is* canonical and axiom-free is the **multi-valued shadow**: for each path we
-can return the *set* of indices compatible with its endpoint. This matches the
-“on n’exclut rien / un chemin traverse plusieurs indices” reading.
--/
-
-/-- Multi-valued 1D shot: compress a path into a *set* of codes (no choice needed). -/
-abbrev SummarySet {P : Type u} [HistoryGraph P] (Q : Type uQ) :=
-  ∀ {h k : P}, HistoryGraph.Path h k → Set Q
-
-/-- Shadow-future set of indices at a prefix: indices whose stage is reachable from `h`. -/
-def shadowFuture {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
-    (s : Scheduling (P := P) A) (h : P) : Set A :=
-  { i | Reach (P := P) h (s.c i) }
-
-theorem shadowFuture_nonempty {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
-    (s : Scheduling (P := P) A) (h : P) : ∃ i : A, i ∈ shadowFuture (P := P) s h := by
-  rcases s.cofinal h with ⟨i, hi⟩
-  exact ⟨i, hi⟩
-
-/-- The shadow-future set is upward closed along the scheduling order. -/
-theorem shadowFuture_of_le {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
-    (s : Scheduling (P := P) A) {h : P} {i j : A} (hij : i ≤ j)
-    (hi : i ∈ shadowFuture (P := P) s h) :
-    j ∈ shadowFuture (P := P) s h := by
-  -- `hi : Reach h (c i)` and `s.mono hij : Reach (c i) (c j)`
-  exact reach_trans (P := P) hi (s.mono hij)
-
-/-- Canonical shadow summary-set: send a path `p : Path h k` to the set of indices above its target `k`. -/
-def schedulingToSummarySet {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
-    (s : Scheduling (P := P) A) : SummarySet (P := P) A :=
-  fun {_h k} _p => shadowFuture (P := P) s k
-
-/--
-If you *also* provide an explicit choice of indices (data, not an axiom),
-you obtain an ordinary single-valued `Summary`.
--/
-def schedulingToSummary_of_choice {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
-    (s : Scheduling (P := P) A)
-    (pick : ∀ h : P, { i : A // Reach (P := P) h (s.c i) }) :
-    Summary (P := P) A :=
-  fun {_h k} _p => (pick k).1
-
 /-- Holonomy factors through a 1D summary `q` iff there exists a map `H`
     such that Hol(α) depends only on the two 1D codes of the paths involved in α. -/
 def FactorsHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
@@ -597,16 +545,6 @@ def NonReducibleHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
     (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
   ∀ (Q : Type uQ) (q : Summary (P := P) Q),
     ¬ FactorsHolonomy sem obs target_obs q
-
-/-- Ordinal-shadow insufficiency as a corollary of global non-reducibility. -/
-theorem ordinal_shadow_insufficient_of_choice
-    {P : Type u} [HistoryGraph P] {S V : Type w}
-    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
-    (hNonRed : NonReducibleHolonomy.{u, w, uQ, v} (P := P) sem obs target_obs)
-    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A)
-    (pick : ∀ h : P, { i : A // Reach (P := P) h (s.c i) }) :
-    ¬ FactorsHolonomy (P := P) sem obs target_obs (schedulingToSummary_of_choice (P := P) s pick) := by
-  exact hNonRed A (schedulingToSummary_of_choice (P := P) s pick)
 
 end PrimitiveHolonomy
 
