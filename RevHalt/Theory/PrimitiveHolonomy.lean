@@ -175,6 +175,92 @@ theorem lag_of_witness {S V : Type w} (sem : Semantics P S) (obs : S → V) (tar
 by
   refine ⟨x, x', hx, hHol, hstep.1, hstep.2⟩
 
+/-!
+### 5.1 Positive use: compatibility signatures (universal property)
+
+`Compatible` already captures “what stays possible in the future from a micro-state”. The most
+direct *positive* invariant for predicting future compatibility is the signature that maps each
+future step to its compatibility truth value.
+
+This section packages two facts:
+
+1. `Sig` is a complete invariant for “compatibility prediction” along a chosen family of steps.
+2. Any predictor that factors through a 1D summary `σ` forces `σ` to separate any pair that has
+   different compatibility along some step (so you can *prove what extra information is required*).
+-/
+
+/-- The type of “future steps” starting at a fixed prefix `h` (endpoint varies). -/
+def Future (h : P) := Σ k : P, HistoryGraph.Path h k
+
+/-- Compatibility along a dependent future step. -/
+def CompatibleFuture {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h : P} (step : Future (P := P) h) (x : FiberPt (P := P) obs target_obs h) : Prop :=
+  Compatible sem obs target_obs step.2 x
+
+/-- Full compatibility signature: for each future step, whether `x` remains compatible. -/
+def Sig {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h : P} (x : FiberPt (P := P) obs target_obs h) : Future (P := P) h → Prop :=
+  fun step => CompatibleFuture (P := P) sem obs target_obs step x
+
+theorem sig_iff_of_summary_correct
+    {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h : P}
+    {Q : Type uQ} (σ : FiberPt (P := P) obs target_obs h → Q)
+    (pred : Q → Future (P := P) h → Prop)
+    (Hcorr : ∀ x step, pred (σ x) step ↔ CompatibleFuture (P := P) sem obs target_obs step x)
+    {x x' : FiberPt (P := P) obs target_obs h}
+    (hσ : σ x = σ x') :
+    ∀ step, Sig (P := P) sem obs target_obs x step ↔ Sig (P := P) sem obs target_obs x' step :=
+by
+  intro step
+  have hx : pred (σ x) step ↔ pred (σ x') step := by simp [hσ]
+  exact (Hcorr x step).symm.trans (hx.trans (Hcorr x' step))
+
+theorem summary_separates_compatible_witness
+    {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h : P}
+    {Q : Type uQ} (σ : FiberPt (P := P) obs target_obs h → Q)
+    (pred : Q → Future (P := P) h → Prop)
+    (Hcorr : ∀ x step, pred (σ x) step ↔ CompatibleFuture (P := P) sem obs target_obs step x)
+    {x x' : FiberPt (P := P) obs target_obs h}
+    (step : Future (P := P) h)
+    (hx : CompatibleFuture (P := P) sem obs target_obs step x)
+    (hx' : ¬ CompatibleFuture (P := P) sem obs target_obs step x') :
+    σ x ≠ σ x' :=
+by
+  intro hσ
+  have hsig :
+      ∀ s, Sig (P := P) sem obs target_obs x s ↔ Sig (P := P) sem obs target_obs x' s :=
+    sig_iff_of_summary_correct (P := P) sem obs target_obs σ pred Hcorr hσ
+  have hEq : CompatibleFuture (P := P) sem obs target_obs step x ↔
+      CompatibleFuture (P := P) sem obs target_obs step x' := by
+    simpa [Sig, CompatibleFuture] using hsig step
+  exact hx' (hEq.mp hx)
+
+theorem lagEvent_gives_summary_witness
+    {S V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    {Q : Type uQ} (σ : FiberPt (P := P) obs target_obs h → Q)
+    (hσ : ∃ f : V → Q, ∀ x, σ x = f (obs x.1))
+    (Hlag : LagEvent (P := P) sem obs target_obs α step) :
+    ∃ x x' : FiberPt (P := P) obs target_obs h,
+      σ x = σ x' ∧ Compatible (P := P) sem obs target_obs step x ∧ ¬ Compatible (P := P) sem obs target_obs step x' :=
+by
+  rcases Hlag with ⟨x, x', hxne, hHol, hx, hx'⟩
+  rcases hσ with ⟨f, hf⟩
+  have hobs : obs x.1 = obs x'.1 := by
+    -- both lie in the same fiber over `h`
+    have hx0 : obs x.1 = target_obs h := x.2
+    have hx'0 : obs x'.1 = target_obs h := x'.2
+    exact hx0.trans hx'0.symm
+  have hσxx' : σ x = σ x' := by
+    calc
+      σ x = f (obs x.1) := hf x
+      _ = f (obs x'.1) := by rw [hobs]
+      _ = σ x' := (hf x').symm
+  exact ⟨x, x', hσxx', hx, hx'⟩
+
 /--
 Step-dependence on the hidden component (product scenario `X = Y×B`, `O(y,b)=y`):
 two states in the same fiber with different `hidden` values cannot both remain compatible
