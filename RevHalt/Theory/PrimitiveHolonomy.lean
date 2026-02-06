@@ -216,6 +216,21 @@ def Gauge {S V : Type w} (obs : S → V) (target_obs : P → V) :=
   {h k : P} → HistoryGraph.Path h k →
     Relation (FiberPt (P := P) obs target_obs k) (FiberPt (P := P) obs target_obs k)
 
+/-- The empty gauge: it never relates any two fiber points (useful to audit vacuity). -/
+def emptyGauge {S V : Type w} (obs : S → V) (target_obs : P → V) : Gauge (P := P) obs target_obs :=
+  fun {_h _k} _p => fun _ _ => False
+
+/-- Gauge admissibility: reflexive on each target fiber (contains the diagonal). -/
+def GaugeRefl {S V : Type w} (obs : S → V) (target_obs : P → V)
+    (φ : Gauge (P := P) obs target_obs) : Prop :=
+  ∀ {h k : P} (p : HistoryGraph.Path h k) (y : FiberPt (P := P) obs target_obs k), φ p y y
+
+/-- Gauge admissibility: total/serial on each target fiber (cannot annihilate everything). -/
+def GaugeTotal {S V : Type w} (obs : S → V) (target_obs : P → V)
+    (φ : Gauge (P := P) obs target_obs) : Prop :=
+  ∀ {h k : P} (p : HistoryGraph.Path h k) (y : FiberPt (P := P) obs target_obs k),
+    ∃ y' : FiberPt (P := P) obs target_obs k, φ p y y'
+
 /-- Corrected transport along a total p: first do Transport, then apply the gauge at the target. -/
 def CorrectedTransport {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     {h k : P} (gauge : Gauge (P := P) obs target_obs) (p : HistoryGraph.Path h k) :
@@ -228,6 +243,28 @@ def CorrectedHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S �
     Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) :=
   relComp (CorrectedTransport sem obs target_obs gauge p)
           (relConverse (CorrectedTransport sem obs target_obs gauge q))
+
+/-- `emptyGauge` makes every corrected transport false. -/
+theorem not_correctedTransport_emptyGauge {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} (p : HistoryGraph.Path h k)
+    (x : FiberPt (P := P) obs target_obs h) (y : FiberPt (P := P) obs target_obs k) :
+    ¬ CorrectedTransport sem obs target_obs (emptyGauge (P := P) obs target_obs) p x y := by
+  intro hCT
+  unfold CorrectedTransport emptyGauge at hCT
+  rcases hCT with ⟨z, _hzT, hzG⟩
+  exact hzG
+
+/-- `emptyGauge` makes every corrected holonomy false. -/
+theorem not_correctedHolonomy_emptyGauge {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : FiberPt (P := P) obs target_obs h) :
+    ¬ CorrectedHolonomy sem obs target_obs (emptyGauge (P := P) obs target_obs) α x x' := by
+  intro hHol
+  unfold CorrectedHolonomy at hHol
+  rcases hHol with ⟨y, hy, _⟩
+  exact (not_correctedTransport_emptyGauge (P := P) sem obs target_obs p x y) hy
 
 /-- A primitive 2-cell: (h,k,p,q) together with α : p ⇒ q. We use PLift to put Prop in Type. -/
 abbrev Cell {P : Type u} [HistoryGraph P] :=
@@ -271,6 +308,15 @@ Definition of Auto-Regulation on a set J of deformations.
 def AutoRegulated {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     (J : Set (Cell (P := P))) : Prop :=
   ∃ φ : Gauge (P := P) obs target_obs,
+    ∀ c, c ∈ J →
+      let ⟨_h, _, _, _, ⟨α⟩⟩ := c
+      ∀ x x',
+        CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x'
+
+/-- Auto-regulation relative to a predicate selecting *admissible* gauges. -/
+def AutoRegulatedWrt {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) (J : Set (Cell (P := P))) : Prop :=
+  ∃ φ : Gauge (P := P) obs target_obs, OK φ ∧
     ∀ c, c ∈ J →
       let ⟨_h, _, _, _, ⟨α⟩⟩ := c
       ∀ x x',
@@ -332,6 +378,13 @@ def AutoRegulatedCofinal
   (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
   ∃ C : Set P, Cofinal C ∧ AutoRegulated sem obs target_obs (CellsOver C)
 
+/-- Cofinal auto-regulation relative to a predicate selecting admissible gauges. -/
+def AutoRegulatedCofinalWrt
+  {S V : Type w}
+  (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+  (OK : Gauge (P := P) obs target_obs → Prop) : Prop :=
+  ∃ C : Set P, Cofinal C ∧ AutoRegulatedWrt (P := P) sem obs target_obs OK (CellsOver C)
+
 /-- A positive (witnessed) notion of obstruction: every gauge fails by producing a twisted corrected holonomy. -/
 def Obstruction {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     (J : Set (Cell (P := P))) : Prop :=
@@ -341,9 +394,60 @@ def Obstruction {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) 
       ∃ x x' : FiberPt (P := P) obs target_obs h,
         x ≠ x' ∧ CorrectedHolonomy sem obs target_obs φ α x x'
 
+/-- Obstruction relative to a predicate selecting *admissible* gauges. -/
+def ObstructionWrt {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) (J : Set (Cell (P := P))) : Prop :=
+  ∀ φ : Gauge (P := P) obs target_obs, OK φ →
+    ∃ c, c ∈ J ∧
+      let ⟨h, _, _, _, ⟨α⟩⟩ := c
+      ∃ x x' : FiberPt (P := P) obs target_obs h,
+        x ≠ x' ∧ CorrectedHolonomy sem obs target_obs φ α x x'
+
+/-- With the current (unrestricted) `Gauge`, `Obstruction` is refutable via `emptyGauge`. -/
+theorem not_Obstruction_of_emptyGauge {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (J : Set (Cell (P := P))) :
+    ¬ Obstruction (P := P) sem obs target_obs J := by
+  intro hObs
+  rcases hObs (emptyGauge (P := P) obs target_obs) with ⟨c, _hcJ, hw⟩
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  rcases hw with ⟨x, x', _hxne, hxHol⟩
+  exact (not_correctedHolonomy_emptyGauge (P := P) sem obs target_obs α x x') hxHol
+
+/-- `ObstructionWrt` implies `¬ AutoRegulatedWrt` (constructive, no quantifier swaps). -/
+theorem not_AutoRegulatedWrt_of_ObstructionWrt {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) (J : Set (Cell (P := P))) :
+    ObstructionWrt (P := P) sem obs target_obs OK J →
+      ¬ AutoRegulatedWrt (P := P) sem obs target_obs OK J := by
+  intro hObs hAuto
+  rcases hAuto with ⟨φ, hOK, hφ⟩
+  rcases hObs φ hOK with ⟨c, hcJ, hw⟩
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  have hDiag : ∀ x x', CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x' :=
+    hφ ⟨h, k, p, q, ⟨α⟩⟩ hcJ
+  rcases hw with ⟨x, x', hxne, hxHol⟩
+  have : x = x' := (hDiag x x').1 hxHol
+  exact hxne this
+
+/-- `AutoRegulatedWrt` implies `¬ ObstructionWrt` (constructive, no quantifier swaps). -/
+theorem not_ObstructionWrt_of_AutoRegulatedWrt {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) (J : Set (Cell (P := P))) :
+    AutoRegulatedWrt (P := P) sem obs target_obs OK J →
+      ¬ ObstructionWrt (P := P) sem obs target_obs OK J := by
+  intro hAuto hObs
+  exact (not_AutoRegulatedWrt_of_ObstructionWrt (P := P) sem obs target_obs OK J hObs) hAuto
+
 /-- Cofinal obstruction: there exists a cofinal future where every gauge fails (with a witness). -/
 def ObstructionCofinal {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
   ∃ C : Set P, Cofinal C ∧ Obstruction sem obs target_obs (CellsOver C)
+
+/-- Cofinal obstruction relative to a predicate selecting admissible gauges. -/
+def ObstructionCofinalWrt {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) : Prop :=
+  ∃ C : Set P, Cofinal C ∧ ObstructionWrt (P := P) sem obs target_obs OK (CellsOver C)
 
 /-- Cells whose endpoints lie on the range of a given scheduling `s`. -/
 abbrev CellsAlong {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Set (Cell (P := P)) :=
@@ -356,12 +460,28 @@ def AutoRegulatedAlong
     {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Prop :=
   AutoRegulated sem obs target_obs (CellsAlong (P := P) s)
 
+/-- Auto-regulation along a specific scheduling, relative to admissible gauges. -/
+def AutoRegulatedAlongWrt
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Prop :=
+  AutoRegulatedWrt (P := P) sem obs target_obs OK (CellsAlong (P := P) s)
+
 /-- Obstruction restricted to the cofinal future presented by `s`. -/
 def ObstructionAlong
     {S V : Type w}
     (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
     {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Prop :=
   Obstruction sem obs target_obs (CellsAlong (P := P) s)
+
+/-- Obstruction along a specific scheduling, relative to admissible gauges. -/
+def ObstructionAlongWrt
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) : Prop :=
+  ObstructionWrt (P := P) sem obs target_obs OK (CellsAlong (P := P) s)
 
 theorem autoRegulatedCofinal_of_autoRegulatedAlong
     {S V : Type w}
@@ -382,6 +502,30 @@ theorem obstructionCofinal_of_obstructionAlong
   refine ⟨Set.range s.c, ?_, ?_⟩
   · exact cofinal_range_of_scheduling (P := P) s
   · simpa [ObstructionAlong, CellsAlong] using hAlong
+
+theorem autoRegulatedCofinalWrt_of_autoRegulatedAlongWrt
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) :
+    AutoRegulatedAlongWrt (P := P) sem obs target_obs OK s →
+      AutoRegulatedCofinalWrt (P := P) sem obs target_obs OK := by
+  intro hAlong
+  refine ⟨Set.range s.c, ?_, ?_⟩
+  · exact cofinal_range_of_scheduling (P := P) s
+  · simpa [AutoRegulatedAlongWrt, CellsAlong] using hAlong
+
+theorem obstructionCofinalWrt_of_obstructionAlongWrt
+    {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    {A : Type uQ} [Preorder A] (s : Scheduling (P := P) A) :
+    ObstructionAlongWrt (P := P) sem obs target_obs OK s →
+      ObstructionCofinalWrt (P := P) sem obs target_obs OK := by
+  intro hAlong
+  refine ⟨Set.range s.c, ?_, ?_⟩
+  · exact cofinal_range_of_scheduling (P := P) s
+  · simpa [ObstructionAlongWrt, CellsAlong] using hAlong
 
 theorem not_AutoRegulated_of_Obstruction {S : Type w} {V : Type w}
     {sem : Semantics P S} {obs : S → V} {target_obs : P → V} {J : Set (Cell (P := P))} :
@@ -485,6 +629,39 @@ namespace PrimitiveHolonomy
 abbrev Summary {P : Type u} [HistoryGraph P] (Q : Type uQ) :=
   ∀ {h k : P}, HistoryGraph.Path h k → Q
 
+/-
+Refinements for "1D shots":
+
+`Summary` is intentionally permissive: it can encode the path itself, so global
+statements like `NonReducibleHolonomy` are only meaningful when we restrict what
+counts as "1D".
+
+We provide two constructive restrictions:
+
+* `TimeShot`: a monotone "time coordinate" on objects (prefixes), inducing a summary.
+* `shadowSummary` from a `Scheduling`: a set-valued shadow that does not use choice.
+-/
+
+/-- A time-like shot: a preorder-valued coordinate on prefixes, monotone along `Reach`. -/
+structure TimeShot {P : Type u} [HistoryGraph P] (A : Type uQ) [Preorder A] where
+  time : P → A
+  mono : ∀ {h k : P}, Reach (P := P) h k → time h ≤ time k
+
+/-- A `TimeShot` induces a `Summary` by forgetting the actual path and keeping the target time. -/
+def TimeShot.toSummary {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
+    (t : TimeShot (P := P) A) : Summary (P := P) A :=
+  fun {_h k} _p => t.time k
+
+/-- Shadow-future set of indices at a prefix: indices whose stage is reachable from `h`. -/
+def shadowFuture {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
+    (s : Scheduling (P := P) A) (h : P) : Set A :=
+  { i | Reach (P := P) h (s.c i) }
+
+/-- Constructively, `Scheduling` induces a canonical set-valued summary (no choice needed). -/
+def shadowSummary {P : Type u} [HistoryGraph P] {A : Type uQ} [Preorder A]
+    (s : Scheduling (P := P) A) : Summary (P := P) (Set A) :=
+  fun {_h k} _p => shadowFuture (P := P) s k
+
 /-- Holonomy factors through a 1D summary `q` iff there exists a map `H`
     such that Hol(α) depends only on the two 1D codes of the paths involved in α. -/
 def FactorsHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
@@ -495,6 +672,18 @@ def FactorsHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
     ∀ (c : Cell (P := P)),
       let ⟨h, _, p, q', ⟨α⟩⟩ := c
       RelEq (HolonomyRel sem obs target_obs α) (H h (q p) (q q'))
+
+/-- "Factors through time": `FactorsHolonomy` for the summary induced by a `TimeShot`. -/
+def FactorsHolonomyTime {P : Type u} [HistoryGraph P] {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {A : Type uQ} [Preorder A] (t : TimeShot (P := P) A) : Prop :=
+  FactorsHolonomy (P := P) sem obs target_obs (t.toSummary)
+
+/-- Non-reducible relative to *time-like* shots. -/
+def NonReducibleHolonomyTime {P : Type u} [HistoryGraph P] {S V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ (A : Type uQ) [Preorder A] (t : TimeShot (P := P) A),
+    ¬ FactorsHolonomy (P := P) sem obs target_obs (t.toSummary)
 
 /-- Forward direction: if holonomy factors through a 1D summary,
     then equal codes force equal holonomy. -/
