@@ -207,38 +207,69 @@ def toyScheduling : Scheduling (P := Unit) Nat where
 
 /-! ## 8. AutoRegulated and Obstruction -/
 
-/-- Empty gauge: all corrected transports are empty. -/
-def emptyGauge : Gauge (P := Unit) toyObs toyTargetObs :=
-  fun {_ _} _ => fun _ _ => False
-
 /-- The cell for α₁. -/
 def cell₁ : Cell (P := Unit) := ⟨(), (), ToyPath.p, ToyPath.q, ⟨ToyDef.pq⟩⟩
 
 /-- AutoRegulated on empty set is trivially true. -/
 theorem autoRegulated_empty :
     AutoRegulated (P := Unit) toySemantics toyObs toyTargetObs ∅ := by
-  refine ⟨emptyGauge, ?_⟩
+  refine ⟨emptyGauge (P := Unit) toyObs toyTargetObs, ?_⟩
   intro c hc
   exact absurd hc (Set.notMem_empty c)
 
-/-- ¬ Obstruction: empty gauge has no twisted corrected holonomy. -/
+/-- ¬ Obstruction: use the theory-level theorem. -/
 theorem not_obstruction_any (J : Set (Cell (P := Unit))) :
-    ¬ Obstruction (P := Unit) toySemantics toyObs toyTargetObs J := by
-  intro hObs
-  -- Instantiate at emptyGauge
-  obtain ⟨c, _, hWitness⟩ := hObs emptyGauge
-  -- Unpack the cell
-  obtain ⟨h, k, pathP, pathQ, ⟨def_α⟩⟩ := c
-  obtain ⟨xW, x'W, _, hCorrHol⟩ := hWitness
-  -- CorrectedHolonomy with emptyGauge is always False
-  -- CorrectedHolonomy = relComp (CorrectedTransport p) (relConverse (CorrectedTransport q))
-  -- CorrectedTransport = relComp (Transport) emptyGauge
-  -- Since emptyGauge is always False, CorrectedTransport is always False
-  -- Hence CorrectedHolonomy is always False
-  obtain ⟨y, hCT_p, _⟩ := hCorrHol
-  -- CorrectedTransport p xW y = ∃ z, Transport p xW z ∧ emptyGauge _ z y
-  obtain ⟨z, _, hEmpty⟩ := hCT_p
-  exact hEmpty
+    ¬ Obstruction (P := Unit) toySemantics toyObs toyTargetObs J :=
+  not_Obstruction_of_emptyGauge (P := Unit) toySemantics toyObs toyTargetObs J
+
+/-!
+Refined layer: make obstruction non-vacuous by restricting to reflexive gauges.
+
+This stays within the maximal model perimeter because we do not change `Gauge`;
+we only add a predicate `GaugeRefl` and talk about `ObstructionWrt GaugeRefl`.
+-/
+
+/-- A simple admissible gauge: identity on the target fiber, for every path. -/
+def idGauge : Gauge (P := Unit) toyObs toyTargetObs :=
+  fun {_h _k} _p => relId
+
+theorem idGauge_refl : GaugeRefl (P := Unit) toyObs toyTargetObs idGauge := by
+  intro _h _k _p y
+  rfl
+
+/-- Any reflexive gauge forces a corrected twist for α₁ at (x, x'). -/
+theorem correctedHolonomy_x_x'_of_refl
+    (φ : Gauge (P := Unit) toyObs toyTargetObs)
+    (hRefl : GaugeRefl (P := Unit) toyObs toyTargetObs φ) :
+    CorrectedHolonomy toySemantics toyObs toyTargetObs φ α₁ x x' := by
+  refine ⟨x', ?_, ?_⟩
+  · -- CorrectedTransport p x x'
+    refine ⟨x', transport_p_x_x', ?_⟩
+    exact hRefl ToyPath.p x'
+  · -- CorrectedTransport q x' x'
+    refine ⟨x', transport_q_x'_x', ?_⟩
+    exact hRefl ToyPath.q x'
+
+/-- `ObstructionWrt` is non-vacuous: it holds for the reflexive gauges on `{cell₁}`. -/
+theorem obstructionWrt_refl_singleton :
+    ObstructionWrt (P := Unit) toySemantics toyObs toyTargetObs
+      (GaugeRefl (P := Unit) toyObs toyTargetObs) ({cell₁} : Set (Cell (P := Unit))) := by
+  intro φ hOK
+  refine ⟨cell₁, ?_, ?_⟩
+  · -- membership in the singleton set
+    rfl
+  -- Unfold the cell and use the explicit witness x, x'.
+  dsimp [cell₁]
+  refine ⟨x, x', x_ne_x', ?_⟩
+  exact correctedHolonomy_x_x'_of_refl φ hOK
+
+theorem not_autoRegulatedWrt_refl_singleton :
+    ¬ AutoRegulatedWrt (P := Unit) toySemantics toyObs toyTargetObs
+      (GaugeRefl (P := Unit) toyObs toyTargetObs) ({cell₁} : Set (Cell (P := Unit))) :=
+  not_AutoRegulatedWrt_of_ObstructionWrt
+    (P := Unit) toySemantics toyObs toyTargetObs
+    (GaugeRefl (P := Unit) toyObs toyTargetObs) ({cell₁} : Set (Cell (P := Unit)))
+    obstructionWrt_refl_singleton
 
 /-! ## 9. Axiom Audit -/
 
@@ -250,5 +281,7 @@ theorem not_obstruction_any (J : Set (Cell (P := Unit))) :
 #print axioms toyScheduling
 #print axioms autoRegulated_empty
 #print axioms not_obstruction_any
+#print axioms obstructionWrt_refl_singleton
+#print axioms not_autoRegulatedWrt_refl_singleton
 
 end PrimitiveHolonomy
