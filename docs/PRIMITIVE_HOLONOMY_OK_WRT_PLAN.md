@@ -155,6 +155,19 @@ Selon le domaine (LLM, concurrence, normalisation de preuves, contrôle), un `OK
 Ici on se place dans le **scénario 2** typique : chaque transport sur la fibre est une bijection
 (au sens relationnel), mais `p` et `q` ne recollent pas les fibres de la même façon.
 
+### 5.0 Trois notions distinctes : `WeakHolonomy` / `FlatHolonomy` / `TwistedHolonomy`
+
+Dans le code, il faut garder trois niveaux logiques séparés (ils ne se déduisent pas les uns des autres) :
+
+- `WeakHolonomy α` : la diagonale est incluse, `Δ ⊆ Hol_α` (au moins tout état reste lié à lui-même).
+- `FlatHolonomy α` : holonomie exactement diagonale, `Hol_α = Δ` (au sens extensionnel `∀ x x', Hol_α x x' ↔ x = x'`).
+- `TwistedHolonomy α` : **witness off-diagonal**, `∃ x ≠ x', Hol_α x x'` (donc `Hol_α` n’est pas contenu dans `Δ`).
+
+Deux conséquences utiles :
+
+- `TwistedHolonomy α → ¬ FlatHolonomy α` (immédiat : un témoin off-diagonal contredit `↔ x = x'`).
+- `TwistedHolonomy` ne dit **rien** sur `WeakHolonomy` : on peut avoir des holonomies “avec extra” *et* contenant la diagonale.
+
 ### 5.1 Holonomie = permutation (set-level) ; automorphisme seulement si la structure est préservée
 
 Si `T_p, T_q : Fiber(h) → Fiber(k)` sont bijectifs, alors leur converse `(T_q)†` se comporte comme
