@@ -602,6 +602,59 @@ theorem lag_forces_feature_det
 by
   exact lagEvent_gives_summary_witness (P := Term) semantics_det obs target_obs α (APath.step h0) σ hσ lag_event_det
 
+/-!
+## 7) Le point “OK est crucial” (gauge admissible)
+
+Sans restriction, `Obstruction` est réfutable via `emptyGauge`.
+Ici on exhibe un `OK` minimal qui exclut `emptyGauge` et rend l’obstruction non-vacu.
+
+Choix : on impose que le gauge contienne la diagonale (`GaugeRefl`) et soit total (`GaugeTotal`).
+Sous cette contrainte, toute holonomie tordue reste tordue après correction, car la correction
+ne peut pas “effacer” un témoin existant (elle contient toujours l’identité sur la fibre cible).
+-/
+
+abbrev OK_refl_total : Gauge (P := Term) obs target_obs → Prop :=
+  fun φ => GaugeRefl (P := Term) obs target_obs φ ∧ GaugeTotal (P := Term) obs target_obs φ
+
+def cell_h0 : Cell (P := Term) :=
+  ⟨h0, k0, APath.p h0, APath.q h0, ⟨α⟩⟩
+
+abbrev J_h0 : Set (Cell (P := Term)) := Set.singleton cell_h0
+
+theorem obstructionWrt_semantics_OK_refl_total :
+    ObstructionWrt (P := Term) semantics obs target_obs OK_refl_total J_h0 := by
+  intro φ hOK
+  refine ⟨cell_h0, by simp [J_h0, Set.singleton], ?_⟩
+  -- unpack `cell_h0` (so the binder `α` inside `ObstructionWrt` is our `α`)
+  change (∃ x x' : FiberPt (P := Term) obs target_obs h0,
+      x ≠ x' ∧ CorrectedHolonomy (P := Term) semantics obs target_obs φ α x x')
+  refine ⟨x, x', x_ne_x', ?_⟩
+  -- `GaugeRefl` makes correction monotone: any existing holonomy witness survives correction.
+  exact
+    correctedHolonomy_of_holonomy_of_gaugeRefl (P := Term) semantics obs target_obs φ hOK.1 α x x'
+      holonomy_x_x'
+
+theorem not_autoRegulatedWrt_semantics_OK_refl_total :
+    ¬ AutoRegulatedWrt (P := Term) semantics obs target_obs OK_refl_total J_h0 := by
+  exact not_AutoRegulatedWrt_of_ObstructionWrt (P := Term) semantics obs target_obs OK_refl_total J_h0
+    obstructionWrt_semantics_OK_refl_total
+
+theorem obstructionWrt_semantics_det_OK_refl_total :
+    ObstructionWrt (P := Term) semantics_det obs target_obs OK_refl_total J_h0 := by
+  intro φ hOK
+  refine ⟨cell_h0, by simp [J_h0, Set.singleton], ?_⟩
+  change (∃ x x' : FiberPt (P := Term) obs target_obs h0,
+      x ≠ x' ∧ CorrectedHolonomy (P := Term) semantics_det obs target_obs φ α x x')
+  refine ⟨xd, x'd, xd_ne_x'd, ?_⟩
+  exact
+    correctedHolonomy_of_holonomy_of_gaugeRefl (P := Term) semantics_det obs target_obs φ hOK.1 α xd x'd
+      holonomy_det_xd_x'd
+
+theorem not_autoRegulatedWrt_semantics_det_OK_refl_total :
+    ¬ AutoRegulatedWrt (P := Term) semantics_det obs target_obs OK_refl_total J_h0 := by
+  exact not_AutoRegulatedWrt_of_ObstructionWrt (P := Term) semantics_det obs target_obs OK_refl_total J_h0
+    obstructionWrt_semantics_det_OK_refl_total
+
 end PAFragment
 
 end PrimitiveHolonomy

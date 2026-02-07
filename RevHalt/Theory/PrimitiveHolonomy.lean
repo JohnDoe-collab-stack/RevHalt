@@ -330,6 +330,45 @@ def CorrectedHolonomy {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S �
   relComp (CorrectedTransport sem obs target_obs gauge p)
           (relConverse (CorrectedTransport sem obs target_obs gauge q))
 
+/-!
+### A small but important monotonicity fact
+
+If a gauge contains the diagonal (`GaugeRefl`), then corrected transport/holonomy can only add
+possibilities: any existing witness for `Transport`/`HolonomyRel` remains a witness after correction.
+
+This is the key to making `OK` meaningful: once `OK` enforces at least `GaugeRefl`, some obstructions
+cannot be “repaired away” by choosing a degenerate gauge like `emptyGauge`.
+-/
+
+theorem correctedTransport_of_transport_of_gaugeRefl
+    {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} (gauge : Gauge (P := P) obs target_obs)
+    (hg : GaugeRefl (P := P) obs target_obs gauge)
+    (p : HistoryGraph.Path h k)
+    (x : FiberPt (P := P) obs target_obs h) (y : FiberPt (P := P) obs target_obs k) :
+    Transport (P := P) sem obs target_obs p x y →
+      CorrectedTransport (P := P) sem obs target_obs gauge p x y := by
+  intro hT
+  unfold CorrectedTransport
+  exact ⟨y, hT, hg p y⟩
+
+theorem correctedHolonomy_of_holonomy_of_gaugeRefl
+    {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} (gauge : Gauge (P := P) obs target_obs)
+    (hg : GaugeRefl (P := P) obs target_obs gauge)
+    {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : FiberPt (P := P) obs target_obs h) :
+    HolonomyRel (P := P) sem obs target_obs α x x' →
+      CorrectedHolonomy (P := P) sem obs target_obs gauge α x x' := by
+  intro hHol
+  -- unfold both sides and reuse the same intermediate witness `y`
+  unfold HolonomyRel at hHol
+  rcases hHol with ⟨y, hTp, hTq⟩
+  unfold CorrectedHolonomy CorrectedTransport
+  refine ⟨y, ?_, ?_⟩
+  · exact ⟨y, hTp, hg p y⟩
+  · exact ⟨y, hTq, hg q y⟩
+
 /-- `emptyGauge` makes every corrected transport false. -/
 theorem not_correctedTransport_emptyGauge {S : Type w} {V : Type w}
     (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
