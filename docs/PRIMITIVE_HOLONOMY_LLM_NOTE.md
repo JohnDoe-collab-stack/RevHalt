@@ -75,9 +75,10 @@ Dans `RevHalt/Theory/PrimitiveHolonomy_PA_Fragment.lean` :
   On prouve `¬ LeftUniqueRel (Transport … p …)`.
 - En fait, dans ce scénario 1, le transport reste *fonctionnel* au sens “un seul `y` par `x`”
   (right-unique + total), mais il est **many-to-one** (non left-unique) : c’est exactement
-  le pattern de “perte d’information”.
+  le pattern de “perte d’information” (et il n’est pas surjectif sur la fibre cible complète).
 - Scénario 2 (“mismatch de chemins”) : `R_p_det ≠ R_q_det`, mais chacun est déterministe.
-  On prouve `LeftUniqueRel` pour `p` et `q`, et malgré ça on obtient une holonomie tordue + `LagEvent`.
+  On prouve `FunctionalRel`, `LeftUniqueRel` **et** `SurjectiveRel` pour `p_det` et `q_det`
+  (donc des bijections sur la fibre), et malgré ça on obtient une holonomie tordue + `LagEvent`.
 
 Autrement dit : même quand chaque chemin est “propre” pris isolément, la 2D peut fabriquer une
 obstruction prédictive.

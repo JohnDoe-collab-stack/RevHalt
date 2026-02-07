@@ -63,10 +63,10 @@ Ce fichier donne **deux** instanciations concrètes de `Semantics` sur le même 
 1. `semantics` (aliasing pur): `R_p = R_q` et chaque sortie `y` a plusieurs antécédents `x`
    (relation non left-unique). On obtient alors une holonomie non-triviale de la forme `R ∘ R†`.
    Remarque: ici `p`/`q` restent **fonctionnels** (un seul `y` par `x`), mais ils oublient `hidden`,
-   donc ils sont many-to-one.
+   donc ils sont many-to-one (et non surjectifs sur la fibre cible complète).
 2. `semantics_det` (mismatch de chemins): `R_p ≠ R_q`, et chacun est fonctionnel *et* left-unique
-   (sur les fibres considérées).
-   L’holonomie vient alors du **croisement** entre deux mises à jour différentes.
+   (sur les fibres considérées), et même surjectif: ce sont des bijections sur la fibre.
+   L’holonomie vient alors du **croisement** entre deux bijections différentes.
 -/
 
 abbrev State := LagState Term Bool
@@ -100,6 +100,19 @@ def TotalRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
 
 def FunctionalRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
   TotalRel R ∧ RightUniqueRel R
+
+/-!
+`SurjectiveRel R` signifie: tout point cible `y` a au moins un antécédent `x`.
+
+Dans ce fichier on l’utilise uniquement pour des relations déjà `FunctionalRel` (donc des fonctions),
+afin de pouvoir parler proprement de “bijection sur la fibre” = (fonctionnelle + injective + surjective).
+-/
+
+def SurjectiveRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
+  ∀ y : B, ∃ x : A, R x y
+
+def BijectiveRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
+  FunctionalRel R ∧ LeftUniqueRel R ∧ SurjectiveRel R
 
 /-- (Scenario 1) Transport `p`: écrase `hidden` à `false` et oublie le `hidden` d’entrée (aliasing). -/
 def R_p (t : Term) : Relation State State :=
@@ -154,6 +167,9 @@ def k0 : Term := nf h0
 
 def y : FiberPt (P := Term) obs target_obs k0 :=
   ⟨⟨k0, false⟩, rfl⟩
+
+def yTrue : FiberPt (P := Term) obs target_obs k0 :=
+  ⟨⟨k0, true⟩, rfl⟩
 
 def α : ADef (APath.p h0) (APath.q h0) := ADef.pq h0
 
@@ -252,6 +268,28 @@ theorem transport_q_functional :
         cases hvis
         cases hhid
         rfl
+
+theorem transport_p_not_surjective :
+    ¬ SurjectiveRel (Transport (P := Term) semantics obs target_obs (APath.p h0)) := by
+  intro hSurj
+  rcases hSurj yTrue with ⟨x0, hx0⟩
+  have hy : R_p h0 x0.1 yTrue.1 := by
+    simpa [Transport, semantics, sem, R_p] using hx0
+  have hyFalse : (yTrue.1.hidden = false) := hy.2.2
+  have hyTrue : (yTrue.1.hidden = true) := by simp [yTrue]
+  have : true = false := hyTrue.symm.trans hyFalse
+  exact Bool.noConfusion this
+
+theorem transport_q_not_surjective :
+    ¬ SurjectiveRel (Transport (P := Term) semantics obs target_obs (APath.q h0)) := by
+  intro hSurj
+  rcases hSurj yTrue with ⟨x0, hx0⟩
+  have hy : R_q h0 x0.1 yTrue.1 := by
+    simpa [Transport, semantics, sem, R_q] using hx0
+  have hyFalse : (yTrue.1.hidden = false) := hy.2.2
+  have hyTrue : (yTrue.1.hidden = true) := by simp [yTrue]
+  have : true = false := hyTrue.symm.trans hyFalse
+  exact Bool.noConfusion this
 
 theorem holonomy_x_x' :
     HolonomyRel (P := Term) semantics obs target_obs α x x' := by
@@ -493,6 +531,37 @@ theorem transport_q_det_functional :
         cases hvis
         cases hhid
         rfl
+
+theorem transport_p_det_surjective :
+    SurjectiveRel (Transport (P := Term) semantics_det obs target_obs (APath.p h0)) := by
+  intro y0
+  -- take the unique preimage: same hidden bit
+  refine ⟨⟨⟨h0, y0.1.hidden⟩, rfl⟩, ?_⟩
+  have hy0vis : y0.1.visible = k0 := y0.2
+  show R_p_det h0 ⟨h0, y0.1.hidden⟩ y0.1
+  refine ⟨rfl, ?_, rfl⟩
+  -- `k0 = nf h0` by definition
+  simpa [k0] using hy0vis
+
+theorem transport_q_det_surjective :
+    SurjectiveRel (Transport (P := Term) semantics_det obs target_obs (APath.q h0)) := by
+  intro y0
+  -- preimage is obtained by flipping the hidden bit
+  refine ⟨⟨⟨h0, !y0.1.hidden⟩, rfl⟩, ?_⟩
+  have hy0vis : y0.1.visible = k0 := y0.2
+  show R_q_det h0 ⟨h0, !y0.1.hidden⟩ y0.1
+  refine ⟨rfl, ?_, ?_⟩
+  · simpa [k0] using hy0vis
+  · -- `y0.hidden = !(!y0.hidden)` (involutivité)
+    simp
+
+theorem transport_p_det_bijective :
+    BijectiveRel (Transport (P := Term) semantics_det obs target_obs (APath.p h0)) := by
+  refine ⟨transport_p_det_functional, transport_p_det_leftUnique, transport_p_det_surjective⟩
+
+theorem transport_q_det_bijective :
+    BijectiveRel (Transport (P := Term) semantics_det obs target_obs (APath.q h0)) := by
+  refine ⟨transport_q_det_functional, transport_q_det_leftUnique, transport_q_det_surjective⟩
 
 theorem holonomy_det_xd_x'd :
     HolonomyRel (P := Term) semantics_det obs target_obs α xd x'd := by
