@@ -208,6 +208,24 @@ Version anneau :
 Le point conceptuel : vous passez d’un “OK arbitraire sur relations” à un **OK de type algébrique**
 où `AutoRegulatedWrt` devient un problème de *quotient admissible qui tue une action*.
 
+### 5.4 Implication “profonde” côté anneaux : `OK` = famille d’idéaux admissibles
+
+Vu comme un cadre “anneaux”, l’apport n’est pas juste une reformulation : c’est un *filtre de réalisme*.
+
+1. **Dans un cadre algébrique standard**, une “jauge admissible” est typiquement une congruence,
+   donc (pour les anneaux) un idéal `I`. Autrement dit, `OK` spécifie une *classe d’idéaux admissibles*
+   (bornés, locaux, stables, de coût contrôlé, etc.).
+
+2. **Dans ce régime**, les deux problèmes deviennent des énoncés très nets :
+   - `AutoRegulatedWrt` : `∃ I ∈ OK,  h ≡ id (mod I)` (l’action d’holonomie est tuée par le quotient).
+   - `ObstructionWrt` : `∀ I ∈ OK,  h ≢ id (mod I)` (l’action survit à toutes les réductions autorisées).
+
+3. **Le PA-fragment illustre un point important** : il existe des “réparations” relationnelles non réflexives
+   (ex: `repairGauge_det`, `RevHalt/Theory/PrimitiveHolonomy_PA_Fragment.lean:670`) qui peuvent corriger une holonomie,
+   mais qui ne correspondent pas à un quotient/congruence (un idéal donne toujours une relation réflexive).
+   Donc dès que `OK` est “anneau-compatible” (congruences/idéaux), certaines réparations disparaissent et se transforment
+   en **obstructions algébriques réelles**.
+
 ---
 
 ## 6) Ce qu’il reste à faire (prochaines cibles Lean)
