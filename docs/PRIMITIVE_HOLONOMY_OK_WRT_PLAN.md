@@ -208,23 +208,75 @@ Version anneau :
 Le point conceptuel : vous passez d’un “OK arbitraire sur relations” à un **OK de type algébrique**
 où `AutoRegulatedWrt` devient un problème de *quotient admissible qui tue une action*.
 
-### 5.4 Implication “profonde” côté anneaux : `OK` = famille d’idéaux admissibles
+### 5.4 Implication “profonde” côté anneaux : `OK` comme famille d’idéaux admissibles (après restriction)
 
 Vu comme un cadre “anneaux”, l’apport n’est pas juste une reformulation : c’est un *filtre de réalisme*.
 
 1. **Dans un cadre algébrique standard**, une “jauge admissible” est typiquement une congruence,
-   donc (pour les anneaux) un idéal `I`. Autrement dit, `OK` spécifie une *classe d’idéaux admissibles*
+   donc (pour les anneaux) un idéal `I`. Dans **notre code**, une `Gauge` est a priori une relation arbitraire
+   (et dépendante du chemin). La lecture “idéaux” devient mathématiquement exacte seulement après avoir **restreint**
+   `OK` aux jauges qui proviennent de congruences/quotients (et idéalement sont indépendantes du chemin, ou ne dépendent
+   que de la fibre / du type de move). Dans ce régime, `OK` spécifie une *classe d’idéaux admissibles*
    (bornés, locaux, stables, de coût contrôlé, etc.).
 
 2. **Dans ce régime**, les deux problèmes deviennent des énoncés très nets :
    - `AutoRegulatedWrt` : `∃ I ∈ OK,  h ≡ id (mod I)` (l’action d’holonomie est tuée par le quotient).
    - `ObstructionWrt` : `∀ I ∈ OK,  h ≢ id (mod I)` (l’action survit à toutes les réductions autorisées).
 
+   Remarque de précision : ces formes “mod I” deviennent **littérales** si la cible de régulation est formulée
+   *dans le quotient* (ou via une relation `~`) plutôt qu’en égalité brute `x = x'` sur la fibre.
+
 3. **Le PA-fragment illustre un point important** : il existe des “réparations” relationnelles non réflexives
    (ex: `repairGauge_det`, `RevHalt/Theory/PrimitiveHolonomy_PA_Fragment.lean:670`) qui peuvent corriger une holonomie,
    mais qui ne correspondent pas à un quotient/congruence (un idéal donne toujours une relation réflexive).
    Donc dès que `OK` est “anneau-compatible” (congruences/idéaux), certaines réparations disparaissent et se transforment
    en **obstructions algébriques réelles**.
+
+4. **Lecture holonomique des anneaux : trajectoires non bijectives par nature.**
+   Du point de vue “holonomie primitive”, une grande partie de l’algèbre commutative se formule déjà comme
+   une géométrie de flèches **non bijectives** :
+   - un quotient `R → R/I` est une application surjective mais typiquement non injective (collapse),
+   - un morphisme d’anneaux transporte de l’information et peut créer des identifications via son noyau,
+   - les idéaux / congruences décrivent précisément “ce qui devient indiscernable”.
+
+   Traduction dans le cadre :
+   - un `Transport` many-to-one correspond exactement à un “passage au quotient” (perte contrôlée),
+   - `T ∘ T†` est la *relation noyau* (“avoir la même image”), i.e. la version holonomique de “`≡ (mod I)`”,
+   - et `OK` borne **quels** collapses (quels quotients) sont autorisés.
+
+   C’est ce déplacement qui rend le lien anneaux/holonomie non superficiel : on ne colle pas un vocabulaire,
+   on reconnaît que les objets structurants (idéaux, congruences, noyaux) sont déjà des invariants de
+   trajectoires non bijectives.
+
+5. **Spécification minimale pour que la lecture “idéaux / mod I” soit littérale (verrous A/B/C).**
+
+   Pour passer de “bonne intuition” à “énoncé exact”, il faut expliciter trois contraintes sur `OK`
+   (ou sur une sous-classe de `Gauge`) :
+
+   (A) **Congruence ⇔ idéal (bilatère si non commutatif).**
+   - Côté anneaux, une congruence `~` correspond à un idéal `I` via `a ~ b ↔ a - b ∈ I`.
+   - En non-commutatif, il faut un idéal **bilatère** pour que `R/I` hérite d’une structure d’anneau.
+
+   (B) **Path-blind (au moins endpoint-blind).**
+   - Dans le code actuel, une `Gauge` dépend de `p : Path h k`.
+   - Pour être un “quotient de la fibre au-dessus de `k`”, la jauge doit dépendre essentiellement de `k`
+     (ou d’un “type de move”), pas de l’historique fin.
+   - Spécification typique : il existe une relation `~k` telle que `φ p = ~k` pour tout `p : h ⟶ k`.
+
+   (C) **Descente au quotient (compatibilité).**
+   - Pour pouvoir écrire “`h ≡ id (mod I)`”, il faut que le transport (ou le transport corrigé)
+     soit **bien défini sur le quotient**.
+   - Schéma : si `x ~h x'` et `T_p x y` et `T_p x' y'`, alors `y ~k y'`.
+
+   Une fois (A)(B)(C) posés, les deux lectures deviennent réellement des énoncés “mod I” :
+   - **AutoRegulatedWrt (version quotient)** : `∃ I ∈ OK`, pour toute cellule admissible,
+     l’holonomie *induite* sur `Fiber(h)/~h` est l’identité.
+   - **ObstructionWrt (version quotient)** : `∀ I ∈ OK`, il existe une cellule où l’holonomie induite
+     n’est pas l’identité sur le quotient.
+
+   Et c’est précisément là que `repairGauge_det` joue son rôle : dès que `OK` impose (A)(B)(C),
+   les “réparations” non réflexives ou history-dependent sortent du jeu, et ce qui reste est
+   une obstruction algébrique authentique.
 
 ---
 
