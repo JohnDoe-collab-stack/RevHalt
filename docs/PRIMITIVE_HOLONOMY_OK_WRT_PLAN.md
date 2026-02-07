@@ -155,7 +155,7 @@ Selon le domaine (LLM, concurrence, normalisation de preuves, contrôle), un `OK
 Ici on se place dans le **scénario 2** typique : chaque transport sur la fibre est une bijection
 (au sens relationnel), mais `p` et `q` ne recollent pas les fibres de la même façon.
 
-### 5.1 Holonomie = permutation / automorphisme sur la fibre
+### 5.1 Holonomie = permutation (set-level) ; automorphisme seulement si la structure est préservée
 
 Si `T_p, T_q : Fiber(h) → Fiber(k)` sont bijectifs, alors leur converse `(T_q)†` se comporte comme
 un inverse relationnel, et :
@@ -165,6 +165,14 @@ un inverse relationnel, et :
 devient (intuitivement) le **graphe** de la bijection `h := T_p ∘ T_q⁻¹` sur `Fiber(h)`.
 
 Dans ce régime, `TwistedHolonomy` signifie : `h ≠ id` (il existe `x ≠ x'` avec `h(x) = x'`).
+
+Remarque importante : “bijectif” ici veut dire **bijection d’ensembles** (ou permutation) sur une fibre.
+Pour parler littéralement “anneaux / idéaux / mod I”, il faut un verrou supplémentaire : la holonomie doit
+être un **endomorphisme algébrique** (morphisme de module / morphisme d’anneau) ou au moins respecter la
+congruence choisie. Sinon, la théorie pertinente est plutôt “groupe de permutations” que “idéal”.
+
+Exemple-guide : dans le PA-fragment, le twist `Bool.not` est une bijection, mais si on interprète `Bool`
+comme `𝔽₂`, `not : 0 ↦ 1` n’est pas un morphisme d’anneau (il ne préserve pas `0`) : c’est une translation affine.
 
 ### 5.2 `OK` comme “congruence admissible”
 
@@ -188,9 +196,11 @@ Ce `OK` :
 - est compatible avec `GaugeRefl` (car `b - b = 0 ∈ N/I`),
 - permet un **axe appliqué clair** : quel quotient est autorisé (budget, localité, taille, stabilité).
 
-### 5.3 Réguler = trivialiser l’action d’holonomie dans un quotient
+### 5.3 Réguler = trivialiser l’action d’holonomie dans un quotient (quand l’action descend au quotient)
 
-Dans le cas bijectif, les holonomies agissent comme des automorphismes `h` de la fibre.
+Dans le cas bijectif, les holonomies agissent comme des permutations `h` de la fibre (au sens set-level).
+Si, en plus, elles préservent une structure (module/anneau), on peut les traiter comme des automorphismes/endomorphismes
+dans cette catégorie.
 “Diagonaliser l’holonomie corrigée” revient à rendre `h` **trivial** après passage au quotient :
 
 - sur un module : choisir `N` tel que `h` induit l’identité sur `B/N`,
@@ -201,7 +211,7 @@ Heuristique constructive utile (module) :
 - prendre `N` comme le sous-module engendré par l’image de `(h - id)` :
   `N := span (range (h - id))`.
 
-Version anneau :
+Version anneau (si `h` est un endomorphisme d’anneau, ou au moins respecte l’addition/multiplication) :
 
 - prendre `I` comme l’idéal engendré par `{h(b) - b | b ∈ B}`.
 
@@ -248,9 +258,9 @@ Vu comme un cadre “anneaux”, l’apport n’est pas juste une reformulation 
    on reconnaît que les objets structurants (idéaux, congruences, noyaux) sont déjà des invariants de
    trajectoires non bijectives.
 
-5. **Spécification minimale pour que la lecture “idéaux / mod I” soit littérale (verrous A/B/C).**
+5. **Spécification minimale pour que la lecture “idéaux / mod I” soit littérale (verrous A/B/C/D).**
 
-   Pour passer de “bonne intuition” à “énoncé exact”, il faut expliciter trois contraintes sur `OK`
+   Pour passer de “bonne intuition” à “énoncé exact”, il faut expliciter quatre contraintes sur `OK`
    (ou sur une sous-classe de `Gauge`) :
 
    (A) **Congruence ⇔ idéal (bilatère si non commutatif).**
@@ -268,13 +278,20 @@ Vu comme un cadre “anneaux”, l’apport n’est pas juste une reformulation 
      soit **bien défini sur le quotient**.
    - Schéma : si `x ~h x'` et `T_p x y` et `T_p x' y'`, alors `y ~k y'`.
 
-   Une fois (A)(B)(C) posés, les deux lectures deviennent réellement des énoncés “mod I” :
+   (D) **Structure-preserving (anneau / module).**
+   - Pour que “congruence ⇔ idéal” s’applique et que “`≡ (mod I)`” soit un invariant algébrique,
+     il faut que la relation `~` soit compatible avec les opérations, *et* que les transports/holonomies
+     que l’on veut “tuer” soient des morphismes dans la même catégorie (ou au minimum respectent `~`).
+   - Sans (D), on a toujours un noyau/indiscernabilité au niveau *ensembles* (`T ∘ T†`), mais pas forcément
+     un idéal (ou un quotient bien typé comme module/anneau).
+
+   Une fois (A)(B)(C)(D) posés, les deux lectures deviennent réellement des énoncés “mod I” :
    - **AutoRegulatedWrt (version quotient)** : `∃ I ∈ OK`, pour toute cellule admissible,
      l’holonomie *induite* sur `Fiber(h)/~h` est l’identité.
    - **ObstructionWrt (version quotient)** : `∀ I ∈ OK`, il existe une cellule où l’holonomie induite
      n’est pas l’identité sur le quotient.
 
-   Et c’est précisément là que `repairGauge_det` joue son rôle : dès que `OK` impose (A)(B)(C),
+   Et c’est précisément là que `repairGauge_det` joue son rôle : dès que `OK` impose (A)(B)(C)(D),
    les “réparations” non réflexives ou history-dependent sortent du jeu, et ce qui reste est
    une obstruction algébrique authentique.
 
