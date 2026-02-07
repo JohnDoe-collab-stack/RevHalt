@@ -166,7 +166,34 @@ Dans le code, il faut garder trois niveaux logiques séparés (ils ne se déduis
 Deux conséquences utiles :
 
 - `TwistedHolonomy α → ¬ FlatHolonomy α` (immédiat : un témoin off-diagonal contredit `↔ x = x'`).
-- `TwistedHolonomy` ne dit **rien** sur `WeakHolonomy` : on peut avoir des holonomies “avec extra” *et* contenant la diagonale.
+- `TwistedHolonomy` ne force **ni** `WeakHolonomy` **ni** `¬ WeakHolonomy` en général : on peut avoir des holonomies “avec extra” *et* contenant la diagonale (p.ex. régime noyau/aliasing).
+  (Nuance : dans le sous-régime bijectif où `Hol_α` est le graphe d’une permutation `h`, `WeakHolonomy` équivaut à `h = id`, donc `Weak ∧ Twisted` y est impossible.)
+
+### 5.0.1 Notes de lecture (endpoints, deux régimes, et rôle de `OK`)
+
+1. **Trois niveaux logiques stricts (rappel opérationnel).**
+   - `WeakHolonomy (Δ ⊆ H)` : cohérence minimale (`∀ x, H x x`). (Heuristique : c’est souvent le “ticket d’entrée” pour interpréter `H` comme un “transport qui ne casse pas tout”.)
+   - `TwistedHolonomy (H \\ Δ ≠ ∅)` : existence d’un témoin off-diagonal. C’est la “source” typique d’un `LagEvent` dès qu’un futur `step` discrimine.
+   - `FlatHolonomy (H = Δ)` : coïncidence parfaite (diagonale exacte), i.e. `∀ x x', H x x' ↔ x = x'`.
+   - Conséquence : `Twisted → ¬ Flat` immédiat.
+   - Point subtil : `Twisted` **n’implique pas** l’échec de `Weak`. On peut avoir `Weak ∧ Twisted` (par ex. dans le régime “kernel/aliasing”, où `H` est une relation d’équivalence “même image”).
+     En revanche, dans le sous-régime bijectif *fonctionnel* où `H` est le graphe d’une permutation `h`, `Weak` force `h = id`, donc `Weak ∧ Twisted` ne peut pas arriver.
+
+2. **Précision sur “même observable”.**
+   Remplacer “`p` et `q` ont le même effet observable” par :
+   - *Macroscopique* : `p, q : h ⟶ k` ont les mêmes endpoints (c’est ce qui rend `Hol_α` typable).
+   - *Microscopique* : `Hol_α = T_p ∘ (T_q)†` mesure le défaut de recollage **interne** des fibres.
+   L’observable sert à définir les fibres, pas à établir l’égalité (ni même la proximité) des chemins.
+
+3. **Régime bijectif vs régime kernel (aliasing).**
+   - **Régime bijectif (scénario 2)** : si `T_p` et `T_q` sont des graphes de bijections, alors `Hol_α` est le graphe de la permutation `h = T_p ∘ T_q⁻¹`, et `Twisted` se lit comme `h ≠ id`.
+     (Analogie libre : “symétrie / groupe”, plutôt que “quotient”.)
+   - **Régime kernel (scénario 1)** : si `T` est le graphe d’une fonction `f` many-to-one, alors `T ∘ T†` est la relation noyau “avoir la même image”, et `Twisted` traduit une non-injectivité (collapse d’information).
+     (Analogie : quotient / oubli.)
+
+4. **Conséquence pour `OK` (filtre de réalisme).**
+   - Si `OK` autorise des jauges trop puissantes (ex. “quotient engendré par l’holonomie”), alors on peut tuer artificiellement n’importe quel témoin : l’axe `ObstructionWrt`/`AutoRegulatedWrt` devient trivial.
+   - À l’inverse, si `OK` impose des contraintes structurelles (typiquement (A)(B)(C)(D) + des bornes de coût/localité), alors un “twist” devient un vrai objet appliqué : soit il **survit** à toutes les corrections admissibles (`ObstructionWrt`), soit il existe une correction admissible qui le **diagonalise** (`AutoRegulatedWrt`).
 
 ### 5.1 Holonomie = permutation (set-level) ; automorphisme seulement si la structure est préservée
 
