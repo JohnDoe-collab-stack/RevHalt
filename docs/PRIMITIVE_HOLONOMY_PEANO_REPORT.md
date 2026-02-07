@@ -326,8 +326,8 @@ Et on obtient trois faits formels (purement structurels, utilisables *tel quels*
   alors `σ x = σ x'` force `Sig(x)` et `Sig(x')` à coïncider (mêmes réponses pour tous les futurs).
 - **Borne de séparation** (`summary_separates_compatible_witness`): dès qu’un futur `step` accepte `x` mais pas `x'`,
   toute compression correcte doit nécessairement séparer `x` et `x'`.
-- **Pont direct “Lag → witness 1D”** (`lagEvent_gives_summary_witness`): un `LagEvent` exhibe directement un couple `x,x'` indiscernable par toute stratégie de la forme `σ = f ∘ obs`
-  (même visible donc même code), mais séparé par un futur `step` (compatibilité différente). Dit autrement: le witness te dit **exactement quelle information manque**, et donc **quoi ajouter**.
+- **Pont direct “Lag → witness 1D”** (`lagEvent_gives_summary_witness`): à partir d’un `LagEvent`, et pour toute stratégie de la forme `σ = f ∘ obs`,
+  on peut exhiber un couple `x,x'` tel que `σ x = σ x'` (même visible donc même code), mais séparé par un futur `step` (compatibilité différente). Dit autrement: le witness te dit **exactement quelle information manque**, et donc **quoi ajouter**.
 
 On peut condenser ces trois points en un énoncé unique (forme “théorème d’ingénierie”, purement paramétrique):
 
@@ -335,6 +335,59 @@ On peut condenser ces trois points en un énoncé unique (forme “théorème d�
 > Si `pred (σ x) step ↔ CompatibleFuture step x` pour tout `x` et tout `step`,
 > alors `σ x = σ x'` implique `Sig(x) = Sig(x')` (au sens “mêmes réponses pour tous les futurs”).
 > En particulier, si `Sig(x)` et `Sig(x')` diffèrent sur un futur `step`, alors `σ` *doit* séparer `x` et `x'`.
+
+### 4.5 Ce que le framework donne *au-delà* d’un témoin brut
+
+Le point clé: tes objets `LagEvent`, `TwistedHolonomy`, `AutoRegulatedWrt`, `ObstructionWrt`, etc. ne sont pas des “murs” négatifs.
+Ce sont des *formats de certificats* exploitables, avec une extraction de témoins et une structure de composition.
+
+1) **Extraction mécanique (witness-transformer, pas un slogan)**
+
+Dans la théorie, le lemme `lagEvent_gives_summary_witness` dit:
+
+- entrée: un témoin `Hlag : LagEvent ... step` (dans *ta* dynamique) + une stratégie `σ` qui ne dépend que de `obs` (forme `σ = f ∘ obs`),
+- sortie: un couple `x,x'` tel que `σ x = σ x'` mais `Compatible step x` et `¬ Compatible step x'`.
+
+Important: `x,x'` ne sont pas “calculés à partir de `σ` seul” — ils sont *extraits* du témoin `Hlag`.
+Ce que tu obtiens, c’est un pipeline formel “lag → contre-exemple pour toute stratégie obs-only”, avec témoins explicites.
+
+2) **Caractérisation exacte de l’information manquante**
+
+`Sig(x) : Future h → Prop` est l’invariant canonique “positif”:
+
+- `obs` te donne le *quotient visible*,
+- `Sig` te donne la *fonction de compatibilité future* (ce que l’état sait réellement sur les futurs).
+
+Donc la question “quelle information manque à une stratégie 1D basée sur `obs` ?” devient: *quelle partie de `Sig` n’est pas déterminée par `obs` (ou par ta compression admissible)*.
+
+3) **Structure compositionnelle**
+
+Le formalisme `HistoryGraph/Path/Deformation` te permet de:
+
+- localiser où l’effet apparaît (par 2-cellules sélectionnées),
+- composer des analyses (concaténation des chemins + fermeture des moves),
+- restreindre à des futurs (cofinalité / scheduling) sans casser les définitions.
+
+4) **Gauge / obstruction = certificats duals (mais pas “décidables”)**
+
+Tu as deux *types* de sorties possibles, incompatibles constructivement:
+
+- `AutoRegulatedWrt OK J`: un **certificat positif de réparation** (une gauge admissible globale qui trivialise les holonomies corrigées sur `J`),
+- `ObstructionWrt OK J`: un **certificat positif d’échec uniformisé** (pour toute gauge `OK`, un témoin de twist corrigé dans `J`).
+
+Ce n’est pas une dichotomie “on sait toujours dans quel cas on est” (pas de décision automatique).
+Mais dès que tu prouves l’un des deux, tu obtiens l’objet témoin correspondant.
+
+5) **Contrôle de l’infini (futurs cofinaux)**
+
+`Scheduling`, `Cofinal`, `shadowSummary` servent à raisonner sur des futurs infinis:
+
+- sans axiome de choix,
+- avec des “ombres” calculables (temps/ordinal, ou ombre ensembliste constructive),
+- en gardant un format witness-driven.
+
+En bref: ce n’est pas “juste un théorème d’impossibilité abstrait”.
+C’est un langage opérationnel où les succès (gauges) et les échecs (witness) ont une forme exploitable.
 
 ---
 

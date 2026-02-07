@@ -55,7 +55,16 @@ instance : HistoryGraph Term where
   idPath := APath.id
   compPath := APath.comp
 
-/-! ## 3) Micro-états, observable, sémantique relationnelle -/
+/-!
+## 3) Micro-états, observable, sémantique relationnelle
+
+Ce fichier donne **deux** instanciations concrètes de `Semantics` sur le même graphe d’histoires:
+
+1. `semantics` (aliasing pur): `R_p = R_q` et chaque sortie `y` a plusieurs antécédents `x`
+   (relation non left-unique). On obtient alors une holonomie non-triviale de la forme `R ∘ R†`.
+2. `semantics_det` (mismatch de chemins): `R_p ≠ R_q`, mais chacun est déterministe (sans aliasing).
+   L’holonomie vient alors du **croisement** entre deux mises à jour différentes.
+-/
 
 abbrev State := LagState Term Bool
 
@@ -63,12 +72,25 @@ abbrev obs : State → Term := lagObs
 
 def target_obs : Term → Term := fun t => t
 
+/-!
+### Un petit prédicat utilitaire (pour expliciter "aliasing" vs "déterminisme")
+
+`LeftUniqueRel R` signifie: un point cible `y` ne peut pas avoir deux antécédents distincts
+via `R` (sur le domaine donné).
+-/
+
+def LeftUniqueRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
+  ∀ ⦃x x' : A⦄ ⦃y : B⦄, R x y → R x' y → x = x'
+
+/-- (Scenario 1) Transport `p`: écrase `hidden` à `false` et oublie le `hidden` d’entrée (aliasing). -/
 def R_p (t : Term) : Relation State State :=
   fun a b => a.visible = t ∧ b.visible = nf t ∧ b.hidden = false
 
+/-- (Scenario 1) Transport `q`: identique à `p` (aliasing pur, aucune différence de chemin). -/
 def R_q (t : Term) : Relation State State :=
   fun a b => a.visible = t ∧ b.visible = nf t ∧ b.hidden = false
 
+/-- Futur: ne garde compatibles que les états avec `hidden = false`. -/
 def R_step (t : Term) : Relation State State :=
   fun a b => a.visible = t ∧ b.visible = t ∧ a.hidden = false ∧ b.hidden = false
 
@@ -120,6 +142,17 @@ theorem transport_p_x_y :
     Transport (P := Term) semantics obs target_obs (APath.p h0) x y := by
   show R_p h0 x.1 y.1
   exact ⟨rfl, rfl, rfl⟩
+
+theorem transport_p_x'_y :
+    Transport (P := Term) semantics obs target_obs (APath.p h0) x' y := by
+  show R_p h0 x'.1 y.1
+  exact ⟨rfl, rfl, rfl⟩
+
+theorem transport_p_not_leftUnique :
+    ¬ LeftUniqueRel (Transport (P := Term) semantics obs target_obs (APath.p h0)) := by
+  intro hLU
+  have : x = x' := hLU transport_p_x_y transport_p_x'_y
+  exact x_ne_x' this
 
 theorem transport_q_x'_y :
     Transport (P := Term) semantics obs target_obs (APath.q h0) x' y := by
@@ -173,6 +206,171 @@ theorem lag_forces_feature
       ¬ Compatible (P := Term) semantics obs target_obs (APath.step h0) b :=
 by
   exact lagEvent_gives_summary_witness (P := Term) semantics obs target_obs α (APath.step h0) σ hσ lag_event
+
+/-!
+## 6) Second scénario: holonomie par mismatch de chemins (sans aliasing)
+
+Ici on force le contraste avec le scénario 1.
+
+On définit `p` et `q` comme deux **fonctions** (relations déterministes) sur les micro-états:
+
+- `p` conserve `hidden`.
+- `q` inverse `hidden`.
+
+Les deux envoient `visible = t` vers `visible = nf t`.
+
+Ainsi, il n’y a plus d’aliasing interne (pas de multi-antécédents pour un même `y`), mais l’holonomie
+reste non-triviale parce que `p` et `q` ne “recollent” pas les fibres de la même façon.
+-/
+
+/-- (Scenario 2) `p` est déterministe: `hidden` est transporté tel quel. -/
+def R_p_det (t : Term) : Relation State State :=
+  fun a b => a.visible = t ∧ b.visible = nf t ∧ b.hidden = a.hidden
+
+/-- (Scenario 2) `q` est déterministe: `hidden` est inversé. -/
+def R_q_det (t : Term) : Relation State State :=
+  fun a b => a.visible = t ∧ b.visible = nf t ∧ b.hidden = !a.hidden
+
+def sem_det : {h k : Term} → APath h k → Relation State State
+  | _, _, APath.id _ => relId
+  | _, _, APath.p t => R_p_det t
+  | _, _, APath.q t => R_q_det t
+  | _, _, APath.step t => R_step t
+  | _, _, APath.comp u v => relComp (sem_det u) (sem_det v)
+
+theorem sem_det_id (h : Term) : RelEq (sem_det (HistoryGraph.idPath h)) relId := by
+  intro x y
+  exact Iff.rfl
+
+theorem sem_det_comp {h k l : Term} (path1 : HistoryGraph.Path h k) (path2 : HistoryGraph.Path k l) :
+    RelEq (sem_det (HistoryGraph.compPath path1 path2)) (relComp (sem_det path1) (sem_det path2)) := by
+  intro x y
+  exact Iff.rfl
+
+def semantics_det : Semantics Term State where
+  sem := sem_det
+  sem_id := sem_det_id
+  sem_comp := sem_det_comp
+
+def xd : FiberPt (P := Term) obs target_obs h0 :=
+  ⟨⟨h0, false⟩, rfl⟩
+
+def x'd : FiberPt (P := Term) obs target_obs h0 :=
+  ⟨⟨h0, true⟩, rfl⟩
+
+theorem xd_ne_x'd : xd ≠ x'd := by
+  intro h
+  have : (xd.1 : State) = x'd.1 := congrArg Subtype.val h
+  have : false = true := congrArg LagState.hidden this
+  exact Bool.noConfusion this
+
+def yd : FiberPt (P := Term) obs target_obs k0 :=
+  ⟨⟨k0, false⟩, rfl⟩
+
+theorem transport_p_det_xd_yd :
+    Transport (P := Term) semantics_det obs target_obs (APath.p h0) xd yd := by
+  show R_p_det h0 xd.1 yd.1
+  -- visible = h0, visible = nf h0, hidden preserved (false -> false)
+  exact ⟨rfl, rfl, rfl⟩
+
+theorem transport_q_det_x'd_yd :
+    Transport (P := Term) semantics_det obs target_obs (APath.q h0) x'd yd := by
+  show R_q_det h0 x'd.1 yd.1
+  -- visible = h0, visible = nf h0, hidden toggled (true -> false)
+  refine ⟨rfl, rfl, ?_⟩
+  simp [x'd, yd]
+
+theorem transport_p_det_leftUnique :
+    LeftUniqueRel (Transport (P := Term) semantics_det obs target_obs (APath.p h0)) := by
+  intro x1 x2 y1 h1 h2
+  rcases x1 with ⟨s1, hs1⟩
+  rcases x2 with ⟨s2, hs2⟩
+  apply Subtype.ext
+  cases s1 with
+  | mk vis1 hid1 =>
+    cases s2 with
+    | mk vis2 hid2 =>
+      have hvis : vis1 = vis2 := by
+        -- membership in the same fiber over `h0`
+        simpa [obs, lagObs, target_obs] using (hs1.trans hs2.symm)
+      have h1' : R_p_det h0 ⟨vis1, hid1⟩ (y1.1) := by
+        simpa [Transport, semantics_det, sem_det, R_p_det] using h1
+      have h2' : R_p_det h0 ⟨vis2, hid2⟩ (y1.1) := by
+        simpa [Transport, semantics_det, sem_det, R_p_det] using h2
+      have hhid : hid1 = hid2 := by
+        -- both say `y1.hidden` equals the source `hidden`
+        have hy1 : (y1.1.hidden = hid1) := h1'.2.2
+        have hy2 : (y1.1.hidden = hid2) := h2'.2.2
+        -- rewrite `vis2` to `vis1` is irrelevant here; only `hidden` matters.
+        exact hy1.symm.trans (by simpa [hvis] using hy2)
+      cases hvis
+      cases hhid
+      rfl
+
+theorem transport_q_det_leftUnique :
+    LeftUniqueRel (Transport (P := Term) semantics_det obs target_obs (APath.q h0)) := by
+  intro x1 x2 y1 h1 h2
+  rcases x1 with ⟨s1, hs1⟩
+  rcases x2 with ⟨s2, hs2⟩
+  apply Subtype.ext
+  cases s1 with
+  | mk vis1 hid1 =>
+    cases s2 with
+    | mk vis2 hid2 =>
+      have hvis : vis1 = vis2 := by
+        simpa [obs, lagObs, target_obs] using (hs1.trans hs2.symm)
+      have h1' : R_q_det h0 ⟨vis1, hid1⟩ (y1.1) := by
+        simpa [Transport, semantics_det, sem_det, R_q_det] using h1
+      have h2' : R_q_det h0 ⟨vis2, hid2⟩ (y1.1) := by
+        simpa [Transport, semantics_det, sem_det, R_q_det] using h2
+      have hhid : hid1 = hid2 := by
+        have hy1 : (y1.1.hidden = !hid1) := h1'.2.2
+        have hy2 : (y1.1.hidden = !hid2) := h2'.2.2
+        have hnot : (!hid1) = (!hid2) := hy1.symm.trans hy2
+        -- `Bool.not` est involutif, donc injectif: `!hid1 = !hid2` implique `hid1 = hid2`.
+        simpa using (congrArg (fun b => !b) hnot)
+      cases hvis
+      cases hhid
+      rfl
+
+theorem holonomy_det_xd_x'd :
+    HolonomyRel (P := Term) semantics_det obs target_obs α xd x'd := by
+  refine ⟨yd, transport_p_det_xd_yd, ?_⟩
+  exact transport_q_det_x'd_yd
+
+theorem twisted_holonomy_det :
+    TwistedHolonomy (P := Term) semantics_det obs target_obs α := by
+  exact ⟨xd, x'd, xd_ne_x'd, holonomy_det_xd_x'd⟩
+
+theorem compatible_step_xd :
+    Compatible (P := Term) semantics_det obs target_obs (APath.step h0) xd := by
+  refine ⟨xd, ?_⟩
+  show R_step h0 xd.1 xd.1
+  exact ⟨rfl, rfl, rfl, rfl⟩
+
+theorem not_compatible_step_x'd :
+    ¬ Compatible (P := Term) semantics_det obs target_obs (APath.step h0) x'd := by
+  intro hC
+  rcases hC with ⟨z, hz⟩
+  have hx'false : (x'd.1.hidden = false) := (hz.2.2.1)
+  have hx'true : (x'd.1.hidden = true) := by simp [x'd]
+  have : true = false := hx'true.symm.trans hx'false
+  exact Bool.noConfusion this
+
+theorem lag_event_det :
+    LagEvent (P := Term) semantics_det obs target_obs α (APath.step h0) :=
+  lag_of_witness (P := Term) semantics_det obs target_obs α (APath.step h0) xd x'd
+    xd_ne_x'd holonomy_det_xd_x'd ⟨compatible_step_xd, not_compatible_step_x'd⟩
+
+theorem lag_forces_feature_det
+    {Q : Type uQ} (σ : FiberPt (P := Term) obs target_obs h0 → Q)
+    (hσ : ∃ f : Term → Q, ∀ s, σ s = f (obs s.1)) :
+    ∃ a b : FiberPt (P := Term) obs target_obs h0,
+      σ a = σ b ∧
+      Compatible (P := Term) semantics_det obs target_obs (APath.step h0) a ∧
+      ¬ Compatible (P := Term) semantics_det obs target_obs (APath.step h0) b :=
+by
+  exact lagEvent_gives_summary_witness (P := Term) semantics_det obs target_obs α (APath.step h0) σ hσ lag_event_det
 
 end PAFragment
 
