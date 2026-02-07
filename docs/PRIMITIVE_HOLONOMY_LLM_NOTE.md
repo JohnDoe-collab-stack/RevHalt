@@ -73,6 +73,9 @@ le type d’information qu’il faut ajouter (via `Sig`, signatures de compatibi
 Dans `RevHalt/Theory/PrimitiveHolonomy_PA_Fragment.lean` :
 - Scénario 1 (“aliasing pur”) : `R_p = R_q` et le transport n’est pas left-unique.
   On prouve `¬ LeftUniqueRel (Transport … p …)`.
+- En fait, dans ce scénario 1, le transport reste *fonctionnel* au sens “un seul `y` par `x`”
+  (right-unique + total), mais il est **many-to-one** (non left-unique) : c’est exactement
+  le pattern de “perte d’information”.
 - Scénario 2 (“mismatch de chemins”) : `R_p_det ≠ R_q_det`, mais chacun est déterministe.
   On prouve `LeftUniqueRel` pour `p` et `q`, et malgré ça on obtient une holonomie tordue + `LagEvent`.
 
@@ -98,4 +101,3 @@ Pour coller encore plus aux LLM :
 - instancier `HistoryGraph` sur des “programmes”/réécritures/concurrence réelles,
 - choisir un prédicat `OK` (contraintes réalistes sur les “réparations”/interventions),
 - et montrer une obstruction/non-obstruction non-triviale sous ces contraintes.
-

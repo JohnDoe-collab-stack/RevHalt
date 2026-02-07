@@ -62,7 +62,10 @@ Ce fichier donne **deux** instanciations concrètes de `Semantics` sur le même 
 
 1. `semantics` (aliasing pur): `R_p = R_q` et chaque sortie `y` a plusieurs antécédents `x`
    (relation non left-unique). On obtient alors une holonomie non-triviale de la forme `R ∘ R†`.
-2. `semantics_det` (mismatch de chemins): `R_p ≠ R_q`, mais chacun est déterministe (sans aliasing).
+   Remarque: ici `p`/`q` restent **fonctionnels** (un seul `y` par `x`), mais ils oublient `hidden`,
+   donc ils sont many-to-one.
+2. `semantics_det` (mismatch de chemins): `R_p ≠ R_q`, et chacun est fonctionnel *et* left-unique
+   (sur les fibres considérées).
    L’holonomie vient alors du **croisement** entre deux mises à jour différentes.
 -/
 
@@ -81,6 +84,22 @@ via `R` (sur le domaine donné).
 
 def LeftUniqueRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
   ∀ ⦃x x' : A⦄ ⦃y : B⦄, R x y → R x' y → x = x'
+
+/-!
+`RightUniqueRel R` signifie: un point source `x` ne peut pas avoir deux images distinctes
+via `R` (i.e. relation fonctionnelle, au sens “un seul `y` par `x`”).
+
+`TotalRel R` signifie: chaque `x` a au moins une image (pas de blocage).
+-/
+
+def RightUniqueRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
+  ∀ ⦃x : A⦄ ⦃y y' : B⦄, R x y → R x y' → y = y'
+
+def TotalRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
+  ∀ x : A, ∃ y : B, R x y
+
+def FunctionalRel {A : Type} {B : Type} (R : Relation A B) : Prop :=
+  TotalRel R ∧ RightUniqueRel R
 
 /-- (Scenario 1) Transport `p`: écrase `hidden` à `false` et oublie le `hidden` d’entrée (aliasing). -/
 def R_p (t : Term) : Relation State State :=
@@ -154,10 +173,85 @@ theorem transport_p_not_leftUnique :
   have : x = x' := hLU transport_p_x_y transport_p_x'_y
   exact x_ne_x' this
 
+theorem transport_p_functional :
+    FunctionalRel (Transport (P := Term) semantics obs target_obs (APath.p h0)) := by
+  refine ⟨?total, ?ru⟩
+  · intro x0
+    rcases x0 with ⟨s0, hs0⟩
+    refine ⟨y, ?_⟩
+    -- `hs0` is exactly the fiber equation, unfolded without simp-magic.
+    have hx0 : s0.visible = h0 := by
+      dsimp [Fiber] at hs0
+      simpa [obs, lagObs, target_obs] using hs0
+    show R_p h0 s0 y.1
+    exact ⟨hx0, rfl, rfl⟩
+  · intro x0 y1 y2 hy1 hy2
+    rcases y1 with ⟨s1, hs1⟩
+    rcases y2 with ⟨s2, hs2⟩
+    apply Subtype.ext
+    cases s1 with
+    | mk vis1 hid1 =>
+      cases s2 with
+      | mk vis2 hid2 =>
+        have hy1' : R_p h0 x0.1 ⟨vis1, hid1⟩ := by
+          simpa [Transport, semantics, sem, R_p] using hy1
+        have hy2' : R_p h0 x0.1 ⟨vis2, hid2⟩ := by
+          simpa [Transport, semantics, sem, R_p] using hy2
+        have hvis : vis1 = vis2 := by
+          -- both targets have visible = `nf h0`
+          exact (hy1'.2.1).trans (hy2'.2.1).symm
+        have hhid : hid1 = hid2 := by
+          -- both targets have hidden = `false`
+          exact (hy1'.2.2).trans (hy2'.2.2).symm
+        cases hvis
+        cases hhid
+        rfl
+
 theorem transport_q_x'_y :
     Transport (P := Term) semantics obs target_obs (APath.q h0) x' y := by
   show R_q h0 x'.1 y.1
   exact ⟨rfl, rfl, rfl⟩
+
+theorem transport_q_x_y :
+    Transport (P := Term) semantics obs target_obs (APath.q h0) x y := by
+  show R_q h0 x.1 y.1
+  exact ⟨rfl, rfl, rfl⟩
+
+theorem transport_q_not_leftUnique :
+    ¬ LeftUniqueRel (Transport (P := Term) semantics obs target_obs (APath.q h0)) := by
+  intro hLU
+  have : x = x' := hLU transport_q_x_y transport_q_x'_y
+  exact x_ne_x' this
+
+theorem transport_q_functional :
+    FunctionalRel (Transport (P := Term) semantics obs target_obs (APath.q h0)) := by
+  -- same relation as for `p`
+  refine ⟨?total, ?ru⟩
+  · intro x0
+    rcases x0 with ⟨s0, hs0⟩
+    refine ⟨y, ?_⟩
+    have hx0 : s0.visible = h0 := by
+      dsimp [Fiber] at hs0
+      simpa [obs, lagObs, target_obs] using hs0
+    show R_q h0 s0 y.1
+    exact ⟨hx0, rfl, rfl⟩
+  · intro x0 y1 y2 hy1 hy2
+    rcases y1 with ⟨s1, hs1⟩
+    rcases y2 with ⟨s2, hs2⟩
+    apply Subtype.ext
+    cases s1 with
+    | mk vis1 hid1 =>
+      cases s2 with
+      | mk vis2 hid2 =>
+        have hy1' : R_q h0 x0.1 ⟨vis1, hid1⟩ := by
+          simpa [Transport, semantics, sem, R_q] using hy1
+        have hy2' : R_q h0 x0.1 ⟨vis2, hid2⟩ := by
+          simpa [Transport, semantics, sem, R_q] using hy2
+        have hvis : vis1 = vis2 := (hy1'.2.1).trans (hy2'.2.1).symm
+        have hhid : hid1 = hid2 := (hy1'.2.2).trans (hy2'.2.2).symm
+        cases hvis
+        cases hhid
+        rfl
 
 theorem holonomy_x_x' :
     HolonomyRel (P := Term) semantics obs target_obs α x x' := by
@@ -307,6 +401,40 @@ theorem transport_p_det_leftUnique :
       cases hhid
       rfl
 
+theorem transport_p_det_functional :
+    FunctionalRel (Transport (P := Term) semantics_det obs target_obs (APath.p h0)) := by
+  refine ⟨?total, ?ru⟩
+  · intro x0
+    rcases x0 with ⟨s0, hs0⟩
+    -- the unique target keeps the same hidden bit
+    refine ⟨⟨⟨k0, s0.hidden⟩, rfl⟩, ?_⟩
+    have hx0 : s0.visible = h0 := by
+      dsimp [Fiber] at hs0
+      simpa [obs, lagObs, target_obs] using hs0
+    show R_p_det h0 s0 ⟨k0, s0.hidden⟩
+    exact ⟨hx0, rfl, rfl⟩
+  · intro x0 y1 y2 hy1 hy2
+    rcases y1 with ⟨s1, hs1⟩
+    rcases y2 with ⟨s2, hs2⟩
+    apply Subtype.ext
+    cases s1 with
+    | mk vis1 hid1 =>
+      cases s2 with
+      | mk vis2 hid2 =>
+        have hy1' : R_p_det h0 x0.1 ⟨vis1, hid1⟩ := by
+          simpa [Transport, semantics_det, sem_det, R_p_det] using hy1
+        have hy2' : R_p_det h0 x0.1 ⟨vis2, hid2⟩ := by
+          simpa [Transport, semantics_det, sem_det, R_p_det] using hy2
+        have hvis : vis1 = vis2 := (hy1'.2.1).trans (hy2'.2.1).symm
+        have hhid : hid1 = hid2 := by
+          -- both equal `x0.hidden`
+          have hh1 : hid1 = x0.1.hidden := by simpa using hy1'.2.2
+          have hh2 : hid2 = x0.1.hidden := by simpa using hy2'.2.2
+          exact hh1.trans hh2.symm
+        cases hvis
+        cases hhid
+        rfl
+
 theorem transport_q_det_leftUnique :
     LeftUniqueRel (Transport (P := Term) semantics_det obs target_obs (APath.q h0)) := by
   intro x1 x2 y1 h1 h2
@@ -332,6 +460,39 @@ theorem transport_q_det_leftUnique :
       cases hvis
       cases hhid
       rfl
+
+theorem transport_q_det_functional :
+    FunctionalRel (Transport (P := Term) semantics_det obs target_obs (APath.q h0)) := by
+  refine ⟨?total, ?ru⟩
+  · intro x0
+    rcases x0 with ⟨s0, hs0⟩
+    -- the unique target flips the hidden bit
+    refine ⟨⟨⟨k0, !s0.hidden⟩, rfl⟩, ?_⟩
+    have hx0 : s0.visible = h0 := by
+      dsimp [Fiber] at hs0
+      simpa [obs, lagObs, target_obs] using hs0
+    show R_q_det h0 s0 ⟨k0, !s0.hidden⟩
+    exact ⟨hx0, rfl, rfl⟩
+  · intro x0 y1 y2 hy1 hy2
+    rcases y1 with ⟨s1, hs1⟩
+    rcases y2 with ⟨s2, hs2⟩
+    apply Subtype.ext
+    cases s1 with
+    | mk vis1 hid1 =>
+      cases s2 with
+      | mk vis2 hid2 =>
+        have hy1' : R_q_det h0 x0.1 ⟨vis1, hid1⟩ := by
+          simpa [Transport, semantics_det, sem_det, R_q_det] using hy1
+        have hy2' : R_q_det h0 x0.1 ⟨vis2, hid2⟩ := by
+          simpa [Transport, semantics_det, sem_det, R_q_det] using hy2
+        have hvis : vis1 = vis2 := (hy1'.2.1).trans (hy2'.2.1).symm
+        have hhid : hid1 = hid2 := by
+          have hh1 : hid1 = !x0.1.hidden := by simpa using hy1'.2.2
+          have hh2 : hid2 = !x0.1.hidden := by simpa using hy2'.2.2
+          exact hh1.trans hh2.symm
+        cases hvis
+        cases hhid
+        rfl
 
 theorem holonomy_det_xd_x'd :
     HolonomyRel (P := Term) semantics_det obs target_obs α xd x'd := by
