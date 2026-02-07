@@ -679,9 +679,9 @@ theorem not_gaugeRefl_repairGauge_det :
   -- take the `p`-gauge at the target fiber `k0`, and the point with hidden = true
   have hdiag : repairGauge_det (APath.p h0) yTrue yTrue := hRefl (APath.p h0) yTrue
   have hEq : yTrue.1.hidden = !yTrue.1.hidden := by
-    simpa [repairGauge_det] using hdiag
+    simp [repairGauge_det] at hdiag
   have hcontra : (true : Bool) = false := by
-    simpa [yTrue] using hEq
+    simp [yTrue] at hEq
   exact Bool.noConfusion hcontra
 
 theorem correctedHolonomy_semantics_det_repairGauge_det :
