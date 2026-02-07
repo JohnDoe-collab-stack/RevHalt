@@ -564,6 +564,44 @@ theorem not_ObstructionWrt_of_AutoRegulatedWrt {S : Type w} {V : Type w}
   intro hAuto hObs
   exact (not_AutoRegulatedWrt_of_ObstructionWrt (P := P) sem obs target_obs OK J hObs) hAuto
 
+/-!
+### How `OK` restrictions stop vacuity
+
+If `OK` forces gauges to contain the diagonal (`GaugeRefl`), then correction is monotone:
+any twisted holonomy witness for `HolonomyRel` remains a twisted witness for `CorrectedHolonomy`.
+So the only way a gauge can “repair away” such a witness is by **dropping** reflexivity.
+-/
+
+theorem obstructionWrt_singleton_of_twistedHolonomy_of_gaugeRefl
+    {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) :
+    TwistedHolonomy (P := P) sem obs target_obs α →
+      ObstructionWrt (P := P) sem obs target_obs
+        (fun φ => GaugeRefl (P := P) obs target_obs φ)
+        (Set.singleton (⟨h, k, p, q, ⟨α⟩⟩ : Cell (P := P))) := by
+  intro hTw φ hφ
+  refine ⟨⟨h, k, p, q, ⟨α⟩⟩, by simp [Set.singleton], ?_⟩
+  change
+    ∃ x x' : FiberPt (P := P) obs target_obs h,
+      x ≠ x' ∧ CorrectedHolonomy (P := P) sem obs target_obs φ α x x'
+  rcases hTw with ⟨x, x', hxne, hHol⟩
+  refine ⟨x, x', hxne, ?_⟩
+  exact correctedHolonomy_of_holonomy_of_gaugeRefl (P := P) sem obs target_obs φ hφ α x x' hHol
+
+theorem not_autoRegulatedWrt_singleton_of_twistedHolonomy_of_gaugeRefl
+    {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) :
+    TwistedHolonomy (P := P) sem obs target_obs α →
+      ¬ AutoRegulatedWrt (P := P) sem obs target_obs
+        (fun φ => GaugeRefl (P := P) obs target_obs φ)
+        (Set.singleton (⟨h, k, p, q, ⟨α⟩⟩ : Cell (P := P))) := by
+  intro hTw
+  exact
+    not_AutoRegulatedWrt_of_ObstructionWrt (P := P) sem obs target_obs
+      (OK := fun φ => GaugeRefl (P := P) obs target_obs φ)
+      (J := Set.singleton (⟨h, k, p, q, ⟨α⟩⟩ : Cell (P := P)))
+      (obstructionWrt_singleton_of_twistedHolonomy_of_gaugeRefl (P := P) sem obs target_obs α hTw)
+
 /-- Cofinal obstruction: there exists a cofinal future where every gauge fails (with a witness). -/
 def ObstructionCofinal {S : Type w} {V : Type w} (sem : Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
   ∃ C : Set P, Cofinal C ∧ Obstruction sem obs target_obs (CellsOver C)

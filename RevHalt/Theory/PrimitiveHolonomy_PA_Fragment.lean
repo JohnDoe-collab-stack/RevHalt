@@ -655,6 +655,129 @@ theorem not_autoRegulatedWrt_semantics_det_OK_refl_total :
   exact not_AutoRegulatedWrt_of_ObstructionWrt (P := Term) semantics_det obs target_obs OK_refl_total J_h0
     obstructionWrt_semantics_det_OK_refl_total
 
+/-!
+## 8) Réparation possible si on **n’impose pas** `GaugeRefl`
+
+Le scénario 2 (mismatch) est particulièrement instructif:
+
+- sous `OK_refl_total` (qui contient `GaugeRefl`), l’obstruction est non-vide (`not_autoRegulatedWrt_semantics_det_OK_refl_total`);
+- mais si on autorise une jauge **non réflexive**, on peut effectivement “recoller” les deux chemins.
+
+Ici, on construit une jauge qui *inverse* `hidden` après un chemin `p` (et laisse `q` inchangé).
+Alors les deux transports corrigés coïncident, et l’holonomie corrigée devient la diagonale.
+-/
+
+def repairGauge_det : Gauge (P := Term) obs target_obs :=
+  fun {_h _k} path =>
+    match path with
+    | APath.p _t => fun y y' => y'.1.hidden = !y.1.hidden
+    | _ => relId
+
+theorem not_gaugeRefl_repairGauge_det :
+    ¬ GaugeRefl (P := Term) obs target_obs repairGauge_det := by
+  intro hRefl
+  -- take the `p`-gauge at the target fiber `k0`, and the point with hidden = true
+  have hdiag : repairGauge_det (APath.p h0) yTrue yTrue := hRefl (APath.p h0) yTrue
+  have hEq : yTrue.1.hidden = !yTrue.1.hidden := by
+    simpa [repairGauge_det] using hdiag
+  have hcontra : (true : Bool) = false := by
+    simpa [yTrue] using hEq
+  exact Bool.noConfusion hcontra
+
+theorem correctedHolonomy_semantics_det_repairGauge_det :
+    ∀ x x' : FiberPt (P := Term) obs target_obs h0,
+      CorrectedHolonomy (P := Term) semantics_det obs target_obs repairGauge_det α x x' ↔ x = x' := by
+  intro x0 x0'
+  constructor
+  · intro hHol
+    -- unpack corrected holonomy: ∃ y, CT_p x0 y ∧ CT_q x0' y
+    unfold CorrectedHolonomy at hHol
+    rcases hHol with ⟨y0, hCTp, hCTq⟩
+    -- unpack corrected transports
+    unfold CorrectedTransport at hCTp hCTq
+    rcases hCTp with ⟨zp, hTp, hGp⟩
+    rcases hCTq with ⟨zq, hTq, hGq⟩
+    -- extract the hidden equalities enforced by `p`/`q` in `semantics_det`
+    have hzp : zp.1.hidden = x0.1.hidden := by
+      -- `Transport` for `p` says output hidden = input hidden
+      have : R_p_det h0 x0.1 zp.1 := by
+        simpa [Transport, semantics_det, sem_det, R_p_det] using hTp
+      simpa using this.2.2
+    have hzq : zq.1.hidden = !x0'.1.hidden := by
+      -- `Transport` for `q` says output hidden = ! input hidden
+      have : R_q_det h0 x0'.1 zq.1 := by
+        simpa [Transport, semantics_det, sem_det, R_q_det] using hTq
+      simpa using this.2.2
+    -- gauge equations: `p` flips, others are identity
+    have hy_from_p : y0.1.hidden = !x0.1.hidden := by
+      have : y0.1.hidden = !zp.1.hidden := by
+        simpa [repairGauge_det] using hGp
+      simpa [hzp] using this
+    have hy_from_q : y0.1.hidden = !x0'.1.hidden := by
+      -- on `q`, `repairGauge_det` is `relId`, so `zq = y0`
+      have hzqEq : zq = y0 := by
+        simpa [repairGauge_det, relId] using hGq
+      simpa [hzqEq] using hzq
+    have hhidden : x0.1.hidden = x0'.1.hidden := by
+      -- both sides compute the same `y0.hidden` as `!hidden`
+      have : (!x0.1.hidden) = (!x0'.1.hidden) := hy_from_p.symm.trans hy_from_q
+      -- `Bool.not` is involutive, hence injective
+      simpa using congrArg (fun b => !b) this
+    -- conclude `x0 = x0'` inside the fiber over `h0`
+    apply Subtype.ext
+    cases x0 with
+    | mk s hs =>
+      cases x0' with
+      | mk s' hs' =>
+        cases s with
+        | mk vis hid =>
+          cases s' with
+          | mk vis' hid' =>
+            have hvis : vis = vis' := hs.trans hs'.symm
+            cases hvis
+            have hhid : hid = hid' := by
+              -- `hhidden` rewritten under the above destructuring
+              simpa using hhidden
+            cases hhid
+            rfl
+  · intro hx
+    subst hx
+    -- show diagonal: build the common target `y0 = (k0, !hidden)` explicitly
+    let y0 : FiberPt (P := Term) obs target_obs k0 :=
+      ⟨⟨k0, !x0.1.hidden⟩, rfl⟩
+    unfold CorrectedHolonomy
+    refine ⟨y0, ?_, ?_⟩
+    · -- corrected transport along `p`: transport keeps hidden, then gauge flips
+      unfold CorrectedTransport
+      let z0 : FiberPt (P := Term) obs target_obs k0 :=
+        ⟨⟨k0, x0.1.hidden⟩, rfl⟩
+      refine ⟨z0, ?_, ?_⟩
+      · show R_p_det h0 x0.1 z0.1
+        -- source visible = h0 because x0 is in the fiber over h0
+        have hxvis : x0.1.visible = h0 := x0.2
+        exact ⟨hxvis, rfl, rfl⟩
+      · -- gauge flip
+        simp [repairGauge_det, y0, z0]
+    · -- corrected transport along `q`: transport flips hidden, gauge is identity
+      unfold CorrectedTransport
+      refine ⟨y0, ?_, ?_⟩
+      · show R_q_det h0 x0.1 y0.1
+        have hxvis : x0.1.visible = h0 := x0.2
+        refine ⟨hxvis, rfl, ?_⟩
+        simp [y0]
+      · -- identity gauge
+        simp [repairGauge_det, relId]
+
+theorem autoRegulated_semantics_det_repairGauge_det :
+    AutoRegulated (P := Term) semantics_det obs target_obs J_h0 := by
+  refine ⟨repairGauge_det, ?_⟩
+  intro c hc
+  have hc' : c = cell_h0 := by
+    simpa [J_h0, Set.singleton] using hc
+  subst hc'
+  intro x0 x0'
+  simpa using correctedHolonomy_semantics_det_repairGauge_det (x := x0) (x' := x0')
+
 end PAFragment
 
 end PrimitiveHolonomy
