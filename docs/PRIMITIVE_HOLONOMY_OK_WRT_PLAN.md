@@ -150,7 +150,67 @@ Selon le domaine (LLM, concurrence, normalisation de preuves, contrôle), un `OK
 
 ---
 
-## 5) Ce qu’il reste à faire (prochaines cibles Lean)
+## 5) Cas “bijections” et lien algébrique (anneaux / idéaux / congruences)
+
+Ici on se place dans le **scénario 2** typique : chaque transport sur la fibre est une bijection
+(au sens relationnel), mais `p` et `q` ne recollent pas les fibres de la même façon.
+
+### 5.1 Holonomie = permutation / automorphisme sur la fibre
+
+Si `T_p, T_q : Fiber(h) → Fiber(k)` sont bijectifs, alors leur converse `(T_q)†` se comporte comme
+un inverse relationnel, et :
+
+- `HolonomyRel = T_p ∘ (T_q)†`
+
+devient (intuitivement) le **graphe** de la bijection `h := T_p ∘ T_q⁻¹` sur `Fiber(h)`.
+
+Dans ce régime, `TwistedHolonomy` signifie : `h ≠ id` (il existe `x ≠ x'` avec `h(x) = x'`).
+
+### 5.2 `OK` comme “congruence admissible”
+
+Dans beaucoup d’applications, le “hidden” d’une fibre a une structure (groupe abélien, module, anneau).
+Un `OK` réaliste est alors : la jauge doit être une **congruence** compatible avec la structure
+et *non arbitraire*.
+
+Pattern :
+
+1. Sur une fibre `B`, choisir un “objet de quotient” :
+   - **module** : un sous-module `N` (ou `Submodule`),
+   - **anneau** : un idéal `I` (ou `Ideal`).
+2. Définir la relation de jauge par :
+   - `b ~ b'  :↔  (b - b') ∈ N` (module),
+   - `b ~ b'  :↔  (b - b') ∈ I` (anneau).
+3. Lever `~` en une `Gauge` sur `FiberPt` (même `visible`, on ne jauge que le `hidden`).
+
+Ce `OK` :
+
+- exclut les jauges “magiques” (il faut être un quotient),
+- est compatible avec `GaugeRefl` (car `b - b = 0 ∈ N/I`),
+- permet un **axe appliqué clair** : quel quotient est autorisé (budget, localité, taille, stabilité).
+
+### 5.3 Réguler = trivialiser l’action d’holonomie dans un quotient
+
+Dans le cas bijectif, les holonomies agissent comme des automorphismes `h` de la fibre.
+“Diagonaliser l’holonomie corrigée” revient à rendre `h` **trivial** après passage au quotient :
+
+- sur un module : choisir `N` tel que `h` induit l’identité sur `B/N`,
+- sur un anneau : choisir `I` tel que `h` induit l’identité sur `B/I`.
+
+Heuristique constructive utile (module) :
+
+- prendre `N` comme le sous-module engendré par l’image de `(h - id)` :
+  `N := span (range (h - id))`.
+
+Version anneau :
+
+- prendre `I` comme l’idéal engendré par `{h(b) - b | b ∈ B}`.
+
+Le point conceptuel : vous passez d’un “OK arbitraire sur relations” à un **OK de type algébrique**
+où `AutoRegulatedWrt` devient un problème de *quotient admissible qui tue une action*.
+
+---
+
+## 6) Ce qu’il reste à faire (prochaines cibles Lean)
 
 1. Formaliser (et comparer) plusieurs familles de `OK` “naturelles” :
    - `OK_refl_total` (anti-effacement + non-vacuïté),
@@ -164,4 +224,3 @@ Selon le domaine (LLM, concurrence, normalisation de preuves, contrôle), un `OK
    - instancier sur un exemple de concurrence (commutations),
    - ou un exemple de “décodage LLM” (chemins = ordres de calcul / schedule de modules),
    où `OK` correspond à un vrai type de mécanisme d’intervention.
-
