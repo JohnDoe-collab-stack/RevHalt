@@ -5,6 +5,7 @@ imports `RevHalt.Theory.PrimitiveHolonomy` and provides a *concrete model* with
 explicit witnesses (no `classical`, no `noncomputable`, no choice).
 
 Non-goals:
+
 - Do not copy/paste the whole theory file.
 - Do not add any classical reasoning, choice, or quantifier-negation "swaps".
 - Keep the instance minimal but non-trivial (at least one `TwistedHolonomy` and
@@ -20,6 +21,7 @@ Create `RevHalt/Theory/PrimitiveHolonomy_instance.lean`:
 ## 2. A Tiny HistoryGraph
 
 Pick:
+
 - `P := Unit`
 - One hom-type with explicit parallel paths.
 
@@ -43,10 +45,12 @@ Define a deformation relation with *two* generating 2-cells (minimal for a real
     - `| pr : ToyDef ToyPath.p ToyPath.r`
 
 Then you get two explicit deformations:
+
 - `α₁ : ToyDef ToyPath.p ToyPath.q := ToyDef.pq`
 - `α₂ : ToyDef ToyPath.p ToyPath.r := ToyDef.pr`
 
 Define the `HistoryGraph` instance:
+
 - `Path := ToyPath`
 - `Deformation := ToyDef`
 - `idPath := ToyPath.id`
@@ -57,6 +61,7 @@ No category laws needed.
 ## 3. A Concrete State Space and Observables
 
 Pick a state space with at least two points in the same fiber:
+
 - Use the "product" shape already present in the theory file:
   - `Y := Unit`
   - `B := Bool`
@@ -69,6 +74,7 @@ Then every state is in every fiber, constructively (membership proof is `rfl`),
 since `obs s = () = target_obs ()`.
 
 Define two distinct fiber points:
+
 - Let `s0 : S := ⟨(), false⟩` and `s1 : S := ⟨(), true⟩`.
 - `x  : FiberPt obs target_obs () := ⟨s0, rfl⟩`
 - `x' : FiberPt obs target_obs () := ⟨s1, rfl⟩`
@@ -78,12 +84,14 @@ Define two distinct fiber points:
 ## 4. A Semantics With Definitional Composition
 
 Define relations on `S := LagState Unit Bool`:
+
 - `R_p : Relation S S := fun a b => a.hidden = false ∧ b.hidden = true ∧ b.visible = ()`
 - `R_q : Relation S S := relId`  -- keep holonomy simple
 - `R_r : Relation S S := fun _ _ => False`  -- empty relation, used to separate holonomies
 - `R_step : Relation S S := fun a b => a.hidden = false ∧ b.hidden = false ∧ b.visible = ()`
 
 Define `sem : ToyPath () () -> Relation S S` by recursion:
+
 - `sem id       := relId`
 - `sem p        := R_p`
 - `sem q        := R_q`
@@ -92,11 +100,13 @@ Define `sem : ToyPath () () -> Relation S S` by recursion:
 - `sem (comp u v) := relComp (sem u) (sem v)`  -- definitional
 
 Build `Semantics`:
+
 - `sem_id` is `RelEq relId relId` (prove by `intro x y; exact Iff.rfl`).
 - `sem_comp` is `RelEq (relComp (sem u) (sem v)) (relComp (sem u) (sem v))`
   (prove by `intro x y; exact Iff.rfl`).
 
 This guarantees:
+
 - No need for `funext`, `propext`, or rewriting tricks.
 - `sem_comp` is "by definitional equality".
 
@@ -106,10 +116,12 @@ We want an explicit witness of
 `TwistedHolonomy sem obs target_obs α` for `α : Deformation p q`.
 
 Strategy:
+
 - Use `x` and `x'` above.
 - Show `HolonomyRel sem obs target_obs α x x'`.
 
 Easiest proof path:
+
 - Use the lemma `holonomy_def` (it is `rfl`) and provide a witness `y := x'`.
 - Need:
   - `Transport sem obs target_obs ToyPath.p x y` holds because `R_p false true`.
@@ -152,6 +164,7 @@ Add a trivial scheduling (to exercise the "cofinal future" infrastructure):
   - `cofinal := fun _ => ⟨0, reach_refl ()⟩`
 
 Then you can also test the "Along scheduling" layer:
+
 - `CellsAlong toyScheduling`
 - `AutoRegulatedAlong ... toyScheduling` / `ObstructionAlong ... toyScheduling`
 - and the bridge lemmas to `AutoRegulatedCofinal` / `ObstructionCofinal`
@@ -162,6 +175,7 @@ Add only what is actually checkable with the current definitions (no extra
 assumptions about gauges).
 
 Key observation (constructive, and important):
+
 - A `Gauge` can be the empty relation. Since corrected transports are
   `Transport ∘ gauge`, an empty gauge makes every corrected holonomy empty.
   Therefore, the current `Obstruction` (twist-only, "for all gauges") is
@@ -230,6 +244,7 @@ Concrete recipe (uses your existing lemma `witness_no_factor`):
 ## 10. Cleanliness Checks
 
 In the instance file (or a temporary check file you delete), add:
+
 - `#print axioms` for the new `ToyHistoryGraph`, `ToySemantics`, and the witness
   lemmas (`example : TwistedHolonomy ...`, `example : LagEvent ...`).
   Also add one `example : ¬ FactorsHolonomy ...` (the construction above).
@@ -239,6 +254,7 @@ In the instance file (or a temporary check file you delete), add:
   - `example : ¬ Obstruction sem obs target_obs (Set.singleton c₁)` (or any `J`)
 
 Acceptance criteria:
+
 - `rg` finds no `classical`, `noncomputable`, `Classical.*`.
 - `lake env lean RevHalt/Theory/PrimitiveHolonomy_instance.lean` succeeds.
 - `#print axioms` says the new declarations "do not depend on any axioms".

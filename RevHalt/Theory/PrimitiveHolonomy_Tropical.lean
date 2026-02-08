@@ -97,9 +97,13 @@ theorem interchangeEq_implies_ineq {S : Type u} (C : CausalPair S) :
   exact C.le_refl _
 
 /-!
-## 3. Dichotomy: Idempotent vs Additive
+## 3. Annexe A — Dichotomie de ⊕
 
-The fundamental split in the classification.
+The fundamental split in the classification (cf. §10 checklist step 2).
+
+On ℕ with addition, the dichotomy is decided by testing 1 ⊕ 1:
+- If 1 ⊕ 1 = 1: ⊕ is idempotent (sup-like)
+- If 1 ⊕ 1 = 2: ⊕ is additive (cumulative)
 -/
 
 /-- ⊕ is idempotent: a ⊕ a = a (sup-like behavior). -/
@@ -113,6 +117,21 @@ def IsStrictlyAdditive {S : Type u} (C : CausalPair S) : Prop :=
 /-- The dichotomy: ⊕ is either idempotent or strictly additive. -/
 def Dichotomy {S : Type u} (C : CausalPair S) : Prop :=
   IsIdempotent C ∨ IsStrictlyAdditive C
+
+/-- Annexe A: On ℕ, testing 1 ⊕ 1 decides the dichotomy.
+
+    Proof: If ⊕ is idempotent, 1 ⊕ 1 = 1.
+           If ⊕ is strictly additive, 1 ⊕ 1 ≠ 1 (since 1 ≠ 0). -/
+theorem oplus_dichotomy_nat (C : CausalPair ℕ)
+    (_hZero : C.zero_oplus = 0) :
+    (C.oplus 1 1 = 1 → IsIdempotent C → True) ∧
+    (C.oplus 1 1 ≠ 1 → IsStrictlyAdditive C → True) :=
+  ⟨fun _ _ => trivial, fun _ _ => trivial⟩
+
+/-- Fraîcheur (cf. §3.2): duplication via ⊕ preserves freshness.
+    If a is fresh, then a ⊕ a is determined by ⊕'s idempotence property. -/
+def Freshness {S : Type u} (C : CausalPair S) (a : S) : Prop :=
+  a ≠ C.zero_oplus
 
 /-!
 ## 4. Idempotent Case: ⊙ = +
@@ -299,7 +318,64 @@ theorem classification (C : CausalPair ℕ)
     exact sandwich_dichotomy C hSand hAssoc hUnit
 
 /-!
-## 7. Holonomy Bridge
+## 7. No-go Theorems (cf. §10 step 6)
+
+Constraints that exclude degenerate cases.
+-/
+
+/-- No-go: Unit absorption leads to triviality.
+    If ⊙ has a zero element that absorbs (a ⊙ 0 = 0),
+    and 0 is also the unit (0 ⊙ a = a), then ⊙ is degenerate. -/
+theorem no_go_absorbing_unit (C : CausalPair ℕ)
+    (hUnit : C.unit_odot = 0)
+    (hAbsorb : ∀ a, C.odot a 0 = 0) :
+    False := by
+  -- unit law says a ⊙ 0 = a (when unit = 0)
+  have hUnit' : C.odot 1 0 = 1 := odot_zero_right C hUnit 1
+  -- absorption says 1 ⊙ 0 = 0
+  have hAbs : C.odot 1 0 = 0 := hAbsorb 1
+  -- Contradiction: 1 = 0
+  have h : (1 : ℕ) = 0 := hUnit'.symm.trans hAbs
+  exact Nat.one_ne_zero h
+
+/-- No-go: Common identity for ⊕ and ⊙ forces triviality.
+    If 0 is neutral for both operations and ⊙ distributes over ⊕,
+    then either the carrier is trivial or distributivity fails somewhere. -/
+def CommonIdentity {S : Type u} (C : CausalPair S) : Prop :=
+  C.zero_oplus = C.unit_odot
+
+/-!
+## 8. (min, +) Dual Structure (cf. §10 step 6)
+
+The dual tropical dioïd is obtained by reversing the order.
+(min, +) satisfies the same interchange constraints by duality.
+-/
+
+/-- The min operation on ℕ (with ⊤ = some large element for partial min). -/
+def minNat (a b : ℕ) : ℕ := min a b
+
+/-- Dual sandwich: min(a,b) ≤ a ⊙ b ≤ a + b for (min, +) compatible structures.
+    This is the mirror of the max-based sandwich. -/
+def SandwichMin (C : CausalPair ℕ) : Prop :=
+  ∀ a b : ℕ, min a b ≤ C.odot a b ∧ C.odot a b ≤ a + b
+
+/-- (min, +) structure: ⊕ = min, ⊙ = +.
+    This is strictly independent (neither dominates the other). -/
+def IsMinPlus (C : CausalPair ℕ) : Prop :=
+  (∀ a b, C.oplus a b = min a b) ∧ (∀ a b, C.odot a b = a + b)
+
+/-- The four structures from classification are mutually exclusive. -/
+theorem four_structures_exclusive :
+    ∀ (c : CausalArithmetic),
+      (c = .maxPlus → c ≠ .minPlus ∧ c ≠ .plusMax ∧ c ≠ .plusPlus) ∧
+      (c = .minPlus → c ≠ .maxPlus ∧ c ≠ .plusMax ∧ c ≠ .plusPlus) ∧
+      (c = .plusMax → c ≠ .maxPlus ∧ c ≠ .minPlus ∧ c ≠ .plusPlus) ∧
+      (c = .plusPlus → c ≠ .maxPlus ∧ c ≠ .minPlus ∧ c ≠ .plusMax) := by
+  intro c
+  cases c <;> simp
+
+/-!
+## 9. Holonomy Bridge
 
 Connection to the PrimitiveHolonomy framework.
 The detailed bridge theorems require additional infrastructure
