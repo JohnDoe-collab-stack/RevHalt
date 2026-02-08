@@ -815,3 +815,17 @@ The inequality logic of (⊗, ∘, local interchange) likely admits no finite co
 - [ ] Explicit bridge: paper's Thm 9.1 classification ↔ doc's four regimes ↔ Lean's four possible gauge families.
 
 ---
+
+## 16) Relative Primality (A Note on Factorization)
+
+Primality is no longer an absolute property of an object-number, but a property **relative to the dissociation regime** (time-dependent independence).
+
+- **Atom at time t**: x is independent-atomic at t if
+    `x = y ∪ z` with `y ⊥(t) z` implies `y = empty` or `z = empty`.
+    (Indecomposable in "admissible parallel".)
+
+- **Divisibility at t**: `a |(t) b` means there exists c such that `b = a ∪ c` with `a ⊥(t) c`.
+
+- **Prime at t**: If `a |(t) (b ∪ c)` implies `a |(t) b` or `a |(t) c`.
+
+**Conclusion**: "Prime" is a dynamic status. An element can be prime (indecomposable) under strict dissociation, then composite when dissociation relaxes. This reflects the evolutionary nature of the PCM structure.
