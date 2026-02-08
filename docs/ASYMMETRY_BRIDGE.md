@@ -33,9 +33,9 @@ Invariants (L, W, C, d)
     │
     │  measured by (§2, projection hierarchy)
     ▼
-Asymmetry A★(t) = projection of holonomy
+Asymmetry A★_I(t) = projection of holonomy (Screening)
     │
-    │  detects (Lean: lag_of_twist_and_hidden_step)
+    │  signals risk (Lean: lag_of_twist_and_hidden_step needs A★_H)
     ▼
 Lag (invisible future divergence)
 ```
@@ -47,7 +47,8 @@ Lag (invisible future divergence)
 | Arithmetics → invariants | Lax-monoidal factorization | Paper Thm 8 |
 | Invariants → holonomy | Transport on fibers, HolonomyRel | Lean `HolonomyRel` |
 | Holonomy → A★ | Projection Sig → Hol → (p, κ_I, E_I) → A★ | This document §2 |
-| A★ > 0 → lag | Twist + hidden-dependent step ⇒ lag event | Lean theorem |
+| A★_H > 0 → lag | Twist + hidden-dependent step ⇒ lag event | Lean theorem (Strong) |
+| A★_I > 0 → lag risk | Screening signal; requires Sep_I to imply A★_H > 0 | Interpretation |
 
 ### 0.3 Three Faces of Dissociation
 
@@ -248,7 +249,59 @@ Sig(x,t) ──complete──→ Hol(α) ──per-cell──→ (κ_I, E_I) ─
 
 Each arrow loses information. The document works at the rightmost level (A★) for computability.
 
-> **Non-reducibility** (Lean: `NonReducibleHolonomy`): no 1D summary captures full holonomy. Even (p, κ_I, E_I) is a 3D compression of a potentially infinite-dimensional object. A★ compresses further to 1D. This is a theorem (§0.4: consequence of partial ⊗), not a modeling choice.
+---
+
+## (P0) Two Levels: Holonomy (Relational) vs Invariant (Scalar)
+
+There are **two distinct levels**:
+
+1. **Holonomic Level (Lean)**: the primitive fact is the holonomy relation
+   $$ \mathrm{Hol}(\alpha) \subseteq F(h) \times F(h) $$
+   for each 2-cell $\alpha: p \Rightarrow q$.
+   The intrinsic notion is:
+   - **FlatHolonomy**: $\mathrm{Hol}(\alpha) \subseteq \Delta$ (diagonal).
+   - **TwistedHolonomy**: $\exists x \neq x'$ with $\mathrm{Hol}(\alpha)(x,x')$.
+
+2. **Calculable Level (Scalar)**: we observe an invariant $I$ (or an observable that $I$ factorizes) and measure **numerical defects** on interchange squares.
+
+**Key Principle**: an invariant can be **blind** to a holonomic twist. Thus "no measured defect" does not imply "no twist" without a separability hypothesis.
+
+### (P1) Separability Hypothesis / Invariant Fidelity
+
+We introduce the following hypothesis, explicitly when lifting from scalar to holonomy:
+
+**(Sep_I)** *(Separability / Summary-Correctness relative to observable)*
+The invariant $I$ (or the summary $I$ depends on) is **sufficiently faithful** to detect relevant holonomic torsion: if two micro-states $(x,x')$ have incompatible futures (in the sense of $\mathrm{Sig}$), then the observation inducing $I$ separates them.
+
+> Reading: (Sep_I) = "the scalar does not confound causally diverging states".
+
+Without (Sep_I), $I$ remains a **proxy** (screening), not a decider.
+
+### (P2) Two Indices: $A^\star_H$ (Intrinsic) and $A^\star_I$ (Calculable)
+
+#### (P2.1) Holonomic Index (Intrinsic)
+
+Defined **directly** from 2-cells and $\mathrm{Hol}$ (Lean level).
+
+- $\kappa_H(t)$: fraction of 2-cells $\alpha$ at time $t$ such that $\mathrm{Hol}(\alpha) \subseteq \Delta$.
+- $E_H(t)$: aggregated intensity of torsion (e.g., proportion of pairs $x \neq x'$ in linked fibers, or admissible relational norm).
+
+$$ A^\star_H(t) = \alpha(1-p(t)) + \beta(1-\kappa_H(t)) + \gamma E_H(t) $$
+
+**Property**: $A^\star_H(t) = 0 \iff$ flat holonomy on all 2-cells at $t$.
+
+#### (P2.2) Invariant Index (Calculable)
+
+We keep the calculable index:
+
+- $\kappa_I(t)$ = fraction of squares where $I(p_{sq}) = I(q_{sq})$.
+- $E_I(t)$ = median/P95 of $\frac{|I(p_{sq})-I(q_{sq})|}{1+|I(p_{sq})|+|I(q_{sq})|}$.
+
+$$ A^\star_I(t) = \alpha(1-p(t)) + \beta(1-\kappa_I(t)) + \gamma E_I(t) $$
+
+**Status**: $A^\star_I$ is a **calculable summary**, depending on the choice of $I$.
+
+---
 
 ### Dynamic Index
 
@@ -258,10 +311,13 @@ A★(t) = α(1 − p(t)) + β(1 − κ_I(t)) + γ E_I(t)
 
 with **α, β, γ > 0** and α + β + γ = 1.
 
-- **A★(t) = 0** ⇔ p(t) = 1, κ_I(t) = 1, E_I(t) = 0 (perfect dissociation — system in R1).
-- **A★(t) → 1** ⇔ p(t) → 0, κ_I(t) → 0, E_I(t) → 1 (maximal constraint — deep in R2).
+- **A★(t) = 0** ⇔ p(t) = 1, κ_I(t) = 1, E_I(t) = 0.
+- **A★(t) → 1** ⇔ p(t) → 0, κ_I(t) → 0, E_I(t) → 1.
 
-> **A★(t) = 0 means perfect dissociation** (§0.3): full parallelism, exact interchange. Every 2-cell has `FlatHolonomy`. Compatible with any arithmetic regime.
+> **Reading A★(t) = 0**:
+>
+> - If **(Sep_I)** holds, implies **FlatHolonomy** (perfect dissociation).
+> - Without (Sep_I), implies **I-flatness**: the invariant sees no twist.
 
 ### Convention When p(t) = 0
 
@@ -291,14 +347,18 @@ Derivative: ΔA★(t) = A★(t + dt) − A★(t). Sign encodes direction.
 The chain connecting formal structure to operational consequences:
 
 ```
-Twisted holonomy at t  →  Lag event at t' > t  →  A★(t) > 0  →  regime sensitivity
+Twisted holonomy at t  →  Lag event at t' > t  →  A★ > 0  →  regime sensitivity
 ```
 
 ### 3.1 Holonomy Twist → Lag
 
-**Formal** (Lean: `lag_of_twist_and_hidden_step`): If at time t there exists a twisted 2-cell and a future step depending on hidden state, then a `LagEvent` occurs: observationally identical micro-states diverge later.
+**TwistedHolonomy ⇒ Lag**:
 
-**In A★ terms**: TwistedHolonomy ⇒ E_I(t) > 0 or κ_I(t) < 1 ⇒ A★(t) > 0. The lag manifests as future prediction failure.
+- **Strong implication (Intrinsic)**:
+  $$ A^\star_H(t) > 0 \wedge \text{StepDependsOnHidden} \Rightarrow \exists \text{LagEvent} $$
+- **Screening implication (Invariant)**:
+  $$ A^\star_I(t) > 0 \Rightarrow \text{"risk of lag"} $$
+  $$ (Sep_I) \wedge A^\star_I(t) > 0 \wedge \text{StepDependsOnHidden} \Rightarrow \exists \text{LagEvent} $$
 
 **Connection to dissociation** (§0.4): the lag exists **because** ⊗ is partial. If ⊗ were total, holonomy would be flat, and no lag could occur.
 
@@ -312,8 +372,8 @@ Twisted holonomy at t  →  Lag event at t' > t  →  A★(t) > 0  →  regime s
 
 **Lag density**: λ_lag(t) = (# lag events from cells at t) / (# cells at t).
 
-- A★(t) = 0 ⇒ λ_lag(t) = 0 (flat holonomy, no lag).
-- A★(t) > 0 + rich dynamics ⇒ λ_lag(t) > 0 almost surely.
+- A★_H(t) = 0 ⇒ λ_lag(t) = 0 (flat holonomy, no lag).
+- A★_I(t) > 0 + rich dynamics ⇒ λ_lag(t) > 0 almost surely.
 
 ### 3.3 Information Loss in the Projection
 
@@ -324,7 +384,7 @@ Twisted holonomy at t  →  Lag event at t' > t  →  A★(t) > 0  →  regime s
 | (κ_I, E_I) | Rate and amplitude | Which cells twist |
 | A★(t) | Global index | Distinction between p, κ_I, E_I |
 
-A★ is a **screening tool**: A★ = 0 reliably means "no problem". A★ > 0 means "investigate".
+A★ is a **screening tool**: A★ = 0 reliably means "no problem" (under Sep_I). A★ > 0 means "investigate".
 
 ### 3.4 The Summary Separation Theorem
 
@@ -338,12 +398,12 @@ This is the formal reason A★ matters: lag is invisible to the observable.
 
 | Axiom | Type | Statement | Formal anchor |
 |-------|------|-----------|---------------|
-| 1. Normalization | Pointwise | A★(t)=0 ⇔ perfect dissociation at t | `FlatHolonomy` |
+| 1. Normalization | Pointwise | A★_H(t)=0 ⇔ flat holonomy | `FlatHolonomy` |
 | 2. Re-timing | Pointwise | Invariant under pomset-preserving transforms | Geometric neutrality |
 | 3. Monotonicity | Path | ⊥ expanding + interchange-preserving ⇒ A★ ↓ | ⊥(t₁) ⊆ ⊥(t₂) |
 | 4. Geometric neutrality | Pointwise | Representation-independent | Paper §7 |
 | 5. Directional semantics | Trajectory | ΔA★ > 0 ↔ dissociation degrading | Sign of derivative |
-| 6. Lag coupling | Causal | A★ > 0 + hidden-dep step ⇒ ∃ lag | `lag_of_twist_and_hidden_step` |
+| 6. Lag coupling | Causal | A★_H > 0 + hidden-dep step ⇒ ∃ lag | `lag_of_twist_and_hidden_step` |
 
 **Axiom 3 caveat**: κ_I is a conditional ratio. Adding squares that fail interchange can decrease κ_I. Monotonicity requires new pairs to satisfy interchange at rate ≥ κ_I(t₁).
 
@@ -433,7 +493,7 @@ If this fails (`ObstructionCofinalWrt`): **permanent twist**. No regime eliminat
 
 The three faces of dissociation (§0.3) made dynamic:
 
-- **Symmetry (R1)**: p(t) = 1, κ_I(t) = 1, E_I(t) = 0. Perfect dissociation. Flat holonomy. No lag. All four arithmetics agree.
+- **Symmetry (R1)**: p(t) = 1, κ_H(t) = 1, E_H(t) = 0. Perfect dissociation. Flat holonomy. No lag. All four arithmetics agree.
 
 - **Asymmetry (bridge)**: trajectory A★(t). Measures how far dissociation is from perfect. A★ > 0 = twist exists = lag possible = regimes diverge.
 
@@ -445,12 +505,12 @@ The three faces of dissociation (§0.3) made dynamic:
 
 | Statement | Content | Formal anchor |
 |-----------|---------|---------------|
-| **L1** Symmetric limit | A★(t)=0 ⇒ flat holonomy, all regimes agree, no lag | `FlatHolonomy` |
+| **L1** Symmetric limit | A★_H(t)=0 ⇔ FlatHolonomy. A★_I(t)=0 ⇒ I-flatness (impl FlatHol under Sep_I) | `FlatHolonomy` |
 | **L2** Host factorization | A★(t)>0 ⇒ invariants factorize into one of four hosts | Paper Thm 8, 9.1 |
 | **L3** Non-exchange cost | δ_I ≡ 0 ∧ p=1 ⇔ A★=0 (vacuity caveat when p=0) | `HolonomyRel` |
 | **L4** Geometric neutrality | A★ invariant under pomset-preserving transforms | Paper §7 |
 | **L5** Dissociation direction | ⊥ shrinking ⇒ A★ increasing | Axiom 3 contrapositive |
-| **L6** Lag existence | A★>0 + hidden-dep step ⇒ ∃ lag event | `lag_of_twist_and_hidden_step` |
+| **L6** Lag coupling | A★_H>0 + hidden-dep step ⇒ ∃ lag event. A★_I>0 is a signal. | `lag_of_twist_and_hidden_step` |
 | **L7** Observation insufficiency | No obs-only summary predicts lag | `lagEvent_gives_summary_witness` |
 | **L8** Gauge irreparability | TwistedHolonomy + GaugeRefl ⇒ ObstructionWrt | `obstructionWrt_singleton_of_...` |
 
