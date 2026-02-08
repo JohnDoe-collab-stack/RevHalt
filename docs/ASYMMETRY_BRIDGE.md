@@ -1,5 +1,139 @@
 # Asymmetry as a Bridge Between Two Reference Frames
 
+## 0) Philosophy of Dissociation
+
+### 0.1 The Primitive
+
+Dissociation is the **ontological primitive** of this framework. It is the assertion:
+
+> Certain things can be **separated** (disjoint supports) and composed in parallel. This separation is **partial**: not everything dissociates from everything.
+
+Formally: a PCM (partial commutative monoid) $(S, \perp, \uplus, \varnothing)$ where $x \perp y$ (disjointness) conditions $x \uplus y$ (union). The parallel $\otimes$ exists only under disjointness. The sequential $\circ$ exists always.
+
+**Dissociation is the fundamental asymmetry between $\otimes$ (conditional) and $\circ$ (total).** Everything else follows.
+
+### 0.2 The Causal Cascade
+
+The framework has a strict logical direction. Each arrow is a **theorem**, not a modeling choice:
+
+```
+Dissociation (PCM, ⊥)
+    │
+    │  engenders (§1, paper §3)
+    ▼
+Local interchange (2-cells)
+    │
+    │  constrains (paper §9, Thm 9.1)
+    ▼
+Four stable arithmetics (⊕,⊙)
+    │
+    │  projected by (paper §8, factorization)
+    ▼
+Invariants (L, W, C, d)
+    │
+    │  measured by (§2, projection hierarchy)
+    ▼
+Asymmetry A★(t) = projection of holonomy
+    │
+    │  detects (Lean: lag_of_twist_and_hidden_step)
+    ▼
+Lag (invisible future divergence)
+```
+
+| Arrow | Theorem | Source |
+|-------|---------|--------|
+| Dissociation → interchange | Interchange is the natural law of the (⊗, ∘) square | Paper §3.2 |
+| Interchange → 4 arithmetics | Classification: only (max,+), (min,+), (+,+), (+,max) survive | Paper Thm 9.1 |
+| Arithmetics → invariants | Lax-monoidal factorization | Paper Thm 8 |
+| Invariants → holonomy | Transport on fibers, HolonomyRel | Lean `HolonomyRel` |
+| Holonomy → A★ | Projection Sig → Hol → (p, κ_I, E_I) → A★ | This document §2 |
+| A★ > 0 → lag | Twist + hidden-dependent step ⇒ lag event | Lean theorem |
+
+### 0.3 Three Faces of Dissociation
+
+Dissociation manifests at three levels, corresponding exactly to the Symmetry–Asymmetry–Dissymmetry trio:
+
+**1) Dissociation as structure (the PCM).**
+The brute fact: some pairs are independent, others are not. This is the relation ⊥(t). The paper calls it the "dissociation referential". It is **R2** in this document.
+
+**2) Dissociation as measure (A★).**
+The quantification of *how much* the system is dissociated relative to a fully parallelizable state. A★ = 0 means "everything dissociates perfectly" (R1). A★ > 0 means "dissociation is partial or imperfect". This is the **bridge** R1 ↔ R2.
+
+> **Key subtlety**: A★ = 0 does not mean "no dissociation". It means "**perfect** dissociation" — everything parallelizes, interchange holds everywhere. This is the maximal case of R2 that coincides with R1. The terminology is counter-intuitive at first: the better dissociation works, the lower A★.
+
+**3) Dissociation as profile (dissymmetry).**
+*How* dissociation manifests in the arithmetic: which pair (⊕,⊙) dominates. The paper shows the classification is canonical. This document shows the profile can change dynamically (R(t)).
+
+### 0.4 Partialité de ⊗: The Engine
+
+The entire machinery rests on **one fact**: $\otimes$ is partial, $\circ$ is total.
+
+| Consequence of partial ⊗ | Formulation |
+|--------------------------|-------------|
+| Interchange is only **local** | Holds only where both parallels exist |
+| Distributivity is only **lax** | ⊙ does not distribute globally over ⊕ |
+| Holonomy can be **twisted** | Two paths (parallel-first vs series-first) give different results |
+| Lag exists | Observationally identical micro-states diverge later |
+| A★ > 0 is possible | The system is not fully dissociated |
+| Four arithmetics (not one) | Partiality prevents a universal structure (Result 1, no-go) |
+
+If $\otimes$ were total (as in a classical symmetric monoidal category), **everything collapses**:
+
+- Interchange would be global → exact distributivity → single semiring
+- Holonomy would be flat → no lag → A★ ≡ 0
+- The paper would have one arithmetic, not four
+
+### 0.5 Three Layers, One Phenomenon
+
+| Layer | Document | Question answered | Dissociation appears as... |
+|-------|----------|-------------------|---------------------------|
+| Algebraic | Paper (doc 4) | Where does arithmetic come from? | The PCM + interchange that forces 4 pairs |
+| Geometric | Lean (doc 3) | What happens when dissociation is imperfect? | Twisted holonomy, lag, obstruction |
+| Calculable | This document | How to measure dynamically? | A★(t) trajectory, regime dynamics |
+
+```
+                    DISSOCIATION
+                    (the primitive)
+                         │
+         ┌───────────────┼───────────────┐
+         │               │               │
+      Paper           Lean          This document
+    "Where does     "What happens    "How to
+     arithmetic      when it          measure"
+     come from"      twists"
+         │               │               │
+    Classification   Holonomy,      A★(t),
+    4 stable pairs   Lag, Gauge,    trajectories,
+                     Obstruction    regimes
+         │               │               │
+         └───────────────┼───────────────┘
+                         │
+                    OPERATIONAL
+                    CONSEQUENCES
+```
+
+### 0.6 What the Lean Adds to the Paper
+
+The paper proves: "from dissociation emerge four arithmetics". But it does not say what happens **between** arithmetics, or what occurs when the system transitions from one to another. The Lean fills this gap:
+
+- **The gauge** is the correction applied when the chosen arithmetic does not perfectly capture the actual dissociation. It is the "gauge choice" in the physics sense.
+- **Obstruction** (`ObstructionWrt`) says: sometimes **no** correction suffices. The dissociation is structurally incompatible with repair. This is the paper's no-go (Result 1) made dynamic.
+- **Cofinality** says: obstruction/repair has a **permanent** character — it persists in every future. It is not a local accident.
+
+### 0.7 Dissociation in One Sentence Per Layer
+
+| Layer | Dissociation is... |
+|-------|--------------------|
+| Ontological | The partiality of ⊗ (some things don't separate) |
+| Algebraic | What forces four arithmetics to exist (not one) |
+| Geometric | What allows twisted holonomy (two paths ≠ same result) |
+| Dynamic | What makes A★(t) > 0 possible and lag real |
+| Operational | What makes apparently identical systems diverge later |
+
+These are five descriptions of the **same phenomenon**, linked by formal theorems.
+
+---
+
 ## 1) Two Well-Defined Reference Frames
 
 ### R1 — Classical Frame of Symmetry
@@ -10,474 +144,614 @@
 
 ### R2 — Frame of Dissociation
 
-- **Setting**: an independence relation (⊥) conditioning a partial parallel (⊗), defined only if f ⊥ g, a sequential (∘), and a local interchange.
+- **Setting**: a time-varying independence relation ⊥(t) conditioning a partial parallel (⊗), defined only if f ⊥(t) g, a sequential (∘), and a local interchange.
 
 - **Measures (I)**:
-  - Parallel induces a parallel aggregation (⊕) via I(f ⊗ g) = I(f) ⊕ I(g) (when defined).
+  - Parallel induces a parallel aggregation (⊕) via I(f ⊗ g) = I(f) ⊕ I(g) (when defined at time t).
   - Series induces a serial aggregation (⊙) via I(g ∘ f) ≽ I(g) ⊙ I(f) (subadditivity).
 
 - **Classification**: only four stable arithmetics appear: (max,+), (min,+), (+,+), (+,max).
 
-  > **Note**: Only (max,+) and (min,+) are semirings in the classical sense (⊙ distributes over ⊕). The pairs (+,+) and (+,max) satisfy the weaker local interchange axiom but not global distributivity. The term "arithmetic" here means (⊕,⊙) satisfying H1–H2, not necessarily a semiring.
+  > **Note**: Only (max,+) and (min,+) are semirings. (+,+) and (+,max) satisfy the weaker local interchange axiom but not global distributivity. "Arithmetic" means (⊕,⊙) satisfying H1–H2, not necessarily a semiring.
 
 - **Geometric neutrality**: only precedences (pomset) matter, not drawing or layout.
 
+- **Temporal reading**: R2 is not a fixed alternative to R1 — it is what R1 **becomes** when independence is restricted (§0.3). A system can move from R1 to R2 (dissociation degrades) and back (resynchronization) over time.
+
+### Formal Backbone
+
+| Layer | Formal (Lean) | Calculable (this document) | Algebraic (paper) |
+|-------|---------------|---------------------------|--------------------|
+| Objects | Prefixes `P` | States / configurations | Supports in PCM |
+| 1-morphisms | `Path h k` | Orderings of tasks | Morphisms in 𝐂_ℱ |
+| 2-morphisms | `Deformation p q` | Interchange squares | Interchange law |
+| Semantics | `sem : Path → Relation S S` | Invariant I : configs → ℝ | I satisfying (i)–(iv) |
+| Fibers | `FiberPt obs target_obs h` | Micro-states with same obs | Observation Obs : Hom → V |
+| Independence | Which ⊗ are defined | ⊥(t) | PCM disjointness ⊥ |
+
 ---
 
-## 2) Asymmetry as a Bridge Between R1 and R2
+## 2) Asymmetry as a Dynamic Bridge Between R1 and R2
 
-### Definition
+### Core Idea
 
-Asymmetry quantifies how far one moves from R1 to R2 (and conversely).
+The system evolves. At each time t:
 
-### Observables
+- The causal graph G(t) determines available tasks and precedences.
+- The independence relation ⊥(t) determines which pairs can be parallelized.
+- The invariant I and arithmetic (⊕,⊙) determine how measurements aggregate.
 
-- **Parallelizability** p ∈ [0,1] — proportion of pairs actually parallelizable.
+Asymmetry is not a static label — it is a **trajectory** through the space of independence structures. It measures how far the system is from perfect dissociation (§0.3, face 2).
 
-- **Interchange locality** κ_I ∈ [0,1] — fraction of interchange squares where the equality
+### Instantaneous Observables
+
+All observables are functions of time through ⊥(t) and G(t).
+
+- **Parallelizability** p(t) ∈ [0,1] — proportion of pairs independent at time t. Measures how much of the PCM structure is "active".
+
+- **Interchange locality** κ_I(t) ∈ [0,1] — fraction of interchange squares where
 
   ```
   I((f₁ ⊗ g₁) ∘ (f₀ ⊗ g₀)) = I((f₁ ∘ f₀) ⊗ (g₁ ∘ g₀))
   ```
 
-  holds, conditional on both parallels being defined.
-  
-  > **Clarification**: κ_I measures observational interchange via invariant I, not structural isomorphism. It requires a **square** of four morphisms (f₀, f₁, g₀, g₁) with f₀ ⊥ g₀ and f₁ ⊥ g₁.
+  holds at time t, conditional on both parallels being defined.
 
-- **Interchange defect** E_I ≥ 0 — quantitative amplitude of interchange failure.
+  > Each interchange test requires a **square** (f₀, f₁, g₀, g₁) with f₀ ⊥(t) g₀ and f₁ ⊥(t) g₁. This is a `Deformation` (2-cell) in the history graph, and corresponds to the interchange law in paper §3.2.
 
-  For a square (f₀, f₁, g₀, g₁) with both parallels defined, let:
+- **Interchange defect** E_I(t) ∈ [0,1) — quantitative amplitude of interchange failure at time t.
+
+  For a square at time t:
 
   ```
   p_sq = (f₁ ⊗ g₁) ∘ (f₀ ⊗ g₀)      (parallel-first)
   q_sq = (f₁ ∘ f₀) ⊗ (g₁ ∘ g₀)      (series-first)
   ```
 
-  **Pointwise defect** (bounded in [0,1)):
+  **Pointwise defect**:
 
   ```
-  E_I(f₀,f₁,g₀,g₁) = |I(p_sq) − I(q_sq)| / (1 + |I(p_sq)| + |I(q_sq)|)
+  E_I(f₀,f₁,g₀,g₁; t) = |I(p_sq) − I(q_sq)| / (1 + |I(p_sq)| + |I(q_sq)|)
   ```
 
-  > **Why this normalizer**: The denominator 1 + |a| + |b| guarantees E_I ∈ [0,1) unconditionally, regardless of the sign or magnitude of I. Unlike the v1 formula max(1,|a|,|b|), this is robust to signed invariants.
+  **Aggregate**: E_I(t) = median or P95 over all squares available at time t.
 
-  **Aggregate**: E_I = median or P95 over all tested squares.
+### The Complete Invariant and Its Projections
 
-  > **Distinction κ_I vs E_I**: κ_I counts how often interchange holds exactly (Boolean rate); E_I measures by how much it fails (continuous amplitude). Both are needed: a system can have κ_I = 0.5 with tiny E_I (many small violations) or κ_I = 0.9 with large E_I (rare but severe violations).
+The observables (p, κ_I, E_I) are **not** the ground truth. The formal structure provides a richer object:
 
-### Compact Index (bounded)
+**Compatibility signature** (Lean: `Sig`). For a micro-state x in fiber F(h) at time t:
 
 ```
-A★ = α(1 − p) + β(1 − κ_I) + γ E_I
+Sig(x, t) : Future(h) → {true, false}
+Sig(x, t)(step) = "∃ y in fiber F(k) such that Transport(step) relates x to y"
+```
+
+Complete invariant for future prediction (Lean: `sig_iff_of_summary_correct`).
+
+**Holonomy relation** (Lean: `HolonomyRel`). For a 2-cell α : p ⇒ q:
+
+```
+Hol(α)(x, x') ⇔ ∃ y ∈ F(k), Transport(p)(x,y) ∧ Transport(q)(x',y)
+```
+
+A relation on fibers, not a number.
+
+**The projection hierarchy**:
+
+```
+Sig(x,t) ──complete──→ Hol(α) ──per-cell──→ (κ_I, E_I) ──aggregate──→ A★(t)
+   ↑                      ↑                      ↑                      ↑
+ function              relation               scalars               scalar
+ on futures           on fiber pairs          per square            global index
+```
+
+Each arrow loses information. The document works at the rightmost level (A★) for computability.
+
+> **Non-reducibility** (Lean: `NonReducibleHolonomy`): no 1D summary captures full holonomy. Even (p, κ_I, E_I) is a 3D compression of a potentially infinite-dimensional object. A★ compresses further to 1D. This is a theorem (§0.4: consequence of partial ⊗), not a modeling choice.
+
+### Dynamic Index
+
+```
+A★(t) = α(1 − p(t)) + β(1 − κ_I(t)) + γ E_I(t)
 ```
 
 with **α, β, γ > 0** and α + β + γ = 1.
 
-> **Strict positivity required**: The biconditionals below hold only when α, β, γ > 0. If any weight is zero, the corresponding observable is ignored and the equivalences weaken to implications.
+- **A★(t) = 0** ⇔ p(t) = 1, κ_I(t) = 1, E_I(t) = 0 (perfect dissociation — system in R1).
+- **A★(t) → 1** ⇔ p(t) → 0, κ_I(t) → 0, E_I(t) → 1 (maximal constraint — deep in R2).
 
-- **A★ = 0** ⇔ p = 1, κ_I = 1, E_I = 0 (total independence, exact interchange).
-- **A★ = 1** ⇔ p = 0, κ_I = 0, E_I = 1 (no independence, no interchange, maximal defect).
+> **A★(t) = 0 means perfect dissociation** (§0.3): full parallelism, exact interchange. Every 2-cell has `FlatHolonomy`. Compatible with any arithmetic regime.
 
-> **What A★ = 0 means**: The system has full parallelism and exact interchange. This is compatible with **any** arithmetic regime — including tropical (max,+) where ⊕ ≠ ⊙ by design. A★ measures structural independence/interchange, not whether ⊕ and ⊙ coincide as operations.
+### Convention When p(t) = 0
 
-**Non-normalized variant** (fixed weights, for quick computation):
+**Penalty convention** (recommended for trajectories): κ_I(t) := 0, E_I(t) := 1.
+
+- Absence of independence = maximal constraint. A★(t) = 1.
+- Formal justification: aligns with `ObstructionWrt` under `GaugeRefl` (§6.2).
+
+**Neutral convention** (analytic convenience): κ_I(t) := 1, E_I(t) := 0. A★(t) = α.
+
+- Formal justification: `AutoRegulated` is vacuously true when no 2-cells exist.
+
+### Trajectory Semantics
+
+A★(·) : T → [0,1] encodes movement between frames:
+
+- **A★(t) increasing**: dissociation degrading — independence shrinking, interchange failing.
+- **A★(t) decreasing**: resynchronizing — independence expanding, interchange improving.
+- **A★(t) ≈ const**: stable regime.
+
+Derivative: ΔA★(t) = A★(t + dt) − A★(t). Sign encodes direction.
+
+---
+
+## 3) The Holonomy–Lag–Trajectory Bridge
+
+The chain connecting formal structure to operational consequences:
 
 ```
-A = 0.5 * ((1 − p) + (1 − κ_I)) + E_I
+Twisted holonomy at t  →  Lag event at t' > t  →  A★(t) > 0  →  regime sensitivity
 ```
 
-> Implicit weights ≈ (0.25, 0.25, 1) after renormalization: disproportionate emphasis on E_I. Bounds: A ∈ [0, 2) since E_I ∈ [0,1). A★ is the canonical form; A is a convenience variant.
+### 3.1 Holonomy Twist → Lag
 
-### Convention When p = 0
+**Formal** (Lean: `lag_of_twist_and_hidden_step`): If at time t there exists a twisted 2-cell and a future step depending on hidden state, then a `LagEvent` occurs: observationally identical micro-states diverge later.
 
-When no pair is independent, no ⊗-context exists, so κ_I and E_I are ratios over an empty set.
+**In A★ terms**: TwistedHolonomy ⇒ E_I(t) > 0 or κ_I(t) < 1 ⇒ A★(t) > 0. The lag manifests as future prediction failure.
 
-**Convention**: set κ_I := 1 and E_I := 0 (no penalty beyond (1−p) = 1).
+**Connection to dissociation** (§0.4): the lag exists **because** ⊗ is partial. If ⊗ were total, holonomy would be flat, and no lag could occur.
 
-**Rationale**: the entire asymmetry is already captured by p = 0. Penalizing κ_I or E_I would double-count the absence of parallelism.
+> **Operational meaning**: A★ > 0 means there exist micro-states that **look the same now** but **behave differently later**. Any controller ignoring A★ risks wrong decisions.
 
-Under this convention: A★ = α when p = 0 (only the parallelizability term contributes).
+### 3.2 Lag → Trajectory Consequences
 
-### Axioms for a Proper Measure
+- **Immediate**: prediction at t fails at t' > t.
+- **Cascading**: wrong micro-state generates further wrong predictions.
+- **Statistical**: repeated lag events appear as unexplained variance.
 
-1. **Normalization**: A★ = 0 when p = 1, κ_I = 1, E_I = 0; increases when independence or interchange is restricted.
-2. **Re-timing invariance**: A★ is unchanged under transformations preserving precedences.
-3. **Monotonicity (conditional)**: expanding independence ⇒ p ↑. If additionally the new independent pairs satisfy interchange at a rate ≥ κ_I (and with defect amplitude ≤ E_I), then κ_I is non-decreasing and E_I is non-increasing, so A★ ↓.
+**Lag density**: λ_lag(t) = (# lag events from cells at t) / (# cells at t).
 
-  > **Caveat on κ_I**: Since κ_I is a conditional ratio, adding independent pairs that fail interchange can decrease κ_I. For example: 7/8 success rate, add 4 pairs with 1 success → κ_I = 8/12 = 2/3 < 7/8. Monotonicity of κ_I requires the new pairs to satisfy interchange at least at the current rate.
+- A★(t) = 0 ⇒ λ_lag(t) = 0 (flat holonomy, no lag).
+- A★(t) > 0 + rich dynamics ⇒ λ_lag(t) > 0 almost surely.
 
----
+### 3.3 Information Loss in the Projection
 
-## 3) Symmetry – Asymmetry – Dissymmetry (Trio)
+| Level | Captures | Loses |
+|-------|----------|-------|
+| Sig(x,t) | Complete future behavior | Nothing |
+| Hol(α) | Fiber confusion per 2-cell | Which steps are affected |
+| (κ_I, E_I) | Rate and amplitude | Which cells twist |
+| A★(t) | Global index | Distinction between p, κ_I, E_I |
 
-- **Symmetry (R1)**: total parallelism, exact interchange (p = 1, κ_I = 1, E_I = 0).
+A★ is a **screening tool**: A★ = 0 reliably means "no problem". A★ > 0 means "investigate".
 
-- **Asymmetry (bridge)**: differing roles between parallel (conditional) and serial (always defined), measured by A★.
+### 3.4 The Summary Separation Theorem
 
-- **Dissymmetry (profile)**: how the gap manifests, classified by
+Any correct 1D predictor of compatibility must separate micro-states with different futures (Lean: `summary_separates_compatible_witness`). Applied to observation-only summaries: since x, x' share the same fiber, σ(x) = σ(x') always. Therefore **no observation-only summary predicts the lag** (Lean: `lagEvent_gives_summary_witness`).
 
-  ```
-  (⊕,⊙) ∈ { (max,+), (min,+), (+,+), (+,max) }
-  ```
-
-  with: idempotent ⊕ (tropical) or not, presence/absence of absorption for ⊙, max/min orientation, and residuation (numeric vs implication in +,max).
-
-  > **Note**: The dissymmetry profile (choice of arithmetic) is **orthogonal** to the asymmetry index A★. A system can have A★ = 0 in any of the four regimes. The profile classifies *how* invariants aggregate; A★ classifies *how constrained* the independence structure is.
-
----
-
-## 4) Structural Statements (Informal but Testable)
-
-- **L1 — Symmetric limit**: A★ = 0 ⇒ full independence and exact interchange hold; parallel behaves as total.
-
-- **L2 — Host factorization**: A★ > 0 ⇒ every stable invariant factorizes into one of the four hosts (max+, min+, ++, +max).
-
-- **L3 — Non-exchange cost**: if residuation exists,
-
-  ```
-  δ_I(f₀,f₁,g₀,g₁) = I(p_sq) ▷ I(q_sq)   (right residual of interchange square)
-  ```
-
-  Then:
-  - **(⇐)** A★ = 0 (with α, β, γ > 0) ⇒ δ_I ≡ 0.
-  - **(⇒, qualified)** δ_I ≡ 0 ⇒ E_I = 0 and κ_I = 1, but does **not** imply p = 1. Full equivalence: δ_I ≡ 0 **and** p = 1 ⇔ A★ = 0.
-
-  > **Why the unqualified ⇒ fails**: If p = 0, no interchange square exists, so δ_I is vacuously ≡ 0, yet A★ = α > 0.
-
-- **L4 — Geometric neutrality**: A★, p, κ_I, E_I invariant under all precedence-preserving transformations.
+This is the formal reason A★ matters: lag is invisible to the observable.
 
 ---
 
-## 5) Quick Numerical Example
+## 4) Axioms as Trajectory Properties
+
+| Axiom | Type | Statement | Formal anchor |
+|-------|------|-----------|---------------|
+| 1. Normalization | Pointwise | A★(t)=0 ⇔ perfect dissociation at t | `FlatHolonomy` |
+| 2. Re-timing | Pointwise | Invariant under pomset-preserving transforms | Geometric neutrality |
+| 3. Monotonicity | Path | ⊥ expanding + interchange-preserving ⇒ A★ ↓ | ⊥(t₁) ⊆ ⊥(t₂) |
+| 4. Geometric neutrality | Pointwise | Representation-independent | Paper §7 |
+| 5. Directional semantics | Trajectory | ΔA★ > 0 ↔ dissociation degrading | Sign of derivative |
+| 6. Lag coupling | Causal | A★ > 0 + hidden-dep step ⇒ ∃ lag | `lag_of_twist_and_hidden_step` |
+
+**Axiom 3 caveat**: κ_I is a conditional ratio. Adding squares that fail interchange can decrease κ_I. Monotonicity requires new pairs to satisfy interchange at rate ≥ κ_I(t₁).
+
+---
+
+## 5) Regime Dynamics
+
+### 5.1 The Regime as a Gauge
+
+In the formal layer, a **gauge** (Lean: `Gauge`) is a fiber-preserving correction:
+
+```
+φ : Path h k → Relation (Fiber(k)) (Fiber(k))
+```
+
+In the calculable layer, the **regime choice** R(t) plays the gauge role:
+
+- Choosing (⊕,⊙) determines how I aggregates ⇒ determines Transport.
+- Wrong regime = non-admissible gauge: corrected holonomy not diagonal.
+- Right regime = gauge making corrected holonomy closest to diagonal.
+
+**Connection to paper**: The four arithmetics (paper Thm 9.1) are the four **canonical gauges** emerging from the dissociation structure. Each is optimal for a different invariant (L, W, C, d).
+
+### 5.2 Admissibility: GaugeRefl
+
+- **GaugeRefl**: φ contains the diagonal. Can only add possibilities, never remove.
+- **emptyGauge**: trivially makes holonomy empty — vacuously diagonal but operationally useless.
+
+GaugeRefl blocks this: pre-existing twist **persists** after correction (Lean: `correctedHolonomy_of_holonomy_of_gaugeRefl`). A twist cannot be gauged away.
+
+**In A★ terms**: penalty convention = requiring GaugeRefl. Prevents A★ from collapsing via vacuity.
+
+### 5.3 Regime as Stateful Process
+
+```
+R(t) = Policy(A★(t), R(t⁻), ΔA★(t), invariant)
+```
+
+### 5.4 Transition Dynamics
+
+**Memoryless**: R(t) = σ(A★(t)).
+
+**Hysteretic**: activate at θ_on, deactivate at θ_off < θ_on (dead zone).
+
+**Anticipatory**: in gray zone, use sign of ΔA★ to pre-switch or hold.
+
+### 5.5 Cofinal Auto-Regulation
+
+`AutoRegulatedCofinal` (Lean): ∃ cofinal C such that one gauge repairs all cells over C.
+
+In trajectory terms: ∃ horizon T₀ such that ∀ t > T₀ in C, A★(t) = 0 under the chosen gauge.
+
+If this fails (`ObstructionCofinalWrt`): **permanent twist**. No regime eliminates the lag in any cofinal future. This is the paper's no-go (Result 1) made temporal.
+
+### 5.6 Phase Portrait
+
+```
+         ΔA★(t)
+           ↑
+    +0.5   |   Pre-switch              Deep R2, worsening
+           |   (lag risk rising)        (lag likely)
+           |
+   ────────┼───────────────────────────────→ A★(t)
+           |        0.15        0.5
+           |
+    −0.5   |   Returning to R1         Partial recovery
+           |   (lag risk falling)       (lag decreasing)
+```
+
+| A★(t) | ΔA★(t) | Lag risk | Action |
+|-------|--------|----------|--------|
+| < 0.15 | any | Negligible | All regimes equivalent |
+| 0.15–0.5 | > 0 | Rising | Pre-switch |
+| 0.15–0.5 | ≤ 0 | Falling | Hold |
+| > 0.5 | > 0 | High, worsening | Locked; monitor |
+| > 0.5 | < 0 | High, improving | Hold; evaluate downshift |
+
+### 5.7 Residence Statistics
+
+```
+τ_{R1}/T,  τ_{R2}/T,  ν (transition rate),  ⟨A★⟩,  σ_A (volatility),  ⟨λ_lag⟩
+```
+
+---
+
+## 6) Symmetry – Asymmetry – Dissymmetry (Dynamic Trio)
+
+The three faces of dissociation (§0.3) made dynamic:
+
+- **Symmetry (R1)**: p(t) = 1, κ_I(t) = 1, E_I(t) = 0. Perfect dissociation. Flat holonomy. No lag. All four arithmetics agree.
+
+- **Asymmetry (bridge)**: trajectory A★(t). Measures how far dissociation is from perfect. A★ > 0 = twist exists = lag possible = regimes diverge.
+
+- **Dissymmetry (profile)**: R(t) ∈ {(max,+), (min,+), (+,+), (+,max)}. Which arithmetic dominates. Can change along trajectory. The profile is **orthogonal** to A★: a system can have A★ = 0 in any regime.
+
+---
+
+## 7) Structural Statements (Formal Anchoring)
+
+| Statement | Content | Formal anchor |
+|-----------|---------|---------------|
+| **L1** Symmetric limit | A★(t)=0 ⇒ flat holonomy, all regimes agree, no lag | `FlatHolonomy` |
+| **L2** Host factorization | A★(t)>0 ⇒ invariants factorize into one of four hosts | Paper Thm 8, 9.1 |
+| **L3** Non-exchange cost | δ_I ≡ 0 ∧ p=1 ⇔ A★=0 (vacuity caveat when p=0) | `HolonomyRel` |
+| **L4** Geometric neutrality | A★ invariant under pomset-preserving transforms | Paper §7 |
+| **L5** Dissociation direction | ⊥ shrinking ⇒ A★ increasing | Axiom 3 contrapositive |
+| **L6** Lag existence | A★>0 + hidden-dep step ⇒ ∃ lag event | `lag_of_twist_and_hidden_step` |
+| **L7** Observation insufficiency | No obs-only summary predicts lag | `lagEvent_gives_summary_witness` |
+| **L8** Gauge irreparability | TwistedHolonomy + GaugeRefl ⇒ ObstructionWrt | `obstructionWrt_singleton_of_...` |
+
+---
+
+## 8) Quick Numerical Example (Dynamic)
 
 ### Setup
 
-Four tasks with durations: f₀ = 2, f₁ = 3, g₀ = 1, g₁ = 4. Independence: f₀ ⊥ g₀ and f₁ ⊥ g₁.
+Four tasks: f₀ = 2, f₁ = 3, g₀ = 1, g₁ = 4. Invariant: L (makespan) in (max,+).
 
-Invariant: L (makespan) in (max,+).
+### Phase 1 (t = 0): partial independence
 
-### Computing p
-
-Six task pairs total: (f₀,f₁), (f₀,g₀), (f₀,g₁), (f₁,g₀), (f₁,g₁), (g₀,g₁).
-Independent pairs: (f₀,g₀) and (f₁,g₁) → p = 2/6 = 1/3.
-
-### Computing the interchange square
+Six pairs, two independent → p(0) = 1/3.
 
 ```
-p_sq = (f₁ ⊗ g₁) ∘ (f₀ ⊗ g₀)
-     = max(f₁,g₁) + max(f₀,g₀)     [in (max,+)]
-     = max(3,4) + max(2,1)
-     = 4 + 2 = 6
-
-q_sq = (f₁ ∘ f₀) ⊗ (g₁ ∘ g₀)
-     = max(f₁+f₀, g₁+g₀)           [in (max,+)]
-     = max(3+2, 4+1)
-     = max(5, 5) = 5
+p_sq = max(3,4) + max(2,1) = 6    (parallel-first)
+q_sq = max(3+2, 4+1) = 5          (series-first)
 ```
 
-### Computing κ_I and E_I
+κ_I(0) = 0, E_I(0) = 1/12 ≈ 0.083. A★(0) = **0.583** (penalty).
 
-I(p_sq) = 6, I(q_sq) = 5 → interchange fails (6 ≠ 5).
+**Dissociation reading**: the PCM allows (f₀, g₀) and (f₁, g₁) to dissociate, but the interchange fails — the way tasks combine depends on the scheduling order. This is the **partialité de ⊗** manifesting through the invariant.
 
-- κ_I = 0/1 = **0** (this square fails).
-- E_I = |6 − 5| / (1 + 6 + 5) = 1/12 ≈ **0.083**.
+### Phase 2 (t = 1): conflict
 
-### Computing A★
+f₁ ⊥̸ g₁ → p(1) = 1/6. No square. Penalty: κ_I := 0, E_I := 1. A★(1) = **0.944**.
 
-With α = β = γ = 1/3:
+**Dissociation reading**: the PCM structure has shrunk. A pair that could dissociate no longer can. The system moves deeper into R2.
 
-```
-A★ = (1/3)(1 − 1/3) + (1/3)(1 − 0) + (1/3)(0.083)
-   = (1/3)(2/3) + (1/3)(1) + (1/3)(0.083)
-   = 0.222 + 0.333 + 0.028
-   = 0.583
-```
+### Phase 3 (t = 2): conflict resolved
 
-→ High A★ zone: tropical regime appropriate.
+Same as Phase 1 → A★(2) = **0.583**.
 
-### Interchange failure in (max,+): why it's generic
+**Dissociation reading**: the PCM expands back. The system resynchronizes.
 
-The interchange identity in (max,+) reads:
+### Trajectory
 
 ```
-max(f₁,g₁) + max(f₀,g₀) = max(f₁+f₀, g₁+g₀)
+A★: 0.583 ──→ 0.944 ──→ 0.583
+         ↑ dissociation    ↓ resynchronization
+         degrading         restoring
 ```
 
-This holds only when the same "lane" dominates in both layers (e.g., f₁ ≥ g₁ **and** f₀ ≥ g₀). When dominance switches lanes (f₁ < g₁ but f₀ > g₀), the LHS picks the max per layer independently while the RHS picks the max of sums — these generically differ by the "cross" terms.
+### Interchange failure: why it's structural
 
-### Geometry neutrality
+```
+max(f₁,g₁) + max(f₀,g₀) ≠ max(f₁+f₀, g₁+g₀)
+```
 
-Redrawing the same precedence graph (same pomset) differently → same (p, κ_I, E_I, A★). ✓
+when dominance switches lanes. This is the scalar shadow of `TwistedHolonomy` — two schedulings of the same dissociated tasks produce different results. The twist exists **because** ⊗ is partial (§0.4).
 
 ---
 
-## 6) Dictionary Definitions
+## 9) Dictionary
 
-- **Asymmetry (classical)**: lack of invariance under a set symmetry (group, global exchange).
-
-- **Asymmetry (dissociative)**: quantified restriction of independence and interchange, measured by A★ = α(1−p) + β(1−κ_I) + γE_I; the dissymmetry details its arithmetic profile (max+, min+, ++, +max).
-
----
-
-## 7) Bounds and Normalization
-
-- **Minimal gap**: A★ = 0 when p = 1, κ_I = 1, E_I = 0 (requires α, β, γ > 0 for converse).
-- **Maximal gap**: A★ → 1 when p = 0, κ_I = 0, E_I → 1 (E_I ∈ [0,1) so A★ < 1 strictly; A★ = 1 is a supremum, not attained).
-
-  > **Technical note**: Since E_I = |a−b|/(1+|a|+|b|) < 1 strictly, A★ = 1 is never exactly attained. If exact attainment is desired, use E_I = |a−b|/max(1,|a|+|b|) instead (which reaches 1 when one of a,b is 0 and the other is ≥ 1). The choice is a modeling decision; the [0,1)-valued version is analytically more convenient.
-
-- **Weights** (α, β, γ > 0) tune the relative importance of independence, interchange rate, and interchange amplitude.
+| Term | Definition |
+|------|-----------|
+| **Dissociation** | The partiality of ⊗; the primitive that generates the framework |
+| **Asymmetry (classical)** | Lack of invariance under a symmetry group |
+| **Asymmetry (dissociative)** | A★(t): trajectory measuring departure from perfect dissociation |
+| **Dissymmetry** | Arithmetic profile R(t); how the twist manifests |
+| **Lag** | Delayed divergence of observationally identical micro-states |
+| **Gauge** | Fiber-preserving correction; the regime choice is an implicit gauge |
+| **Obstruction** | Twist that no admissible gauge can repair |
 
 ---
 
-## 8) Effect of A★ on the Four Arithmetics
+## 10) Bounds and Normalization
 
-### 8.1 Regime Selection by A★
-
-- **A★ ≈ 0**: full independence and interchange → any regime works; choose by invariant semantics.
-- **A★ rising**: parallelism becomes conditional, interchange local → regime selection matters more; tropical regimes (max,+, min,+) and (+,max) become the natural choices for depth/distance/width measures.
-
-  > **Clarification vs v1**: A★ does not select the arithmetic (that depends on the invariant). A★ indicates how much the independence/interchange structure constrains computation. At high A★, the difference between regimes becomes operationally decisive.
-
-### 8.2 Linking Regimes
-
-- **Duality**: (max,+) ↔ (min,+) by order reversal.
-  
-  > **Note**: (+,+) is self-dual; (+,max) has different structure (no simple duality).
-
-- **Additive approximation of max** (LogSumExp):
-
-  ```
-  max(x₁,…,xₙ) ≤ (1/β) · log(Σ eᵝˣⁱ) ≤ max(xᵢ) + (log n)/β
-  ```
-  
-  > **Note**: The max is a **lower bound**, not upper. Large β when interchange is nearly exact (low E_I: controlled error); otherwise use exact tropical operators.
-
-- **Residuation**: numeric in (max,+), (min,+), (+,+); logical (implicative) in (+,max).
-  The larger A★, the more decisive this distinction.
-
-### 8.3 Relations Valid for Any A★
-
-- For nonnegative values: additive cost C₊₊ always bounds depth L_{max+} and distance d_{min+} (since the total sum ≥ any single path).
-
-  > **Note on width W_{+max}**: W = max over antichains S of Σ_{s∈S} I(s). Every antichain is a subset of all tasks, so W ≤ C₊₊. This bound holds because parallel-branch sums are partial sums of the total.
-
-- Geometric neutrality: depends on the pomset, not on drawing.
-- Rigid classification: once the independence structure is non-trivial (p < 1 or interchange imperfect), the four regimes give genuinely different results.
-
-### 8.4 Phase Diagram (indicative thresholds)
-
-```
-A★: 0 ───── 0.15 ───────── 0.5 ───────────────────────── 1.0
-     any regime ok   regime choice matters    regime choice critical
-```
-
-> **Note**: Thresholds are heuristic; calibrate for specific domains. At low A★, all four regimes give similar results because interchange holds nearly everywhere.
+- **Minimal**: A★(t) = 0 when p=1, κ_I=1, E_I=0 (perfect dissociation).
+- **Maximal**: A★(t) = 1 under penalty convention when p=0 (no dissociation).
+- **Weights** α, β, γ > 0 tune importance. Can be time-varying.
 
 ---
 
-## 9) Practical Checklist
+## 11) Effect of A★ on the Four Arithmetics
 
-1. Fix the invariant I and the arithmetic regime (⊕,⊙).
-2. Enumerate interchange squares (quadruples f₀,f₁,g₀,g₁ with f₀⊥g₀, f₁⊥g₁).
-3. Measure p (parallelizability), κ_I (interchange success rate), E_I (interchange defect amplitude).
-4. Choose weights (α, β, γ > 0) and compute A★.
-5. Assess regime sensitivity: at low A★, results are robust to regime choice; at high A★, verify regime appropriateness.
-6. Apply the corresponding operators (closures, min/max-plus convolutions, residuation).
-7. Check global bounds using additive cost when relevant.
+### 11.1 Sensitivity
+
+- A★ ≈ 0: all four arithmetics agree (flat holonomy). Regime = convention.
+- A★ moderate: regimes diverge on some cells. Regime matters.
+- A★ ≈ 1: regimes diverge strongly. Wrong regime = unrepaired twist = lag.
+
+### 11.2 Linking Regimes
+
+- (max,+) ↔ (min,+) by order reversal. (+,+) self-dual. (+,max) no simple dual.
+- LogSumExp: max ≤ (1/β)log(Σeᵝˣ) ≤ max + (log n)/β. Max is lower bound.
+- Residuation: numeric in (max,+), (min,+), (+,+); implicative in (+,max).
+
+### 11.3 Universal Bounds
+
+C₊₊ ≥ L_{max+}, C₊₊ ≥ d_{min+}, C₊₊ ≥ W_{+max} (antichains are subsets).
+
+### 11.4 Arithmetic as Gauge
+
+| Arithmetic | Gauge selects... | Optimal when... |
+|-----------|-----------------|-----------------|
+| (max,+) | Critical path (max) | Bottleneck dominates |
+| (min,+) | Shortest path (min) | Distance/risk |
+| (+,+) | Total sum | All contributions equal |
+| (+,max) | Max of parallel sums | Width/bandwidth |
+
+Wrong arithmetic when A★ > 0 = non-GaugeRefl gauge: masks twist or introduces artifacts.
 
 ---
 
-## 10) TL;DR
-
-- **Asymmetry** measures the gap between classical and dissociative frames via (p, κ_I, E_I) → index A★.
-- **A★ = 0**: full independence + exact interchange. **A★ > 0**: restricted independence or imperfect interchange.
-- **A★** is geometry-invariant and indicates how sensitive computations are to the choice among (max,+), (min,+), (+,+), (+,max).
-
----
-
-## 11) Q-Symmetry (QSym) — Quantified Bridge
+## 12) Q-Symmetry (QSym) — Dynamic Quantified Bridge
 
 ### Definition
 
-- **Triplet**: QSym = (p, κ_I, E_I) with p ∈ [0,1], κ_I ∈ [0,1], E_I ∈ [0,1).
-- **Index**: A★ = α(1−p) + β(1−κ_I) + γE_I, with α, β, γ > 0 and α+β+γ=1.
-  - A★ = 0 ⇔ p = 1, κ_I = 1, E_I = 0
-  - A★ > 0 ⇔ at least one of: p < 1, κ_I < 1, E_I > 0
-- **Non-normalized**: A = 0.5((1−p)+(1−κ_I)) + E_I (fixed-weight variant; see §2)
-- **Convention**: if p = 0 → set κ_I := 1, E_I := 0 (avoid double-counting).
+- **Triplet**: QSym(t) = (p(t), κ_I(t), E_I(t)).
+- **Index**: A★(t) = α(1−p) + β(1−κ_I) + γE_I.
+- **Velocity**: ΔA★(t).
+- **State**: S(t) = (A★(t), R(t), ΔA★(t)).
+- **Anchor**: A★ is 1D projection of holonomy; QSym is 3D projection.
 
-### Properties
+### Trajectory Classification
 
-1. **Normalization**: A★ = 0 when p = 1, κ_I = 1, E_I = 0; grows when independence or interchange degrades.
-2. **Invariance**: stable under re-timing (geometry-neutral).
-3. **Monotonicity (conditional)**: expanding independence ⇒ p ↑; κ_I non-decreasing and E_I non-increasing provided new pairs satisfy interchange at rate ≥ κ_I with defect ≤ E_I.
-
-### Arithmetic Sensitivity Rule
-
-| Zone | A★ Range | Interpretation |
-|------|----------|----------------|
-| Low | A★ ≲ 0.15 | All regimes give similar results; interchange nearly exact |
-| Intermediate | 0.15 ≲ A★ ≲ 0.5 | Regime choice matters for some invariants |
-| High | A★ ≳ 0.5 | Regime choice critical; results diverge significantly |
-
-> Thresholds indicative; calibrate for context.
-
-### Non-Exchange Cost (Corrected)
-
-If residuation exists: δ_I(f₀,f₁,g₀,g₁) = I(p_sq) ▷ I(q_sq).
-
-- δ_I ≡ 0 ⇒ E_I = 0 and κ_I = 1 (but not necessarily p = 1).
-- Full equivalence: δ_I ≡ 0 **and** p = 1 ⇔ A★ = 0.
+| Pattern | Name | Dissociation reading |
+|---------|------|---------------------|
+| A★ ≈ 0 stable | Symmetric equilibrium | Perfect dissociation maintained |
+| A★ ≈ c > 0 stable | Dissociated equilibrium | Stable partial dissociation |
+| A★ increasing | Dissociation degrading | ⊥(t) shrinking |
+| A★ decreasing | Resynchronizing | ⊥(t) expanding |
+| A★ oscillating | Regime cycling | Independence/conflicts alternate |
+| A★ spike/return | Transient disruption | Temporary conflict, self-healing |
 
 ### Practical Algorithm
 
 ```
-Input: causal graph, independence relation ⊥, invariant I, arithmetic (⊕,⊙)
+Input: time-varying G(t), ⊥(t), invariant I, arithmetic (⊕,⊙),
+       observation times {t₁, …, t_N}
 
-1) p := (# independent pairs) / (# total pairs)
-2) If p = 0: set κ_I := 1, E_I := 0, go to step 5.
-3) Enumerate interchange squares S = {(f₀,f₁,g₀,g₁) : f₀⊥g₀, f₁⊥g₁}
-   For each square, compute:
-     p_sq := I((f₁ ⊗ g₁) ∘ (f₀ ⊗ g₀))
-     q_sq := I((f₁ ∘ f₀) ⊗ (g₁ ∘ g₀))
-     success := (p_sq = q_sq)
-     defect := |p_sq − q_sq| / (1 + |p_sq| + |q_sq|)
-4) κ_I := (# successes) / |S|
-   E_I := median(defect) or P95(defect)
-5) A★ := α(1−p) + β(1−κ_I) + γE_I     (α, β, γ > 0, sum = 1)
-6) Assess regime sensitivity based on A★ zone; apply operators accordingly.
+For each tₖ:
+  1) p(tₖ) := (# independent pairs) / (# total pairs)
+  2) Enumerate interchange squares S(tₖ)
+     If |S(tₖ)| = 0:
+       Penalty: κ_I := 0, E_I := 1
+       Neutral: κ_I := 1, E_I := 0
+  3) Else:
+       For each square, compute defect
+       κ_I(tₖ) := (# successes) / |S(tₖ)|
+       E_I(tₖ) := median(defect)
+  4) A★(tₖ) := α(1−p) + β(1−κ_I) + γE_I
+  5) ΔA★(tₖ) := A★(tₖ) − A★(tₖ₋₁)
+  6) R(tₖ) := Policy(A★(tₖ), R(tₖ₋₁), ΔA★(tₖ), invariant)
+
+Output: A★(·), R(·), ΔA★(·); residence statistics; lag density.
 ```
 
 ---
 
-## 12) Decision Policies for A★ — Discrete vs Continuous
+## 13) Decision Policies
 
-### Discrete Threshold Policy
+### 13.1 Static
 
-- **Parameters**: two thresholds θ₁ < θ₂.
-- **Decision**:
-  - Low sensitivity (any regime) if A★ < θ₁
-  - Mixed (verify regime choice for key invariants) if θ₁ ≤ A★ < θ₂
-  - High sensitivity (regime-specific operators required) if A★ ≥ θ₂
-- Thresholds can be set by quantiles, risk minimization, or domain rules.
+R(t) = σ(A★(t)) via thresholds θ₁ < θ₂.
 
-### Continuous Mixture Policy
+### 13.2 Hysteretic
 
-**Two-regime version** (additive vs tropical aggregate):
+Activate at θ_on, deactivate at θ_off < θ_on.
 
-```
-w_add(A★) = exp(−λA★)
-w_trop(A★) = 1 − w_add(A★)
-```
+### 13.3 Anticipatory
 
-Output: F(A★) = w_add · F_{++} + w_trop · F_trop, where F_trop is the tropical operator selected by invariant type.
+In gray zone: ΔA★ > +ε → pre-switch; ΔA★ < −ε → hold.
 
-**Four-regime version** (full softmax):
+### 13.4 Continuous Mixture
 
-```
-w_r(A★) = exp(s_r(A★)) / Σ_{r'} exp(s_{r'}(A★))
-```
+Two-regime: w_add = exp(−λA★), w_trop = 1 − w_add.
 
-where s_r are regime-specific score functions (e.g., linear in A★ with domain-set slopes), and r ∈ {max+, min+, ++, +max}.
+Four-regime: softmax w_r(A★) = exp(s_r(A★)) / Σ exp(s_{r'}).
 
-Output: F(A★) = Σ_r w_r(A★) · F_r.
+### 13.5 Adaptive Weights
 
-> **Note**: The two-regime version is a simplification; use the four-regime softmax when all four arithmetics are simultaneously relevant.
+α(t) = α₀ + α₁ · Var(p)_{[t−W,t]}. Renormalize.
 
-**Advantage**: smooth transitions, no oscillation around thresholds.
+### 13.6 Gauge Admissibility as Policy Constraint
 
-### Hysteresis
+Any reasonable policy must correspond to a GaugeRefl-admissible gauge:
 
-Two thresholds per transition: θ_on < θ_off to avoid back-and-forth in gray zones.
+- Must not delete states (no emptyGauge).
+- Must not claim A★ = 0 when twist exists.
+- If `ObstructionWrt(GaugeRefl, J)`: no policy reduces A★ to 0 on J. The twist is real.
 
 ---
 
-## Incompleteness Results
+## 14) Incompleteness Results
 
-### Assumptions
+### Result 1 — Structural (no-go)
 
-- **H1**: partial parallel (⊗), sequential (∘), local interchange.
-- **H2**: invariant I with I(f⊗g)=I(f)⊕I(g) (when defined) and I(g∘f) ≽ I(g)⊙I(f).
-- **H3**: two canonical families:
-  - *Tropical*: idempotent ⊕ (max/min), zero of ⊕ absorbing for ⊙=+.
-  - *Quantitative*: ⊕ = + (non-idempotent), no absorption for ⊙ ∈ {+, max}.
-- **H4**: factorization of I reflects equality (no confusion between x and 2x).
-- **Convention**: distinguish 𝟘 (zero of ⊕) from 0 = I(id) (unit of ⊙ when ⊙ = +).
+No scalar arithmetic is simultaneously tropical and additive (idempotent ⊕ + absorbing 𝟘 vs not).
 
-### Result 1 — Structural Incompleteness (no-go)
+**Dissociation reading**: the four arithmetics are **necessary** because the dissociation structure (partial ⊗) prevents a universal algebra (§0.4). A system crossing regimes must switch.
 
-**Statement**: No scalar arithmetic (S, ⊕, ⊙, 𝟘, 𝟙) common to all invariants can be simultaneously isomorphic to a tropical host (max,+ or min,+) and an additive one (+,+ or +,max).
+### Result 2 — Observational
 
-**Reason**: tropical ⊕ is idempotent and 𝟘 is absorbing for ⊙=+, both properties absent in additive regimes.
+Non-isomorphic pomsets can share identical (L, W, C). Scalar invariants don't capture full holonomy.
 
-### Result 2 — Observational Incompleteness
+**Dissociation reading**: the projection Hol → (L, W, C) loses the fine structure of how dissociation interacts with scheduling.
 
-**Statement**: Under geometric neutrality, two non-isomorphic pomsets can share identical invariant values.
+### Conjecture 1 — Axiom Incompleteness (Open)
 
-**Example** (all durations = 1):
+The inequality logic of (⊗, ∘, local interchange) likely admits no finite complete axiomatisation.
 
-```
-G1: (A || B) then C    →  L=2, W=2, C=3
-G2: A then (B || C)    →  L=2, W=2, C=3
-```
-
-> **Note**: The rank R (counting barriers) can distinguish such cases when additional synchronization structure is present.
-
-### Conjecture 1 — Proof/Decision Incompleteness (Open Problem)
-
-**Conjecture**: The inequality logic generated by ⊗, ∘, and local interchange, valid for all independence relations, admits no finite, complete axiomatisation.
-
-**Precise formulation needed**: Define the logic as:
-
-- Signature: (⊗, ∘, ≤) with ⊗ partial
-- Axiom schemes: interchange locality, unit laws, associativity
-- Target: completeness relative to PCM-based semantics
-
-**Reason**: interchange locality depends on the fine structure of independence; families (e.g., diamond lattices) require unbounded rule schemes.
-
-### Role of A★ (Bridge)
-
-- **A★ = 0**: full independence and exact interchange → all regimes agree on interchange squares; structural no-go becomes moot (one can work in any regime).
-- **A★ > 0**: the four-host classification becomes necessary (Result 1), observation via (L,W,C,…) becomes insufficient (Result 2), and a finite global axiom base is unlikely (Conjecture 1).
+**Dissociation reading**: the partiality of ⊗ makes the logic depend on the fine structure of ⊥, which varies unboundedly.
 
 ---
 
-## Summary of Corrections
+## 15) TL;DR
 
-### v2 → v3 (conceptual)
+- **Dissociation** (partiality of ⊗) is the primitive. Everything derives from it.
+- **Four arithmetics** emerge canonically from dissociation + interchange.
+- **Asymmetry** A★(t) measures departure from perfect dissociation — a trajectory, not a label.
+- **A★ = 0**: perfect dissociation, flat holonomy, no lag, all regimes agree.
+- **A★ > 0**: imperfect dissociation, twisted holonomy, lag possible, regime choice matters.
+- **Lag** is the operational cost: identical-looking states diverge later. Invisible to observation.
+- **Regime** = implicit gauge. GaugeRefl prevents vacuous repair.
+- **Permanent obstructions** mean some twists cannot be gauged away.
+- **A★ is lossy**: Sig → Hol → (p, κ_I, E_I) → A★. Screens; doesn't diagnose.
 
-| # | Section | Correction |
-|---|---------|------------|
-| 1 | §2, E → E_I | Replaced "aggregation gap" (series vs parallel) by "interchange defect" (parallel-first vs series-first in a square). E_I measures interchange failure, not ⊕/⊙ difference. |
-| 2 | §2, A★=0 | Removed "⊕ ≈ ⊙". A★ = 0 now means (p=1, κ_I=1, E_I=0), compatible with any arithmetic regime. |
-| 3 | §5 | Replaced 2-task example (cannot form interchange square) with 4-morphism example. Showed explicit interchange failure in (max,+). |
-| 4 | §2, convention | Added p=0 convention: κ_I := 1, E_I := 0 to avoid double-counting. |
-| 5 | §3, §8 | Decoupled arithmetic profile (dissymmetry) from A★: the regime is chosen by invariant semantics; A★ indicates how much the choice matters. |
-| 6 | §7 | Noted A★ = 1 is a supremum (not attained) since E_I ∈ [0,1). |
-| 7 | §8.4 | Phase diagram now describes "sensitivity of regime choice", not "which regime to use". |
+---
+
+## Summary of All Corrections (v1 → v6)
+
+### v5 → v6
+
+| # | Change |
+|---|--------|
+| 1 | §0 "Philosophy of Dissociation": primitive, cascade, three faces, engine thesis |
+| 2 | Partialité de ⊗ identified as the single generating fact |
+| 3 | Five-layer table (ontological → operational) of dissociation |
+| 4 | Paper integration: cascade arrows linked to specific theorems |
+| 5 | Three-document architecture diagram |
+| 6 | §0.6: what Lean adds to paper (gauge, obstruction, cofinality) |
+| 7 | Dissociation readings added to example phases, structural statements, incompleteness |
+| 8 | Dictionary expanded with dissociation-centric definitions |
+| 9 | Arithmetic-as-gauge table (§11.4) with optimality conditions |
+
+### v4 → v5 (formal integration, retained)
+
+| # | Change |
+|---|--------|
+| 10 | Formal backbone table |
+| 11 | Projection hierarchy Sig → Hol → (κ,E) → A★ |
+| 12 | Non-reducibility theorem |
+| 13 | Holonomy–Lag–Trajectory bridge (§3) |
+| 14 | Summary separation theorem |
+| 15 | Regime = gauge + GaugeRefl admissibility |
+| 16 | L6, L7, L8 structural statements |
+| 17 | Lag coupling axiom |
+
+### v3 → v4 (dynamic, retained)
+
+| # | Change |
+|---|--------|
+| 18 | All observables temporal |
+| 19 | Axioms: pointwise vs path |
+| 20 | Regime as stateful process |
+| 21 | Phase portrait |
+| 22 | Residence statistics |
+| 23 | Penalty convention for trajectories |
+
+### v2 → v3 (conceptual, retained)
+
+| # | Change |
+|---|--------|
+| 24 | E → E_I (interchange defect) |
+| 25 | A★=0 ≠ ⊕≈⊙ |
+| 26 | 4-morphism example |
+| 27 | Dissymmetry decoupled from A★ |
 
 ### v1 → v2 (technical, retained)
 
-| # | Section | Correction |
-|---|---------|------------|
-| 8 | §2 | α,β,γ > 0 strictly (for biconditionals) |
-| 9 | §2, Axiom 3 | Monotonicity of κ conditional on new-pair interchange rate |
-| 10 | §4, L3 | Fixed false biconditional: δ_I ≡ 0 ⇏ A★ = 0 when p < 1 |
-| 11 | §8.3 | Added justification for C₊₊ ≥ W_{+max} |
-| 12 | §12 | Separated two-regime and four-regime mixture policies |
-| 13 | §Incompleteness | Renamed "Result 3" → "Conjecture 1" |
-| 14 | §1 | Note: (+,+) and (+,max) are not semirings |
+| # | Change |
+|---|--------|
+| 28 | α,β,γ > 0 |
+| 29 | κ_I monotonicity conditional |
+| 30 | L3 biconditional fixed |
+| 31 | C₊₊ ≥ W justified |
+| 32 | Two vs four mixture |
+| 33 | Result 3 → Conjecture 1 |
+| 34 | (+,+), (+,max) not semirings |
 
 ---
 
 ## To-Do
 
-- [ ] Write full proof of Result 1 (idempotence/absorption).
-- [ ] Record explicit counterexample for Result 2 (with R distinguishing).
-- [ ] For Conjecture 1: define the logic precisely, build a parametric family, and show non-finiteness (or relative completeness for restricted classes like series-parallel).
-- [ ] Determine precise conditions under which monotonicity of κ_I holds.
-- [ ] Investigate whether E_I aggregation (median vs P95 vs mean) affects the phase diagram thresholds.
-- [ ] Provide a worked example in (+,+) showing A★ = 0 with interchange exact (confirming regime-independence of the index).
+- [ ] Full proof of Result 1.
+- [ ] Counterexample for Result 2 with R distinguishing.
+- [ ] Conjecture 1: logic, parametric family, non-finiteness.
+- [ ] κ_I monotonicity conditions.
+- [ ] E_I aggregation (median vs P95) effect on phase portrait.
+- [ ] Worked (+,+) example with A★ = 0.
+- [ ] Penalty vs neutral convention as functor property.
+- [ ] A★(t) as stochastic process.
+- [ ] Implementation on scheduling/concurrency benchmarks.
+- [ ] Formalize "regime = gauge" in Lean.
+- [ ] Quantify projection hierarchy information loss.
+- [ ] LagDensity formalization → ObstructionCofinalWrt.
+- [ ] Connect paper's (ΔL, ΔW, ΔR) diagnostics to A★ trajectory.
+- [ ] Explicit bridge: paper's Thm 9.1 classification ↔ doc's four regimes ↔ Lean's four possible gauge families.
 
 ---
