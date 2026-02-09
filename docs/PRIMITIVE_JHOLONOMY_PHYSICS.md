@@ -124,3 +124,24 @@ Donc tu remplaces “CP + sphalérons” par une décomposition formelle :
 Prochaine étape utile (toujours dans ton style Lean) :
 écrire les deux patchs minimaux (pondération + C,B,n) et formuler explicitement les deux théorèmes :
 zéro biais => zéro asymétrie; twist+lag => asymétrie.
+
+Sphalerons provide the topological transitions (vacuum-history changes), and the ABJ anomaly provides the rule that turns those transitions into changes in baryon number
+
+No-go (interdiction) dans une description quotientée :
+Si on travaille uniquement sur l’état “quotienté” (état instantané / observables locales) et qu’on suppose un régime d’équilibre où detailed balance s’applique, alors l’évolution ne peut pas générer un excès net de baryons : les processus “dans un sens” et “dans l’autre” se compensent statistiquement. Dans ce cadre, l’asymétrie finale est contrainte à être nulle.
+
+Ce que fait la pratique standard :
+Pour obtenir une asymétrie, la description effective introduit un terme orientant (source, biais, potentiel chimique effectif) qui casse cette compensation. Dans un modèle complet on peut parfois le dériver, mais au niveau quotienté il apparaît souvent comme une entrée externe parce que la variable qui le fonde a été éliminée par le quotient.
+
+Ce que ton formalisme ajoute (information ontologique manquante) :
+Tu réintroduis exactement la variable que le quotient détruit : une mémoire de boucle irréductible (holonomie non-trivialisable) portée par les boucles d’histoire et agissant dans la fibre.
+
+Si l’holonomie est trivialisable (pas d’obstruction sous gauges admissibles), alors aucun biais orienté ne peut être “verrouillé” : l’asymétrie ne peut pas se stabiliser.
+
+Si une holonomie irréductible existe et qu’un mécanisme de sélection irréversible (Lag cofinal) empêche l’annulation (verrouillage du signe), alors le “terme source” n’est plus un ajout : c’est la trace effective de cette holonomie sur la dynamique quotientée.
+
+Pont sphaléron / ABJ :
+Les sphalérons fournissent la porte topologique (changement de secteur, Delta N_CS). L’anomalie ABJ fournit la loi de conversion (Delta N_CS devient Delta(B+L)). Le Lag fournit le verrouillage irréversible qui empêche la compensation statistique des sauts opposés.
+Donc l’excès baryonique n’est pas une fluctuation chanceuse : c’est une topologie du vide rendue persistante par un mécanisme d’orientation et de gel.
+
+la thèse forte : le quotient standard masque la variable ontologique (holonomie/obstruction) qui rend le biais non arbitraire.
