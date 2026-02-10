@@ -138,6 +138,12 @@ def CInvariantDistribution {S : Type u} (phys : ParticlePhysics S) (μ : S → R
 def ExpectedB {S : Type u} [Fintype S] (phys : ParticlePhysics S) (μ : S → Rat) : Rat :=
   ∑ s : S, μ s * (phys.B s : Rat)
 
+/-- One-step pushforward of a distribution along a weighted transition kernel. -/
+def EvolveDist {S : Type u} [Fintype S]
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat) : S → Rat :=
+  fun s2 => ∑ s1 : S, μ s1 * sem.sem p s1 s2
+
 theorem expectedB_eq_neg_expectedB_of_CInvariantDistribution
     {S : Type u} [Fintype S]
     (phys : ParticlePhysics S)
@@ -183,17 +189,53 @@ theorem expectedB_eq_neg_expectedB_of_CInvariantDistribution
 
 theorem zero_bias_of_symmetric_dynamics
     [Fintype S]
-    (sem : WeightedSemantics (P := P) S W)
+    (sem : WeightedSemantics (P := P) S Rat)
     (phys : ParticlePhysics S)
-    (_hSym : C_Symmetric_Dynamics sem phys)
+    (hSym : C_Symmetric_Dynamics sem phys)
+    {h k : P} (p : HistoryGraph.Path h k)
     (μ : S → Rat)
     (hμ : CInvariantDistribution phys μ) :
-    ExpectedB phys μ = 0 := by
-  have hneg : ExpectedB phys μ = - ExpectedB phys μ :=
-    expectedB_eq_neg_expectedB_of_CInvariantDistribution phys μ hμ
-  have hplus : ExpectedB phys μ + ExpectedB phys μ = 0 := by
+    ExpectedB phys (EvolveDist (P := P) sem p μ) = 0 := by
+  have hμevolved : CInvariantDistribution phys (EvolveDist (P := P) sem p μ) := by
+    intro s2
+    unfold EvolveDist
+    let e : Equiv S S :=
+      { toFun := phys.C
+        invFun := phys.C
+        left_inv := phys.C_invol
+        right_inv := phys.C_invol }
+    calc
+      (∑ s1 : S, μ s1 * sem.sem p s1 (phys.C s2))
+          = ∑ s1 : S, μ (e s1) * sem.sem p (e s1) (phys.C s2) := by
+              exact
+                Fintype.sum_equiv e
+                  (fun s1 : S => μ s1 * sem.sem p s1 (phys.C s2))
+                  (fun s1 : S => μ (e s1) * sem.sem p (e s1) (phys.C s2))
+                  (by
+                    intro x
+                    have hCC : e (e x) = x := by
+                      simpa [e] using phys.C_invol x
+                    calc
+                      μ x * sem.sem p x (phys.C s2)
+                          = μ (e (e x)) * sem.sem p (e (e x)) (phys.C s2) := by simp [hCC]
+                      _ = (fun s1 : S => μ (e s1) * sem.sem p (e s1) (phys.C s2)) (e x) := by rfl)
+      _ = ∑ s1 : S, μ s1 * sem.sem p s1 s2 := by
+            refine Finset.sum_congr rfl ?_
+            intro s1 _hs
+            have hμs : μ (phys.C s1) = μ s1 := hμ s1
+            have hsym : sem.sem p (phys.C s1) (phys.C s2) = sem.sem p s1 s2 := by
+              exact (hSym p s1 s2).symm
+            simp [e, hμs, hsym]
+  have hneg :
+      ExpectedB phys (EvolveDist (P := P) sem p μ) =
+      - ExpectedB phys (EvolveDist (P := P) sem p μ) :=
+    expectedB_eq_neg_expectedB_of_CInvariantDistribution
+      phys (EvolveDist (P := P) sem p μ) hμevolved
+  have hplus :
+      ExpectedB phys (EvolveDist (P := P) sem p μ) +
+      ExpectedB phys (EvolveDist (P := P) sem p μ) = 0 := by
     linarith [hneg]
-  have hmul : (2 : Rat) * ExpectedB phys μ = 0 := by
+  have hmul : (2 : Rat) * ExpectedB phys (EvolveDist (P := P) sem p μ) = 0 := by
     simpa [two_mul] using hplus
   exact (mul_eq_zero.mp hmul).resolve_left (by norm_num)
 
@@ -204,6 +246,26 @@ def TwoStateSupport {S : Type u} (phys : ParticlePhysics S) (μ : S → Rat) (s 
 /-- C-asymmetric selection on a pair `(s, C s)` (lag-like orientation witness). -/
 def LagBiasedSelection {S : Type u} (phys : ParticlePhysics S) (μ : S → Rat) (s : S) : Prop :=
   μ s ≠ μ (phys.C s)
+
+/-- Distribution concentrated on two distinguished states `s` and `cs`. -/
+def PairDistribution {S : Type u} [DecidableEq S] (s cs : S) (a b : Rat) : S → Rat :=
+  fun t => if t = s then a else if t = cs then b else 0
+
+theorem twoStateSupport_pairDistribution
+    {S : Type u} [DecidableEq S] (phys : ParticlePhysics S) (s : S) (a b : Rat) :
+    TwoStateSupport phys (PairDistribution s (phys.C s) a b) s := by
+  intro t ht_ne_s ht_ne_cs
+  simp [PairDistribution, ht_ne_s, ht_ne_cs]
+
+theorem lagBiasedSelection_pairDistribution
+    {S : Type u} [DecidableEq S] (phys : ParticlePhysics S) (s : S) (a b : Rat)
+    (hCs : phys.C s ≠ s) (hab : a ≠ b) :
+    LagBiasedSelection phys (PairDistribution s (phys.C s) a b) s := by
+  have hsC : s ≠ phys.C s := by
+    intro hs
+    exact hCs hs.symm
+  unfold LagBiasedSelection PairDistribution
+  simpa [hCs, hsC] using hab
 
 /-- On a pure C-pair support, expected baryon number is an explicit biased pair formula. -/
 theorem expectedB_pair_formula
@@ -279,6 +341,21 @@ theorem expectedB_ne_zero_of_lagBiasedSelection
 
 section LagSelectionBridge
 
+/-- Hypothesis: every lag witness on `(α, step)` is a conjugate pair under `phys.C`,
+with no fixed point on that witness. -/
+def LagConjugacyHypothesis
+    {S V : Type u}
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k') : Prop :=
+  ∀ x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h,
+    x ≠ x' →
+    _root_.PrimitiveHolonomy.HolonomyRel (P := P) semR obs target_obs α x x' →
+    _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x →
+    ¬ _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x' →
+    x'.1 = phys.C x.1 ∧ phys.C x.1 ≠ x.1
+
 /-- Compatibility indicator on a fixed fiber (1 if compatible, else 0). -/
 def CompatibilityIndicator
     {S V : Type u}
@@ -310,6 +387,100 @@ theorem lagEvent_implies_indicator_bias
     simp [CompatibilityIndicator, hxNotCompat]
   rw [hx1, hx0]
   norm_num
+
+/-- Under a conjugacy hypothesis, a lag event yields an explicit C-biased
+two-point distribution. -/
+theorem lagEvent_implies_lagBiasedSelection_under_conjugacy
+    {S V : Type u}
+    [DecidableEq S]
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h =>
+      _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x)]
+    (hConj : LagConjugacyHypothesis (P := P) phys semR obs target_obs α step)
+    (hLag : _root_.PrimitiveHolonomy.LagEvent (P := P) semR obs target_obs α step) :
+    ∃ s : S, ∃ μ : S → Rat,
+      LagBiasedSelection phys μ s ∧ TwoStateSupport phys μ s := by
+  rcases hLag with ⟨x, x', hxne, hHol, hxCompat, hxNotCompat⟩
+  rcases hConj x x' hxne hHol hxCompat hxNotCompat with ⟨hxConj, hCne⟩
+  let a : Rat := CompatibilityIndicator (P := P) semR obs target_obs step x
+  let b : Rat := CompatibilityIndicator (P := P) semR obs target_obs step x'
+  let μ : S → Rat := PairDistribution x.1 (phys.C x.1) a b
+  have ha : a = 1 := by
+    unfold a CompatibilityIndicator
+    simp [hxCompat]
+  have hb : b = 0 := by
+    unfold b CompatibilityIndicator
+    simp [hxNotCompat]
+  have hab : a ≠ b := by
+    rw [ha, hb]
+    norm_num
+  refine ⟨x.1, μ, ?_, ?_⟩
+  · -- C-biased selection on the pair
+    dsimp [μ]
+    exact lagBiasedSelection_pairDistribution phys x.1 a b hCne hab
+  · -- support only on `{x, C x}`
+    dsimp [μ]
+    exact twoStateSupport_pairDistribution phys x.1 a b
+
+/-- Variant with explicit non-fixed-point witness `phys.C s ≠ s`. -/
+theorem lagEvent_implies_lagBiasedSelection_with_nonfixed_under_conjugacy
+    {S V : Type u}
+    [DecidableEq S]
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h =>
+      _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x)]
+    (hConj : LagConjugacyHypothesis (P := P) phys semR obs target_obs α step)
+    (hLag : _root_.PrimitiveHolonomy.LagEvent (P := P) semR obs target_obs α step) :
+    ∃ s : S, ∃ μ : S → Rat,
+      phys.C s ≠ s ∧ LagBiasedSelection phys μ s ∧ TwoStateSupport phys μ s := by
+  rcases hLag with ⟨x, x', hxne, hHol, hxCompat, hxNotCompat⟩
+  rcases hConj x x' hxne hHol hxCompat hxNotCompat with ⟨_hxConj, hCne⟩
+  let a : Rat := CompatibilityIndicator (P := P) semR obs target_obs step x
+  let b : Rat := CompatibilityIndicator (P := P) semR obs target_obs step x'
+  let μ : S → Rat := PairDistribution x.1 (phys.C x.1) a b
+  have ha : a = 1 := by
+    unfold a CompatibilityIndicator
+    simp [hxCompat]
+  have hb : b = 0 := by
+    unfold b CompatibilityIndicator
+    simp [hxNotCompat]
+  have hab : a ≠ b := by
+    rw [ha, hb]
+    norm_num
+  refine ⟨x.1, μ, hCne, ?_, ?_⟩
+  · dsimp [μ]
+    exact lagBiasedSelection_pairDistribution phys x.1 a b hCne hab
+  · dsimp [μ]
+    exact twoStateSupport_pairDistribution phys x.1 a b
+
+/-- Combined bridge:
+lag witness + conjugacy + non-vanishing baryon charge on non-fixed C-pairs
+produces a distribution with non-zero expected baryon number. -/
+theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero
+    {S V : Type u}
+    [Fintype S] [DecidableEq S]
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h =>
+      _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x)]
+    (hConj : LagConjugacyHypothesis (P := P) phys semR obs target_obs α step)
+    (hLag : _root_.PrimitiveHolonomy.LagEvent (P := P) semR obs target_obs α step)
+    (hBnonfixed : ∀ s : S, phys.C s ≠ s → phys.B s ≠ 0) :
+    ∃ μ : S → Rat, ExpectedB phys μ ≠ 0 := by
+  rcases lagEvent_implies_lagBiasedSelection_with_nonfixed_under_conjugacy
+      (P := P) phys semR obs target_obs α step hConj hLag with
+    ⟨s, μ, hCs, hLagBias, hSupp⟩
+  refine ⟨μ, ?_⟩
+  exact expectedB_ne_zero_of_lagBiasedSelection
+    (phys := phys) (μ := μ) (s := s) hCs hSupp hLagBias (hBnonfixed s hCs)
 
 end LagSelectionBridge
 
