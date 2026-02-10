@@ -197,13 +197,20 @@ def lagStateIntPhysics (Y : Type) : ParticlePhysics (_root_.PrimitiveHolonomy.La
 
 /-- In the canonical `LagState Y Int` model with `B = L = N_CS = hidden`,
 the ABJ law holds on sphaleron pairs for one family (`N_f = 1`). -/
+theorem satisfiesABJ_lagStateIntPhysics_nf_one
+    {Y : Type} (s1 s2 : _root_.PrimitiveHolonomy.LagState Y Int) :
+    SatisfiesABJ (lagStateIntPhysics (Y := Y)) 1 s1 s2 := by
+  unfold SatisfiesABJ DeltaBL DeltaNCS
+  simp [lagStateIntPhysics]
+  ring
+
+/-- In the canonical `LagState Y Int` model with `B = L = N_CS = hidden`,
+the ABJ law holds on sphaleron pairs for one family (`N_f = 1`). -/
 theorem abjOnSphaleronPairs_lagStateIntPhysics_nf_one
     {Y : Type} :
     ABJOnSphaleronPairs (lagStateIntPhysics (Y := Y)) 1 := by
   intro s1 s2 _hSph
-  unfold SatisfiesABJ DeltaBL DeltaNCS
-  simp [lagStateIntPhysics]
-  ring
+  exact satisfiesABJ_lagStateIntPhysics_nf_one (Y := Y) s1 s2
 
 /-- In the product model `X = Y × Int` with observable `lagObs`,
 twisted witnesses automatically carry a topological jump (`ΔN_CS ≠ 0`). -/
@@ -1302,6 +1309,122 @@ theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_
     hLag
 
 end LagSelectionBridge
+
+-- ============================================================
+-- 4.2 TOY SEMANTICS INSTANCE (explicit hidden-flip holonomy)
+-- ============================================================
+
+section ToySemanticsInstance
+
+/-- Single-prefix toy history. -/
+inductive ToyPrefix where
+  | base
+
+instance : HistoryGraph ToyPrefix where
+  Path _ _ := Bool
+  Deformation := by
+    intro _ _ p q
+    exact p ≠ q
+  idPath _ := false
+  compPath p q := Bool.xor p q
+
+def toyStepFun {Y : Type} (b : Bool) :
+    _root_.PrimitiveHolonomy.LagState Y Int →
+      _root_.PrimitiveHolonomy.LagState Y Int
+  | s =>
+      if b then ⟨s.visible, -s.hidden⟩ else s
+
+theorem toyStepFun_comp {Y : Type}
+    (p q : Bool) (s : _root_.PrimitiveHolonomy.LagState Y Int) :
+    toyStepFun q (toyStepFun p s) = toyStepFun (Bool.xor p q) s := by
+  cases p <;> cases q <;> cases s <;> simp [toyStepFun, Bool.xor]
+
+/-- Explicit semantics on the toy history:
+`false` = identity step, `true` = hidden-sign flip step. -/
+def toyLagSemantics (Y : Type) :
+    _root_.PrimitiveHolonomy.Semantics ToyPrefix
+      (_root_.PrimitiveHolonomy.LagState Y Int) where
+  sem := by
+    intro _h _k p
+    exact fun s t => t = toyStepFun p s
+  sem_id := by
+    intro _h x y
+    constructor <;> intro hxy <;> simpa [toyStepFun, _root_.PrimitiveHolonomy.relId] using hxy.symm
+  sem_comp := by
+    intro _h _k _l p q x z
+    constructor
+    · intro hz
+      refine ⟨toyStepFun p x, rfl, ?_⟩
+      simpa [toyStepFun_comp] using hz
+    · intro hz
+      rcases hz with ⟨y, hy, hz⟩
+      subst hy
+      simpa [toyStepFun_comp] using hz
+
+/-- Concrete instance of the structural hidden-flip contract:
+for the toy history semantics, every holonomy relation flips hidden sign. -/
+theorem semanticsFlipsHiddenOnHolonomy_toyLagSemantics
+    {Y : Type}
+    (target_obs : ToyPrefix → Y) :
+    SemanticsFlipsHiddenOnHolonomy (P := ToyPrefix)
+      (Y := Y) (toyLagSemantics (Y := Y)) target_obs := by
+  intro h k p q α x x' hHol
+  cases h
+  cases k
+  rcases hHol with ⟨y, hp, hq⟩
+  cases p <;> cases q
+  · cases α rfl
+  · have hEq : x.1 = toyStepFun true x'.1 := by
+      exact hp.symm.trans hq
+    have hHidden : x.1.hidden = -x'.1.hidden := by
+      simpa [toyStepFun] using congrArg _root_.PrimitiveHolonomy.LagState.hidden hEq
+    have hNeg : -x.1.hidden = x'.1.hidden := by
+      simpa using congrArg Neg.neg hHidden
+    exact hNeg.symm
+  · have hEq : x'.1 = toyStepFun true x.1 := by
+      exact hq.symm.trans hp
+    simpa [toyStepFun] using congrArg _root_.PrimitiveHolonomy.LagState.hidden hEq
+  · cases α rfl
+
+/-- In the toy semantics instance, twisted cells force non-zero `Δ(B+L)` in the
+canonical `LagState` physics (`N_f = 1` internalized). -/
+theorem deltaBL_ne_zero_of_twistedOnCell_toyLagSemantics
+    {Y : Type}
+    (target_obs : ToyPrefix → Y)
+    (φ : _root_.PrimitiveHolonomy.Gauge (P := ToyPrefix)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := ToyPrefix))
+    (hTw : _root_.PrimitiveHolonomy.TwistedOnCell (P := ToyPrefix)
+      (toyLagSemantics (Y := Y))
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs φ c) :
+    ∃ s1 s2 : _root_.PrimitiveHolonomy.LagState Y Int,
+      DeltaBL (lagStateIntPhysics (Y := Y)) s1 s2 ≠ 0 := by
+  exact deltaBL_ne_zero_of_twistedOnCell_of_lagState_hidden
+    (P := ToyPrefix) (Y := Y) (toyLagSemantics (Y := Y)) target_obs φ c hTw
+
+/-- In the toy semantics instance, any lag event yields a distribution with
+non-zero expected baryon number in the canonical `LagState` physics. -/
+theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero_toyLagSemantics
+    {Y : Type}
+    [Fintype (_root_.PrimitiveHolonomy.LagState Y Int)]
+    [DecidableEq (_root_.PrimitiveHolonomy.LagState Y Int)]
+    (target_obs : ToyPrefix → Y)
+    {h k k' : ToyPrefix} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := ToyPrefix)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs h =>
+      _root_.PrimitiveHolonomy.Compatible (P := ToyPrefix) (toyLagSemantics (Y := Y))
+        (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs step x)]
+    (hLag : _root_.PrimitiveHolonomy.LagEvent (P := ToyPrefix) (toyLagSemantics (Y := Y))
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step) :
+    ∃ μ : _root_.PrimitiveHolonomy.LagState Y Int → Rat,
+      ExpectedB (lagStateIntPhysics (Y := Y)) μ ≠ 0 := by
+  exact lagEvent_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_of_semanticsFlipsHiddenOnHolonomy
+    (P := ToyPrefix) (Y := Y) (semR := toyLagSemantics (Y := Y)) target_obs α step
+    (semanticsFlipsHiddenOnHolonomy_toyLagSemantics (Y := Y) target_obs)
+    hLag
+
+end ToySemanticsInstance
 
 -- ============================================================
 -- 5. GAUGE-FIXING BRIDGE (Gribov-Singer shape)

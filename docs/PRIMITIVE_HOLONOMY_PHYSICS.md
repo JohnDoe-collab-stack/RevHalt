@@ -1,3 +1,40 @@
+## Mise à jour de statut (code Lean actuel)
+
+Ce qui est maintenant formalisé et prouvé dans `RevHalt/Theory/PrimitiveHolonomy_Physics.lean`:
+
+- Le pont topologie -> ABJ -> non-nullité de `DeltaBL` est établi via:
+  `NCSJumpOnTwistedWitness`, `TwistToSphaleronBridge`,
+  `deltaBL_ne_zero_of_twistedOnCell_of_ncsJump_and_abj`,
+  et les versions obstruction/cofinalité.
+- Une instance canonique `LagState Y Int` est en place (`lagStateIntPhysics`),
+  avec ABJ interne à `N_f = 1` (`satisfiesABJ_lagStateIntPhysics_nf_one`,
+  `abjOnSphaleronPairs_lagStateIntPhysics_nf_one`) et des corollaires sans hypothèse ABJ externe.
+- Le no-go detailed balance est formalisé (1 pas + multi-pas):
+  `deltaExpectedB_eq_zero_of_detailedBalance_of_markov`,
+  `deltaExpectedBStepN_eq_zero_of_detailedBalance_of_markov`.
+- Le théorème "zéro biais => zéro asymétrie baryonique" est prouvé:
+  `zero_bias_of_symmetric_dynamics`.
+- Le pont "lag + conjugaison => esperance baryonique non nulle" est prouvé:
+  `lagEvent_implies_exists_distribution_with_expectedB_ne_zero`
+  et ses variantes canoniques `LagState`.
+- Une instance jouet explicite est ajoutée (`ToySemanticsInstance`) avec preuves
+  `semanticsFlipsHiddenOnHolonomy_toyLagSemantics`,
+  `deltaBL_ne_zero_of_twistedOnCell_toyLagSemantics`,
+  `lagEvent_implies_exists_distribution_with_expectedB_ne_zero_toyLagSemantics`.
+
+Priorites restantes (vraiment ouvertes):
+
+1. Construire une instance non-jouet de type Gribov-Singer
+   (bundle/champ de jauge, action de groupe, condition de jauge concrete).
+2. Prouver la correspondance explicite entre cette instance physique et les predicates abstraits
+   (`AutoRegulatedWrt`, `ObstructionWrt`, `TwistedOnCell`, etc.).
+3. Remplacer au maximum les hypotheses structurelles fortes (ex. hidden-flip) par des lois derivees
+   du modele physique choisi.
+4. Etendre la couche quantitative (au-dela du 1-step/iteratif simple) vers un schema de freeze-out
+   et des hypotheses de normalisation/probabilite explicites.
+
+---
+
 Oui — et ton Lean a exactement la bonne “forme” pour trancher, mais seulement si tu le pousses jusqu’au point où il peut exprimer (i) le secteur topologique et (ii) un biais matière/antimatière, sans rajouter d’hypothèses ad hoc au mauvais endroit.
 
 Voici ce que ta théorie peut rendre plus précis et plus tranché que les explications physiques “à la main”, et comment, sans te noyer.
@@ -54,37 +91,17 @@ Autrement dit : ABJ n’est pas un paramètre, c’est une loi de couplage entre
 
 ---
 
-## 3) Ce qu’il te manque (minimal) pour rendre ça calculable et tranchant
+## 3) Ce qu’il te manque encore (minimal et priorise)
 
-Tu n’as pas besoin d’ajouter des couches inutiles. Il faut deux ajouts structuraux ciblés.
+Les ajouts "pondere + C/B/N_CS + no-go + zero-bias + pont lag->asymetrie" sont deja en place.
 
-### (i) Passer de “possible/impossible” à “pondéré”
+Le manque prioritaire n’est plus l’abstraction interne; c’est l’instance physique concrete:
 
-Actuellement : Relation = S -> S -> Prop.
-Avec seulement Prop, tu ne peux pas définir un “excès” (asymétrie quantitative), seulement des compatibilités.
-
-Patch minimal : remplacer par une relation pondérée (un noyau) :
-
-- Kernel = S -> S -> weight
-où weight est un type de poids non négatif (par ex. un réel non négatif, ou un réel non négatif étendu).
-Cela permet de définir un excès comme une espérance / un poids total orienté.
-
-### (ii) Ajouter C et une charge signée B (et le label topologique n)
-
-Patch minimal :
-
-- Une involution C : S -> S, avec C(C(x)) = x (charge-conjugaison au niveau micro-état).
-- Une charge B : S -> Z (entiers), avec B(C(x)) = -B(x).
-- Un index topologique n : S -> Z (entiers) (analogue de N_CS).
-
-Puis tu poses une seule loi “interface physique” (ABJ dans ton cadre) :
-
-- Quand une transition réalise Delta n = +1 ou -1 (événement sphaléronique),
-  alors Delta(B+L) = N_f * Delta n,
-  où N_f est le nombre de familles (constante du modèle).
-- Et B-L reste conservé par ces transitions.
-
-Ce contrat peut être postulé au début comme règle de couplage, puis dérivé plus tard si tu construis un modèle de champ explicite.
+- Donner un modele non-jouet (groupe de jauge, orbites, condition de jauge, copies de Gribov).
+- Montrer que ce modele realise explicitement les hypotheses du cadre
+  (au lieu de les poser comme contrats).
+- Verrouiller la chaine complete "instance concrete -> obstruction/twist -> ABJ -> signal baryonique"
+  sans etape externe implicite.
 
 ---
 

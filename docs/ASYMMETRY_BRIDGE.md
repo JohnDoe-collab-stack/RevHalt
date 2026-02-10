@@ -135,6 +135,39 @@ These are five descriptions of the **same phenomenon**, linked by formal theorem
 
 ---
 
+## 0.8 Status Sync With Lean (Current State)
+
+This document is aligned with the current Lean status in
+RevHalt/Theory/PrimitiveHolonomy_Physics.lean.
+
+Already proved in Lean (not just planned):
+
+- Topology -> ABJ -> non-zero DeltaBL bridge is formalized, including
+  twisted cell, obstruction, and cofinal-obstruction forms.
+- Canonical LagState Y Int instance is wired end-to-end with internal
+  ABJ at N_f = 1 (satisfiesABJ_lagStateIntPhysics_nf_one and
+  abjOnSphaleronPairs_lagStateIntPhysics_nf_one).
+- No-go under detailed balance is formalized (one-step and multi-step):
+  deltaExpectedB_eq_zero_of_detailedBalance_of_markov and
+  deltaExpectedBStepN_eq_zero_of_detailedBalance_of_markov.
+- zero_bias_of_symmetric_dynamics is now proved (no longer a placeholder).
+- A qualitative-to-quantitative lag bridge is formalized:
+  lag witness -> biased selection -> ExpectedB != 0.
+- A toy explicit semantics instance is included (ToySemanticsInstance)
+  and proves hidden-flip holonomy + non-zero DeltaBL + non-zero expected baryon witness.
+
+Still open (main gaps):
+
+- A physically faithful non-toy concrete instance for Gribov-Singer
+  correspondence (principal bundle, gauge action, concrete gauge condition,
+  Gribov copies).
+- Deriving strong bridge assumptions (for example hidden-flip structural
+  hypotheses) from weaker base axioms in a realistic model.
+- Stronger quantitative stochastic layer beyond witness existence
+  (normalization/positivity/long-time behavior under physically constrained kernels).
+
+---
+
 ## 1) Two Well-Defined Reference Frames
 
 ### R1 — Classical Frame of Symmetry
@@ -797,7 +830,38 @@ The inequality logic of (⊗, ∘, local interchange) likely admits no finite co
 
 ---
 
-## To-Do
+## To-Do (Updated Priorities)
+
+Priority 1 (do now):
+
+- [ ] Build one non-toy concrete physical instance (bundle + gauge action +
+      gauge condition + explicit Gribov copies) and prove correspondence with
+      the abstract GaugeFixingObstructed layer.
+
+Priority 2:
+
+- [ ] Replace strong bridge assumptions by derivations from lower-level axioms
+      in a realistic semantics (especially hidden-flip style hypotheses).
+- [ ] Strengthen quantitative baryogenesis statements from existence witnesses
+      to controlled evolution statements under explicit kernel constraints.
+
+Priority 3:
+
+- [ ] Full proof of Result 1.
+- [ ] Counterexample for Result 2 with R distinguishing.
+- [ ] Conjecture 1: logic, parametric family, non-finiteness.
+- [ ] kappa_I monotonicity conditions.
+- [ ] E_I aggregation (median vs P95) effect on phase portrait.
+- [ ] Worked (+,+) example with A* = 0.
+- [ ] Penalty vs neutral convention as functor property.
+- [ ] A*(t) as stochastic process.
+- [ ] Implementation on scheduling/concurrency benchmarks.
+- [ ] Quantify projection hierarchy information loss.
+- [ ] LagDensity formalization -> ObstructionCofinalWrt.
+- [ ] Connect paper's (DeltaL, DeltaW, DeltaR) diagnostics to A* trajectory.
+- [ ] Explicit bridge: paper's Thm 9.1 classification <-> doc's four regimes <-> Lean gauge families.
+
+## Legacy To-Do
 
 - [ ] Full proof of Result 1.
 - [ ] Counterexample for Result 2 with R distinguishing.
