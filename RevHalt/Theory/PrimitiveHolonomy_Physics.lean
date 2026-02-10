@@ -111,4 +111,103 @@ theorem zero_bias_of_symmetric_dynamics
     (s_initial : S) (h_initial_neutral : phys.B s_initial = 0) :
     True := trivial
 
+-- ============================================================
+-- 5. GAUGE-FIXING BRIDGE (Gribov-Singer shape)
+-- ============================================================
+
+/-!
+This section gives an explicit bridge between:
+- an external reading in terms of gauge-fixing (`local` vs `global`),
+- and the internal PrimitiveHolonomy predicates.
+
+It is a *formal correspondence layer* only. It does not claim that the open
+continuum problem is solved.
+-/
+
+section GaugeFixingBridge
+
+variable {Sg Vg : Type u}
+
+/-- Local gauge-fixing is possible on each cell in `J` under admissibility `OK`. -/
+abbrev LocalGaugeFixable
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) : Prop :=
+  _root_.PrimitiveHolonomy.LocallyAutoRegulatedWrt (P := P) sem obs target_obs OK J
+
+/-- A single admissible gauge fixes all cells in `J`. -/
+abbrev GlobalGaugeFixable
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) : Prop :=
+  _root_.PrimitiveHolonomy.AutoRegulatedWrt (P := P) sem obs target_obs OK J
+
+/-- Gribov-type obstruction: every admissible global gauge fails on some cell in `J`. -/
+abbrev GaugeFixingObstructed
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) : Prop :=
+  _root_.PrimitiveHolonomy.ObstructionWrt (P := P) sem obs target_obs OK J
+
+/-- External-style statement: local repair exists, but no global admissible repair exists, on one cofinal future. -/
+abbrev LocalButNotGlobalCofinal
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop) : Prop :=
+  ∃ C : Set P, _root_.PrimitiveHolonomy.Cofinal (P := P) C ∧
+    _root_.PrimitiveHolonomy.LocallyAutoRegulatedWrt (P := P) sem obs target_obs OK (_root_.PrimitiveHolonomy.CellsOver (P := P) C) ∧
+    ¬ _root_.PrimitiveHolonomy.AutoRegulatedWrt (P := P) sem obs target_obs OK (_root_.PrimitiveHolonomy.CellsOver (P := P) C)
+
+theorem obstructed_implies_not_globalGaugeFixable
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) :
+    GaugeFixingObstructed sem obs target_obs OK J →
+      ¬ GlobalGaugeFixable sem obs target_obs OK J := by
+  exact _root_.PrimitiveHolonomy.not_AutoRegulatedWrt_of_ObstructionWrt (P := P) sem obs target_obs OK J
+
+theorem globalGaugeFixable_implies_not_obstructed
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) :
+    GlobalGaugeFixable sem obs target_obs OK J →
+      ¬ GaugeFixingObstructed sem obs target_obs OK J := by
+  exact _root_.PrimitiveHolonomy.not_ObstructionWrt_of_AutoRegulatedWrt (P := P) sem obs target_obs OK J
+
+theorem globalGaugeFixable_iff_goodIntersection_nonempty
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) :
+    GlobalGaugeFixable sem obs target_obs OK J ↔
+      _root_.PrimitiveHolonomy.GoodGaugeIntersectionWrt (P := P) sem obs target_obs OK J := by
+  exact _root_.PrimitiveHolonomy.autoRegulatedWrt_iff_goodGaugeIntersection_nonempty (P := P) sem obs target_obs OK J
+
+theorem localGaugeFixable_iff_perCell_goodGauge
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) :
+    LocalGaugeFixable sem obs target_obs OK J ↔
+      ∀ c, c ∈ J → ∃ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs,
+        _root_.PrimitiveHolonomy.GoodGaugeForCellWrt (P := P) sem obs target_obs OK c φ := by
+  exact _root_.PrimitiveHolonomy.locallyAutoRegulatedWrt_iff_goodGaugeForCell_nonempty (P := P) sem obs target_obs OK J
+
+theorem obstruction_iff_twisted_witness_per_admissible_gauge
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P))) :
+    GaugeFixingObstructed sem obs target_obs OK J ↔
+      ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs, OK φ →
+        ∃ c, c ∈ J ∧ _root_.PrimitiveHolonomy.TwistedOnCell (P := P) sem obs target_obs φ c := by
+  exact _root_.PrimitiveHolonomy.obstructionWrt_iff_twistedOnCell (P := P) sem obs target_obs OK J
+
+theorem localFlatButObstructedCofinal_implies_localButNotGlobal
+    (sem : _root_.PrimitiveHolonomy.Semantics P Sg) (obs : Sg → Vg) (target_obs : P → Vg)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop) :
+    _root_.PrimitiveHolonomy.LocalFlatButObstructedCofinalWrt (P := P) sem obs target_obs OK →
+      LocalButNotGlobalCofinal sem obs target_obs OK := by
+  intro h
+  exact _root_.PrimitiveHolonomy.localAndNotAutoRegulatedWrt_of_localFlatButObstructedCofinalWrt
+    (P := P) sem obs target_obs OK h
+
+end GaugeFixingBridge
+
 end PrimitiveHolonomy.Physics
