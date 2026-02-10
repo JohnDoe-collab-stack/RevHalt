@@ -195,6 +195,16 @@ def lagStateIntPhysics (Y : Type) : ParticlePhysics (_root_.PrimitiveHolonomy.La
     simp
   N_CS := fun s => s.hidden
 
+/-- In the canonical `LagState Y Int` model with `B = L = N_CS = hidden`,
+the ABJ law holds on sphaleron pairs for one family (`N_f = 1`). -/
+theorem abjOnSphaleronPairs_lagStateIntPhysics_nf_one
+    {Y : Type} :
+    ABJOnSphaleronPairs (lagStateIntPhysics (Y := Y)) 1 := by
+  intro s1 s2 _hSph
+  unfold SatisfiesABJ DeltaBL DeltaNCS
+  simp [lagStateIntPhysics]
+  ring
+
 /-- In the product model `X = Y × Int` with observable `lagObs`,
 twisted witnesses automatically carry a topological jump (`ΔN_CS ≠ 0`). -/
 theorem ncsJumpOnTwistedWitness_of_lagState_hidden
@@ -302,6 +312,25 @@ theorem deltaBL_ne_zero_of_twistedOnCell_of_lagState_hidden_and_abj
     (ncsJumpOnTwistedWitness_of_lagState_hidden (P := P) (Y := Y) semR target_obs)
     hABJall φ c hTw
 
+/-- Canonical `LagState` form without external ABJ assumption:
+for `N_f = 1`, twisted cells force non-zero `Δ(B+L)`. -/
+theorem deltaBL_ne_zero_of_twistedOnCell_of_lagState_hidden
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    (φ : _root_.PrimitiveHolonomy.Gauge (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := P))
+    (hTw : _root_.PrimitiveHolonomy.TwistedOnCell (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs φ c) :
+    ∃ s1 s2 : _root_.PrimitiveHolonomy.LagState Y Int,
+      DeltaBL (lagStateIntPhysics (Y := Y)) s1 s2 ≠ 0 := by
+  exact deltaBL_ne_zero_of_twistedOnCell_of_lagState_hidden_and_abj
+    (P := P) (Y := Y) (N_f := 1) semR target_obs
+    (by norm_num)
+    (abjOnSphaleronPairs_lagStateIntPhysics_nf_one (Y := Y))
+    φ c hTw
+
 /-- Obstruction + bridge contracts imply: every admissible gauge has some
 topological pair with non-zero `Δ(B+L)`. -/
 theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge
@@ -362,6 +391,30 @@ theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_
     (ncsJumpOnTwistedWitness_of_ncsInjectiveOnAllFibers (P := P) phys semR obs target_obs hFib)
     hABJall hObs
 
+/-- Canonical `LagState` obstruction form without external ABJ assumption:
+for `N_f = 1`, each admissible gauge has a non-zero `Δ(B+L)` witness. -/
+theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_lagState_hidden
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P)))
+    (hObs : _root_.PrimitiveHolonomy.ObstructionWrt (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs OK J) :
+    ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs, OK φ →
+      ∃ s1 s2 : _root_.PrimitiveHolonomy.LagState Y Int,
+        DeltaBL (lagStateIntPhysics (Y := Y)) s1 s2 ≠ 0 := by
+  exact obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsJump_and_abj
+    (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+    (phys := lagStateIntPhysics (Y := Y)) (N_f := 1)
+    semR (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs OK J
+    (by norm_num)
+    (ncsJumpOnTwistedWitness_of_lagState_hidden (P := P) (Y := Y) semR target_obs)
+    (abjOnSphaleronPairs_lagStateIntPhysics_nf_one (Y := Y))
+    hObs
+
 /-- Cofinal version: if the system is locally flat but globally obstructed on a cofinal
 future, and the `N_CS`/ABJ bridge contracts hold, then on that same cofinal future
 every admissible gauge admits a non-zero `Δ(B+L)` witness. -/
@@ -401,6 +454,32 @@ theorem localFlatButObstructedCofinalWrt_implies_exists_deltaBL_ne_zero_for_each
     obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsInjectiveOnAllFibers_and_abj
       (P := P) phys N_f semR obs target_obs OK (_root_.PrimitiveHolonomy.CellsOver (P := P) C)
       hNf hFib hABJall hObs
+
+/-- Canonical `LagState` cofinal-obstruction form without external ABJ assumption:
+for `N_f = 1`, every admissible gauge on the obstructed cofinal future has a
+non-zero `Δ(B+L)` witness. -/
+theorem localFlatButObstructedCofinalWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_lagState_hidden
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs → Prop)
+    (hLFO : _root_.PrimitiveHolonomy.LocalFlatButObstructedCofinalWrt (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs OK) :
+    ∃ C : Set P, _root_.PrimitiveHolonomy.Cofinal (P := P) C ∧
+      ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P)
+        (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs,
+        OK φ →
+          ∃ s1 s2 : _root_.PrimitiveHolonomy.LagState Y Int,
+            DeltaBL (lagStateIntPhysics (Y := Y)) s1 s2 ≠ 0 := by
+  exact localFlatButObstructedCofinalWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge
+    (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+    (phys := lagStateIntPhysics (Y := Y)) (N_f := 1)
+    semR (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs OK
+    (by norm_num)
+    (ncsJumpOnTwistedWitness_of_lagState_hidden (P := P) (Y := Y) semR target_obs)
+    (abjOnSphaleronPairs_lagStateIntPhysics_nf_one (Y := Y))
+    hLFO
 
 end TopologyToABJBridge
 
