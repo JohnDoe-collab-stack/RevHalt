@@ -639,5 +639,5 @@ theorem decoheredIntensity_of_oppositePhase {X : Type u}
   ring
 
 end Regimes
-docn ljholonomy permet de savori quoi de nouveau ?_
+
 end PrimitiveHolonomy.Physics
