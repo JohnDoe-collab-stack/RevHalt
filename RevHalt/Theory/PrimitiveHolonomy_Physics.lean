@@ -108,6 +108,155 @@ theorem deltaBL_ne_zero_of_satisfiesABJ_of_isSphaleron
   exact mul_ne_zero hK hΔN
 
 -- ============================================================
+-- 3.1 TOPOLOGY -> ABJ BRIDGE (missing central coupling layer)
+-- ============================================================
+
+section TopologyToABJBridge
+
+variable {S V : Type u}
+
+/-- ABJ holds on every sphaleron (topological-jump) pair. -/
+def ABJOnSphaleronPairs (phys : ParticlePhysics S) (N_f : Int) : Prop :=
+  ∀ s1 s2 : S, IsSphaleron phys s1 s2 → SatisfiesABJ phys N_f s1 s2
+
+/-- Bridge contract: every twisted cell yields (at least) one sphaleron pair. -/
+def TwistToSphaleronBridge
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ (φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := P)),
+    _root_.PrimitiveHolonomy.TwistedOnCell (P := P) semR obs target_obs φ c →
+      ∃ s1 s2 : S, IsSphaleron phys s1 s2
+
+/-- Concrete micro-level contract: a twisted corrected-holonomy witness always carries
+an `N_CS` jump between the two witness states. -/
+def NCSJumpOnTwistedWitness
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ (φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := P)),
+    let ⟨h, _, _, _, ⟨α⟩⟩ := c
+    ∀ x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h,
+      x ≠ x' →
+      _root_.PrimitiveHolonomy.CorrectedHolonomy (P := P) semR obs target_obs φ α x x' →
+      phys.N_CS x.1 ≠ phys.N_CS x'.1
+
+/-- A concrete `N_CS`-jump witness assumption yields the abstract
+`TwistToSphaleronBridge` contract. -/
+theorem twistToSphaleronBridge_of_ncsJumpOnTwistedWitness
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (hNCS : NCSJumpOnTwistedWitness (P := P) phys semR obs target_obs) :
+    TwistToSphaleronBridge (P := P) phys semR obs target_obs := by
+  intro φ c hTw
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  dsimp [_root_.PrimitiveHolonomy.TwistedOnCell] at hTw
+  rcases hTw with ⟨x, x', hxne, hHol⟩
+  have hJump : phys.N_CS x.1 ≠ phys.N_CS x'.1 :=
+    hNCS φ ⟨h, k, p, q, ⟨α⟩⟩ x x' hxne hHol
+  exact ⟨x.1, x'.1, hJump⟩
+
+/-- Once the bridge contracts are assumed, any twisted cell forces a non-zero `Δ(B+L)`. -/
+theorem deltaBL_ne_zero_of_twistedOnCell_of_bridges
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (hNf : N_f ≠ 0)
+    (hTwBridge : TwistToSphaleronBridge (P := P) phys semR obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := P))
+    (hTw : _root_.PrimitiveHolonomy.TwistedOnCell (P := P) semR obs target_obs φ c) :
+    ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  rcases hTwBridge φ c hTw with ⟨s1, s2, hSph⟩
+  refine ⟨s1, s2, ?_⟩
+  exact deltaBL_ne_zero_of_satisfiesABJ_of_isSphaleron
+    phys N_f s1 s2 (hABJall s1 s2 hSph) hNf hSph
+
+/-- One-shot concrete form:
+if twisted witnesses are `N_CS`-jumping and ABJ holds on sphaleron pairs,
+then any twisted cell forces a non-zero `Δ(B+L)`. -/
+theorem deltaBL_ne_zero_of_twistedOnCell_of_ncsJump_and_abj
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (hNf : N_f ≠ 0)
+    (hNCS : NCSJumpOnTwistedWitness (P := P) phys semR obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := P))
+    (hTw : _root_.PrimitiveHolonomy.TwistedOnCell (P := P) semR obs target_obs φ c) :
+    ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  exact deltaBL_ne_zero_of_twistedOnCell_of_bridges
+    (P := P) phys N_f semR obs target_obs hNf
+    (twistToSphaleronBridge_of_ncsJumpOnTwistedWitness (P := P) phys semR obs target_obs hNCS)
+    hABJall φ c hTw
+
+/-- Obstruction + bridge contracts imply: every admissible gauge has some
+topological pair with non-zero `Δ(B+L)`. -/
+theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P)))
+    (hNf : N_f ≠ 0)
+    (hTwBridge : TwistToSphaleronBridge (P := P) phys semR obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (hObs : _root_.PrimitiveHolonomy.ObstructionWrt (P := P) semR obs target_obs OK J) :
+    ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs, OK φ →
+      ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  have hObsTw :
+      ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs, OK φ →
+        ∃ c, c ∈ J ∧ _root_.PrimitiveHolonomy.TwistedOnCell (P := P) semR obs target_obs φ c := by
+    exact
+      (_root_.PrimitiveHolonomy.obstructionWrt_iff_twistedOnCell
+        (P := P) semR obs target_obs OK J).1 hObs
+  intro φ hOK
+  rcases hObsTw φ hOK with ⟨c, _hcJ, hTw⟩
+  exact deltaBL_ne_zero_of_twistedOnCell_of_bridges
+    (P := P) phys N_f semR obs target_obs hNf hTwBridge hABJall φ c hTw
+
+/-- Concrete obstruction form (no abstract bridge argument):
+if twisted witnesses force `N_CS` jumps and ABJ holds on sphaleron pairs,
+then each admissible gauge has a non-zero `Δ(B+L)` witness. -/
+theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsJump_and_abj
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P)))
+    (hNf : N_f ≠ 0)
+    (hNCS : NCSJumpOnTwistedWitness (P := P) phys semR obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (hObs : _root_.PrimitiveHolonomy.ObstructionWrt (P := P) semR obs target_obs OK J) :
+    ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs, OK φ →
+      ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  exact obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge
+    (P := P) phys N_f semR obs target_obs OK J hNf
+    (twistToSphaleronBridge_of_ncsJumpOnTwistedWitness (P := P) phys semR obs target_obs hNCS)
+    hABJall hObs
+
+/-- Cofinal version: if the system is locally flat but globally obstructed on a cofinal
+future, and the `N_CS`/ABJ bridge contracts hold, then on that same cofinal future
+every admissible gauge admits a non-zero `Δ(B+L)` witness. -/
+theorem localFlatButObstructedCofinalWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (hNf : N_f ≠ 0)
+    (hNCS : NCSJumpOnTwistedWitness (P := P) phys semR obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (hLFO : _root_.PrimitiveHolonomy.LocalFlatButObstructedCofinalWrt (P := P) semR obs target_obs OK) :
+    ∃ C : Set P, _root_.PrimitiveHolonomy.Cofinal (P := P) C ∧
+      ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs,
+        OK φ → ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  rcases hLFO with ⟨C, hCof, _hLocal, hObs⟩
+  refine ⟨C, hCof, ?_⟩
+  exact
+    obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsJump_and_abj
+      (P := P) phys N_f semR obs target_obs OK (_root_.PrimitiveHolonomy.CellsOver (P := P) C)
+      hNf hNCS hABJall hObs
+
+end TopologyToABJBridge
+
+-- ============================================================
 -- 4. BARYOGENESIS THEOREMS (Sketch)
 -- ============================================================
 
