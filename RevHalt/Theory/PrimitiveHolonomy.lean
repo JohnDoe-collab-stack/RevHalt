@@ -760,6 +760,64 @@ by
   -- exactly the same diagonal witness, but per-cell
   exact hφ c hcJ
 
+/-- Local (per-2-cell) repair, relative to admissible gauges selected by `OK`. -/
+def LocallyAutoRegulatedWrt {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) : Prop :=
+  ∀ c, c ∈ J →
+    ∃ φ : Gauge (P := P) obs target_obs, OK φ ∧
+      let ⟨_h, _, _, _, ⟨α⟩⟩ := c
+      ∀ x x', CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x'
+
+/-- Global auto-regulation implies local auto-regulation (version `Wrt`). -/
+theorem locallyAutoRegulatedWrt_of_autoRegulatedWrt
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) :
+  AutoRegulatedWrt (P := P) sem obs target_obs OK J →
+  LocallyAutoRegulatedWrt (P := P) sem obs target_obs OK J := by
+  rintro ⟨φ, hOK, hφ⟩
+  intro c hcJ
+  refine ⟨φ, hOK, ?_⟩
+  exact hφ c hcJ
+
+/-- Paradigm statement: locally flat but globally obstructed on the same cofinal future. -/
+def LocalFlatButObstructedCofinalWrt {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) : Prop :=
+  ∃ C : Set P, Cofinal (P := P) C ∧
+    LocallyAutoRegulatedWrt (P := P) sem obs target_obs OK (CellsOver (P := P) C) ∧
+    ObstructionWrt (P := P) sem obs target_obs OK (CellsOver (P := P) C)
+
+/-- On that cofinal future, local flatness together with obstruction forces non-auto-regulation. -/
+theorem localAndNotAutoRegulatedWrt_of_localFlatButObstructedCofinalWrt
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) :
+  LocalFlatButObstructedCofinalWrt (P := P) sem obs target_obs OK →
+  ∃ C : Set P, Cofinal (P := P) C ∧
+    LocallyAutoRegulatedWrt (P := P) sem obs target_obs OK (CellsOver (P := P) C) ∧
+    ¬ AutoRegulatedWrt (P := P) sem obs target_obs OK (CellsOver (P := P) C) := by
+  rintro ⟨C, hCof, hLocal, hObs⟩
+  refine ⟨C, hCof, hLocal, ?_⟩
+  exact not_AutoRegulatedWrt_of_ObstructionWrt (P := P) sem obs target_obs OK
+    (J := CellsOver (P := P) C) hObs
+
+/-- Obstructed cofinal paradigm implies non-auto-regulation on the same cofinal future. -/
+theorem not_autoRegulatedWrt_of_localFlatButObstructedCofinalWrt
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop) :
+  LocalFlatButObstructedCofinalWrt (P := P) sem obs target_obs OK →
+  ∃ C : Set P, Cofinal (P := P) C ∧
+    ¬ AutoRegulatedWrt (P := P) sem obs target_obs OK (CellsOver (P := P) C) := by
+  rintro ⟨C, hCof, _hLocal, hObs⟩
+  refine ⟨C, hCof, ?_⟩
+  exact not_AutoRegulatedWrt_of_ObstructionWrt (P := P) sem obs target_obs OK
+    (J := CellsOver (P := P) C) hObs
+
 end WithHistoryGraph
 
 end PrimitiveHolonomy
