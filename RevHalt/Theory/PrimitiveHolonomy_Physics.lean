@@ -113,7 +113,7 @@ theorem deltaBL_ne_zero_of_satisfiesABJ_of_isSphaleron
 
 section TopologyToABJBridge
 
-variable {S V : Type u}
+variable {S V : Type w}
 
 /-- ABJ holds on every sphaleron (topological-jump) pair. -/
 def ABJOnSphaleronPairs (phys : ParticlePhysics S) (N_f : Int) : Prop :=
@@ -140,6 +140,78 @@ def NCSJumpOnTwistedWitness
       x ≠ x' →
       _root_.PrimitiveHolonomy.CorrectedHolonomy (P := P) semR obs target_obs φ α x x' →
       phys.N_CS x.1 ≠ phys.N_CS x'.1
+
+/-- `N_CS` separates points inside a fixed observation fiber. -/
+def NCSInjectiveOnFiber
+    (phys : ParticlePhysics S) (obs : S → V) (target_obs : P → V) (h : P) : Prop :=
+  Function.Injective (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h => phys.N_CS x.1)
+
+/-- Fiberwise version: `N_CS` is injective on every observation fiber. -/
+def NCSInjectiveOnAllFibers
+    (phys : ParticlePhysics S) (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ h : P, NCSInjectiveOnFiber (P := P) phys obs target_obs h
+
+/-- Fiberwise `N_CS`-injectivity already implies the twisted-witness `N_CS` jump contract. -/
+theorem ncsJumpOnTwistedWitness_of_ncsInjectiveOnAllFibers
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (hFib : NCSInjectiveOnAllFibers (P := P) phys obs target_obs) :
+    NCSJumpOnTwistedWitness (P := P) phys semR obs target_obs := by
+  intro φ c
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  intro x x' hxne _hHol hEq
+  exact hxne ((hFib h) hEq)
+
+/-- If `N_CS` is injective on micro-states, any twisted witness is automatically
+an `N_CS`-jump witness. -/
+theorem ncsJumpOnTwistedWitness_of_ncs_injective
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (hInj : Function.Injective phys.N_CS) :
+    NCSJumpOnTwistedWitness (P := P) phys semR obs target_obs := by
+  intro φ c
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  intro x x' hxne _hHol hEq
+  apply hxne
+  exact Subtype.ext (hInj hEq)
+
+/-- Canonical physics structure on `LagState Y Int`:
+`C` flips the hidden integer, and `N_CS` is the hidden component. -/
+def lagStateIntPhysics (Y : Type) : ParticlePhysics (_root_.PrimitiveHolonomy.LagState Y Int) where
+  C := fun s => ⟨s.visible, -s.hidden⟩
+  C_invol := by
+    intro s
+    cases s
+    simp
+  B := fun s => s.hidden
+  B_odd := by
+    intro s
+    cases s
+    simp
+  L := fun s => s.hidden
+  L_odd := by
+    intro s
+    cases s
+    simp
+  N_CS := fun s => s.hidden
+
+/-- In the product model `X = Y × Int` with observable `lagObs`,
+twisted witnesses automatically carry a topological jump (`ΔN_CS ≠ 0`). -/
+theorem ncsJumpOnTwistedWitness_of_lagState_hidden
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y) :
+    NCSJumpOnTwistedWitness (P := P)
+      (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+      (lagStateIntPhysics (Y := Y)) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs := by
+  intro φ c
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  intro x x' hxne _hHol
+  have hHidden : x.1.hidden ≠ x'.1.hidden :=
+    _root_.PrimitiveHolonomy.hidden_ne_of_ne
+      (P := P) (target_obs := target_obs) (h := h) (x := x) (x' := x') hxne
+  simpa [lagStateIntPhysics] using hHidden
 
 /-- A concrete `N_CS`-jump witness assumption yields the abstract
 `TwistToSphaleronBridge` contract. -/
@@ -190,6 +262,46 @@ theorem deltaBL_ne_zero_of_twistedOnCell_of_ncsJump_and_abj
     (twistToSphaleronBridge_of_ncsJumpOnTwistedWitness (P := P) phys semR obs target_obs hNCS)
     hABJall φ c hTw
 
+/-- Intrinsic-fiber form:
+if `N_CS` separates each fiber and ABJ holds on sphaleron pairs,
+any twisted cell forces a non-zero `Δ(B+L)`. -/
+theorem deltaBL_ne_zero_of_twistedOnCell_of_ncsInjectiveOnAllFibers_and_abj
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (hNf : N_f ≠ 0)
+    (hFib : NCSInjectiveOnAllFibers (P := P) phys obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := P))
+    (hTw : _root_.PrimitiveHolonomy.TwistedOnCell (P := P) semR obs target_obs φ c) :
+    ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  exact deltaBL_ne_zero_of_twistedOnCell_of_ncsJump_and_abj
+    (P := P) phys N_f semR obs target_obs hNf
+    (ncsJumpOnTwistedWitness_of_ncsInjectiveOnAllFibers (P := P) phys semR obs target_obs hFib)
+    hABJall φ c hTw
+
+/-- Canonical `LagState` form: in the model `N_CS = hidden`,
+twist implies a non-zero `Δ(B+L)` as soon as ABJ holds on sphaleron pairs. -/
+theorem deltaBL_ne_zero_of_twistedOnCell_of_lagState_hidden_and_abj
+    {Y : Type} (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    (hNf : N_f ≠ 0)
+    (hABJall : ABJOnSphaleronPairs (lagStateIntPhysics (Y := Y)) N_f)
+    (φ : _root_.PrimitiveHolonomy.Gauge (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs)
+    (c : _root_.PrimitiveHolonomy.Cell (P := P))
+    (hTw : _root_.PrimitiveHolonomy.TwistedOnCell (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs φ c) :
+    ∃ s1 s2 : _root_.PrimitiveHolonomy.LagState Y Int,
+      DeltaBL (lagStateIntPhysics (Y := Y)) s1 s2 ≠ 0 := by
+  exact deltaBL_ne_zero_of_twistedOnCell_of_ncsJump_and_abj
+    (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+    (phys := lagStateIntPhysics (Y := Y)) N_f semR
+    (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs hNf
+    (ncsJumpOnTwistedWitness_of_lagState_hidden (P := P) (Y := Y) semR target_obs)
+    hABJall φ c hTw
+
 /-- Obstruction + bridge contracts imply: every admissible gauge has some
 topological pair with non-zero `Δ(B+L)`. -/
 theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge
@@ -233,6 +345,23 @@ theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_
     (twistToSphaleronBridge_of_ncsJumpOnTwistedWitness (P := P) phys semR obs target_obs hNCS)
     hABJall hObs
 
+/-- Obstruction form with intrinsic fiberwise `N_CS` separation. -/
+theorem obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsInjectiveOnAllFibers_and_abj
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P)))
+    (hNf : N_f ≠ 0)
+    (hFib : NCSInjectiveOnAllFibers (P := P) phys obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (hObs : _root_.PrimitiveHolonomy.ObstructionWrt (P := P) semR obs target_obs OK J) :
+    ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs, OK φ →
+      ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  exact obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsJump_and_abj
+    (P := P) phys N_f semR obs target_obs OK J hNf
+    (ncsJumpOnTwistedWitness_of_ncsInjectiveOnAllFibers (P := P) phys semR obs target_obs hFib)
+    hABJall hObs
+
 /-- Cofinal version: if the system is locally flat but globally obstructed on a cofinal
 future, and the `N_CS`/ABJ bridge contracts hold, then on that same cofinal future
 every admissible gauge admits a non-zero `Δ(B+L)` witness. -/
@@ -254,7 +383,86 @@ theorem localFlatButObstructedCofinalWrt_implies_exists_deltaBL_ne_zero_for_each
       (P := P) phys N_f semR obs target_obs OK (_root_.PrimitiveHolonomy.CellsOver (P := P) C)
       hNf hNCS hABJall hObs
 
+/-- Cofinal obstruction form with intrinsic fiberwise `N_CS` separation. -/
+theorem localFlatButObstructedCofinalWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsInjectiveOnAllFibers_and_abj
+    (phys : ParticlePhysics S) (N_f : Int)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (hNf : N_f ≠ 0)
+    (hFib : NCSInjectiveOnAllFibers (P := P) phys obs target_obs)
+    (hABJall : ABJOnSphaleronPairs phys N_f)
+    (hLFO : _root_.PrimitiveHolonomy.LocalFlatButObstructedCofinalWrt (P := P) semR obs target_obs OK) :
+    ∃ C : Set P, _root_.PrimitiveHolonomy.Cofinal (P := P) C ∧
+      ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs,
+        OK φ → ∃ s1 s2 : S, DeltaBL phys s1 s2 ≠ 0 := by
+  rcases hLFO with ⟨C, hCof, _hLocal, hObs⟩
+  refine ⟨C, hCof, ?_⟩
+  exact
+    obstructionWrt_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge_of_ncsInjectiveOnAllFibers_and_abj
+      (P := P) phys N_f semR obs target_obs OK (_root_.PrimitiveHolonomy.CellsOver (P := P) C)
+      hNf hFib hABJall hObs
+
 end TopologyToABJBridge
+
+-- ============================================================
+-- 3.2 CONCRETE TWO-STATE INSTANCE (explicit N_CS-separating model)
+-- ============================================================
+
+section TwoStateInstance
+
+inductive TwoState where
+  | a
+  | b
+  deriving DecidableEq, Fintype
+
+def twoC : TwoState → TwoState
+  | .a => .b
+  | .b => .a
+
+def twoB : TwoState → Int
+  | .a => 1
+  | .b => -1
+
+def twoL : TwoState → Int
+  | .a => 1
+  | .b => -1
+
+def twoNCS : TwoState → Int
+  | .a => 0
+  | .b => 1
+
+def twoStatePhysics : ParticlePhysics TwoState where
+  C := twoC
+  C_invol := by
+    intro s
+    cases s <;> rfl
+  B := twoB
+  B_odd := by
+    intro s
+    cases s <;> decide
+  L := twoL
+  L_odd := by
+    intro s
+    cases s <;> decide
+  N_CS := twoNCS
+
+theorem twoNCS_injective : Function.Injective twoStatePhysics.N_CS := by
+  intro s t h
+  cases s <;> cases t <;> simp [twoStatePhysics, twoNCS] at h ⊢
+
+/-- In the explicit two-state model, `NCSJumpOnTwistedWitness` is automatic
+for any semantics/observable/fiber map. -/
+theorem ncsJumpOnTwistedWitness_twoState
+    {V : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P TwoState)
+    (obs : TwoState → V) (target_obs : P → V) :
+    NCSJumpOnTwistedWitness (P := P) (S := TwoState) (V := V)
+      twoStatePhysics semR obs target_obs := by
+  exact ncsJumpOnTwistedWitness_of_ncs_injective
+    (P := P) (S := TwoState) (V := V)
+    twoStatePhysics semR obs target_obs twoNCS_injective
+
+end TwoStateInstance
 
 -- ============================================================
 -- 4. BARYOGENESIS THEOREMS (Sketch)
@@ -292,6 +500,164 @@ def EvolveDist {S : Type u} [Fintype S]
     (sem : WeightedSemantics (P := P) S Rat)
     {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat) : S → Rat :=
   fun s2 => ∑ s1 : S, μ s1 * sem.sem p s1 s2
+
+/-- Row-normalization of a one-step kernel (discrete Markov condition). -/
+def IsMarkovKernel {S : Type u} [Fintype S]
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) : Prop :=
+  ∀ s1 : S, ∑ s2 : S, sem.sem p s1 s2 = 1
+
+/-- Detailed balance at distribution `μ` for one step `p`. -/
+def DetailedBalance {S : Type u} [Fintype S]
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat) : Prop :=
+  ∀ s1 s2 : S, μ s1 * sem.sem p s1 s2 = μ s2 * sem.sem p s2 s1
+
+/-- Stationarity of `μ` under one-step evolution by `p`. -/
+def StationaryDist {S : Type u} [Fintype S]
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat) : Prop :=
+  ∀ s2 : S, EvolveDist (P := P) sem p μ s2 = μ s2
+
+theorem stationary_of_detailedBalance_of_markov
+    {S : Type u} [Fintype S]
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hDB : DetailedBalance (P := P) sem p μ)
+    (hMk : IsMarkovKernel (P := P) sem p) :
+    StationaryDist (P := P) sem p μ := by
+  intro s2
+  unfold EvolveDist
+  calc
+    (∑ s1 : S, μ s1 * sem.sem p s1 s2)
+        = ∑ s1 : S, μ s2 * sem.sem p s2 s1 := by
+            refine Finset.sum_congr rfl ?_
+            intro s1 _hs
+            exact hDB s1 s2
+    _ = μ s2 * ∑ s1 : S, sem.sem p s2 s1 := by
+          simp [Finset.mul_sum]
+    _ = μ s2 * 1 := by rw [hMk s2]
+    _ = μ s2 := by ring
+
+theorem expectedB_evolve_eq_expectedB_of_stationary
+    {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hStat : StationaryDist (P := P) sem p μ) :
+    ExpectedB phys (EvolveDist (P := P) sem p μ) = ExpectedB phys μ := by
+  unfold ExpectedB
+  refine Finset.sum_congr rfl ?_
+  intro s _hs
+  rw [hStat s]
+
+/-- Net one-step baryon production under kernel evolution. -/
+def DeltaExpectedB {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat) : Rat :=
+  ExpectedB phys (EvolveDist (P := P) sem p μ) - ExpectedB phys μ
+
+/-- No-go (equilibrium detailed-balance form):
+under detailed balance + Markov normalization, one step cannot create net baryon expectation. -/
+theorem deltaExpectedB_eq_zero_of_detailedBalance_of_markov
+    {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hDB : DetailedBalance (P := P) sem p μ)
+    (hMk : IsMarkovKernel (P := P) sem p) :
+    DeltaExpectedB (P := P) phys sem p μ = 0 := by
+  unfold DeltaExpectedB
+  have hStat : StationaryDist (P := P) sem p μ :=
+    stationary_of_detailedBalance_of_markov (P := P) sem p μ hDB hMk
+  have hEq :
+      ExpectedB phys (EvolveDist (P := P) sem p μ) = ExpectedB phys μ :=
+    expectedB_evolve_eq_expectedB_of_stationary (P := P) phys sem p μ hStat
+  linarith [hEq]
+
+/-- Corollary: equilibrium detailed balance preserves zero baryon expectation in one step. -/
+theorem zero_bias_of_detailedBalance
+    {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hDB : DetailedBalance (P := P) sem p μ)
+    (hMk : IsMarkovKernel (P := P) sem p)
+    (hZero : ExpectedB phys μ = 0) :
+    ExpectedB phys (EvolveDist (P := P) sem p μ) = 0 := by
+  have hEq :
+      ExpectedB phys (EvolveDist (P := P) sem p μ) = ExpectedB phys μ :=
+    expectedB_evolve_eq_expectedB_of_stationary (P := P) phys sem p μ
+      (stationary_of_detailedBalance_of_markov (P := P) sem p μ hDB hMk)
+  rw [hEq, hZero]
+
+/-- `n`-step evolution by iterating the same one-step kernel. -/
+def EvolveDistN {S : Type u} [Fintype S]
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) : Nat → (S → Rat) → (S → Rat)
+  | 0, μ => μ
+  | n + 1, μ => EvolveDist (P := P) sem p (EvolveDistN sem p n μ)
+
+theorem evolveDistN_eq_of_stationary
+    {S : Type u} [Fintype S]
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hStat : StationaryDist (P := P) sem p μ) :
+    ∀ n : Nat, EvolveDistN (P := P) sem p n μ = μ := by
+  have hStatEq : EvolveDist (P := P) sem p μ = μ := funext hStat
+  intro n
+  induction n with
+  | zero =>
+      rfl
+  | succ n ih =>
+      simp [EvolveDistN, ih, hStatEq]
+
+theorem expectedB_evolveDistN_eq_expectedB_of_stationary
+    {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hStat : StationaryDist (P := P) sem p μ) :
+    ∀ n : Nat, ExpectedB phys (EvolveDistN (P := P) sem p n μ) = ExpectedB phys μ := by
+  intro n
+  rw [evolveDistN_eq_of_stationary (P := P) sem p μ hStat n]
+
+theorem expectedB_evolveDistN_eq_expectedB_of_detailedBalance_of_markov
+    {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hDB : DetailedBalance (P := P) sem p μ)
+    (hMk : IsMarkovKernel (P := P) sem p) :
+    ∀ n : Nat, ExpectedB phys (EvolveDistN (P := P) sem p n μ) = ExpectedB phys μ := by
+  exact expectedB_evolveDistN_eq_expectedB_of_stationary (P := P) phys sem p μ
+    (stationary_of_detailedBalance_of_markov (P := P) sem p μ hDB hMk)
+
+/-- Net baryon production at step `n -> n+1` along iterated evolution. -/
+def DeltaExpectedBStepN {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat) (n : Nat) : Rat :=
+  ExpectedB phys (EvolveDistN (P := P) sem p (n + 1) μ) -
+  ExpectedB phys (EvolveDistN (P := P) sem p n μ)
+
+/-- Multi-step no-go:
+under detailed balance + Markov normalization, every step has zero net baryon production. -/
+theorem deltaExpectedBStepN_eq_zero_of_detailedBalance_of_markov
+    {S : Type u} [Fintype S]
+    (phys : ParticlePhysics S)
+    (sem : WeightedSemantics (P := P) S Rat)
+    {h k : P} (p : HistoryGraph.Path h k) (μ : S → Rat)
+    (hDB : DetailedBalance (P := P) sem p μ)
+    (hMk : IsMarkovKernel (P := P) sem p) :
+    ∀ n : Nat, DeltaExpectedBStepN (P := P) phys sem p μ n = 0 := by
+  intro n
+  unfold DeltaExpectedBStepN
+  have hInv := expectedB_evolveDistN_eq_expectedB_of_detailedBalance_of_markov
+    (P := P) phys sem p μ hDB hMk
+  rw [hInv (n + 1), hInv n]
+  ring
 
 theorem expectedB_eq_neg_expectedB_of_CInvariantDistribution
     {S : Type u} [Fintype S]
@@ -630,6 +996,20 @@ theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero
   refine ⟨μ, ?_⟩
   exact expectedB_ne_zero_of_lagBiasedSelection
     (phys := phys) (μ := μ) (s := s) hCs hSupp hLagBias (hBnonfixed s hCs)
+
+/-- In the canonical `LagState Y Int` model, non-fixed `C`-pairs automatically
+have nonzero baryon charge (`B = hidden`). -/
+theorem b_nonfixed_of_lagStateIntPhysics
+    {Y : Type} (s : _root_.PrimitiveHolonomy.LagState Y Int) :
+    (lagStateIntPhysics (Y := Y)).C s ≠ s →
+    (lagStateIntPhysics (Y := Y)).B s ≠ 0 := by
+  intro hC hB
+  apply hC
+  cases s with
+  | mk vis hid =>
+    dsimp [lagStateIntPhysics] at hB ⊢
+    subst hB
+    simp
 
 end LagSelectionBridge
 
