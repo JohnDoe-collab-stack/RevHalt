@@ -859,7 +859,7 @@ section LagSelectionBridge
 /-- Hypothesis: every lag witness on `(α, step)` is a conjugate pair under `phys.C`,
 with no fixed point on that witness. -/
 def LagConjugacyHypothesis
-    {S V : Type u}
+    {S V : Type w}
     (phys : ParticlePhysics S)
     (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
     {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
@@ -871,9 +871,132 @@ def LagConjugacyHypothesis
     ¬ _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x' →
     x'.1 = phys.C x.1 ∧ phys.C x.1 ≠ x.1
 
+/-- Equality-only version of `LagConjugacyHypothesis`. -/
+def LagConjugacyEqHypothesis
+    {S V : Type w}
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k') : Prop :=
+  ∀ x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h,
+    x ≠ x' →
+    _root_.PrimitiveHolonomy.HolonomyRel (P := P) semR obs target_obs α x x' →
+    _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x →
+    ¬ _root_.PrimitiveHolonomy.Compatible (P := P) semR obs target_obs step x' →
+    x'.1 = phys.C x.1
+
+theorem lagConjugacyHypothesis_of_eq
+    {S V : Type w}
+    (phys : ParticlePhysics S)
+    (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    (hEq : LagConjugacyEqHypothesis (P := P) phys semR obs target_obs α step) :
+    LagConjugacyHypothesis (P := P) phys semR obs target_obs α step := by
+  intro x x' hxne hHol hx hx'
+  refine ⟨hEq x x' hxne hHol hx hx', ?_⟩
+  intro hFix
+  apply hxne
+  apply Subtype.ext
+  exact ((hEq x x' hxne hHol hx hx').trans hFix).symm
+
+/-- Canonical hidden-flip contract for lag witnesses in `LagState Y Int`. -/
+def LagHiddenFlipWitness
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k') : Prop :=
+  ∀ x x' : _root_.PrimitiveHolonomy.FiberPt (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs h,
+    x ≠ x' →
+    _root_.PrimitiveHolonomy.HolonomyRel (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α x x' →
+    _root_.PrimitiveHolonomy.Compatible (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs step x →
+    ¬ _root_.PrimitiveHolonomy.Compatible (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs step x' →
+    x'.1.hidden = -x.1.hidden
+
+/-- Pure topological version: holonomy witnesses already force opposite hidden signs
+(independent of the later compatibility test). -/
+def HolonomyHiddenFlipWitness
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) : Prop :=
+  ∀ x x' : _root_.PrimitiveHolonomy.FiberPt (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs h,
+    x ≠ x' →
+    _root_.PrimitiveHolonomy.HolonomyRel (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α x x' →
+    x'.1.hidden = -x.1.hidden
+
+/-- Structural semantics hypothesis: every holonomy relation on `LagState Y Int`
+flips the hidden component. -/
+def SemanticsFlipsHiddenOnHolonomy
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y) : Prop :=
+  ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs h),
+    _root_.PrimitiveHolonomy.HolonomyRel (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α x x' →
+    x'.1.hidden = -x.1.hidden
+
+theorem holonomyHiddenFlipWitness_of_semanticsFlipsHiddenOnHolonomy
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hSemFlip : SemanticsFlipsHiddenOnHolonomy (P := P) semR target_obs) :
+    HolonomyHiddenFlipWitness (P := P) semR target_obs α := by
+  intro x x' _hxne hHol
+  exact hSemFlip α x x' hHol
+
+theorem lagHiddenFlipWitness_of_holonomyHiddenFlipWitness
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    (hHolFlip : HolonomyHiddenFlipWitness (P := P) semR target_obs α) :
+    LagHiddenFlipWitness (P := P) semR target_obs α step := by
+  intro x x' hxne hHol _hx _hx'
+  exact hHolFlip x x' hxne hHol
+
+/-- Hidden-flip witness implies the equality-only conjugacy hypothesis
+for the canonical `lagStateIntPhysics`. -/
+theorem lagConjugacyEqHypothesis_lagStateInt_of_hiddenFlip
+    {Y : Type}
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    (hFlip : LagHiddenFlipWitness (P := P) semR target_obs α step) :
+    LagConjugacyEqHypothesis (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+      (lagStateIntPhysics (Y := Y)) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step := by
+  intro x x' hxne hHol hx hx'
+  have hHidden : x'.1.hidden = -x.1.hidden := hFlip x x' hxne hHol hx hx'
+  have hVis : x'.1.visible = x.1.visible := by
+    exact x'.2.trans x.2.symm
+  cases xs : x.1 with
+  | mk vis hid =>
+    cases xs' : x'.1 with
+    | mk vis' hid' =>
+      have hVis' : vis' = vis := by
+        simpa [xs, xs'] using hVis
+      have hHid' : hid' = -hid := by
+        simpa [xs, xs'] using hHidden
+      subst hVis'
+      subst hHid'
+      simp [lagStateIntPhysics]
+
 /-- Compatibility indicator on a fixed fiber (1 if compatible, else 0). -/
 def CompatibilityIndicator
-    {S V : Type u}
+    {S V : Type w}
     (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
     {h k : P} (step : HistoryGraph.Path h k)
     [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h =>
@@ -884,7 +1007,7 @@ def CompatibilityIndicator
 
 /-- A lag witness induces a strict bias on the compatibility indicator. -/
 theorem lagEvent_implies_indicator_bias
-    {S V : Type u}
+    {S V : Type w}
     (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
     {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
     (step : HistoryGraph.Path h k')
@@ -906,7 +1029,7 @@ theorem lagEvent_implies_indicator_bias
 /-- Under a conjugacy hypothesis, a lag event yields an explicit C-biased
 two-point distribution. -/
 theorem lagEvent_implies_lagBiasedSelection_under_conjugacy
-    {S V : Type u}
+    {S V : Type w}
     [DecidableEq S]
     (phys : ParticlePhysics S)
     (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
@@ -942,7 +1065,7 @@ theorem lagEvent_implies_lagBiasedSelection_under_conjugacy
 
 /-- Variant with explicit non-fixed-point witness `phys.C s ≠ s`. -/
 theorem lagEvent_implies_lagBiasedSelection_with_nonfixed_under_conjugacy
-    {S V : Type u}
+    {S V : Type w}
     [DecidableEq S]
     (phys : ParticlePhysics S)
     (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
@@ -978,7 +1101,7 @@ theorem lagEvent_implies_lagBiasedSelection_with_nonfixed_under_conjugacy
 lag witness + conjugacy + non-vanishing baryon charge on non-fixed C-pairs
 produces a distribution with non-zero expected baryon number. -/
 theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero
-    {S V : Type u}
+    {S V : Type w}
     [Fintype S] [DecidableEq S]
     (phys : ParticlePhysics S)
     (semR : _root_.PrimitiveHolonomy.Semantics P S) (obs : S → V) (target_obs : P → V)
@@ -1010,6 +1133,94 @@ theorem b_nonfixed_of_lagStateIntPhysics
     dsimp [lagStateIntPhysics] at hB ⊢
     subst hB
     simp
+
+/-- Canonical lag-to-asymmetry statement in `LagState Y Int`:
+`LagEvent` + hidden-flip witness give a distribution with non-zero expected baryon number. -/
+theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_of_hiddenFlip
+    {Y : Type}
+    [Fintype (_root_.PrimitiveHolonomy.LagState Y Int)]
+    [DecidableEq (_root_.PrimitiveHolonomy.LagState Y Int)]
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs h =>
+      _root_.PrimitiveHolonomy.Compatible (P := P) semR
+        (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs step x)]
+    (hFlip : LagHiddenFlipWitness (P := P) semR target_obs α step)
+    (hLag : _root_.PrimitiveHolonomy.LagEvent (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step) :
+    ∃ μ : _root_.PrimitiveHolonomy.LagState Y Int → Rat,
+      ExpectedB (lagStateIntPhysics (Y := Y)) μ ≠ 0 := by
+  have hEq :
+      LagConjugacyEqHypothesis (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+        (lagStateIntPhysics (Y := Y)) semR
+        (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step :=
+    lagConjugacyEqHypothesis_lagStateInt_of_hiddenFlip (P := P) (Y := Y) semR target_obs α step hFlip
+  have hConj :
+      LagConjugacyHypothesis (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+        (lagStateIntPhysics (Y := Y)) semR
+        (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step :=
+    lagConjugacyHypothesis_of_eq (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+      (lagStateIntPhysics (Y := Y)) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step hEq
+  exact lagEvent_implies_exists_distribution_with_expectedB_ne_zero
+    (P := P) (S := _root_.PrimitiveHolonomy.LagState Y Int) (V := Y)
+    (phys := lagStateIntPhysics (Y := Y))
+    semR (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step
+    hConj hLag (by
+      intro s hs
+      exact b_nonfixed_of_lagStateIntPhysics (Y := Y) s hs)
+
+/-- Same canonical conclusion with a purely topological hidden-flip contract:
+holonomy already fixes the sign relation, and `LagEvent` supplies the selection asymmetry. -/
+theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_of_holonomyHiddenFlip
+    {Y : Type}
+    [Fintype (_root_.PrimitiveHolonomy.LagState Y Int)]
+    [DecidableEq (_root_.PrimitiveHolonomy.LagState Y Int)]
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs h =>
+      _root_.PrimitiveHolonomy.Compatible (P := P) semR
+        (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs step x)]
+    (hHolFlip : HolonomyHiddenFlipWitness (P := P) semR target_obs α)
+    (hLag : _root_.PrimitiveHolonomy.LagEvent (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step) :
+    ∃ μ : _root_.PrimitiveHolonomy.LagState Y Int → Rat,
+      ExpectedB (lagStateIntPhysics (Y := Y)) μ ≠ 0 := by
+  exact lagEvent_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_of_hiddenFlip
+    (P := P) (Y := Y) semR target_obs α step
+    (lagHiddenFlipWitness_of_holonomyHiddenFlipWitness (P := P) (Y := Y) semR target_obs α step hHolFlip)
+    hLag
+
+/-- Same canonical conclusion from a structural semantics hypothesis:
+if holonomy always flips hidden sign, then `LagEvent` yields non-zero expected baryon number. -/
+theorem lagEvent_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_of_semanticsFlipsHiddenOnHolonomy
+    {Y : Type}
+    [Fintype (_root_.PrimitiveHolonomy.LagState Y Int)]
+    [DecidableEq (_root_.PrimitiveHolonomy.LagState Y Int)]
+    (semR : _root_.PrimitiveHolonomy.Semantics P (_root_.PrimitiveHolonomy.LagState Y Int))
+    (target_obs : P → Y)
+    {h k k' : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (step : HistoryGraph.Path h k')
+    [DecidablePred (fun x : _root_.PrimitiveHolonomy.FiberPt (P := P)
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs h =>
+      _root_.PrimitiveHolonomy.Compatible (P := P) semR
+        (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs step x)]
+    (hSemFlip : SemanticsFlipsHiddenOnHolonomy (P := P) semR target_obs)
+    (hLag : _root_.PrimitiveHolonomy.LagEvent (P := P) semR
+      (_root_.PrimitiveHolonomy.lagObs (Y := Y) (B := Int)) target_obs α step) :
+    ∃ μ : _root_.PrimitiveHolonomy.LagState Y Int → Rat,
+      ExpectedB (lagStateIntPhysics (Y := Y)) μ ≠ 0 := by
+  exact lagEvent_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_of_holonomyHiddenFlip
+    (P := P) (Y := Y) semR target_obs α step
+    (holonomyHiddenFlipWitness_of_semanticsFlipsHiddenOnHolonomy
+      (P := P) (Y := Y) semR target_obs α hSemFlip)
+    hLag
 
 end LagSelectionBridge
 
