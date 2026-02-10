@@ -17,10 +17,27 @@ Ce qui est maintenant formalisé et prouvé dans `RevHalt/Theory/PrimitiveHolono
 - Le pont "lag + conjugaison => esperance baryonique non nulle" est prouvé:
   `lagEvent_implies_exists_distribution_with_expectedB_ne_zero`
   et ses variantes canoniques `LagState`.
+- La chaîne principale `LagEvent -> selection biaisee -> ExpectedB != 0` ne dépend plus
+  de `DecidablePred` ni de contraintes explicites `DecidableEq` dans les signatures
+  (le biais est construit directement via une distribution explicite sur la paire `(s, C s)`).
+- Un pont structurel supplémentaire est ajouté:
+  `lagEvent_of_twistedHolonomy_of_stepDependsOnHidden_of_compatible`
+  et son corollaire canonique
+  `twistedHolonomy_implies_exists_distribution_with_expectedB_ne_zero_lagStateInt_of_semanticsFlipsHiddenOnHolonomy`.
 - Une instance jouet explicite est ajoutée (`ToySemanticsInstance`) avec preuves
   `semanticsFlipsHiddenOnHolonomy_toyLagSemantics`,
   `deltaBL_ne_zero_of_twistedOnCell_toyLagSemantics`,
   `lagEvent_implies_exists_distribution_with_expectedB_ne_zero_toyLagSemantics`.
+- Un pont concret "witness d'orbite -> vocabulaire Physics/GaugeFixingBridge" est
+  factorisé dans `RevHalt/Theory/PrimitiveHolonomy_PhysicsOrbitBridge.lean`
+  (`orbitGaugeFixingObstructed`, `orbit_not_globalGaugeFixable`,
+  `orbit_every_admissible_has_twisted_cell_physics`).
+- Un pont instance->physique est ajouté dans
+  `RevHalt/Theory/PrimitiveHolonomy_PhysicsInstanceBridge.lean`, avec une
+  preuve concrete sans hypothèses externes de
+  `lagEvent_implies_exists_distribution_with_expectedB_ne_zero_toyStateBoolPhysics`,
+  et une forme obstruction->charge:
+  `toy_obstruction_implies_exists_deltaBL_ne_zero_for_each_admissible_gauge`.
 
 Priorites restantes (vraiment ouvertes):
 

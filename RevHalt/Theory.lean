@@ -20,3 +20,11 @@ import RevHalt.Theory.TheoryDynamics_Trajectory
 import RevHalt.Theory.TheoryDynamics_Transfinite_Jump
 import RevHalt.Theory.TheoryDynamics_Transfinite_JumpFixpoint
 import RevHalt.Theory.TheoryDynamics_Transfinite
+
+import RevHalt.Theory.PrimitiveHolonomy
+import RevHalt.Theory.PrimitiveHolonomy_instance
+import RevHalt.Theory.PrimitiveHolonomy_GribovSingerWitness
+import RevHalt.Theory.PrimitiveHolonomy_OrbitGaugeWitness
+import RevHalt.Theory.PrimitiveHolonomy_Physics
+import RevHalt.Theory.PrimitiveHolonomy_PhysicsInstanceBridge
+import RevHalt.Theory.PrimitiveHolonomy_PhysicsOrbitBridge
