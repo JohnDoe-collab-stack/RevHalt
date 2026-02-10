@@ -783,6 +783,143 @@ theorem locallyAutoRegulatedWrt_of_autoRegulatedWrt
   refine ⟨φ, hOK, ?_⟩
   exact hφ c hcJ
 
+/-- Corrected holonomy is flat on a single 2-cell `c` under gauge `φ`. -/
+def FlatOnCell {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (φ : Gauge (P := P) obs target_obs) (c : Cell (P := P)) : Prop :=
+  let ⟨h, _, _, _, ⟨α⟩⟩ := c
+  ∀ x x' : FiberPt (P := P) obs target_obs h,
+    CorrectedHolonomy sem obs target_obs φ α x x' ↔ x = x'
+
+/-- Twisted witness on a single 2-cell `c` under gauge `φ`. -/
+def TwistedOnCell {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (φ : Gauge (P := P) obs target_obs) (c : Cell (P := P)) : Prop :=
+  let ⟨h, _, _, _, ⟨α⟩⟩ := c
+  ∃ x x' : FiberPt (P := P) obs target_obs h,
+    x ≠ x' ∧ CorrectedHolonomy sem obs target_obs φ α x x'
+
+/-- Set of admissible gauges that flatten a fixed cell `c`. -/
+def GoodGaugeForCellWrt {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (c : Cell (P := P)) (φ : Gauge (P := P) obs target_obs) : Prop :=
+  OK φ ∧ FlatOnCell (P := P) sem obs target_obs φ c
+
+/-- Global intersection of good gauges over all cells in `J`. -/
+def GoodGaugeIntersectionWrt {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) : Prop :=
+  ∃ φ : Gauge (P := P) obs target_obs, OK φ ∧
+    ∀ c, c ∈ J → FlatOnCell (P := P) sem obs target_obs φ c
+
+theorem locallyAutoRegulatedWrt_iff_goodGaugeForCell_nonempty
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) :
+    LocallyAutoRegulatedWrt (P := P) sem obs target_obs OK J ↔
+      ∀ c, c ∈ J → ∃ φ : Gauge (P := P) obs target_obs,
+        GoodGaugeForCellWrt (P := P) sem obs target_obs OK c φ := by
+  constructor
+  · intro hLocal c hcJ
+    rcases hLocal c hcJ with ⟨φ, hOK, hFlat⟩
+    refine ⟨φ, hOK, ?_⟩
+    simpa [GoodGaugeForCellWrt, FlatOnCell] using hFlat
+  · intro hGood c hcJ
+    rcases hGood c hcJ with ⟨φ, hOK, hFlat⟩
+    refine ⟨φ, hOK, ?_⟩
+    simpa [GoodGaugeForCellWrt, FlatOnCell] using hFlat
+
+theorem autoRegulatedWrt_iff_exists_goodGaugeForAllCells
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) :
+    AutoRegulatedWrt (P := P) sem obs target_obs OK J ↔
+      ∃ φ : Gauge (P := P) obs target_obs, OK φ ∧
+        ∀ c, c ∈ J → GoodGaugeForCellWrt (P := P) sem obs target_obs OK c φ := by
+  constructor
+  · intro hAuto
+    rcases hAuto with ⟨φ, hOK, hFlatAll⟩
+    refine ⟨φ, hOK, ?_⟩
+    intro c hcJ
+    refine ⟨hOK, ?_⟩
+    simpa [GoodGaugeForCellWrt, FlatOnCell] using hFlatAll c hcJ
+  · intro h
+    rcases h with ⟨φ, hOK, hGood⟩
+    refine ⟨φ, hOK, ?_⟩
+    intro c hcJ
+    have hFlat : FlatOnCell (P := P) sem obs target_obs φ c := (hGood c hcJ).2
+    simpa [FlatOnCell] using hFlat
+
+theorem autoRegulatedWrt_iff_goodGaugeIntersection_nonempty
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) :
+    AutoRegulatedWrt (P := P) sem obs target_obs OK J ↔
+      GoodGaugeIntersectionWrt (P := P) sem obs target_obs OK J := by
+  constructor
+  · intro hAuto
+    rcases hAuto with ⟨φ, hOK, hFlatAll⟩
+    refine ⟨φ, hOK, ?_⟩
+    intro c hcJ
+    simpa [FlatOnCell] using hFlatAll c hcJ
+  · intro hI
+    rcases hI with ⟨φ, hOK, hAll⟩
+    refine ⟨φ, hOK, ?_⟩
+    intro c hcJ
+    simpa [FlatOnCell] using (hAll c hcJ)
+
+theorem obstructionWrt_iff_twistedOnCell
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) :
+    ObstructionWrt (P := P) sem obs target_obs OK J ↔
+      ∀ φ : Gauge (P := P) obs target_obs, OK φ →
+        ∃ c, c ∈ J ∧ TwistedOnCell (P := P) sem obs target_obs φ c := by
+  constructor
+  · intro hObs φ hOK
+    rcases hObs φ hOK with ⟨c, hcJ, hw⟩
+    refine ⟨c, hcJ, ?_⟩
+    simpa [TwistedOnCell] using hw
+  · intro hObs φ hOK
+    rcases hObs φ hOK with ⟨c, hcJ, hTw⟩
+    refine ⟨c, hcJ, ?_⟩
+    simpa [TwistedOnCell] using hTw
+
+theorem twistedOnCell_not_goodGaugeForCellWrt
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    {φ : Gauge (P := P) obs target_obs} {c : Cell (P := P)} :
+    TwistedOnCell (P := P) sem obs target_obs φ c →
+      ¬ GoodGaugeForCellWrt (P := P) sem obs target_obs OK c φ := by
+  intro hTw hGood
+  rcases hGood with ⟨_hOK, hFlat⟩
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  dsimp [TwistedOnCell, FlatOnCell] at hTw hFlat
+  rcases hTw with ⟨x, x', hxne, hHol⟩
+  have : x = x' := (hFlat x x').1 hHol
+  exact hxne this
+
+theorem obstructionWrt_implies_exists_cell_not_goodGauge
+    {S : Type w} {V : Type w}
+    (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
+    (OK : Gauge (P := P) obs target_obs → Prop)
+    (J : Set (Cell (P := P))) :
+    ObstructionWrt (P := P) sem obs target_obs OK J →
+      ∀ φ : Gauge (P := P) obs target_obs, OK φ →
+        ∃ c, c ∈ J ∧ ¬ GoodGaugeForCellWrt (P := P) sem obs target_obs OK c φ := by
+  intro hObs φ hOK
+  rcases hObs φ hOK with ⟨c, hcJ, hw⟩
+  have hTw : TwistedOnCell (P := P) sem obs target_obs φ c := by
+    simpa [TwistedOnCell] using hw
+  exact ⟨c, hcJ, twistedOnCell_not_goodGaugeForCellWrt (P := P) sem obs target_obs OK hTw⟩
+
 /-- Paradigm statement: locally flat but globally obstructed on the same cofinal future. -/
 def LocalFlatButObstructedCofinalWrt {S : Type w} {V : Type w}
     (sem : Semantics P S) (obs : S → V) (target_obs : P → V)
