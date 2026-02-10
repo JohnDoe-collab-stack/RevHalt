@@ -26,5 +26,6 @@ import RevHalt.Theory.PrimitiveHolonomy_instance
 import RevHalt.Theory.PrimitiveHolonomy_GribovSingerWitness
 import RevHalt.Theory.PrimitiveHolonomy_OrbitGaugeWitness
 import RevHalt.Theory.PrimitiveHolonomy_Physics
+import RevHalt.Theory.PrimitiveHolonomy_Young
 import RevHalt.Theory.PrimitiveHolonomy_PhysicsInstanceBridge
 import RevHalt.Theory.PrimitiveHolonomy_PhysicsOrbitBridge
