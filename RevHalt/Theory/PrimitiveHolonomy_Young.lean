@@ -80,6 +80,22 @@ theorem decoheredIntensity_one {X : Type u}
   symm
   exact coherentIntensity_eq_incoherent_plus_interference m x
 
+/-- Decoherence shift from coherent intensity: `(η - 1)` times interference. -/
+theorem decohered_minus_coherent_eq_eta_sub_one_mul_interference {X : Type u}
+    (η : Real) (m : YoungModel X) (x : X) :
+    decoheredIntensity η m x - coherentIntensity m x =
+      (η - 1) * interferenceTerm m x := by
+  rw [decoheredIntensity, coherentIntensity_eq_incoherent_plus_interference]
+  ring
+
+/-- Decoherence gap to incoherent intensity: `-η` times interference. -/
+theorem incoherent_minus_decohered_eq_neg_eta_mul_interference {X : Type u}
+    (η : Real) (m : YoungModel X) (x : X) :
+    incoherentIntensity m x - decoheredIntensity η m x =
+      (-η) * interferenceTerm m x := by
+  rw [decoheredIntensity]
+  ring
+
 /-- Coherence defect is exactly the interference term. -/
 theorem coherenceDefect_eq_interferenceTerm {X : Type u}
     (m : YoungModel X) (x : X) :
@@ -153,6 +169,22 @@ theorem phaseCoupledAt_of_div {X : Type u}
   have hMul : (rightAmp m x / leftAmp m x) * leftAmp m x = rightAmp m x := by
     field_simp [hL]
   exact hMul.symm
+
+/-- If `A_L ≠ 0`, the phase-coupling factor at `x` is unique. -/
+theorem phaseCoupledAt_unique_of_leftAmp_ne_zero {X : Type u}
+    (m : YoungModel X) (x : X) (U U' : Complex)
+    (hL : leftAmp m x ≠ 0)
+    (hU : PhaseCoupledAt m x U)
+    (hU' : PhaseCoupledAt m x U') :
+    U = U' := by
+  unfold PhaseCoupledAt at hU hU'
+  have hMul : (U - U') * leftAmp m x = 0 := by
+    calc
+      (U - U') * leftAmp m x = U * leftAmp m x - U' * leftAmp m x := by ring
+      _ = rightAmp m x - rightAmp m x := by rw [← hU, ← hU']
+      _ = 0 := by ring
+  have hDiff : U - U' = 0 := (mul_eq_zero.mp hMul).resolve_right hL
+  exact sub_eq_zero.mp hDiff
 
 /-- If left/right amplitudes have equal norm and left is nonzero, `A_R / A_L` is unit-modulus. -/
 theorem normSq_div_eq_one_of_normSq_eq {X : Type u}
@@ -239,6 +271,70 @@ theorem coherent_eq_incoherent_of_phaseCoupled_unit_of_re_zero {X : Type u}
     coherentIntensity m x = incoherentIntensity m x := by
   rw [coherentIntensity_of_phaseCoupled_unit m x U hPhase hUnit,
     incoherentIntensity_of_phaseCoupled_unit m x U hPhase hUnit, hRe]
+  ring
+
+/-- Unit-modulus phase with `Re(U) = -1` gives a dark fringe (`I_coh = 0`). -/
+theorem coherentIntensity_zero_of_phaseCoupled_unit_of_re_eq_neg_one {X : Type u}
+    (m : YoungModel X) (x : X) (U : Complex)
+    (hPhase : PhaseCoupledAt m x U)
+    (hUnit : Complex.normSq U = 1)
+    (hRe : U.re = -1) :
+    coherentIntensity m x = 0 := by
+  rw [coherentIntensity_of_phaseCoupled_unit m x U hPhase hUnit, hRe]
+  ring
+
+/-- Under unit phase coupling and `A_L ≠ 0`, dark fringe is equivalent to `Re(U) = -1`. -/
+theorem coherentIntensity_zero_iff_re_eq_neg_one_of_phaseCoupled_unit_of_leftAmp_ne_zero
+    {X : Type u}
+    (m : YoungModel X) (x : X) (U : Complex)
+    (hPhase : PhaseCoupledAt m x U)
+    (hUnit : Complex.normSq U = 1)
+    (hL : leftAmp m x ≠ 0) :
+    coherentIntensity m x = 0 ↔ U.re = -1 := by
+  rw [coherentIntensity_of_phaseCoupled_unit m x U hPhase hUnit]
+  have hNsq : Complex.normSq (leftAmp m x) ≠ 0 := by
+    intro h0
+    exact hL ((Complex.normSq_eq_zero).1 h0)
+  constructor
+  · intro hZero
+    have hCoef : 2 + 2 * U.re = 0 := (mul_eq_zero.mp hZero).resolve_right hNsq
+    linarith
+  · intro hRe
+    rw [hRe]
+    ring
+
+/-- In dark-fringe phase (`Re(U) = -1`), the interference term is `-2|A_L|^2`. -/
+theorem interferenceTerm_of_phaseCoupled_of_re_eq_neg_one {X : Type u}
+    (m : YoungModel X) (x : X) (U : Complex)
+    (hPhase : PhaseCoupledAt m x U)
+    (hRe : U.re = -1) :
+    interferenceTerm m x = -((2 : Real) * Complex.normSq (leftAmp m x)) := by
+  rw [interferenceTerm_of_phaseCoupled m x U hPhase, hRe]
+  ring
+
+/-- In dark-fringe phase (`Re(U) = -1`), the coherent deficit is exactly `2|A_L|^2`. -/
+theorem incoherentIntensity_sub_coherentIntensity_of_phaseCoupled_unit_of_re_eq_neg_one {X : Type u}
+    (m : YoungModel X) (x : X) (U : Complex)
+    (hPhase : PhaseCoupledAt m x U)
+    (hUnit : Complex.normSq U = 1)
+    (hRe : U.re = -1) :
+    incoherentIntensity m x - coherentIntensity m x =
+      (2 : Real) * Complex.normSq (leftAmp m x) := by
+  rw [incoherentIntensity_of_phaseCoupled_unit m x U hPhase hUnit,
+    coherentIntensity_of_phaseCoupled_unit m x U hPhase hUnit, hRe]
+  ring
+
+/-- In dark-fringe phase (`Re(U) = -1`), decoherence gap is exactly `2η|A_L|^2`. -/
+theorem incoherentIntensity_sub_decoheredIntensity_of_phaseCoupled_unit_of_re_eq_neg_one {X : Type u}
+    (η : Real) (m : YoungModel X) (x : X) (U : Complex)
+    (hPhase : PhaseCoupledAt m x U)
+    (hUnit : Complex.normSq U = 1)
+    (hRe : U.re = -1) :
+    incoherentIntensity m x - decoheredIntensity η m x =
+      (2 * η) * Complex.normSq (leftAmp m x) := by
+  rw [decoheredIntensity,
+    incoherentIntensity_of_phaseCoupled_unit m x U hPhase hUnit,
+    interferenceTerm_of_phaseCoupled m x U hPhase, hRe]
   ring
 
 /-- Unit-modulus phase under decoherence `η`: explicit interpolation formula. -/
@@ -369,6 +465,67 @@ theorem exists_coherent_formula_of_holonomyRel
   refine ⟨U, hUnit, ?_⟩
   exact coherentIntensity_of_phaseCoupled_unit m xDet U hPhase hUnit
 
+/-- For nonzero left amplitude, a dark fringe forces `Re(U) = -1` on the induced unit phase. -/
+theorem exists_phase_re_eq_neg_one_of_coherent_zero_of_holonomyRel_of_leftAmp_ne_zero
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (obs : S → V) (target_obs : P → V)
+    (m : YoungModel X) (xDet : X)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hBridge : HolonomyRelInducesPhaseAt (P := P) sem obs target_obs m xDet α)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (hZero : coherentIntensity m xDet = 0)
+    (hL : leftAmp m xDet ≠ 0) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧ PhaseCoupledAt m xDet U ∧ U.re = -1 := by
+  rcases hBridge x x' hHol with ⟨U, hUnit, hPhase⟩
+  refine ⟨U, hUnit, hPhase, ?_⟩
+  exact (coherentIntensity_zero_iff_re_eq_neg_one_of_phaseCoupled_unit_of_leftAmp_ne_zero
+    (m := m) (x := xDet) (U := U) hPhase hUnit hL).1 hZero
+
+/-- On a fixed holonomy witness with `A_L ≠ 0`, dark fringe is equivalent to `Re(U) = -1`
+for some induced unit phase witness. -/
+theorem coherent_zero_iff_exists_phase_re_eq_neg_one_of_holonomyRel_of_leftAmp_ne_zero
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (obs : S → V) (target_obs : P → V)
+    (m : YoungModel X) (xDet : X)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hBridge : HolonomyRelInducesPhaseAt (P := P) sem obs target_obs m xDet α)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (hL : leftAmp m xDet ≠ 0) :
+    coherentIntensity m xDet = 0 ↔
+      ∃ U : Complex, Complex.normSq U = 1 ∧ PhaseCoupledAt m xDet U ∧ U.re = -1 := by
+  constructor
+  · intro hZero
+    exact exists_phase_re_eq_neg_one_of_coherent_zero_of_holonomyRel_of_leftAmp_ne_zero
+      sem obs target_obs m xDet α hBridge x x' hHol hZero hL
+  · intro hPhaseNeg
+    rcases hPhaseNeg with ⟨U, hUnit, hPhase, hRe⟩
+    exact coherentIntensity_zero_of_phaseCoupled_unit_of_re_eq_neg_one
+      (m := m) (x := xDet) (U := U) hPhase hUnit hRe
+
+/-- On a dark-fringe holonomy witness (`A_L ≠ 0`), decoherence gap is exactly `2η|A_L|^2`. -/
+theorem exists_incoherent_sub_decohered_formula_of_holonomyRel_of_coherent_zero_of_leftAmp_ne_zero
+    (η : Real)
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (obs : S → V) (target_obs : P → V)
+    (m : YoungModel X) (xDet : X)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hBridge : HolonomyRelInducesPhaseAt (P := P) sem obs target_obs m xDet α)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (hZero : coherentIntensity m xDet = 0)
+    (hL : leftAmp m xDet ≠ 0) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧ PhaseCoupledAt m xDet U ∧ U.re = -1 ∧
+      incoherentIntensity m xDet - decoheredIntensity η m xDet =
+        (2 * η) * Complex.normSq (leftAmp m xDet) := by
+  rcases exists_phase_re_eq_neg_one_of_coherent_zero_of_holonomyRel_of_leftAmp_ne_zero
+      sem obs target_obs m xDet α hBridge x x' hHol hZero hL with
+      ⟨U, hUnit, hPhase, hRe⟩
+  refine ⟨U, hUnit, hPhase, hRe, ?_⟩
+  exact incoherentIntensity_sub_decoheredIntensity_of_phaseCoupled_unit_of_re_eq_neg_one
+    η m xDet U hPhase hUnit hRe
+
 /-- Holonomy witness yields an explicit decohered-intensity formula at `xDet`. -/
 theorem exists_decohered_formula_of_holonomyRel
     (η : Real)
@@ -453,6 +610,64 @@ theorem semanticsDerivedUnitPhaseOnHolonomy_of_ratioUnitary
       (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL hNorm
   · exact phaseCoupledAt_of_div
       (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL
+
+/-- Under the ratio-unitary contract, any coupled phase equals the forced ratio `A_R / A_L`. -/
+theorem phase_eq_div_of_ratioUnitary
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (hRatio : SemanticsRatioUnitaryOnHolonomy (P := P) sem semW obs target_obs)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) (U : Complex)
+    (hCoupled : PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U) :
+    U = rightAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet /
+      leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet := by
+  rcases hRatio α x x' hHol sDet with ⟨hL, _hNorm⟩
+  exact phaseCoupledAt_unique_of_leftAmp_ne_zero
+    (m := youngModelOfTwoPaths (P := P) semW p q x.1)
+    (x := sDet)
+    (U := U)
+    (U' := rightAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet /
+      leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet)
+    hL
+    hCoupled
+    (phaseCoupledAt_of_div
+      (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL)
+
+/-- Under the ratio-unitary contract, unit phase coupling exists uniquely. -/
+theorem existsUnique_unitPhaseCoupling_of_holonomyRel_of_ratioUnitary
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (hRatio : SemanticsRatioUnitaryOnHolonomy (P := P) sem semW obs target_obs)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃! U : Complex,
+      Complex.normSq U = 1 ∧
+      PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U := by
+  rcases hRatio α x x' hHol sDet with ⟨hL, hNorm⟩
+  refine ⟨rightAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet /
+      leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet, ?_, ?_⟩
+  · refine ⟨?_, ?_⟩
+    · exact normSq_div_eq_one_of_normSq_eq
+        (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL hNorm
+    · exact phaseCoupledAt_of_div
+        (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL
+  · intro U hU
+    exact phaseCoupledAt_unique_of_leftAmp_ne_zero
+      (m := youngModelOfTwoPaths (P := P) semW p q x.1)
+      (x := sDet)
+      (U := U)
+      (U' := rightAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet /
+        leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet)
+      hL
+      hU.2
+      (phaseCoupledAt_of_div
+        (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL)
 
 /--
 Complete holonomic phase data:
@@ -1275,6 +1490,26 @@ theorem decoheredIntensity_of_oppositePhase {X : Type u}
       ((2 : Real) - 2 * η) * Complex.normSq (leftAmp m x) := by
   rw [decoheredIntensity, incoherentIntensity_of_oppositePhase m x hOpp,
     interferenceTerm_of_oppositePhase m x hOpp]
+  ring
+
+/-- Opposite phase: incoherent-to-coherent jump is exactly `2|A_L|^2`. -/
+theorem incoherentIntensity_sub_coherentIntensity_of_oppositePhase {X : Type u}
+    (m : YoungModel X) (x : X)
+    (hOpp : rightAmp m x = - leftAmp m x) :
+    incoherentIntensity m x - coherentIntensity m x =
+      (2 : Real) * Complex.normSq (leftAmp m x) := by
+  rw [incoherentIntensity_of_oppositePhase m x hOpp,
+    coherentIntensity_zero_of_oppositePhase m x hOpp]
+  ring
+
+/-- Opposite phase: decoherence gap to incoherent level is exactly `2η|A_L|^2`. -/
+theorem incoherentIntensity_sub_decoheredIntensity_of_oppositePhase {X : Type u}
+    (η : Real) (m : YoungModel X) (x : X)
+    (hOpp : rightAmp m x = - leftAmp m x) :
+    incoherentIntensity m x - decoheredIntensity η m x =
+      (2 * η) * Complex.normSq (leftAmp m x) := by
+  rw [incoherentIntensity_of_oppositePhase m x hOpp,
+    decoheredIntensity_of_oppositePhase η m x hOpp]
   ring
 
 end Regimes
