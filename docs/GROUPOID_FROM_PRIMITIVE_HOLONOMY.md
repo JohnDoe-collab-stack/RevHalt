@@ -65,3 +65,34 @@ La décomposition sépare :
 |---|---|---|
 | **Topologique** | Réversibilité homotopique (C1) | HistoryGraph |
 | **Géométrique** | Platitude sur les unités (C2) | Semantics |
+
+---
+
+## Quotient : émergence sans condition
+
+Contrairement au groupoïde qui nécessite (C1)+(C2), le **quotient émerge toujours** de l'holonomie primitive.
+
+### Construction
+
+La relation `ProbeIndistinguishable` (indiscernabilité sous tous les tests holonomiques) est une équivalence par construction (réfl/sym/trans). Le quotient `FiberQuot` existe sans condition supplémentaire.
+
+> **Le quotient canonique d'une fibre = l'espace des orbites sous l'indistinguabilité holonomique.**
+
+### Trivialité
+
+- **Quotient trivial** ⟺ la famille de probes est **séparante** : `∀ x ≠ y, ∃ test holonomique qui les distingue`
+- **Quotient non-trivial** ⟺ ∃ `x ≠ y` indistinguables sous toutes les holonomies
+
+### Lien avec le groupoïde
+
+Le groupoïde (C1+C2) porte sur **une** sémantique. Le quotient (`ProbeSetoid`) porte sur une **famille** de sémantiques (`SemFamily` sur `CoeffCat`). Ce sont des niveaux différents, reliés par une **implication à sens unique** :
+
+> **Groupoïde dans au moins un coefficient ⟹ quotient trivial.**
+
+Car la self-holonomie `Δ` (qui existe dans tout groupoïde) est un test séparant : `Hol(α)(x,x) = True` mais `Hol(α)(y,x) = (y = x)`, donc `x ≠ y` sont distingués.
+
+| Concept | Niveau | Condition |
+|---|---|---|
+| **Groupoïde** | Une sémantique | (C1) + (C2) |
+| **Quotient trivial** | Famille de sémantiques | Probes séparantes |
+| **Quotient non-trivial** | Famille de sémantiques | Probes non-séparantes |
