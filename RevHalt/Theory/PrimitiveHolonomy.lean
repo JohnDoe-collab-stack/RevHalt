@@ -1891,6 +1891,71 @@ theorem combo_lagEvent :
   · exact combo_holonomy_all_id comboX0 comboX1
   · exact ⟨combo_compatible_step_x0, combo_not_compatible_step_x1⟩
 
+/-- For `(id,id)`, `comboX0` and `comboX1` are not holonomy-related. -/
+theorem combo_not_holonomy_id_id_x0_x1 :
+    ¬ HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base)
+      (p := ComboPath.id) (q := ComboPath.id)
+      (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.id ComboPath.id from trivial)
+      comboX0 comboX1 := by
+  intro hHol
+  rcases hHol with ⟨y, hy0, hy1⟩
+  have hy0' : comboX0.1 = y.1 := by
+    simpa [Transport, comboSemantics, comboRel, relId] using hy0
+  have hy1' : comboX1.1 = y.1 := by
+    simpa [Transport, comboSemantics, comboRel, relId] using hy1
+  have h01 : comboX0.1 = comboX1.1 := hy0'.trans hy1'.symm
+  exact Bool.false_ne_true h01
+
+/-- The two holonomies `(all,id)` and `(id,id)` are extensionally different. -/
+theorem combo_holonomy_all_id_ne_holonomy_id_id :
+    ¬ RelEq
+      (HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+        (h := ComboPrefix.base) (k := ComboPrefix.base)
+        (p := ComboPath.all) (q := ComboPath.id)
+        (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial))
+      (HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+        (h := ComboPrefix.base) (k := ComboPrefix.base)
+        (p := ComboPath.id) (q := ComboPath.id)
+        (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.id ComboPath.id from trivial)) := by
+  intro hEq
+  have hAll :
+      HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+        (h := ComboPrefix.base) (k := ComboPrefix.base)
+        (p := ComboPath.all) (q := ComboPath.id)
+        (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial)
+        comboX0 comboX1 := combo_holonomy_all_id comboX0 comboX1
+  have hId :
+      HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+        (h := ComboPrefix.base) (k := ComboPrefix.base)
+        (p := ComboPath.id) (q := ComboPath.id)
+        (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.id ComboPath.id from trivial)
+        comboX0 comboX1 := (hEq comboX0 comboX1).1 hAll
+  exact combo_not_holonomy_id_id_x0_x1 hId
+
+/-- This instance cannot factor holonomy through any time-shot summary. -/
+theorem combo_not_factorsHolonomyTime
+    {A : Type uQ} [Preorder A] (t : TimeShot (P := ComboPrefix) A) :
+    ¬ FactorsHolonomy (P := ComboPrefix) comboSemantics comboObs comboTargetObs (t.toSummary) := by
+  have hp :
+      t.toSummary (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.all =
+        t.toSummary (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.id := rfl
+  have hq :
+      t.toSummary (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.id =
+        t.toSummary (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.id := rfl
+  exact witness_no_factor (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+    (q := t.toSummary)
+    (h := ComboPrefix.base) (k := ComboPrefix.base)
+    (α₁ := (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial))
+    (α₂ := (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.id ComboPath.id from trivial))
+    hp hq combo_holonomy_all_id_ne_holonomy_id_id
+
+/-- Rich witness: the combo instance is non-reducible for every time-shot summary. -/
+theorem combo_nonReducibleHolonomyTime :
+    NonReducibleHolonomyTime (P := ComboPrefix) comboSemantics comboObs comboTargetObs := by
+  intro A _ t
+  exact combo_not_factorsHolonomyTime t
+
 theorem combo_not_autoRegulatedWrt_singleton_gaugeRefl :
     ¬ AutoRegulatedWrt (P := ComboPrefix) comboSemantics comboObs comboTargetObs
       (fun φ => GaugeRefl (P := ComboPrefix) comboObs comboTargetObs φ)
