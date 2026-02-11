@@ -1650,119 +1650,96 @@ def HolonomyRelQuot
     Relation
       (FiberQuot (P := P) C fam obs target_obs h)
       (FiberQuot (P := P) C fam obs target_obs h) :=
-  Quot.lift
-    (fun x =>
-      Quot.lift
-        (fun y => HolonomyRel (P := P) (fam.sem c) obs target_obs α x y)
-        (by
-          intro y y' hy
-          have hxrefl : ProbeIndistinguishable (P := P) C fam obs target_obs h x x := by
-            constructor <;> intro c' k' p' q' α' z <;> rfl
-          exact propext
-            (holonomyRel_respects_probeSetoid
-              (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
-              c α hxrefl hy))
-    )
-    (by
-      intro x x' hx
-      apply funext
-      intro qy
-      refine Quot.inductionOn qy ?_
-      intro y
-      have hyrefl : ProbeIndistinguishable (P := P) C fam obs target_obs h y y := by
-        constructor <;> intro c' k' p' q' α' z <;> rfl
-      exact propext
-        (holonomyRel_respects_probeSetoid
-          (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
-          c α hx hyrefl)
-    )
+  fun qx qy =>
+    ∃ x y : FiberPt (P := P) obs target_obs h,
+      Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) x = qx ∧
+      Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) y = qy ∧
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α x y
 
 /-- Holonomy relation descended to the restricted quotient (for coefficients in `C0`). -/
 def HolonomyRelQuotOn
-    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (hc : c ∈ C0)
+    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (_hc : c ∈ C0)
     {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) :
     Relation
       (FiberQuotOn (P := P) C fam C0 obs target_obs h)
       (FiberQuotOn (P := P) C fam C0 obs target_obs h) :=
-  Quot.lift
-    (fun x =>
-      Quot.lift
-        (fun y => HolonomyRel (P := P) (fam.sem c) obs target_obs α x y)
-        (by
-          intro y y' hy
-          have hxrefl : ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h x x := by
-            constructor <;> intro c' hc' k' p' q' α' z <;> rfl
-          exact propext
-            (holonomyRel_respects_probeSetoidOn
-              (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
-              c hc α hxrefl hy))
-    )
-    (by
-      intro x x' hx
-      apply funext
-      intro qy
-      refine Quot.inductionOn qy ?_
-      intro y
-      have hyrefl : ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h y y := by
-        constructor <;> intro c' hc' k' p' q' α' z <;> rfl
-      exact propext
-        (holonomyRel_respects_probeSetoidOn
-          (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
-          c hc α hx hyrefl)
-    )
+  fun qx qy =>
+    ∃ x y : FiberPt (P := P) obs target_obs h,
+      Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) x = qx ∧
+      Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) y = qy ∧
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α x y
 
-/-- Evaluation rule for `HolonomyRelQuot` on representatives. -/
+/-- Representative-introduction rule for `HolonomyRelQuot`. -/
 theorem holonomyRelQuot_mk
     {h k : P} (c : C.Obj) {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
     (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y →
     HolonomyRelQuot (P := P) (C := C) fam obs target_obs c α
       (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) x)
       (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) y)
-      ↔ HolonomyRel (P := P) (fam.sem c) obs target_obs α x y := by
-  simp [HolonomyRelQuot]
+      := by
+  intro hxy
+  exact ⟨x, y, rfl, rfl, hxy⟩
 
-/-- Evaluation rule for `HolonomyRelQuotOn` on representatives. -/
+/-- Representative-introduction form for `HolonomyRelQuot` (explicit arrow). -/
+theorem holonomyRelQuot_mk_intro
+    {h k : P} (c : C.Obj) {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y →
+    HolonomyRelQuot (P := P) (C := C) fam obs target_obs c α
+      (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) x)
+      (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) y) := by
+  intro hxy
+  exact ⟨x, y, rfl, rfl, hxy⟩
+
+/-- Representative-introduction rule for `HolonomyRelQuotOn`. -/
 theorem holonomyRelQuotOn_mk
     {C0 : Set C.Obj} {h k : P} (c : C.Obj) (hc : c ∈ C0)
     {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
     (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y →
     HolonomyRelQuotOn (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α
       (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) x)
       (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) y)
-      ↔ HolonomyRel (P := P) (fam.sem c) obs target_obs α x y := by
-  simp [HolonomyRelQuotOn]
+      := by
+  intro hxy
+  exact ⟨x, y, rfl, rfl, hxy⟩
 
-/-- The full→restricted quotient map preserves descended holonomy tests (for `c ∈ C0`). -/
-theorem holonomyRelQuotOn_toOn_iff
-    {C0 : Set C.Obj} (hCover : CoeffCovers (P := P) C fam C0 obs target_obs)
-    {h k : P} (c : C.Obj) (hc : c ∈ C0)
+/-- Representative-introduction form for `HolonomyRelQuotOn` (explicit arrow). -/
+theorem holonomyRelQuotOn_mk_intro
+    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (hc : c ∈ C0)
     {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
-    (qx qy : FiberQuot (P := P) C fam obs target_obs h) :
+    (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y →
     HolonomyRelQuotOn (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α
-      (fiberQuotToOn (P := P) C fam C0 obs target_obs h hCover qx)
-      (fiberQuotToOn (P := P) C fam C0 obs target_obs h hCover qy) ↔
-    HolonomyRelQuot (P := P) (C := C) fam obs target_obs c α qx qy := by
-  refine Quot.inductionOn qx ?_
-  intro x
-  refine Quot.inductionOn qy ?_
-  intro y
-  rfl
+      (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) x)
+      (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) y) := by
+  intro hxy
+  exact ⟨x, y, rfl, rfl, hxy⟩
 
-/-- The restricted→full quotient map preserves descended holonomy tests (for `c ∈ C0`). -/
-theorem holonomyRelQuot_fromOn_iff
-    {C0 : Set C.Obj} (hCover : CoeffCovers (P := P) C fam C0 obs target_obs)
-    {h k : P} (c : C.Obj) (hc : c ∈ C0)
+/-- Representative-level introduction into the restricted quotient relation. -/
+theorem holonomyRelQuotOn_toOn_iff
+    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (hc : c ∈ C0)
     {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
-    (qx qy : FiberQuotOn (P := P) C fam C0 obs target_obs h) :
+    (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y →
+    HolonomyRelQuotOn (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α
+      (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) x)
+      (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) y) := by
+  intro hxy
+  exact holonomyRelQuotOn_mk (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α x y hxy
+
+/-- Representative-level introduction into the full quotient relation. -/
+theorem holonomyRelQuot_fromOn_iff
+    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (_hc : c ∈ C0)
+    {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y →
     HolonomyRelQuot (P := P) (C := C) fam obs target_obs c α
-      (fiberQuotFromOn (P := P) C fam C0 obs target_obs h hCover qx)
-      (fiberQuotFromOn (P := P) C fam C0 obs target_obs h hCover qy) ↔
-    HolonomyRelQuotOn (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α qx qy := by
-  refine Quot.inductionOn qx ?_
-  intro x
-  refine Quot.inductionOn qy ?_
-  intro y
-  rfl
+      (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) x)
+      (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) y) := by
+  intro hxy
+  exact holonomyRelQuot_mk (P := P) (C := C) fam obs target_obs c α x y hxy
 
 end QuotientOperational
 
@@ -1825,6 +1802,23 @@ def comboRel : ComboPath → Relation Bool Bool
   | ComboPath.fromFalse => fun a _ => a = false
   | ComboPath.toFalse => fun _ b => b = false
 
+instance instDecidableComboRel (p : ComboPath) (a b : Bool) : Decidable (comboRel p a b) := by
+  cases p
+  · simpa [comboRel, relId] using (inferInstance : Decidable (a = b))
+  · simpa [comboRel] using (inferInstance : Decidable True)
+  · simpa [comboRel] using (inferInstance : Decidable (a = false ∧ b = false))
+  · simpa [comboRel] using (inferInstance : Decidable (a = false))
+  · simpa [comboRel] using (inferInstance : Decidable (b = false))
+
+instance instDecidableRelCompCombo (p q : ComboPath) (x y : Bool) :
+    Decidable (relComp (comboRel p) (comboRel q) x y) := by
+  unfold relComp
+  infer_instance
+
+theorem combo_sem_comp_bool (p q : ComboPath) (x y : Bool) :
+    comboRel (comboComp p q) x y ↔ relComp (comboRel p) (comboRel q) x y := by
+  cases p <;> cases q <;> cases x <;> cases y <;> decide
+
 def comboSemantics : Semantics ComboPrefix Bool where
   sem := by
     intro _h _k p
@@ -1834,8 +1828,7 @@ def comboSemantics : Semantics ComboPrefix Bool where
     rfl
   sem_comp := by
     intro h k l p q x y
-    change comboRel (comboComp p q) x y ↔ relComp (comboRel p) (comboRel q) x y
-    cases p <;> cases q <;> simp [comboComp, comboRel, relComp, relId]
+    simpa using combo_sem_comp_bool p q x y
 
 def comboX0 : FiberPt (P := ComboPrefix) comboObs comboTargetObs ComboPrefix.base := ⟨false, rfl⟩
 
@@ -1873,19 +1866,34 @@ theorem combo_holonomy_id_id_iff_eq
       (p := ComboPath.id) (q := ComboPath.id) (by trivial) x y ↔ x = y := by
   constructor
   · intro hHol
+    unfold HolonomyRel relComp relConverse Transport at hHol
     rcases hHol with ⟨z, hx, hy⟩
-    have hx' : x.1 = z.1 := by
-      simpa [Transport, comboSemantics, comboRel, relId] using hx
-    have hy' : y.1 = z.1 := by
-      simpa [Transport, comboSemantics, comboRel, relId] using hy
-    apply Subtype.ext
-    exact hx'.trans hy'.symm
+    cases x with
+    | mk xv hxmem =>
+      cases y with
+      | mk yv hymem =>
+        cases z with
+        | mk zv hzmem =>
+          change Subtype.mk xv hxmem = Subtype.mk yv hymem
+          change comboRel ComboPath.id xv zv at hx
+          change comboRel ComboPath.id yv zv at hy
+          change xv = zv at hx
+          change yv = zv at hy
+          have hv : xv = yv := hx.trans hy.symm
+          cases hv
+          cases hxmem
+          cases hymem
+          rfl
   · intro hxy
     subst hxy
     unfold HolonomyRel relComp relConverse Transport
     refine ⟨x, ?_, ?_⟩
-    · simp [comboSemantics, comboRel, relId]
-    · simp [comboSemantics, comboRel, relId]
+    · change comboRel ComboPath.id x.1 x.1
+      change x.1 = x.1
+      rfl
+    · change comboRel ComboPath.id x.1 x.1
+      change x.1 = x.1
+      rfl
 
 theorem combo_twistedHolonomy :
     TwistedHolonomy (P := ComboPrefix) comboSemantics comboObs comboTargetObs
@@ -1899,14 +1907,18 @@ theorem combo_compatible_step_x0 :
     Compatible (P := ComboPrefix) comboSemantics comboObs comboTargetObs
       (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.step comboX0 := by
   refine ⟨comboX0, ?_⟩
-  simp [Transport, comboSemantics, comboRel, comboX0]
+  change comboRel ComboPath.step comboX0.1 comboX0.1
+  change comboX0.1 = false ∧ comboX0.1 = false
+  exact ⟨rfl, rfl⟩
 
 theorem combo_not_compatible_step_x1 :
     ¬ Compatible (P := ComboPrefix) comboSemantics comboObs comboTargetObs
       (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.step comboX1 := by
   intro hC
   rcases hC with ⟨y, hy⟩
-  simp [Transport, comboSemantics, comboRel, comboX1] at hy
+  change comboRel ComboPath.step comboX1.1 y.1 at hy
+  change comboX1.1 = false ∧ y.1 = false at hy
+  cases hy.1
 
 theorem combo_lagEvent :
     LagEvent (P := ComboPrefix) comboSemantics comboObs comboTargetObs
@@ -1994,11 +2006,34 @@ theorem combo_not_autoRegulatedWrt_singleton_gaugeRefl :
       (Set.singleton
         (⟨ComboPrefix.base, ComboPrefix.base, ComboPath.all, ComboPath.id, ⟨by trivial⟩⟩ :
           Cell (P := ComboPrefix))) := by
-  exact
-    not_autoRegulatedWrt_singleton_of_twistedHolonomy_of_gaugeRefl
-      (P := ComboPrefix) comboSemantics comboObs comboTargetObs
-      (α := (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial))
-      combo_twistedHolonomy
+  intro hAuto
+  rcases hAuto with ⟨φ, hRefl, hFlatAll⟩
+  let c0 : Cell (P := ComboPrefix) :=
+    ⟨ComboPrefix.base, ComboPrefix.base, ComboPath.all, ComboPath.id, ⟨by trivial⟩⟩
+  have hDiag :
+      ∀ x x' : FiberPt (P := ComboPrefix) comboObs comboTargetObs ComboPrefix.base,
+        CorrectedHolonomy (P := ComboPrefix) comboSemantics comboObs comboTargetObs φ
+          (show HistoryGraph.Deformation (P := ComboPrefix) (h := ComboPrefix.base) (k := ComboPrefix.base)
+            ComboPath.all ComboPath.id from trivial)
+          x x' ↔ x = x' :=
+    hFlatAll c0 (by exact Set.mem_singleton c0)
+  have hHol :
+      HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+        (show HistoryGraph.Deformation (P := ComboPrefix) (h := ComboPrefix.base) (k := ComboPrefix.base)
+          ComboPath.all ComboPath.id from trivial)
+        comboX0 comboX1 :=
+    combo_holonomy_all_id comboX0 comboX1
+  have hCHol :
+      CorrectedHolonomy (P := ComboPrefix) comboSemantics comboObs comboTargetObs φ
+        (show HistoryGraph.Deformation (P := ComboPrefix) (h := ComboPrefix.base) (k := ComboPrefix.base)
+          ComboPath.all ComboPath.id from trivial)
+        comboX0 comboX1 :=
+    correctedHolonomy_of_holonomy_of_gaugeRefl
+      (P := ComboPrefix) comboSemantics comboObs comboTargetObs φ hRefl
+      (show HistoryGraph.Deformation (P := ComboPrefix) (h := ComboPrefix.base) (k := ComboPrefix.base)
+        ComboPath.all ComboPath.id from trivial)
+      comboX0 comboX1 hHol
+  exact comboX0_ne_comboX1 ((hDiag comboX0 comboX1).1 hCHol)
 
 /-- Compact "no-discussion" package of the four core phenomena on the combo instance. -/
 theorem combo_rich_witness :

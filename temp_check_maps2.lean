@@ -1,0 +1,5 @@
+import RevHalt.Theory.PrimitiveHolonomy
+#print axioms PrimitiveHolonomy.fiberQuotToOn
+#print axioms PrimitiveHolonomy.fiberQuotFromOn
+#print axioms PrimitiveHolonomy.fiberQuotFromOn_leftInverse_fiberQuotToOn
+#print axioms PrimitiveHolonomy.fiberQuotToOn_rightInverse_fiberQuotFromOn
