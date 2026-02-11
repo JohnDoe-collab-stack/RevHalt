@@ -25,11 +25,11 @@ La direction **⟸** n'est pas automatique : il faut produire des déformations 
 
 ### Reformulation packagée (≡ C1+C2)
 
-La condition packagée :
+La condition :
 
 > ∀ p : h→k, ∃ (q : k→h) (η : comp(p,q) ⇒ id_h) (ε : comp(q,p) ⇒ id_k), Hol(η) = Δ_h ∧ Hol(ε) = Δ_k
 
-est équivalente à C1+C2 (triviallement). Elle implique FibGrpd (`fwd`), mais **la réciproque FibGrpd ⟹ Packagée nécessite aussi DeformationComplete** (pour produire η, ε), car la condition mentionne des objets syntaxiques (déformations dans le HistoryGraph), pas seulement des propriétés sémantiques.
+est équivalente à C1+C2 (triviallement). Elle implique FibGrpd (`fwd`), mais **la réciproque FibGrpd ⟹ Packagée nécessite aussi DeformationComplete** (pour produire η, ε), car la condition mentionne des objets syntaxiques (déformations dans le HistoryGraph).
 
 ### ⟹ : (C1) + (C2) donne un groupoïde
 
@@ -69,7 +69,7 @@ Si chaque `T_p` est une bijection (groupoïde sur fibres) :
 
 ## Redéfinition
 
-> **Un groupoïde est une sémantique relationnelle sur une 2-catégorie réversible dont l'holonomie est plate sur les 2-cellules d'unité.**
+> **Un groupoïde émerge d'une sémantique relationnelle sur une 2-catégorie réversible dont l'holonomie est plate sur les 2-cellules d'unité.** (sens ⟹ ; le sens ⟸ nécessite DeformationComplete.)
 
 La décomposition sépare :
 
