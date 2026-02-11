@@ -19,7 +19,17 @@ Soit `(P, Path, Deformation)` une 2-catégorie, `(S, sem)` une sémantique relat
 
 ## Théorème
 
-> **(C1) + (C2) ⟺ groupoïde sur les fibres.**
+> **(C1) + (C2) ⟹ groupoïde sur les fibres.**
+
+La direction **⟸** n'est pas automatique : il faut produire des déformations η, ε dans le HistoryGraph à partir de l'égalité sémantique. Cela requiert une hypothèse de *complétude des déformations* (DeformationComplete).
+
+### Caractérisation ⟺ (reformulation packagée)
+
+> ∀ p : h→k, ∃ (q : k→h) (η : comp(p,q) ⇒ id_h) (ε : comp(q,p) ⇒ id_k), Hol(η) = Δ_h ∧ Hol(ε) = Δ_k
+>
+> **⟺ groupoïde sur les fibres.**
+
+Cette condition packagée est purement sémantique et donne le vrai ⟺ sans hypothèse supplémentaire.
 
 ### ⟹ : (C1) + (C2) donne un groupoïde
 

@@ -1,12 +1,16 @@
 /-!
 # Groupoïde = Base réversible + Holonomie plate sur les unités
 
-Formalization of the groupoid characterization theorem:
-  **(C1) + (C2) ⟺ groupoid structure on fibers**
+Formalization of the groupoid characterization theorem.
 
-where:
-- C1 = homotopy reversibility of the base
-- C2 = flat holonomy on unit 2-cells
+Proven directions:
+  **(C1) + (C2) ⟹ groupoid structure on fibers** (`fwd`)
+  **groupoid + inverse paths ⟹ (C2)** (`bwd_C2`)
+
+The full ⟺ requires either:
+  (a) DeformationComplete (to derive C1 from groupoid), or
+  (b) Packaging C1+C2 into a single sematic condition:
+      ∀ p, ∃ q η ε, Hol(η) = Δ ∧ Hol(ε) = Δ
 
 Strictly constructive (no `noncomputable`, no `classical`).
 Self-contained — no imports beyond Lean core.
