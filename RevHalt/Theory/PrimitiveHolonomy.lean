@@ -1855,6 +1855,38 @@ theorem combo_holonomy_all_id
   · simp [comboSemantics, comboRel]
   · rfl
 
+theorem combo_holonomy_all_id_iff_true
+    (x y : FiberPt (P := ComboPrefix) comboObs comboTargetObs ComboPrefix.base) :
+    HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base)
+      (p := ComboPath.all) (q := ComboPath.id) (by trivial) x y ↔ True := by
+  constructor
+  · intro _h
+    trivial
+  · intro _h
+    exact combo_holonomy_all_id x y
+
+theorem combo_holonomy_id_id_iff_eq
+    (x y : FiberPt (P := ComboPrefix) comboObs comboTargetObs ComboPrefix.base) :
+    HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base)
+      (p := ComboPath.id) (q := ComboPath.id) (by trivial) x y ↔ x = y := by
+  constructor
+  · intro hHol
+    rcases hHol with ⟨z, hx, hy⟩
+    have hx' : x.1 = z.1 := by
+      simpa [Transport, comboSemantics, comboRel, relId] using hx
+    have hy' : y.1 = z.1 := by
+      simpa [Transport, comboSemantics, comboRel, relId] using hy
+    apply Subtype.ext
+    exact hx'.trans hy'.symm
+  · intro hxy
+    subst hxy
+    unfold HolonomyRel relComp relConverse Transport
+    refine ⟨x, ?_, ?_⟩
+    · simp [comboSemantics, comboRel, relId]
+    · simp [comboSemantics, comboRel, relId]
+
 theorem combo_twistedHolonomy :
     TwistedHolonomy (P := ComboPrefix) comboSemantics comboObs comboTargetObs
       (h := ComboPrefix.base) (k := ComboPrefix.base)
@@ -1967,6 +1999,26 @@ theorem combo_not_autoRegulatedWrt_singleton_gaugeRefl :
       (P := ComboPrefix) comboSemantics comboObs comboTargetObs
       (α := (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial))
       combo_twistedHolonomy
+
+/-- Compact "no-discussion" package of the four core phenomena on the combo instance. -/
+theorem combo_rich_witness :
+    TwistedHolonomy (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base)
+      (p := ComboPath.all) (q := ComboPath.id)
+      (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial)
+    ∧ LagEvent (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+        (h := ComboPrefix.base) (k := ComboPrefix.base) (k' := ComboPrefix.base)
+        (p := ComboPath.all) (q := ComboPath.id)
+        (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial)
+        ComboPath.step
+    ∧ ¬ AutoRegulatedWrt (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+        (fun φ => GaugeRefl (P := ComboPrefix) comboObs comboTargetObs φ)
+        (Set.singleton
+          (⟨ComboPrefix.base, ComboPrefix.base, ComboPath.all, ComboPath.id, ⟨by trivial⟩⟩ :
+            Cell (P := ComboPrefix)))
+    ∧ NonReducibleHolonomyTime (P := ComboPrefix) comboSemantics comboObs comboTargetObs := by
+  refine ⟨combo_twistedHolonomy, combo_lagEvent, combo_not_autoRegulatedWrt_singleton_gaugeRefl, ?_⟩
+  exact combo_nonReducibleHolonomyTime
 
 end NontrivialCombinatorialInstance
 
