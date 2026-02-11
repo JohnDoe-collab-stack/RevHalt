@@ -1093,6 +1093,286 @@ def NonReducibleHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
   ∀ (Q : Type uQ) (q : Summary (P := P) Q),
     ¬ FactorsHolonomy sem obs target_obs q
 
+/-!
+## 8. Coefficients / Probes: coherent families of holonomies
+
+This section packages the "all holonomies" viewpoint:
+- a coefficient system (`CoeffCat`);
+- a family of semantics indexed by coefficients (`SemFamily`);
+- a notion of naturality for holonomy under coefficient change;
+- an indistinguishability relation tested by all coefficients;
+- a constructive cofinal-reduction theorem for a covering subfamily.
+-/
+
+universe uC uM
+
+/-- Minimal category-like structure for probe/coefficients. -/
+structure CoeffCat where
+  Obj : Type uC
+  Hom : Obj → Obj → Type uM
+  id : ∀ c : Obj, Hom c c
+  comp : ∀ {a b d : Obj}, Hom a b → Hom b d → Hom a d
+
+/-- A family of semantics indexed by coefficients. -/
+structure SemFamily (C : CoeffCat) (P : Type u) [HistoryGraph P] (S : Type w) where
+  sem : C.Obj → Semantics P S
+
+/-- Action of coefficient morphisms on fiber relations (at each source prefix). -/
+structure FiberRelPush {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (obs : S → V) (target_obs : P → V) where
+  push :
+    {c d : C.Obj} → C.Hom c d → {h : P} →
+      Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h) →
+      Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h)
+  push_id :
+    ∀ {c : C.Obj} {h : P}
+      (R : Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h)),
+      RelEq (push (C.id c) (h := h) R) R
+  push_comp :
+    ∀ {a b d : C.Obj} (f : C.Hom a b) (g : C.Hom b d) {h : P}
+      (R : Relation (FiberPt (P := P) obs target_obs h) (FiberPt (P := P) obs target_obs h)),
+      RelEq (push (C.comp f g) (h := h) R) (push g (h := h) (push f (h := h) R))
+
+/-- Naturality: change coefficient then read holonomy = read holonomy then push. -/
+def HolonomyNatural {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (obs : S → V) (target_obs : P → V)
+    (push : FiberRelPush (P := P) (S := S) (V := V) C obs target_obs) : Prop :=
+  ∀ {c d : C.Obj} (f : C.Hom c d) (cell : Cell (P := P)),
+    let ⟨h, _, _p, _q, ⟨α⟩⟩ := cell
+    RelEq
+      (push.push f (h := h) (HolonomyRel (P := P) (fam.sem c) obs target_obs α))
+      (HolonomyRel (P := P) (fam.sem d) obs target_obs α)
+
+/-- One-sided (outgoing) indistinguishability seen by all coefficients/cells from `h`. -/
+def ProbeIndistinguishableOut {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (x y : FiberPt (P := P) obs target_obs h) : Prop :=
+  ∀ (c : C.Obj) (k : P) (p q : HistoryGraph.Path h k) (α : HistoryGraph.Deformation p q)
+    (z : FiberPt (P := P) obs target_obs h),
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α x z ↔
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α y z
+
+/-- One-sided indistinguishability restricted to a selected subfamily of coefficients. -/
+def ProbeIndistinguishableOutOn {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (x y : FiberPt (P := P) obs target_obs h) : Prop :=
+  ∀ (c : C.Obj), c ∈ C0 →
+    ∀ (k : P) (p q : HistoryGraph.Path h k) (α : HistoryGraph.Deformation p q)
+      (z : FiberPt (P := P) obs target_obs h),
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α x z ↔
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α y z
+
+/-- Two-sided indistinguishability (outgoing + incoming) over all coefficients/cells. -/
+def ProbeIndistinguishable {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (x y : FiberPt (P := P) obs target_obs h) : Prop :=
+  ProbeIndistinguishableOut (P := P) C fam obs target_obs h x y ∧
+  (∀ (c : C.Obj) (k : P) (p q : HistoryGraph.Path h k) (α : HistoryGraph.Deformation p q)
+    (z : FiberPt (P := P) obs target_obs h),
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α z x ↔
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α z y)
+
+/-- Two-sided indistinguishability restricted to a selected subfamily of coefficients. -/
+def ProbeIndistinguishableOn {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (x y : FiberPt (P := P) obs target_obs h) : Prop :=
+  ProbeIndistinguishableOutOn (P := P) C fam C0 obs target_obs h x y ∧
+  (∀ (c : C.Obj), c ∈ C0 →
+    ∀ (k : P) (p q : HistoryGraph.Path h k) (α : HistoryGraph.Deformation p q)
+      (z : FiberPt (P := P) obs target_obs h),
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α z x ↔
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α z y)
+
+/-- Setoid induced by all probes. -/
+def ProbeSetoid {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S)
+    (obs : S → V) (target_obs : P → V) (h : P) :
+    Setoid (FiberPt (P := P) obs target_obs h) where
+  r := ProbeIndistinguishable (P := P) C fam obs target_obs h
+  iseqv := by
+    constructor
+    · intro x
+      constructor
+      · intro c k p q α z
+        rfl
+      · intro c k p q α z
+        rfl
+    · intro x y hxy
+      constructor
+      · intro c k p q α z
+        exact (hxy.1 c k p q α z).symm
+      · intro c k p q α z
+        exact (hxy.2 c k p q α z).symm
+    · intro x y z hxy hyz
+      constructor
+      · intro c k p q α t
+        exact (hxy.1 c k p q α t).trans (hyz.1 c k p q α t)
+      · intro c k p q α t
+        exact (hxy.2 c k p q α t).trans (hyz.2 c k p q α t)
+
+/-- Setoid induced by a restricted probe family `C0`. -/
+def ProbeSetoidOn {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P) :
+    Setoid (FiberPt (P := P) obs target_obs h) where
+  r := ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h
+  iseqv := by
+    constructor
+    · intro x
+      constructor
+      · intro c hc k p q α z
+        rfl
+      · intro c hc k p q α z
+        rfl
+    · intro x y hxy
+      constructor
+      · intro c hc k p q α z
+        exact (hxy.1 c hc k p q α z).symm
+      · intro c hc k p q α z
+        exact (hxy.2 c hc k p q α z).symm
+    · intro x y z hxy hyz
+      constructor
+      · intro c hc k p q α t
+        exact (hxy.1 c hc k p q α t).trans (hyz.1 c hc k p q α t)
+      · intro c hc k p q α t
+        exact (hxy.2 c hc k p q α t).trans (hyz.2 c hc k p q α t)
+
+/-- Quotient of a fiber by two-sided probe indistinguishability. -/
+def FiberQuot {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S)
+    (obs : S → V) (target_obs : P → V) (h : P) :=
+  Quot (ProbeSetoid (P := P) C fam obs target_obs h)
+
+/-- Quotient of a fiber by two-sided probe indistinguishability on `C0`. -/
+def FiberQuotOn {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P) :=
+  Quot (ProbeSetoidOn (P := P) C fam C0 obs target_obs h)
+
+/-- Cofinality in coefficients: every coefficient maps to some coefficient in `C0`. -/
+def CoeffCofinal (C : CoeffCat) (C0 : Set C.Obj) : Prop :=
+  ∀ c : C.Obj, ∃ c0 : C.Obj, c0 ∈ C0 ∧ Nonempty (C.Hom c c0)
+
+/--
+Conservativity on holonomy tests along coefficient morphisms:
+pushing a holonomy relation does not lose information (pointwise).
+-/
+def PushConservativeOnHolonomy {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (obs : S → V) (target_obs : P → V)
+    (push : FiberRelPush (P := P) (S := S) (V := V) C obs target_obs) : Prop :=
+  ∀ {c d : C.Obj} (f : C.Hom c d) (cell : Cell (P := P)),
+    let ⟨h, _, _p, _q, ⟨α⟩⟩ := cell
+    RelEq
+      (push.push f (h := h) (HolonomyRel (P := P) (fam.sem c) obs target_obs α))
+      (HolonomyRel (P := P) (fam.sem c) obs target_obs α)
+
+/--
+`C0` covers all coefficients if each coefficient has a representative in `C0`
+with exactly the same holonomy tests (pointwise on fibers).
+-/
+def CoeffCovers {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ c : C.Obj, ∃ c0 : C.Obj, c0 ∈ C0 ∧
+    ∀ (h k : P) (p q : HistoryGraph.Path h k) (α : HistoryGraph.Deformation p q)
+      (x z : FiberPt (P := P) obs target_obs h),
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α x z ↔
+      HolonomyRel (P := P) (fam.sem c0) obs target_obs α x z
+
+/--
+Structural derivation of `CoeffCovers` from:
+1) coefficient cofinality (via morphisms),
+2) holonomy naturality under coefficient change,
+3) conservativity of push on holonomy tests.
+-/
+theorem coeffCovers_of_coeffCofinal_of_holonomyNatural_of_pushConservativeOnHolonomy
+    {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V)
+    (push : FiberRelPush (P := P) (S := S) (V := V) C obs target_obs)
+    (hCof : CoeffCofinal C C0)
+    (hNat : HolonomyNatural (P := P) C fam obs target_obs push)
+    (hCons : PushConservativeOnHolonomy (P := P) C fam obs target_obs push) :
+    CoeffCovers (P := P) C fam C0 obs target_obs := by
+  intro c
+  rcases hCof c with ⟨c0, hc0, ⟨f⟩⟩
+  refine ⟨c0, hc0, ?_⟩
+  intro h k p q α x z
+  have hNatCell :
+      RelEq
+        (push.push f (h := h) (HolonomyRel (P := P) (fam.sem c) obs target_obs α))
+        (HolonomyRel (P := P) (fam.sem c0) obs target_obs α) := by
+    simpa using hNat (c := c) (d := c0) f ⟨h, k, p, q, ⟨α⟩⟩
+  have hConsCell :
+      RelEq
+        (push.push f (h := h) (HolonomyRel (P := P) (fam.sem c) obs target_obs α))
+        (HolonomyRel (P := P) (fam.sem c) obs target_obs α) := by
+    simpa using hCons (c := c) (d := c0) f ⟨h, k, p, q, ⟨α⟩⟩
+  have hEq :
+      RelEq
+        (HolonomyRel (P := P) (fam.sem c) obs target_obs α)
+        (HolonomyRel (P := P) (fam.sem c0) obs target_obs α) := by
+    intro a b
+    exact (hConsCell a b).symm.trans (hNatCell a b)
+  exact hEq x z
+
+theorem probeIndistinguishableOn_of_probeIndistinguishable
+    {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    {x y : FiberPt (P := P) obs target_obs h} :
+    ProbeIndistinguishable (P := P) C fam obs target_obs h x y →
+      ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h x y := by
+  intro hAll
+  constructor
+  · intro c hc0 k p q α z
+    exact hAll.1 c k p q α z
+  · intro c hc0 k p q α z
+    exact hAll.2 c k p q α z
+
+theorem probeIndistinguishable_of_probeIndistinguishableOn_of_coeffCovers
+    {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (hCover : CoeffCovers (P := P) C fam C0 obs target_obs)
+    {x y : FiberPt (P := P) obs target_obs h} :
+    ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h x y →
+      ProbeIndistinguishable (P := P) C fam obs target_obs h x y := by
+  intro hOn
+  constructor
+  · intro c k p q α z
+    rcases hCover c with ⟨c0, hc0, hEq⟩
+    have hx : HolonomyRel (P := P) (fam.sem c) obs target_obs α x z ↔
+        HolonomyRel (P := P) (fam.sem c0) obs target_obs α x z := hEq h k p q α x z
+    have hy : HolonomyRel (P := P) (fam.sem c) obs target_obs α y z ↔
+        HolonomyRel (P := P) (fam.sem c0) obs target_obs α y z := hEq h k p q α y z
+    exact hx.trans ((hOn.1 c0 hc0 k p q α z).trans hy.symm)
+  · intro c k p q α z
+    rcases hCover c with ⟨c0, hc0, hEq⟩
+    have hx : HolonomyRel (P := P) (fam.sem c) obs target_obs α z x ↔
+        HolonomyRel (P := P) (fam.sem c0) obs target_obs α z x := hEq h k p q α z x
+    have hy : HolonomyRel (P := P) (fam.sem c) obs target_obs α z y ↔
+        HolonomyRel (P := P) (fam.sem c0) obs target_obs α z y := hEq h k p q α z y
+    exact hx.trans ((hOn.2 c0 hc0 k p q α z).trans hy.symm)
+
+/-- Cofinal-reduction principle for two-sided probe indistinguishability. -/
+theorem probeIndistinguishable_iff_probeIndistinguishableOn_of_coeffCovers
+    {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (hCover : CoeffCovers (P := P) C fam C0 obs target_obs)
+    (x y : FiberPt (P := P) obs target_obs h) :
+    ProbeIndistinguishable (P := P) C fam obs target_obs h x y ↔
+      ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h x y := by
+  constructor
+  · exact probeIndistinguishableOn_of_probeIndistinguishable (P := P) C fam C0 obs target_obs h
+  · exact probeIndistinguishable_of_probeIndistinguishableOn_of_coeffCovers
+      (P := P) C fam C0 obs target_obs h hCover
+
 end PrimitiveHolonomy
 
 #print axioms PrimitiveHolonomy.factors_eq_of_codes
