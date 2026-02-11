@@ -646,6 +646,67 @@ def youngModelOfTwoPaths
     | Slit.right => semW.sem q sSrc sDet
 
 /--
+Primitive phase-factorization data on holonomy witnesses:
+for each witness `(α, x, x', hHol)` and detector state `sDet`,
+the right-path amplitude factorizes as a complex phase times the left-path amplitude.
+-/
+def SemanticsPhaseFactorizationOnHolonomy
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex) : Prop :=
+  ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x'),
+    ∀ sDet : S,
+      semW.sem q x.1 sDet = phase α x x' hHol sDet * semW.sem p x.1 sDet
+
+/--
+Primitive unitarity data on the same phase field:
+the factorization phase has unit modulus on every holonomy witness and detector state.
+-/
+def SemanticsPhaseUnitaryOnHolonomy
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex) : Prop :=
+  ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x'),
+    ∀ sDet : S, Complex.normSq (phase α x x' hHol sDet) = 1
+
+/--
+Minimal primitive bridge data on holonomy witnesses:
+for each witness `(α, x, x', hHol)` and detector state `sDet`, we assume only:
+1) right amplitude factorizes through a phase field,
+2) left/right amplitudes have equal norm.
+
+No separate unit-modulus axiom on the phase field is postulated.
+-/
+def SemanticsFactorizedNormBalancedOnHolonomy
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex) : Prop :=
+  ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x'),
+    ∀ sDet : S,
+      semW.sem q x.1 sDet = phase α x x' hHol sDet * semW.sem p x.1 sDet ∧
+      Complex.normSq (semW.sem q x.1 sDet) = Complex.normSq (semW.sem p x.1 sDet)
+
+/--
 Semantics-derived phase contract:
 for each holonomy witness and detector state, semantics provides a unit-modulus
 coupling factor for the two path amplitudes extracted from `semW`.
@@ -660,6 +721,82 @@ def SemanticsDerivedUnitPhaseOnHolonomy
     ∀ sDet : S, ∃ U : Complex,
       Complex.normSq U = 1 ∧
       PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U
+
+/--
+From the minimal primitive bridge data (factorization + norm balance), the unit-phase
+bridge is derived. The unit modulus of the coupling phase is proved, not assumed.
+-/
+theorem semanticsDerivedUnitPhaseOnHolonomy_of_factorizedNormBalanced
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hPrim : SemanticsFactorizedNormBalancedOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase) :
+    SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs := by
+  intro h k p q α x x' hHol sDet
+  let m : YoungModel S := youngModelOfTwoPaths (P := P) semW p q x.1
+  by_cases hL : leftAmp m sDet = 0
+  · have hBal :
+      Complex.normSq (rightAmp m sDet) = Complex.normSq (leftAmp m sDet) := by
+      simpa [m, rightAmp, leftAmp, youngModelOfTwoPaths] using (hPrim α x x' hHol sDet).2
+    have hRnormZero : Complex.normSq (rightAmp m sDet) = 0 := by
+      simpa [hL] using hBal
+    have hR : rightAmp m sDet = 0 := (Complex.normSq_eq_zero).1 hRnormZero
+    refine ⟨(1 : Complex), by simp, ?_⟩
+    unfold PhaseCoupledAt
+    simp [m, hL, hR]
+  · have hFact :
+      rightAmp m sDet = phase α x x' hHol sDet * leftAmp m sDet := by
+      simpa [m, rightAmp, leftAmp, youngModelOfTwoPaths, mul_comm] using (hPrim α x x' hHol sDet).1
+    have hBal :
+      Complex.normSq (rightAmp m sDet) = Complex.normSq (leftAmp m sDet) := by
+      simpa [m, rightAmp, leftAmp, youngModelOfTwoPaths] using (hPrim α x x' hHol sDet).2
+    have hNormMul :
+        Complex.normSq (phase α x x' hHol sDet) * Complex.normSq (leftAmp m sDet) =
+          Complex.normSq (leftAmp m sDet) := by
+      calc
+        Complex.normSq (phase α x x' hHol sDet) * Complex.normSq (leftAmp m sDet)
+            = Complex.normSq (phase α x x' hHol sDet * leftAmp m sDet) := by
+                simp [Complex.normSq_mul]
+        _ = Complex.normSq (rightAmp m sDet) := by simp [hFact]
+        _ = Complex.normSq (leftAmp m sDet) := hBal
+    have hLeftNormNe : Complex.normSq (leftAmp m sDet) ≠ 0 := by
+      intro h0
+      exact hL ((Complex.normSq_eq_zero).1 h0)
+    have hLeftNormPos : 0 < Complex.normSq (leftAmp m sDet) :=
+      lt_of_le_of_ne (Complex.normSq_nonneg _) (Ne.symm hLeftNormNe)
+    have hUnit : Complex.normSq (phase α x x' hHol sDet) = 1 := by
+      nlinarith [hNormMul, hLeftNormPos]
+    refine ⟨phase α x x' hHol sDet, hUnit, ?_⟩
+    simpa [m] using hFact
+
+/--
+From primitive complex-semantics data (factorization + unitarity), the unit-phase bridge
+is derived: no separate bridge contract is postulated.
+-/
+theorem semanticsDerivedUnitPhaseOnHolonomy_of_factorizedUnitaryPhase
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hFact : SemanticsPhaseFactorizationOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase)
+    (hUnit : SemanticsPhaseUnitaryOnHolonomy
+      (P := P) (S := S) (V := V) sem obs target_obs phase) :
+    SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs := by
+  intro h k p q α x x' hHol sDet
+  refine ⟨phase α x x' hHol sDet, hUnit α x x' hHol sDet, ?_⟩
+  unfold PhaseCoupledAt rightAmp leftAmp youngModelOfTwoPaths
+  simpa [mul_comm] using hFact α x x' hHol sDet
 
 /--
 Non-oracular ratio contract on holonomy witnesses:
@@ -910,6 +1047,192 @@ theorem exists_decoheredIntensity_formula_of_holonomyRel
     (U := U)
     hCoupled
     hUnit
+
+/--
+Direct bridge from the minimal primitive complex-semantics assumptions:
+factorization + norm balance imply unit phase coupling on each holonomy witness.
+-/
+theorem exists_unitPhaseCoupling_of_holonomyRel_of_factorizedNormBalanced
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hPrim : SemanticsFactorizedNormBalancedOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U := by
+  exact exists_unitPhaseCoupling_of_holonomyRel
+    (P := P) (S := S) (V := V)
+    sem semW obs target_obs α
+    (semanticsDerivedUnitPhaseOnHolonomy_of_factorizedNormBalanced
+      (P := P) (S := S) (V := V)
+      sem semW obs target_obs phase hPrim)
+    x x' hHol sDet
+
+/--
+Direct coherent-intensity formula from the minimal primitive complex-semantics assumptions.
+-/
+theorem exists_coherentIntensity_formula_of_holonomyRel_of_factorizedNormBalanced
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hPrim : SemanticsFactorizedNormBalancedOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      coherentIntensity (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+        (2 + 2 * U.re) *
+          Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  exact exists_coherentIntensity_formula_of_holonomyRel
+    (P := P) (S := S) (V := V)
+    sem semW obs target_obs α
+    (semanticsDerivedUnitPhaseOnHolonomy_of_factorizedNormBalanced
+      (P := P) (S := S) (V := V)
+      sem semW obs target_obs phase hPrim)
+    x x' hHol sDet
+
+/--
+Direct decohered-intensity formula from the minimal primitive complex-semantics assumptions.
+-/
+theorem exists_decoheredIntensity_formula_of_holonomyRel_of_factorizedNormBalanced
+    (η : Real)
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hPrim : SemanticsFactorizedNormBalancedOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      decoheredIntensity η (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+        (2 + 2 * η * U.re) *
+          Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  exact exists_decoheredIntensity_formula_of_holonomyRel
+    (P := P) (S := S) (V := V)
+    η sem semW obs target_obs α
+    (semanticsDerivedUnitPhaseOnHolonomy_of_factorizedNormBalanced
+      (P := P) (S := S) (V := V)
+      sem semW obs target_obs phase hPrim)
+    x x' hHol sDet
+
+/--
+Direct bridge from primitive complex-semantics assumptions:
+factorization + unitarity imply unit phase coupling on each holonomy witness.
+-/
+theorem exists_unitPhaseCoupling_of_holonomyRel_of_factorizedUnitaryPhase
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hFact : SemanticsPhaseFactorizationOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase)
+    (hUnit : SemanticsPhaseUnitaryOnHolonomy
+      (P := P) (S := S) (V := V) sem obs target_obs phase)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U := by
+  exact exists_unitPhaseCoupling_of_holonomyRel
+    (P := P) (S := S) (V := V)
+    sem semW obs target_obs α
+    (semanticsDerivedUnitPhaseOnHolonomy_of_factorizedUnitaryPhase
+      (P := P) (S := S) (V := V)
+      sem semW obs target_obs phase hFact hUnit)
+    x x' hHol sDet
+
+/--
+Direct coherent-intensity formula from primitive complex-semantics assumptions.
+-/
+theorem exists_coherentIntensity_formula_of_holonomyRel_of_factorizedUnitaryPhase
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hFact : SemanticsPhaseFactorizationOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase)
+    (hUnit : SemanticsPhaseUnitaryOnHolonomy
+      (P := P) (S := S) (V := V) sem obs target_obs phase)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      coherentIntensity (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+        (2 + 2 * U.re) *
+          Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  exact exists_coherentIntensity_formula_of_holonomyRel
+    (P := P) (S := S) (V := V)
+    sem semW obs target_obs α
+    (semanticsDerivedUnitPhaseOnHolonomy_of_factorizedUnitaryPhase
+      (P := P) (S := S) (V := V)
+      sem semW obs target_obs phase hFact hUnit)
+    x x' hHol sDet
+
+/--
+Direct decohered-intensity formula from primitive complex-semantics assumptions.
+-/
+theorem exists_decoheredIntensity_formula_of_holonomyRel_of_factorizedUnitaryPhase
+    (η : Real)
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (phase :
+      ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+        (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+        _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        S → Complex)
+    (hFact : SemanticsPhaseFactorizationOnHolonomy
+      (P := P) (S := S) (V := V) sem semW obs target_obs phase)
+    (hUnit : SemanticsPhaseUnitaryOnHolonomy
+      (P := P) (S := S) (V := V) sem obs target_obs phase)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      decoheredIntensity η (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+        (2 + 2 * η * U.re) *
+          Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  exact exists_decoheredIntensity_formula_of_holonomyRel
+    (P := P) (S := S) (V := V)
+    η sem semW obs target_obs α
+    (semanticsDerivedUnitPhaseOnHolonomy_of_factorizedUnitaryPhase
+      (P := P) (S := S) (V := V)
+      sem semW obs target_obs phase hFact hUnit)
+    x x' hHol sDet
 
 end DerivedPhaseFromWeightedSemantics
 
