@@ -23,13 +23,13 @@ Soit `(P, Path, Deformation)` une 2-catégorie, `(S, sem)` une sémantique relat
 
 La direction **⟸** n'est pas automatique : il faut produire des déformations η, ε dans le HistoryGraph à partir de l'égalité sémantique. Cela requiert une hypothèse de *complétude des déformations* (DeformationComplete).
 
-### Caractérisation ⟺ (reformulation packagée)
+### Reformulation packagée (≡ C1+C2)
+
+La condition packagée :
 
 > ∀ p : h→k, ∃ (q : k→h) (η : comp(p,q) ⇒ id_h) (ε : comp(q,p) ⇒ id_k), Hol(η) = Δ_h ∧ Hol(ε) = Δ_k
->
-> **⟺ groupoïde sur les fibres.**
 
-Cette condition packagée est purement sémantique et donne le vrai ⟺ sans hypothèse supplémentaire.
+est équivalente à C1+C2 (triviallement). Elle implique FibGrpd (`fwd`), mais **la réciproque FibGrpd ⟹ Packagée nécessite aussi DeformationComplete** (pour produire η, ε), car la condition mentionne des objets syntaxiques (déformations dans le HistoryGraph), pas seulement des propriétés sémantiques.
 
 ### ⟹ : (C1) + (C2) donne un groupoïde
 
