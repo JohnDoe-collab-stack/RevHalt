@@ -111,6 +111,34 @@ Car la self-holonomie `Δ` (qui existe dans tout groupoïde) est un test sépara
 
 ---
 
+## J = fidélité pleine du foncteur de transport
+
+La formalisation révèle une **décomposition à trois niveaux**, pas deux :
+
+| Condition | Nature | Porte sur |
+| --- | --- | --- |
+| C1 | Topologique | Syntaxe (HistoryGraph) |
+| C2 | Géométrique | Sémantique (Rel sur fibres) |
+| J (DeformationComplete) | Épistémique | Le pont syntaxe ↔ sémantique |
+
+**Preuve formelle** : `fwd` n'utilise jamais J. `bwd_C2` non plus. J n'apparaîtrait que dans un hypothétique `bwd_C1` — et *uniquement* là.
+
+### J comme fidélité du foncteur
+
+Le foncteur d'interprétation envoie les chemins sur leurs transports. J est la condition de **fidélité pleine au niveau des 2-cellules** : si deux chemins ont le même transport sur toutes les fibres, alors il existe une déformation entre eux dans le HistoryGraph.
+
+- **Sans J** : la sémantique est un *quotient* de la syntaxe. Plusieurs chemins (ou déformations) syntaxiquement distincts peuvent donner le même transport. L'information coule syntaxe → sémantique mais pas retour.
+
+- **Avec J** : la sémantique est *fidèle* à la syntaxe. Toute égalité sémantique est témoinée syntaxiquement.
+
+### Conséquence pour le programme
+
+Le cadre *sans J* est le bon cadre général. Les systèmes concrets (réécritures, traces d'exécution, sémantiques de jeux) n'ont en général pas J — la syntaxe est plus riche que la sémantique. Le fait que `fwd` marche sans J signifie que la direction utile (conditions vérifiables → structure groupoïdale) est **inconditionnelle**.
+
+> **J est la fidélité du foncteur de transport — la reformulation géométrique du slogan HoTT « l'univalence est l'extensionnalité pour les types ».**
+
+---
+
 ## Correspondance avec HoTT
 
 | Holonomie primitive | HoTT |
