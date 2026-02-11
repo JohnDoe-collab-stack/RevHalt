@@ -367,6 +367,184 @@ theorem exists_decohered_formula_of_holonomyRel
 end PrimitiveHolonomyBridge
 
 -- ============================================================
+-- DERIVED PHASE FROM WEIGHTED SEMANTICS (non-axiomatic U)
+-- ============================================================
+
+section DerivedPhaseFromWeightedSemantics
+
+variable {P S V : Type u} [HistoryGraph P]
+
+/-- Two-path Young model extracted from a complex weighted semantics and a fixed source state. -/
+def youngModelOfTwoPaths
+    (semW : WeightedSemantics (P := P) S Complex)
+    {h k : P} (p q : HistoryGraph.Path h k) (sSrc : S) : YoungModel S where
+  amp slit sDet :=
+    match slit with
+    | Slit.left => semW.sem p sSrc sDet
+    | Slit.right => semW.sem q sSrc sDet
+
+/--
+Semantics-derived phase contract:
+for each holonomy witness and detector state, semantics provides a unit-modulus
+coupling factor for the two path amplitudes extracted from `semW`.
+-/
+def SemanticsDerivedUnitPhaseOnHolonomy
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+    _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+    ∀ sDet : S, ∃ U : Complex,
+      Complex.normSq U = 1 ∧
+      PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U
+
+/--
+Complete holonomic phase data:
+`phase` is an explicit map from full holonomy data `(α, x, x', hHol, sDet)` to a coupling phase.
+-/
+structure CompleteHolonomyPhaseData
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V) where
+  phase :
+    ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+      (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+      _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+      S → Complex
+  phase_unit :
+    ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+      (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+      (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+      (sDet : S),
+      Complex.normSq (phase α x x' hHol sDet) = 1
+  phase_coupled :
+    ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+      (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+      (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+      (sDet : S),
+      PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet
+        (phase α x x' hHol sDet)
+
+/-- Complete holonomic phase data induces the existential bridge contract. -/
+theorem semanticsDerivedUnitPhaseOnHolonomy_of_completeHolonomyPhaseData
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (hData : CompleteHolonomyPhaseData (P := P) sem semW obs target_obs) :
+    SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs := by
+  intro h k p q α x x' hHol sDet
+  refine ⟨hData.phase α x x' hHol sDet, ?_, ?_⟩
+  · exact hData.phase_unit α x x' hHol sDet
+  · exact hData.phase_coupled α x x' hHol sDet
+
+/-- Coherent formula with explicit phase computed from complete holonomic data. -/
+theorem coherentIntensity_formula_of_holonomyRel_of_completeHolonomyPhaseData
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (hData : CompleteHolonomyPhaseData (P := P) sem semW obs target_obs)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    coherentIntensity (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+      (2 + 2 * (hData.phase α x x' hHol sDet).re) *
+        Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  exact coherentIntensity_of_phaseCoupled_unit
+    (m := youngModelOfTwoPaths (P := P) semW p q x.1)
+    (x := sDet)
+    (U := hData.phase α x x' hHol sDet)
+    (hData.phase_coupled α x x' hHol sDet)
+    (hData.phase_unit α x x' hHol sDet)
+
+/-- Decohered formula with explicit phase computed from complete holonomic data. -/
+theorem decoheredIntensity_formula_of_holonomyRel_of_completeHolonomyPhaseData
+    (η : Real)
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (hData : CompleteHolonomyPhaseData (P := P) sem semW obs target_obs)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    decoheredIntensity η (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+      (2 + 2 * η * (hData.phase α x x' hHol sDet).re) *
+        Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  exact decoheredIntensity_of_phaseCoupled_unit
+    (η := η)
+    (m := youngModelOfTwoPaths (P := P) semW p q x.1)
+    (x := sDet)
+    (U := hData.phase α x x' hHol sDet)
+    (hData.phase_coupled α x x' hHol sDet)
+    (hData.phase_unit α x x' hHol sDet)
+
+/-- For a holonomy witness, unit-phase coupling now depends on `(α, x, x', sDet)`. -/
+theorem exists_unitPhaseCoupling_of_holonomyRel_of_leftAmp_ne_zero
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hDerived : SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U := by
+  exact hDerived α x x' hHol sDet
+
+/-- Coherent intensity formula from a holonomy witness, with semantics-derived unit phase. -/
+theorem exists_coherentIntensity_formula_of_holonomyRel
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hDerived : SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      coherentIntensity (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+        (2 + 2 * U.re) *
+          Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  rcases hDerived α x x' hHol sDet with ⟨U, hUnit, hCoupled⟩
+  refine ⟨U, hUnit, ?_⟩
+  exact coherentIntensity_of_phaseCoupled_unit
+    (m := youngModelOfTwoPaths (P := P) semW p q x.1)
+    (x := sDet)
+    (U := U)
+    hCoupled
+    hUnit
+
+/-- Decohered intensity formula from a holonomy witness, with semantics-derived unit phase. -/
+theorem exists_decoheredIntensity_formula_of_holonomyRel
+    (η : Real)
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hDerived : SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      decoheredIntensity η (youngModelOfTwoPaths (P := P) semW p q x.1) sDet =
+        (2 + 2 * η * U.re) *
+          Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) := by
+  rcases hDerived α x x' hHol sDet with ⟨U, hUnit, hCoupled⟩
+  refine ⟨U, hUnit, ?_⟩
+  exact decoheredIntensity_of_phaseCoupled_unit
+    (η := η)
+    (m := youngModelOfTwoPaths (P := P) semW p q x.1)
+    (x := sDet)
+    (U := U)
+    hCoupled
+    hUnit
+
+end DerivedPhaseFromWeightedSemantics
+
+-- ============================================================
 -- CONCRETE TOY CLOSURE (bridge fully instantiated)
 -- ============================================================
 
@@ -379,6 +557,61 @@ def toyTargetObsUnit : ToyPrefix → Unit := fun _ => ()
 
 abbrev ToyFiberBase :=
   _root_.PrimitiveHolonomy.FiberPt (P := ToyPrefix) toyObsUnit toyTargetObsUnit ToyPrefix.base
+
+/-- Unit-modulus complex weight attached to each toy path label. -/
+def toyPathUnitWeight : Bool → Complex
+  | false => 1
+  | true => Complex.I
+
+/-- Relative phase between two toy path labels. -/
+def toyRelativePhase : Bool → Bool → Complex
+  | false, false => 1
+  | false, true => Complex.I
+  | true, false => -Complex.I
+  | true, true => 1
+
+theorem normSq_toyRelativePhase (p q : Bool) :
+    Complex.normSq (toyRelativePhase p q) = 1 := by
+  cases p <;> cases q <;> simp [toyRelativePhase]
+
+theorem toyPathUnitWeight_factorization (p q : Bool) :
+    toyPathUnitWeight q = toyRelativePhase p q * toyPathUnitWeight p := by
+  cases p <;> cases q <;> simp [toyPathUnitWeight, toyRelativePhase]
+
+/-- Complex weighted semantics on the toy history (path-only unit-modulus weights). -/
+def toyWeightedSemanticsUnit : WeightedSemantics (P := ToyPrefix) ToyStateInt Complex where
+  sem := by
+    intro _h _k p
+    exact fun _sSrc _sDet => toyPathUnitWeight p
+
+/-- Complete holonomic phase data instantiated on the toy history. -/
+def toyCompleteHolonomyPhaseData :
+    CompleteHolonomyPhaseData (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+      (sem := toyLagSemantics (Y := Unit))
+      (semW := toyWeightedSemanticsUnit)
+      toyObsUnit toyTargetObsUnit where
+  phase := by
+    intro _h _k p q _α _x _x' _hHol _sDet
+    exact toyRelativePhase p q
+  phase_unit := by
+    intro _h _k p q _α _x _x' _hHol _sDet
+    exact normSq_toyRelativePhase p q
+  phase_coupled := by
+    intro _h _k p q _α _x _x' _hHol _sDet
+    unfold PhaseCoupledAt rightAmp leftAmp youngModelOfTwoPaths
+    simp [toyWeightedSemanticsUnit]
+    exact toyPathUnitWeight_factorization p q
+
+/-- The toy complete-data instance induces the existential derived-phase bridge. -/
+theorem semanticsDerivedUnitPhaseOnHolonomy_toy :
+    SemanticsDerivedUnitPhaseOnHolonomy (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+      (toyLagSemantics (Y := Unit)) toyWeightedSemanticsUnit toyObsUnit toyTargetObsUnit := by
+  exact semanticsDerivedUnitPhaseOnHolonomy_of_completeHolonomyPhaseData
+    (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+    (sem := toyLagSemantics (Y := Unit))
+    (semW := toyWeightedSemanticsUnit)
+    (obs := toyObsUnit) (target_obs := toyTargetObsUnit)
+    toyCompleteHolonomyPhaseData
 
 /-- Two explicit micro-states in the base fiber (hidden `+1` and `-1`). -/
 def xPlus : ToyFiberBase := ⟨⟨(), 1⟩, rfl⟩
@@ -460,6 +693,26 @@ theorem coherent_eq_incoherent_toyHolonomy_quadrature (A : Complex) :
     (phaseCoupledAt_fixedPhaseYoungModel A Complex.I ())
     Complex.normSq_I Complex.I_re
 
+/-- Concrete coherent-intensity formula driven by complete holonomic phase data. -/
+theorem coherentIntensity_formula_toyHolonomy_from_completeData
+    (sDet : ToyStateInt) :
+    coherentIntensity (youngModelOfTwoPaths (P := ToyPrefix)
+      (h := ToyPrefix.base) (k := ToyPrefix.base)
+      toyWeightedSemanticsUnit false true xPlus.1) sDet =
+      (2 + 2 * (toyRelativePhase false true).re) *
+        Complex.normSq (leftAmp (youngModelOfTwoPaths (P := ToyPrefix)
+          (h := ToyPrefix.base) (k := ToyPrefix.base)
+          toyWeightedSemanticsUnit false true xPlus.1) sDet) := by
+  simpa using
+    coherentIntensity_formula_of_holonomyRel_of_completeHolonomyPhaseData
+      (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+      (sem := toyLagSemantics (Y := Unit))
+      (semW := toyWeightedSemanticsUnit)
+      (obs := toyObsUnit) (target_obs := toyTargetObsUnit)
+      toyCompleteHolonomyPhaseData
+      (α := alphaFlip) (x := xPlus) (x' := xMinus)
+      holonomyRel_xPlus_xMinus_alphaFlip sDet
+
 -- ============================================================
 -- ANGLE PARAMETRIZATION (explicit fringe formulas)
 -- ============================================================
@@ -467,9 +720,7 @@ theorem coherent_eq_incoherent_toyHolonomy_quadrature (A : Complex) :
 /-- The angle phase `⟨cos θ, sin θ⟩` always has modulus 1. -/
 theorem normSq_phase_of_angle (θ : Real) :
     Complex.normSq (⟨Real.cos θ, Real.sin θ⟩ : Complex) = 1 := by
-  have h := Real.cos_sq_add_sin_sq θ
-  simpa [Complex.normSq, pow_two, mul_comm, mul_left_comm, mul_assoc, add_comm,
-    add_left_comm, add_assoc] using h
+  simpa [Complex.normSq, pow_two] using Real.cos_sq_add_sin_sq θ
 
 /-- Angle form of the interference term on the fixed-phase model: `2 cos(θ) |A|^2`. -/
 theorem interferenceTerm_fixedPhaseYoungModel_of_angle (A : Complex) (θ : Real) :
