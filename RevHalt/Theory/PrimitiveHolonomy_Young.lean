@@ -543,6 +543,89 @@ theorem exists_decohered_formula_of_holonomyRel
   refine ⟨U, hUnit, ?_⟩
   exact decoheredIntensity_of_phaseCoupled_unit η m xDet U hPhase hUnit
 
+/--
+Contract: corrected holonomy witnesses project to bare holonomy witnesses
+on the same 2-cell.
+-/
+def CorrectedHolonomyProjectsToHolonomy
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+    _root_.PrimitiveHolonomy.CorrectedHolonomy (P := P) sem obs target_obs φ α x x' →
+      _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x'
+
+/--
+If every corrected holonomy witness projects to a bare holonomy witness, and bare holonomy
+at `xDet` enforces a dark fringe, then each admissible obstruction witness yields a unit phase
+with `Re(U) = -1`.
+-/
+theorem exists_phase_re_eq_neg_one_per_admissibleGauge_of_obstructionWrt
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (obs : S → V) (target_obs : P → V)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P)))
+    (m : YoungModel X) (xDet : X)
+    (hObs : _root_.PrimitiveHolonomy.ObstructionWrt (P := P) sem obs target_obs OK J)
+    (hProj : CorrectedHolonomyProjectsToHolonomy (P := P) sem obs target_obs)
+    (hBridge : ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q),
+      HolonomyRelInducesPhaseAt (P := P) sem obs target_obs m xDet α)
+    (hDark : ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+      (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+      _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        coherentIntensity m xDet = 0)
+    (hL : leftAmp m xDet ≠ 0) :
+    ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs, OK φ →
+      ∃ U : Complex, Complex.normSq U = 1 ∧ PhaseCoupledAt m xDet U ∧ U.re = -1 := by
+  intro φ hOK
+  rcases ((_root_.PrimitiveHolonomy.obstructionWrt_iff_twistedOnCell
+      (P := P) sem obs target_obs OK J).1 hObs) φ hOK with ⟨c, _hcJ, hTw⟩
+  rcases c with ⟨h, k, p, q, ⟨α⟩⟩
+  rcases hTw with ⟨x, x', _hxNe, hCorr⟩
+  have hHol :
+      _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' :=
+    hProj α φ x x' hCorr
+  have hZero : coherentIntensity m xDet = 0 := hDark α x x' hHol
+  rcases exists_phase_re_eq_neg_one_of_coherent_zero_of_holonomyRel_of_leftAmp_ne_zero
+      (P := P) (S := S) (V := V) (X := X)
+      sem obs target_obs m xDet α (hBridge α) x x' hHol hZero hL with
+      ⟨U, hUnit, hPhase, hRe⟩
+  exact ⟨U, hUnit, hPhase, hRe⟩
+
+/--
+Under the same projection and dark-fringe contracts, each admissible obstruction witness yields
+the exact decoherence gap formula `I_incoh - I_η = 2η |A_L|^2` at `xDet`.
+-/
+theorem exists_incoherent_sub_decohered_formula_per_admissibleGauge_of_obstructionWrt
+    (η : Real)
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (obs : S → V) (target_obs : P → V)
+    (OK : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs → Prop)
+    (J : Set (_root_.PrimitiveHolonomy.Cell (P := P)))
+    (m : YoungModel X) (xDet : X)
+    (hObs : _root_.PrimitiveHolonomy.ObstructionWrt (P := P) sem obs target_obs OK J)
+    (hProj : CorrectedHolonomyProjectsToHolonomy (P := P) sem obs target_obs)
+    (hBridge : ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q),
+      HolonomyRelInducesPhaseAt (P := P) sem obs target_obs m xDet α)
+    (hDark : ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+      (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+      _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+        coherentIntensity m xDet = 0)
+    (hL : leftAmp m xDet ≠ 0) :
+    ∀ φ : _root_.PrimitiveHolonomy.Gauge (P := P) obs target_obs, OK φ →
+      ∃ U : Complex, Complex.normSq U = 1 ∧ PhaseCoupledAt m xDet U ∧ U.re = -1 ∧
+        incoherentIntensity m xDet - decoheredIntensity η m xDet =
+          (2 * η) * Complex.normSq (leftAmp m xDet) := by
+  intro φ hOK
+  rcases exists_phase_re_eq_neg_one_per_admissibleGauge_of_obstructionWrt
+      (P := P) (S := S) (V := V) (X := X)
+      sem obs target_obs OK J m xDet hObs hProj hBridge hDark hL φ hOK with
+      ⟨U, hUnit, hPhase, hRe⟩
+  refine ⟨U, hUnit, hPhase, hRe, ?_⟩
+  exact incoherentIntensity_sub_decoheredIntensity_of_phaseCoupled_unit_of_re_eq_neg_one
+    η m xDet U hPhase hUnit hRe
+
 end PrimitiveHolonomyBridge
 
 -- ============================================================
