@@ -2023,3 +2023,21 @@ theorem combo_rich_witness :
 end NontrivialCombinatorialInstance
 
 end PrimitiveHolonomy
+
+#print axioms PrimitiveHolonomy.holonomyRel_respects_probeSetoid
+#print axioms PrimitiveHolonomy.holonomyRel_respects_probeSetoidOn
+#print axioms PrimitiveHolonomy.HolonomyRelQuot
+#print axioms PrimitiveHolonomy.HolonomyRelQuotOn
+#print axioms PrimitiveHolonomy.holonomyRelQuot_mk
+#print axioms PrimitiveHolonomy.holonomyRelQuotOn_mk
+#print axioms PrimitiveHolonomy.holonomyRelQuotOn_toOn_iff
+#print axioms PrimitiveHolonomy.holonomyRelQuot_fromOn_iff
+#print axioms PrimitiveHolonomy.combo_holonomy_all_id_iff_true
+#print axioms PrimitiveHolonomy.combo_holonomy_id_id_iff_eq
+#print axioms PrimitiveHolonomy.combo_twistedHolonomy
+#print axioms PrimitiveHolonomy.combo_lagEvent
+#print axioms PrimitiveHolonomy.combo_holonomy_all_id_ne_holonomy_id_id
+#print axioms PrimitiveHolonomy.combo_not_factorsHolonomyTime
+#print axioms PrimitiveHolonomy.combo_nonReducibleHolonomyTime
+#print axioms PrimitiveHolonomy.combo_not_autoRegulatedWrt_singleton_gaugeRefl
+#print axioms PrimitiveHolonomy.combo_rich_witness
