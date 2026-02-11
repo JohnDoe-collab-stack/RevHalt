@@ -1,4 +1,5 @@
 import Mathlib
-example (z : Complex) : 2 * (z * (starRingEnd Complex) (-z)).re = - (2 * Complex.normSq z) := by
-  simp [Complex.normSq]
-  ring
+#check abs_add
+#check abs_add_le_abs_add_abs
+#check abs_add_three
+#check abs_mul
