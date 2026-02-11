@@ -46,12 +46,14 @@ Donc C2 donne : `T_p ∘ T_q = Δ_h` et `T_q ∘ T_p = Δ_k`.
 
 Donc `T_p` est une bijection, `T_q = T_p†`, et avec `sem_id` + `sem_comp` : groupoïde. ∎
 
-### ⟸ : groupoïde donne (C1) + (C2)
+### ⟸ : groupoïde donne (C2), mais (C1) nécessite une hypothèse supplémentaire
 
-Si chaque `T_p` est une bijection (groupoïde sur fibres d'une 2-catégorie relationnelle) :
+Si chaque `T_p` est une bijection (groupoïde sur fibres) :
 
-- **(C1)** : prendre `q` tel que `T_q = T_p†` (= `T_p⁻¹`). Alors `T_{comp(p,q)} = T_p ∘ T_q = Δ = T_{id}` par `sem_comp`/`sem_id`. Les chemins `comp(p,q)` et `id_h` ont le même transport — la déformation entre eux existe dans toute 2-catégorie qui identifie les chemins de même sémantique.
-- **(C2)** : `Hol(η) = T_{comp(p,q)} ∘ T_{id}† = T_p ∘ T_q = Δ`. ∎
+- **(C2)** : pour tout `q` avec `T_q = T_p†`, si `η : comp(p,q) ⇒ id_h` existe, alors `Hol(η) = T_{comp(p,q)} ∘ T_{id}† = T_p ∘ T_q = Δ`. ✅ Prouvé (`bwd_C2` dans le fichier Lean).
+- **(C1)** : il faut produire `q`, `η`, et `ε` **dans le HistoryGraph**. On sait que `T_q = T_p†` donne `T_{comp(p,q)} = T_{id}` sémantiquement, mais **rien ne garantit l'existence d'une déformation** `comp(p,q) ⇒ id_h` dans une 2-catégorie abstraite. Cela requiert l'hypothèse de **complétude des déformations** (DeformationComplete) : si deux chemins ont le même transport, il existe une déformation entre eux. ⚠️
+
+> **Sans DeformationComplete** : ⟸ vaut pour C2 mais pas pour C1.
 
 ## Attention : platitude universelle ≠ groupoïde
 
