@@ -144,6 +144,28 @@ Interpretation: `U` is the effective relative holonomy/phase between the two pat
 def PhaseCoupledAt {X : Type u} (m : YoungModel X) (x : X) (U : Complex) : Prop :=
   rightAmp m x = U * leftAmp m x
 
+/-- The quotient phase `A_R / A_L` satisfies phase coupling when `A_L ≠ 0`. -/
+theorem phaseCoupledAt_of_div {X : Type u}
+    (m : YoungModel X) (x : X)
+    (hL : leftAmp m x ≠ 0) :
+    PhaseCoupledAt m x (rightAmp m x / leftAmp m x) := by
+  unfold PhaseCoupledAt
+  have hMul : (rightAmp m x / leftAmp m x) * leftAmp m x = rightAmp m x := by
+    field_simp [hL]
+  exact hMul.symm
+
+/-- If left/right amplitudes have equal norm and left is nonzero, `A_R / A_L` is unit-modulus. -/
+theorem normSq_div_eq_one_of_normSq_eq {X : Type u}
+    (m : YoungModel X) (x : X)
+    (hL : leftAmp m x ≠ 0)
+    (hNorm : Complex.normSq (rightAmp m x) = Complex.normSq (leftAmp m x)) :
+    Complex.normSq (rightAmp m x / leftAmp m x) = 1 := by
+  rw [Complex.normSq_div, hNorm]
+  have hNsq : Complex.normSq (leftAmp m x) ≠ 0 := by
+    intro h0
+    exact hL ((Complex.normSq_eq_zero).1 h0)
+  exact div_self hNsq
+
 /-- Under phase coupling, the interference term is controlled by `Re(U)`. -/
 theorem interferenceTerm_of_phaseCoupled {X : Type u}
     (m : YoungModel X) (x : X) (U : Complex)
@@ -400,6 +422,39 @@ def SemanticsDerivedUnitPhaseOnHolonomy
       PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U
 
 /--
+Non-oracular ratio contract on holonomy witnesses:
+for each witness, the left amplitude is nonzero and left/right amplitudes have equal norm.
+Then the coupling phase is automatically the ratio `A_R / A_L`.
+-/
+def SemanticsRatioUnitaryOnHolonomy
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V) : Prop :=
+  ∀ {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h),
+    _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x' →
+    ∀ sDet : S,
+      leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet ≠ 0 ∧
+      Complex.normSq (rightAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet) =
+        Complex.normSq (leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet)
+
+/-- Ratio-unitary contract implies the existential unit-phase bridge. -/
+theorem semanticsDerivedUnitPhaseOnHolonomy_of_ratioUnitary
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    (hRatio : SemanticsRatioUnitaryOnHolonomy (P := P) sem semW obs target_obs) :
+    SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs := by
+  intro h k p q α x x' hHol sDet
+  rcases hRatio α x x' hHol sDet with ⟨hL, hNorm⟩
+  refine ⟨rightAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet /
+      leftAmp (youngModelOfTwoPaths (P := P) semW p q x.1) sDet, ?_, ?_⟩
+  · exact normSq_div_eq_one_of_normSq_eq
+      (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL hNorm
+  · exact phaseCoupledAt_of_div
+      (m := youngModelOfTwoPaths (P := P) semW p q x.1) (x := sDet) hL
+
+/--
 Complete holonomic phase data:
 `phase` is an explicit map from full holonomy data `(α, x, x', hHol, sDet)` to a coupling phase.
 -/
@@ -481,7 +536,7 @@ theorem decoheredIntensity_formula_of_holonomyRel_of_completeHolonomyPhaseData
     (hData.phase_unit α x x' hHol sDet)
 
 /-- For a holonomy witness, unit-phase coupling now depends on `(α, x, x', sDet)`. -/
-theorem exists_unitPhaseCoupling_of_holonomyRel_of_leftAmp_ne_zero
+theorem exists_unitPhaseCoupling_of_holonomyRel
     (sem : _root_.PrimitiveHolonomy.Semantics P S)
     (semW : WeightedSemantics (P := P) S Complex)
     (obs : S → V) (target_obs : P → V)
@@ -493,6 +548,22 @@ theorem exists_unitPhaseCoupling_of_holonomyRel_of_leftAmp_ne_zero
     ∃ U : Complex, Complex.normSq U = 1 ∧
       PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U := by
   exact hDerived α x x' hHol sDet
+
+/-- Legacy name kept for compatibility. -/
+theorem exists_unitPhaseCoupling_of_holonomyRel_of_leftAmp_ne_zero
+    (sem : _root_.PrimitiveHolonomy.Semantics P S)
+    (semW : WeightedSemantics (P := P) S Complex)
+    (obs : S → V) (target_obs : P → V)
+    {h k : P} {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (hDerived : SemanticsDerivedUnitPhaseOnHolonomy (P := P) sem semW obs target_obs)
+    (x x' : _root_.PrimitiveHolonomy.FiberPt (P := P) obs target_obs h)
+    (hHol : _root_.PrimitiveHolonomy.HolonomyRel (P := P) sem obs target_obs α x x')
+    (sDet : S) :
+    ∃ U : Complex, Complex.normSq U = 1 ∧
+      PhaseCoupledAt (youngModelOfTwoPaths (P := P) semW p q x.1) sDet U := by
+  exact exists_unitPhaseCoupling_of_holonomyRel
+    (P := P) (S := S) (V := V)
+    sem semW obs target_obs α hDerived x x' hHol sDet
 
 /-- Coherent intensity formula from a holonomy witness, with semantics-derived unit phase. -/
 theorem exists_coherentIntensity_formula_of_holonomyRel
@@ -848,6 +919,187 @@ theorem coherentIntensity_toyHolonomyData_xPlus_to_xMinus :
     coherentIntensity (toyYoungFromHolonomyData xPlus.1) xMinus.1 = 0 := by
   apply coherentIntensity_toyYoungFromHolonomyData_of_gt
   simp [xPlus, xMinus]
+
+-- ============================================================
+-- PHASE-FIELD HOLONOMY DATA (constructive, state-dependent)
+-- ============================================================
+
+/-- Path-weight semantics from a fully state-dependent complex phase field. -/
+def toyWeightedSemanticsPhaseField
+    (phase : ToyStateInt → ToyStateInt → Complex) :
+    WeightedSemantics (P := ToyPrefix) ToyStateInt Complex where
+  sem := by
+    intro _h _k p
+    exact fun sSrc sDet => if p then phase sSrc sDet else 1
+
+/-- Relative phase for arbitrary `(p,q)` induced by a phase field. -/
+def toyRelativePhasePhaseField
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (p q : Bool) (sSrc sDet : ToyStateInt) : Complex :=
+  let U := phase sSrc sDet
+  match p, q with
+  | false, false => 1
+  | false, true => U
+  | true, false => (starRingEnd Complex) U
+  | true, true => 1
+
+theorem normSq_toyRelativePhasePhaseField
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (hUnit : ∀ sSrc sDet, Complex.normSq (phase sSrc sDet) = 1)
+    (p q : Bool) (sSrc sDet : ToyStateInt) :
+    Complex.normSq (toyRelativePhasePhaseField phase p q sSrc sDet) = 1 := by
+  cases p <;> cases q <;> simp [toyRelativePhasePhaseField, hUnit, Complex.normSq_conj]
+
+theorem toyWeightedSemanticsPhaseField_factorization
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (hUnit : ∀ sSrc sDet, Complex.normSq (phase sSrc sDet) = 1)
+    (p q : Bool) (sSrc sDet : ToyStateInt) :
+    (if q then phase sSrc sDet else 1) =
+      toyRelativePhasePhaseField phase p q sSrc sDet *
+        (if p then phase sSrc sDet else 1) := by
+  cases p <;> cases q <;> simp [toyRelativePhasePhaseField]
+  ·
+    have hNormCast : ((Complex.normSq (phase sSrc sDet) : Complex) = 1) := by
+      exact_mod_cast hUnit sSrc sDet
+    have hConjMul : (starRingEnd Complex) (phase sSrc sDet) * phase sSrc sDet = 1 := by
+      calc
+        (starRingEnd Complex) (phase sSrc sDet) * phase sSrc sDet
+            = (Complex.normSq (phase sSrc sDet) : Complex) := by
+                simpa using (Complex.normSq_eq_conj_mul_self (z := phase sSrc sDet)).symm
+        _ = 1 := hNormCast
+    simpa using hConjMul.symm
+
+/-- Complete holonomic phase data induced by a state-dependent unit phase field. -/
+def toyCompleteHolonomyPhaseData_phaseField
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (hUnit : ∀ sSrc sDet, Complex.normSq (phase sSrc sDet) = 1) :
+    CompleteHolonomyPhaseData (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+      (sem := toyLagSemantics (Y := Unit))
+      (semW := toyWeightedSemanticsPhaseField phase)
+      toyObsUnit toyTargetObsUnit where
+  phase := by
+    intro _h _k p q _α x _x' _hHol sDet
+    exact toyRelativePhasePhaseField phase p q x.1 sDet
+  phase_unit := by
+    intro _h _k p q _α x _x' _hHol sDet
+    exact normSq_toyRelativePhasePhaseField phase hUnit p q x.1 sDet
+  phase_coupled := by
+    intro _h _k p q _α x _x' _hHol sDet
+    unfold PhaseCoupledAt rightAmp leftAmp youngModelOfTwoPaths
+    cases p <;> cases q <;> simp [toyWeightedSemanticsPhaseField, toyRelativePhasePhaseField]
+    ·
+      have hNormCast : ((Complex.normSq (phase x.1 sDet) : Complex) = 1) := by
+        exact_mod_cast hUnit x.1 sDet
+      have hConjMul : (starRingEnd Complex) (phase x.1 sDet) * phase x.1 sDet = 1 := by
+        calc
+          (starRingEnd Complex) (phase x.1 sDet) * phase x.1 sDet
+              = (Complex.normSq (phase x.1 sDet) : Complex) := by
+                  simpa using (Complex.normSq_eq_conj_mul_self (z := phase x.1 sDet)).symm
+          _ = 1 := hNormCast
+      simpa using hConjMul.symm
+
+/-- Two-path Young model induced by a phase-field holonomic weighted semantics. -/
+abbrev toyYoungFromPhaseFieldHolonomyData
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (sSrc : ToyStateInt) : YoungModel ToyStateInt :=
+  youngModelOfTwoPaths (P := ToyPrefix)
+    (h := ToyPrefix.base) (k := ToyPrefix.base)
+    (toyWeightedSemanticsPhaseField phase) false true sSrc
+
+/-- Coherent intensity law for phase-field holonomy data. -/
+theorem coherentIntensity_toyYoungFromPhaseFieldHolonomyData
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (hUnit : ∀ sSrc sDet, Complex.normSq (phase sSrc sDet) = 1)
+    (sSrc sDet : ToyStateInt) :
+    coherentIntensity (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet =
+      2 + 2 * (phase sSrc sDet).re := by
+  have hPhase :
+      PhaseCoupledAt (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet
+        (phase sSrc sDet) := by
+    unfold toyYoungFromPhaseFieldHolonomyData PhaseCoupledAt rightAmp leftAmp youngModelOfTwoPaths
+    simp [toyWeightedSemanticsPhaseField]
+  have hMain :
+      coherentIntensity (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet =
+        (2 + 2 * (phase sSrc sDet).re) *
+          Complex.normSq (leftAmp (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet) :=
+    coherentIntensity_of_phaseCoupled_unit
+      (m := toyYoungFromPhaseFieldHolonomyData phase sSrc)
+      (x := sDet)
+      (U := phase sSrc sDet)
+      hPhase
+      (hUnit sSrc sDet)
+  have hLeft :
+      Complex.normSq (leftAmp (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet) = 1 := by
+    unfold toyYoungFromPhaseFieldHolonomyData leftAmp youngModelOfTwoPaths
+    simp [toyWeightedSemanticsPhaseField]
+  rw [hLeft] at hMain
+  simpa using hMain
+
+/-- Decohered intensity law for phase-field holonomy data. -/
+theorem decoheredIntensity_toyYoungFromPhaseFieldHolonomyData
+    (η : Real)
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (hUnit : ∀ sSrc sDet, Complex.normSq (phase sSrc sDet) = 1)
+    (sSrc sDet : ToyStateInt) :
+    decoheredIntensity η (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet =
+      2 + 2 * η * (phase sSrc sDet).re := by
+  have hPhase :
+      PhaseCoupledAt (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet
+        (phase sSrc sDet) := by
+    unfold toyYoungFromPhaseFieldHolonomyData PhaseCoupledAt rightAmp leftAmp youngModelOfTwoPaths
+    simp [toyWeightedSemanticsPhaseField]
+  have hMain :
+      decoheredIntensity η (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet =
+        (2 + 2 * η * (phase sSrc sDet).re) *
+          Complex.normSq (leftAmp (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet) :=
+    decoheredIntensity_of_phaseCoupled_unit
+      (η := η)
+      (m := toyYoungFromPhaseFieldHolonomyData phase sSrc)
+      (x := sDet)
+      (U := phase sSrc sDet)
+      hPhase
+      (hUnit sSrc sDet)
+  have hLeft :
+      Complex.normSq (leftAmp (toyYoungFromPhaseFieldHolonomyData phase sSrc) sDet) = 1 := by
+    unfold toyYoungFromPhaseFieldHolonomyData leftAmp youngModelOfTwoPaths
+    simp [toyWeightedSemanticsPhaseField]
+  rw [hLeft] at hMain
+  simpa using hMain
+
+/-- Ratio-unitary contract holds for any unit phase field in the toy history. -/
+theorem semanticsRatioUnitaryOnHolonomy_toyPhaseField
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (hUnit : ∀ sSrc sDet, Complex.normSq (phase sSrc sDet) = 1) :
+    SemanticsRatioUnitaryOnHolonomy (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+      (toyLagSemantics (Y := Unit)) (toyWeightedSemanticsPhaseField phase)
+      toyObsUnit toyTargetObsUnit := by
+  intro h k p q α x x' _hHol sDet
+  constructor
+  · cases p with
+    | false =>
+        simp [leftAmp, youngModelOfTwoPaths, toyWeightedSemanticsPhaseField]
+    | true =>
+        have hNe : phase x.1 sDet ≠ 0 := by
+          intro hz
+          have h := hUnit x.1 sDet
+          simp [hz] at h
+        simpa [leftAmp, youngModelOfTwoPaths, toyWeightedSemanticsPhaseField] using hNe
+  · cases p <;> cases q <;> simp [rightAmp, leftAmp, youngModelOfTwoPaths,
+      toyWeightedSemanticsPhaseField, hUnit]
+
+/-- Therefore the existential unit-phase bridge is derived from the ratio contract. -/
+theorem semanticsDerivedUnitPhaseOnHolonomy_toyPhaseField_of_ratio
+    (phase : ToyStateInt → ToyStateInt → Complex)
+    (hUnit : ∀ sSrc sDet, Complex.normSq (phase sSrc sDet) = 1) :
+    SemanticsDerivedUnitPhaseOnHolonomy (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+      (toyLagSemantics (Y := Unit)) (toyWeightedSemanticsPhaseField phase)
+      toyObsUnit toyTargetObsUnit := by
+  exact semanticsDerivedUnitPhaseOnHolonomy_of_ratioUnitary
+    (P := ToyPrefix) (S := ToyStateInt) (V := Unit)
+    (sem := toyLagSemantics (Y := Unit))
+    (semW := toyWeightedSemanticsPhaseField phase)
+    (obs := toyObsUnit) (target_obs := toyTargetObsUnit)
+    (semanticsRatioUnitaryOnHolonomy_toyPhaseField phase hUnit)
 
 -- ============================================================
 -- ANGLE PARAMETRIZATION (explicit fringe formulas)
