@@ -38,9 +38,9 @@ Donc `T_p` est une bijection, `T_q = T_p†`, et avec `sem_id` + `sem_comp` : gr
 
 ### ⟸ : groupoïde donne (C1) + (C2)
 
-Si chaque `T_p` est une bijection :
+Si chaque `T_p` est une bijection (groupoïde sur fibres d'une 2-catégorie relationnelle) :
 
-- **(C1)** : prendre `q` tel que `T_q = T_p†` (= `T_p⁻¹`). Alors `T_p ∘ T_q = Δ = T_{id}` et `T_q ∘ T_p = Δ = T_{id}`, donc par `sem_comp` les compositions ont le même transport que l'identité — poser les déformations correspondantes.
+- **(C1)** : prendre `q` tel que `T_q = T_p†` (= `T_p⁻¹`). Alors `T_{comp(p,q)} = T_p ∘ T_q = Δ = T_{id}` par `sem_comp`/`sem_id`. Les chemins `comp(p,q)` et `id_h` ont le même transport — la déformation entre eux existe dans toute 2-catégorie qui identifie les chemins de même sémantique.
 - **(C2)** : `Hol(η) = T_{comp(p,q)} ∘ T_{id}† = T_p ∘ T_q = Δ`. ∎
 
 ## Attention : platitude universelle ≠ groupoïde
@@ -96,3 +96,32 @@ Car la self-holonomie `Δ` (qui existe dans tout groupoïde) est un test sépara
 | **Groupoïde** | Une sémantique | (C1) + (C2) |
 | **Quotient trivial** | Famille de sémantiques | Probes séparantes |
 | **Quotient non-trivial** | Famille de sémantiques | Probes non-séparantes |
+
+---
+
+## Correspondance avec HoTT
+
+| Holonomie primitive | HoTT |
+|---|---|
+| Base `P` | Type `A : U` |
+| `Path(h, k)` | Type d'identité `h =_A k` |
+| `Deformation(p, q)` | Identité entre chemins `p =_{h=k} q` |
+| Fibre `FiberPt(h)` | Type dépendant `B(h)` |
+| Transport `T_p` (relation) | `transport^B(p) : B(h) → B(k)` (fonction) |
+| Holonomie `Hol(α)` | `transport^B(p) ∘ transport^B(q)⁻¹` |
+
+### C1 et C2 sont automatiques en HoTT
+
+**C1** : l'inversion `p⁻¹` et les unités `p · p⁻¹ = refl` sont des théorèmes (par induction sur `refl`). Pas besoin de les postuler.
+
+**C2** : `transport^B` respecte les 2-chemins, donc `η : p · p⁻¹ = refl` implique `transport^B(p · p⁻¹) = transport^B(refl) = id`. L'holonomie est automatiquement plate.
+
+### Conséquence : notre cadre est strictement plus général que HoTT
+
+HoTT **présuppose** la fonctionnalité du transport. Nos conditions (C1)+(C2) sont les hypothèses exactes que HoTT a encodées dans sa fondation (induction sur `refl` + fonctorialité du transport).
+
+Notre cadre part de **relations** (plus général que fonctions). Quand (C1)+(C2) échouent, on accède à des situations — holonomie non-plate, base irréversible — que HoTT ne peut pas exprimer.
+
+> **HoTT = cas particulier de notre cadre où (C1) et (C2) sont automatiques.**
+
+Note : HoTT produit des **∞-groupoïdes** (toutes les dimensions). Notre cadre capture le niveau 1-tronqué (2-cellules, pas de 3-cellules).
