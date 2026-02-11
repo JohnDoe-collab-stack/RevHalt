@@ -7,10 +7,17 @@ Proven directions:
   **(C1) + (C2) ⟹ groupoid structure on fibers** (`fwd`)
   **groupoid + inverse paths ⟹ (C2)** (`bwd_C2`)
 
-The full ⟺ requires either:
-  (a) DeformationComplete (to derive C1 from groupoid), or
-  (b) Packaging C1+C2 into a single sematic condition:
-      ∀ p, ∃ q η ε, Hol(η) = Δ ∧ Hol(ε) = Δ
+The full ⟺ requires DeformationComplete (syntaxe → sémantique bridge).
+
+## Design note — 1-categorical semantics
+
+`Sem` assigns relations to **paths** (1-cells), not to deformations (2-cells).
+Therefore `Hol p q := Tr(p) ∘ Tr(q)†` depends only on (p, q), not on which
+specific deformation connects them. This is correct for the theorem as stated:
+holonomy is derived from transport, and the deformation serves as **evidence**
+that two paths are related, not as additional geometric data. To distinguish
+different deformations between the same paths, one would need a `sem₂` field
+(2-categorical semantics), which changes the theorem's character entirely.
 
 Strictly constructive (no `noncomputable`, no `classical`).
 Self-contained — no imports beyond Lean core.
@@ -59,9 +66,13 @@ def Tr {P : Type u} [HG P] {S V : Type w}
     {h k : P} (p : HG.Path h k) : Rel (FibPt obs tgt h) (FibPt obs tgt k) :=
   fun x y ↦ s.sem p x.1 y.1
 
+/-- Holonomy of a pair of paths `p, q : h → k`.
+    Measures the failure of `Tr(p)` and `Tr(q)` to agree: `Hol(p,q) = Tr(p) ∘ Tr(q)†`.
+    In this 1-categorical semantics, `Hol` is **derived** from transport:
+    it depends on `p` and `q` as paths, not on any specific deformation between them. -/
 def Hol {P : Type u} [HG P] {S V : Type w}
     (s : Sem P S) (obs : S → V) (tgt : P → V)
-    {h k : P} {p q : HG.Path h k} (_α : HG.Def p q) :
+    {h k : P} (p q : HG.Path h k) :
     Rel (FibPt obs tgt h) (FibPt obs tgt h) :=
   relComp (Tr s obs tgt p) (relConv (Tr s obs tgt q))
 
@@ -148,14 +159,20 @@ structure HomotopyRev (P : Type u) [HG P] : Prop where
       (_ : HG.Def (HG.comp p q) (HG.idP h))
       (_ : HG.Def (HG.comp q p) (HG.idP k)), True
 
+/-- Flat holonomy on unit 2-cells.
+    The deformation witness `η`/`ε` appears here as **evidence** that the
+    composite `comp(p,q)` is deformation-connected to `idP`. Since `Hol`
+    is derived from transport (1-categorical), all η between the same paths
+    yield the same holonomy — the quantification is over "whether a deformation
+    exists", not over distinct holonomies. -/
 structure FlatUnits {P : Type u} [HG P] {S V : Type w}
     (s : Sem P S) (obs : S → V) (tgt : P → V) : Prop where
   flat_η : ∀ {h k : P} (p : HG.Path h k) (q : HG.Path k h)
-    (η : HG.Def (HG.comp p q) (HG.idP h)),
-    RelEq (Hol s obs tgt η) relId
+    (_ : HG.Def (HG.comp p q) (HG.idP h)),
+    RelEq (Hol s obs tgt (HG.comp p q) (HG.idP h)) relId
   flat_ε : ∀ {h k : P} (p : HG.Path h k) (q : HG.Path k h)
-    (ε : HG.Def (HG.comp q p) (HG.idP k)),
-    RelEq (Hol s obs tgt ε) relId
+    (_ : HG.Def (HG.comp q p) (HG.idP k)),
+    RelEq (Hol s obs tgt (HG.comp q p) (HG.idP k)) relId
 
 structure FibGrpd {P : Type u} [HG P] {S V : Type w}
     (s : Sem P S) (obs : S → V) (tgt : P → V) : Prop where
@@ -197,14 +214,14 @@ theorem tr_id {P : Type u} [HG P] {S V : Type w}
     subst heq
     exact (s.sem_id h x.1 x.1).mpr rfl
 
-/-- Hol(η) ↔ T_p ∘ T_q for η : comp(p,q) ⇒ id_h. -/
+/-- `Hol(comp(p,q), idP(h)) ↔ Tr(p) ∘ Tr(q)` — expansion of derived holonomy. -/
 theorem hol_eta {P : Type u} [HG P] {S V : Type w}
     (s : Sem P S) (obs : S → V) (tgt : P → V)
     (fp : FibPres s obs tgt)
     {h k : P} (p : HG.Path h k) (q : HG.Path k h)
-    (η : HG.Def (HG.comp p q) (HG.idP h))
     (x x' : FibPt obs tgt h) :
-    Hol s obs tgt η x x' ↔ relComp (Tr s obs tgt p) (Tr s obs tgt q) x x' := by
+    Hol s obs tgt (HG.comp p q) (HG.idP h) x x' ↔
+    relComp (Tr s obs tgt p) (Tr s obs tgt q) x x' := by
   constructor
   · intro ⟨w, hTpq_xw, hTid_x'w⟩
     have : x' = w := (tr_id s obs tgt h x' w).mp hTid_x'w
@@ -215,14 +232,14 @@ theorem hol_eta {P : Type u} [HG P] {S V : Type w}
     exact ⟨x', (tr_comp s obs tgt fp p q x x').mpr ⟨m, hpm, hqm⟩,
            (tr_id s obs tgt h x' x').mpr rfl⟩
 
-/-- Hol(ε) ↔ T_q ∘ T_p for ε : comp(q,p) ⇒ id_k. -/
+/-- `Hol(comp(q,p), idP(k)) ↔ Tr(q) ∘ Tr(p)` — symmetric case. -/
 theorem hol_eps {P : Type u} [HG P] {S V : Type w}
     (s : Sem P S) (obs : S → V) (tgt : P → V)
     (fp : FibPres s obs tgt)
     {h k : P} (p : HG.Path h k) (q : HG.Path k h)
-    (ε : HG.Def (HG.comp q p) (HG.idP k))
     (y y' : FibPt obs tgt k) :
-    Hol s obs tgt ε y y' ↔ relComp (Tr s obs tgt q) (Tr s obs tgt p) y y' := by
+    Hol s obs tgt (HG.comp q p) (HG.idP k) y y' ↔
+    relComp (Tr s obs tgt q) (Tr s obs tgt p) y y' := by
   constructor
   · intro ⟨w, hTqp_yw, hTid_y'w⟩
     have : y' = w := (tr_id s obs tgt k y' w).mp hTid_y'w
@@ -248,13 +265,13 @@ theorem fwd {P : Type u} [HG P] {S V : Type w}
       (η : HG.Def (HG.comp p q) (HG.idP h)),
       RelEq (relComp (Tr s obs tgt p) (Tr s obs tgt q)) relId := by
     intro h k p q η a a'
-    exact Iff.trans (hol_eta s obs tgt fp p q η a a').symm (hC2.flat_η p q η a a')
+    exact Iff.trans (hol_eta s obs tgt fp p q a a').symm (hC2.flat_η p q η a a')
   -- Helper: from C2 flat_ε, derive T_q ∘ T_p = relId
   have mk_qp : ∀ {h k : P} (p : HG.Path h k) (q : HG.Path k h)
       (ε : HG.Def (HG.comp q p) (HG.idP k)),
       RelEq (relComp (Tr s obs tgt q) (Tr s obs tgt p)) relId := by
     intro h k p q ε a a'
-    exact Iff.trans (hol_eps s obs tgt fp p q ε a a').symm (hC2.flat_ε p q ε a a')
+    exact Iff.trans (hol_eps s obs tgt fp p q a a').symm (hC2.flat_ε p q ε a a')
   constructor
   · -- total
     intro h k p x
@@ -281,19 +298,21 @@ theorem fwd {P : Type u} [HG P] {S V : Type w}
     ## BACKWARD DIRECTION (C2 part): Groupoid ⟹ flat on specific units
     ================================================================ -/
 
+/-- Given a groupoid and the inverse path `q` with `Tr(q) = Tr(p)†`,
+    the holonomy `Hol(comp(p,q), idP(h))` is the diagonal.
+    Note: the deformation `η` is not needed here — it would only serve as
+    evidence that `comp(p,q)` and `idP(h)` are related in `HG`. -/
 theorem bwd_C2 {P : Type u} [HG P] {S V : Type w}
     (s : Sem P S) (obs : S → V) (tgt : P → V)
     (fp : FibPres s obs tgt)
     (g : FibGrpd s obs tgt)
     {h k : P} (p : HG.Path h k) (q : HG.Path k h)
-    (hTq : RelEq (Tr s obs tgt q) (relConv (Tr s obs tgt p)))
-    (η : HG.Def (HG.comp p q) (HG.idP h)) :
-    RelEq (Hol s obs tgt η) relId := by
+    (hTq : RelEq (Tr s obs tgt q) (relConv (Tr s obs tgt p))) :
+    RelEq (Hol s obs tgt (HG.comp p q) (HG.idP h)) relId := by
   intro x x'
   unfold Hol relComp relConv relId
   constructor
   · intro ⟨w, hTpq_xw, hTid_x'w⟩
-    -- hTid_x'w : Tr s obs tgt (HG.idP h) x' w (the converse flips to this)
     have heq_x'w : x' = w := (tr_id s obs tgt h x' w).mp hTid_x'w
     subst heq_x'w
     obtain ⟨m_val, hpm, hqm⟩ := (s.sem_comp p q x.1 x'.1).mp hTpq_xw
