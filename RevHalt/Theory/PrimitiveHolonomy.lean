@@ -1373,8 +1373,536 @@ theorem probeIndistinguishable_iff_probeIndistinguishableOn_of_coeffCovers
   · exact probeIndistinguishable_of_probeIndistinguishableOn_of_coeffCovers
       (P := P) C fam C0 obs target_obs h hCover
 
+/-- Canonical map from the full probe quotient to the restricted one. -/
+def fiberQuotToOn {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (hCover : CoeffCovers (P := P) C fam C0 obs target_obs) :
+    FiberQuot (P := P) C fam obs target_obs h →
+      FiberQuotOn (P := P) C fam C0 obs target_obs h :=
+  Quot.map id (fun x y hxy =>
+    (probeIndistinguishable_iff_probeIndistinguishableOn_of_coeffCovers
+      (P := P) C fam C0 obs target_obs h hCover x y).1 hxy)
+
+/-- Canonical map from the restricted probe quotient to the full one. -/
+def fiberQuotFromOn {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (hCover : CoeffCovers (P := P) C fam C0 obs target_obs) :
+    FiberQuotOn (P := P) C fam C0 obs target_obs h →
+      FiberQuot (P := P) C fam obs target_obs h :=
+  Quot.map id (fun x y hxy =>
+    (probeIndistinguishable_iff_probeIndistinguishableOn_of_coeffCovers
+      (P := P) C fam C0 obs target_obs h hCover x y).2 hxy)
+
+theorem fiberQuotFromOn_leftInverse_fiberQuotToOn
+    {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (hCover : CoeffCovers (P := P) C fam C0 obs target_obs) :
+    Function.LeftInverse
+      (fiberQuotFromOn (P := P) C fam C0 obs target_obs h hCover)
+      (fiberQuotToOn (P := P) C fam C0 obs target_obs h hCover) := by
+  intro q
+  refine Quot.inductionOn q ?_
+  intro x
+  rfl
+
+theorem fiberQuotToOn_rightInverse_fiberQuotFromOn
+    {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (hCover : CoeffCovers (P := P) C fam C0 obs target_obs) :
+    Function.RightInverse
+      (fiberQuotFromOn (P := P) C fam C0 obs target_obs h hCover)
+      (fiberQuotToOn (P := P) C fam C0 obs target_obs h hCover) := by
+  intro q
+  refine Quot.inductionOn q ?_
+  intro x
+  rfl
+
+/--
+Under coefficient cover, the full quotient and the restricted quotient are equivalent.
+-/
+def fiberQuotEquivFiberQuotOn {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (hCover : CoeffCovers (P := P) C fam C0 obs target_obs) :
+    FiberQuot (P := P) C fam obs target_obs h ≃
+      FiberQuotOn (P := P) C fam C0 obs target_obs h where
+  toFun := fiberQuotToOn (P := P) C fam C0 obs target_obs h hCover
+  invFun := fiberQuotFromOn (P := P) C fam C0 obs target_obs h hCover
+  left_inv := fiberQuotFromOn_leftInverse_fiberQuotToOn
+    (P := P) C fam C0 obs target_obs h hCover
+  right_inv := fiberQuotToOn_rightInverse_fiberQuotFromOn
+    (P := P) C fam C0 obs target_obs h hCover
+
+/--
+Structural quotient-equivalence from:
+1) coefficient cofinality,
+2) holonomy naturality,
+3) push conservativity on holonomy.
+-/
+def fiberQuotEquivFiberQuotOn_of_coeffCofinal_of_holonomyNatural_of_pushConservativeOnHolonomy
+    {P : Type u} [HistoryGraph P] {S V : Type w}
+    (C : CoeffCat) (fam : SemFamily C P S) (C0 : Set C.Obj)
+    (obs : S → V) (target_obs : P → V) (h : P)
+    (push : FiberRelPush (P := P) (S := S) (V := V) C obs target_obs)
+    (hCof : CoeffCofinal C C0)
+    (hNat : HolonomyNatural (P := P) C fam obs target_obs push)
+    (hCons : PushConservativeOnHolonomy (P := P) C fam obs target_obs push) :
+    FiberQuot (P := P) C fam obs target_obs h ≃
+      FiberQuotOn (P := P) C fam C0 obs target_obs h := by
+  refine fiberQuotEquivFiberQuotOn (P := P) C fam C0 obs target_obs h ?_
+  exact
+    coeffCovers_of_coeffCofinal_of_holonomyNatural_of_pushConservativeOnHolonomy
+      (P := P) C fam C0 obs target_obs push hCof hNat hCons
+
 end PrimitiveHolonomy
 
 #print axioms PrimitiveHolonomy.factors_eq_of_codes
 #print axioms PrimitiveHolonomy.witness_no_factor
 #print axioms PrimitiveHolonomy.NonReducibleHolonomy
+
+namespace PrimitiveHolonomy
+
+section ConcreteMathInstance
+
+/-!
+Concrete non-physical instance for the coefficient/probe layer:
+- one-prefix history graph;
+- boolean micro-states with constant observable;
+- two coefficient objects with unique morphisms;
+- identity push on probe relations.
+
+This section instantiates and validates the full structural chain:
+`CoeffCofinal + HolonomyNatural + PushConservativeOnHolonomy
+  => CoeffCovers => probe reduction => quotient equivalence`.
+-/
+
+inductive MathPrefix where
+  | base
+  deriving DecidableEq
+
+instance : HistoryGraph MathPrefix where
+  Path _ _ := Unit
+  Deformation {_ _} _ _ := True
+  idPath _ := ()
+  compPath _ _ := ()
+
+def mathObs : Bool → Unit := fun _ => ()
+
+def mathTargetObs : MathPrefix → Unit := fun _ => ()
+
+def mathSemantics : Semantics MathPrefix Bool where
+  sem := by
+    intro _h _k _p
+    exact relId
+  sem_id := by
+    intro h x y
+    rfl
+  sem_comp := by
+    intro h k l p q x y
+    simp [relComp, relId]
+
+inductive MathCoeffObj where
+  | c0
+  | c1
+  deriving DecidableEq
+
+def MathCoeffCat : CoeffCat where
+  Obj := MathCoeffObj
+  Hom _ _ := Unit
+  id _ := ()
+  comp _ _ := ()
+
+def mathSemFamily : SemFamily MathCoeffCat MathPrefix Bool where
+  sem _ := mathSemantics
+
+def mathPush :
+    FiberRelPush (P := MathPrefix) (S := Bool) (V := Unit)
+      MathCoeffCat mathObs mathTargetObs where
+  push := by
+    intro _c _d _f _h R
+    exact R
+  push_id := by
+    intro c h R x y
+    rfl
+  push_comp := by
+    intro a b d f g h R x y
+    rfl
+
+/-- Chosen covering subfamily: one coefficient object only. -/
+def mathC0 : Set MathCoeffObj := {MathCoeffObj.c0}
+
+/-- The chosen subfamily is proper (`c1` is excluded). -/
+theorem mathC0_proper : MathCoeffObj.c1 ∉ mathC0 := by
+  simp [mathC0]
+
+theorem mathCoeffCofinal : CoeffCofinal MathCoeffCat mathC0 := by
+  intro c
+  refine ⟨MathCoeffObj.c0, by simp [mathC0], ?_⟩
+  exact ⟨()⟩
+
+theorem mathHolonomyNatural :
+    HolonomyNatural (P := MathPrefix)
+      MathCoeffCat mathSemFamily mathObs mathTargetObs mathPush := by
+  intro c d f cell
+  rcases cell with ⟨h, k, p, q, ⟨α⟩⟩
+  intro x y
+  rfl
+
+theorem mathPushConservative :
+    PushConservativeOnHolonomy (P := MathPrefix)
+      MathCoeffCat mathSemFamily mathObs mathTargetObs mathPush := by
+  intro c d f cell
+  rcases cell with ⟨h, k, p, q, ⟨α⟩⟩
+  intro x y
+  rfl
+
+theorem mathCoeffCovers :
+    CoeffCovers (P := MathPrefix)
+      MathCoeffCat mathSemFamily mathC0 mathObs mathTargetObs := by
+  exact
+    coeffCovers_of_coeffCofinal_of_holonomyNatural_of_pushConservativeOnHolonomy
+      (P := MathPrefix)
+      MathCoeffCat mathSemFamily mathC0 mathObs mathTargetObs mathPush
+      mathCoeffCofinal mathHolonomyNatural mathPushConservative
+
+theorem mathProbeReduction
+    (x y : FiberPt (P := MathPrefix) mathObs mathTargetObs MathPrefix.base) :
+    ProbeIndistinguishable
+      (P := MathPrefix) MathCoeffCat mathSemFamily mathObs mathTargetObs MathPrefix.base x y
+      ↔
+    ProbeIndistinguishableOn
+      (P := MathPrefix) MathCoeffCat mathSemFamily mathC0
+      mathObs mathTargetObs MathPrefix.base x y := by
+  exact
+    probeIndistinguishable_iff_probeIndistinguishableOn_of_coeffCovers
+      (P := MathPrefix)
+      MathCoeffCat mathSemFamily mathC0 mathObs mathTargetObs MathPrefix.base
+      mathCoeffCovers x y
+
+/-- Structural quotient equivalence in the concrete mathematical instance. -/
+def mathFiberQuotEquiv :
+    FiberQuot
+      (P := MathPrefix) MathCoeffCat mathSemFamily mathObs mathTargetObs MathPrefix.base
+      ≃
+    FiberQuotOn
+      (P := MathPrefix) MathCoeffCat mathSemFamily mathC0
+      mathObs mathTargetObs MathPrefix.base := by
+  exact
+    fiberQuotEquivFiberQuotOn_of_coeffCofinal_of_holonomyNatural_of_pushConservativeOnHolonomy
+      (P := MathPrefix)
+      MathCoeffCat mathSemFamily mathC0
+      mathObs mathTargetObs MathPrefix.base
+      mathPush mathCoeffCofinal mathHolonomyNatural mathPushConservative
+
+end ConcreteMathInstance
+
+section QuotientOperational
+
+variable {P : Type u} [HistoryGraph P]
+variable {S V : Type w}
+variable (C : CoeffCat) (fam : SemFamily C P S)
+variable (obs : S → V) (target_obs : P → V)
+
+/-- Holonomy tests are compatible with the full probe setoid in both arguments. -/
+theorem holonomyRel_respects_probeSetoid
+    {h k : P} (c : C.Obj) {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    {x x' y y' : FiberPt (P := P) obs target_obs h}
+    (hx : ProbeIndistinguishable (P := P) C fam obs target_obs h x x')
+    (hy : ProbeIndistinguishable (P := P) C fam obs target_obs h y y') :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y ↔
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α x' y' := by
+  constructor
+  · intro hxy
+    have hx' : HolonomyRel (P := P) (fam.sem c) obs target_obs α x' y :=
+      (hx.1 c k p q α y).mp hxy
+    exact (hy.2 c k p q α x').mp hx'
+  · intro hx'y'
+    have hx'y : HolonomyRel (P := P) (fam.sem c) obs target_obs α x' y :=
+      (hy.2 c k p q α x').mpr hx'y'
+    exact (hx.1 c k p q α y).mpr hx'y
+
+/-- Holonomy tests are compatible with the restricted probe setoid in both arguments. -/
+theorem holonomyRel_respects_probeSetoidOn
+    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (hc : c ∈ C0)
+    {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    {x x' y y' : FiberPt (P := P) obs target_obs h}
+    (hx : ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h x x')
+    (hy : ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h y y') :
+    HolonomyRel (P := P) (fam.sem c) obs target_obs α x y ↔
+      HolonomyRel (P := P) (fam.sem c) obs target_obs α x' y' := by
+  constructor
+  · intro hxy
+    have hx' : HolonomyRel (P := P) (fam.sem c) obs target_obs α x' y :=
+      (hx.1 c hc k p q α y).mp hxy
+    exact (hy.2 c hc k p q α x').mp hx'
+  · intro hx'y'
+    have hx'y : HolonomyRel (P := P) (fam.sem c) obs target_obs α x' y :=
+      (hy.2 c hc k p q α x').mpr hx'y'
+    exact (hx.1 c hc k p q α y).mpr hx'y
+
+/-- Holonomy relation descended to the full quotient. -/
+def HolonomyRelQuot
+    {h k : P} (c : C.Obj) {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) :
+    Relation
+      (FiberQuot (P := P) C fam obs target_obs h)
+      (FiberQuot (P := P) C fam obs target_obs h) :=
+  Quot.lift
+    (fun x =>
+      Quot.lift
+        (fun y => HolonomyRel (P := P) (fam.sem c) obs target_obs α x y)
+        (by
+          intro y y' hy
+          have hxrefl : ProbeIndistinguishable (P := P) C fam obs target_obs h x x := by
+            constructor <;> intro c' k' p' q' α' z <;> rfl
+          exact propext
+            (holonomyRel_respects_probeSetoid
+              (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
+              c α hxrefl hy))
+    )
+    (by
+      intro x x' hx
+      apply funext
+      intro qy
+      refine Quot.inductionOn qy ?_
+      intro y
+      have hyrefl : ProbeIndistinguishable (P := P) C fam obs target_obs h y y := by
+        constructor <;> intro c' k' p' q' α' z <;> rfl
+      exact propext
+        (holonomyRel_respects_probeSetoid
+          (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
+          c α hx hyrefl)
+    )
+
+/-- Holonomy relation descended to the restricted quotient (for coefficients in `C0`). -/
+def HolonomyRelQuotOn
+    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (hc : c ∈ C0)
+    {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q) :
+    Relation
+      (FiberQuotOn (P := P) C fam C0 obs target_obs h)
+      (FiberQuotOn (P := P) C fam C0 obs target_obs h) :=
+  Quot.lift
+    (fun x =>
+      Quot.lift
+        (fun y => HolonomyRel (P := P) (fam.sem c) obs target_obs α x y)
+        (by
+          intro y y' hy
+          have hxrefl : ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h x x := by
+            constructor <;> intro c' hc' k' p' q' α' z <;> rfl
+          exact propext
+            (holonomyRel_respects_probeSetoidOn
+              (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
+              c hc α hxrefl hy))
+    )
+    (by
+      intro x x' hx
+      apply funext
+      intro qy
+      refine Quot.inductionOn qy ?_
+      intro y
+      have hyrefl : ProbeIndistinguishableOn (P := P) C fam C0 obs target_obs h y y := by
+        constructor <;> intro c' hc' k' p' q' α' z <;> rfl
+      exact propext
+        (holonomyRel_respects_probeSetoidOn
+          (P := P) (C := C) (fam := fam) (obs := obs) (target_obs := target_obs)
+          c hc α hx hyrefl)
+    )
+
+/-- Evaluation rule for `HolonomyRelQuot` on representatives. -/
+theorem holonomyRelQuot_mk
+    {h k : P} (c : C.Obj) {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRelQuot (P := P) (C := C) fam obs target_obs c α
+      (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) x)
+      (Quot.mk (ProbeSetoid (P := P) C fam obs target_obs h) y)
+      ↔ HolonomyRel (P := P) (fam.sem c) obs target_obs α x y := by
+  simp [HolonomyRelQuot]
+
+/-- Evaluation rule for `HolonomyRelQuotOn` on representatives. -/
+theorem holonomyRelQuotOn_mk
+    {C0 : Set C.Obj} {h k : P} (c : C.Obj) (hc : c ∈ C0)
+    {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (x y : FiberPt (P := P) obs target_obs h) :
+    HolonomyRelQuotOn (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α
+      (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) x)
+      (Quot.mk (ProbeSetoidOn (P := P) C fam C0 obs target_obs h) y)
+      ↔ HolonomyRel (P := P) (fam.sem c) obs target_obs α x y := by
+  simp [HolonomyRelQuotOn]
+
+/-- The full→restricted quotient map preserves descended holonomy tests (for `c ∈ C0`). -/
+theorem holonomyRelQuotOn_toOn_iff
+    {C0 : Set C.Obj} (hCover : CoeffCovers (P := P) C fam C0 obs target_obs)
+    {h k : P} (c : C.Obj) (hc : c ∈ C0)
+    {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (qx qy : FiberQuot (P := P) C fam obs target_obs h) :
+    HolonomyRelQuotOn (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α
+      (fiberQuotToOn (P := P) C fam C0 obs target_obs h hCover qx)
+      (fiberQuotToOn (P := P) C fam C0 obs target_obs h hCover qy) ↔
+    HolonomyRelQuot (P := P) (C := C) fam obs target_obs c α qx qy := by
+  refine Quot.inductionOn qx ?_
+  intro x
+  refine Quot.inductionOn qy ?_
+  intro y
+  rfl
+
+/-- The restricted→full quotient map preserves descended holonomy tests (for `c ∈ C0`). -/
+theorem holonomyRelQuot_fromOn_iff
+    {C0 : Set C.Obj} (hCover : CoeffCovers (P := P) C fam C0 obs target_obs)
+    {h k : P} (c : C.Obj) (hc : c ∈ C0)
+    {p q : HistoryGraph.Path h k} (α : HistoryGraph.Deformation p q)
+    (qx qy : FiberQuotOn (P := P) C fam C0 obs target_obs h) :
+    HolonomyRelQuot (P := P) (C := C) fam obs target_obs c α
+      (fiberQuotFromOn (P := P) C fam C0 obs target_obs h hCover qx)
+      (fiberQuotFromOn (P := P) C fam C0 obs target_obs h hCover qy) ↔
+    HolonomyRelQuotOn (P := P) (C := C) (C0 := C0) fam obs target_obs c hc α qx qy := by
+  refine Quot.inductionOn qx ?_
+  intro x
+  refine Quot.inductionOn qy ?_
+  intro y
+  rfl
+
+end QuotientOperational
+
+section NontrivialCombinatorialInstance
+
+/-!
+Concrete nontrivial mathematical instance:
+- one-prefix history graph with five nontrivial path codes;
+- relational semantics on `Bool`;
+- explicit twisted holonomy witness;
+- explicit lag witness.
+-/
+
+inductive ComboPrefix where
+  | base
+  deriving DecidableEq
+
+inductive ComboPath where
+  | id
+  | all
+  | step
+  | fromFalse
+  | toFalse
+  deriving DecidableEq
+
+def comboComp : ComboPath → ComboPath → ComboPath
+  | ComboPath.id, r => r
+  | r, ComboPath.id => r
+  | ComboPath.all, ComboPath.all => ComboPath.all
+  | ComboPath.all, ComboPath.step => ComboPath.toFalse
+  | ComboPath.all, ComboPath.fromFalse => ComboPath.all
+  | ComboPath.all, ComboPath.toFalse => ComboPath.toFalse
+  | ComboPath.step, ComboPath.all => ComboPath.fromFalse
+  | ComboPath.step, ComboPath.step => ComboPath.step
+  | ComboPath.step, ComboPath.fromFalse => ComboPath.fromFalse
+  | ComboPath.step, ComboPath.toFalse => ComboPath.step
+  | ComboPath.fromFalse, ComboPath.all => ComboPath.fromFalse
+  | ComboPath.fromFalse, ComboPath.step => ComboPath.step
+  | ComboPath.fromFalse, ComboPath.fromFalse => ComboPath.fromFalse
+  | ComboPath.fromFalse, ComboPath.toFalse => ComboPath.step
+  | ComboPath.toFalse, ComboPath.all => ComboPath.all
+  | ComboPath.toFalse, ComboPath.step => ComboPath.toFalse
+  | ComboPath.toFalse, ComboPath.fromFalse => ComboPath.all
+  | ComboPath.toFalse, ComboPath.toFalse => ComboPath.toFalse
+
+instance : HistoryGraph ComboPrefix where
+  Path _ _ := ComboPath
+  Deformation {_ _} _ _ := True
+  idPath _ := ComboPath.id
+  compPath := comboComp
+
+def comboObs : Bool → Unit := fun _ => ()
+
+def comboTargetObs : ComboPrefix → Unit := fun _ => ()
+
+def comboRel : ComboPath → Relation Bool Bool
+  | ComboPath.id => relId
+  | ComboPath.all => fun _ _ => True
+  | ComboPath.step => fun a b => a = false ∧ b = false
+  | ComboPath.fromFalse => fun a _ => a = false
+  | ComboPath.toFalse => fun _ b => b = false
+
+def comboSemantics : Semantics ComboPrefix Bool where
+  sem := by
+    intro _h _k p
+    exact comboRel p
+  sem_id := by
+    intro h x y
+    rfl
+  sem_comp := by
+    intro h k l p q x y
+    change comboRel (comboComp p q) x y ↔ relComp (comboRel p) (comboRel q) x y
+    cases p <;> cases q <;> simp [comboComp, comboRel, relComp, relId]
+
+def comboX0 : FiberPt (P := ComboPrefix) comboObs comboTargetObs ComboPrefix.base := ⟨false, rfl⟩
+
+def comboX1 : FiberPt (P := ComboPrefix) comboObs comboTargetObs ComboPrefix.base := ⟨true, rfl⟩
+
+theorem comboX0_ne_comboX1 : comboX0 ≠ comboX1 := by
+  intro h
+  exact Bool.false_ne_true (congrArg Subtype.val h)
+
+theorem combo_holonomy_all_id
+    (x y : FiberPt (P := ComboPrefix) comboObs comboTargetObs ComboPrefix.base) :
+    HolonomyRel (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base)
+      (p := ComboPath.all) (q := ComboPath.id) (by trivial) x y := by
+  unfold HolonomyRel relComp relConverse Transport
+  refine ⟨y, ?_, ?_⟩
+  · simp [comboSemantics, comboRel]
+  · rfl
+
+theorem combo_twistedHolonomy :
+    TwistedHolonomy (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base)
+      (p := ComboPath.all) (q := ComboPath.id)
+      (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial) := by
+  refine ⟨comboX0, comboX1, comboX0_ne_comboX1, ?_⟩
+  exact combo_holonomy_all_id comboX0 comboX1
+
+theorem combo_compatible_step_x0 :
+    Compatible (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.step comboX0 := by
+  refine ⟨comboX0, ?_⟩
+  simp [Transport, comboSemantics, comboRel, comboX0]
+
+theorem combo_not_compatible_step_x1 :
+    ¬ Compatible (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base) ComboPath.step comboX1 := by
+  intro hC
+  rcases hC with ⟨y, hy⟩
+  simp [Transport, comboSemantics, comboRel, comboX1] at hy
+
+theorem combo_lagEvent :
+    LagEvent (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (h := ComboPrefix.base) (k := ComboPrefix.base) (k' := ComboPrefix.base)
+      (p := ComboPath.all) (q := ComboPath.id)
+      (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial)
+      ComboPath.step := by
+  refine lag_of_witness (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+    (h := ComboPrefix.base) (k := ComboPrefix.base) (k' := ComboPrefix.base)
+    (p := ComboPath.all) (q := ComboPath.id)
+    (α := (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial))
+    (step := ComboPath.step)
+    comboX0 comboX1 comboX0_ne_comboX1 ?_ ?_
+  · exact combo_holonomy_all_id comboX0 comboX1
+  · exact ⟨combo_compatible_step_x0, combo_not_compatible_step_x1⟩
+
+theorem combo_not_autoRegulatedWrt_singleton_gaugeRefl :
+    ¬ AutoRegulatedWrt (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (fun φ => GaugeRefl (P := ComboPrefix) comboObs comboTargetObs φ)
+      (Set.singleton
+        (⟨ComboPrefix.base, ComboPrefix.base, ComboPath.all, ComboPath.id, ⟨by trivial⟩⟩ :
+          Cell (P := ComboPrefix))) := by
+  exact
+    not_autoRegulatedWrt_singleton_of_twistedHolonomy_of_gaugeRefl
+      (P := ComboPrefix) comboSemantics comboObs comboTargetObs
+      (α := (show HistoryGraph.Deformation (P := ComboPrefix) ComboPath.all ComboPath.id from trivial))
+      combo_twistedHolonomy
+
+end NontrivialCombinatorialInstance
+
+end PrimitiveHolonomy
