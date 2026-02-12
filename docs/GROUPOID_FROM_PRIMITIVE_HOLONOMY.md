@@ -165,3 +165,51 @@ Notre cadre part de **relations** (plus général que fonctions). Quand (C1)+(C2
 > **HoTT = cas particulier de notre cadre où (C1) et (C2) sont automatiques.**
 
 Note : HoTT produit des **∞-groupoïdes** (toutes les dimensions). Notre cadre capture le niveau 1-tronqué (2-cellules, pas de 3-cellules).
+
+L'équivalence précise est :
+J (DeformationComplete) tient ⟺ le monde sémantique et le monde syntaxique coïncident.
+Sans J, il y a deux niveaux qui ne communiquent que dans un sens :
+
+```
+Syntaxe (HistoryGraph)          Sémantique (Rel sur fibres)
+```
+
+───────────────────             ──────────────────────────
+C1: ∃ q, η, ε                  FibGrpd: Tr(p) bijection,
+C2: Hol(η)=Δ, Hol(ε)=Δ        ∃ q avec Tr(q)=Tr(p)†
+         │                               │
+         └──── fwd (prouvé) ────────────→┘
+         ┌── bwd_C2 (prouvé, partiel) ──┘
+         │
+    MAIS: FibGrpd ne fabrique
+    PAS des η, ε dans le HG
+J est exactement le pont manquant : « si
+
+```
+Tr(comp(p,q)) = Tr(id)
+```
+
+sémantiquement, alors
+
+```
+∃ η : Def(comp(p,q), id)
+```
+
+syntaxiquement ».
+
+Donc :
+- Sans J :
+
+```
+C1+C2 ⟹ FibGrpd
+```
+
+(sens unique, prouvé)
+- Avec J :
+
+```
+C1+C2 ⟺ FibGrpd
+```
+
+(le ⟺ complet)
+- J lui-même n'est ni C1, ni C2, ni FibGrpd — c'est la condition de passage entre syntaxe et sémantique
