@@ -105,18 +105,18 @@ instance BoolHG : HistoryGraph Bool where
 
 -- The space S is Bool x Bool (Base x Fiber)
 -- obs returns the Base part.
-def Base : Type := Bool
-def Layer : Type := Bool
-def Space : Type := Base × Layer
+-- We no longer use Base, Layer, Space aliases.
+-- Base := Bool
+-- Space := Bool × Bool
 
-def obs (s : Space) : Base := s.1
-def target_obs (b : Base) : Base := b
+def obs (s : Bool × Bool) : Bool := s.1
+def target_obs (b : Bool) : Bool := b
 
 -- Semantics:
 -- stepFT (false -> true): (false, L) -> (true, L)   (Identity Lift)
 -- stepTF (true -> false): (true, L) -> (false, !L)  (Twisted Lift)
 
-def boolRel : {h k : Base} → BoolPath h k → Space → Space → Prop
+def boolRel : {h k : Bool} → BoolPath h k → (Bool × Bool) → (Bool × Bool) → Prop
 | _, _, BoolPath.id _ => fun s1 s2 => s1 = s2
 | _, _, BoolPath.stepFT => fun s1 s2 =>
     s1.1 = false ∧ s2.1 = true ∧ s2.2 = s1.2 -- Identity on Layer
@@ -125,21 +125,16 @@ def boolRel : {h k : Base} → BoolPath h k → Space → Space → Prop
 | _, _, BoolPath.comp p q => fun x z => ∃ y, boolRel p x y ∧ boolRel q y z
 
 -- Semantics instance
--- We need a HistoryGraph instance for Base first.
-instance BaseHG : HistoryGraph Base where
-  Path := BoolPath
-  Deformation := BoolDef
-  idPath := BoolPath.id
-  compPath := BoolPath.comp
+-- We rely on the single BoolHG instance.
 
-def BoolSem : Semantics Base Space where
+def BoolSem : Semantics Bool (Bool × Bool) where
   sem := boolRel
   sem_id := by
     intro h x y
     cases h <;> { simp [boolRel]; rfl }
   sem_comp := by
     intro h k l p q x z
-    simp [boolRel]
+    dsimp [boolRel, relComp, RelEq]
     rfl
 
 -- Define the Loop: false -> true -> false
@@ -151,7 +146,7 @@ The primitive transport of the loop on the double cover is exactly the permutati
 Start at (false, false), go to (true, false), come back to (false, true).
 -/
 theorem DoubleCover_Recovery_Swap_False :
-    Transport (P := Base) BoolSem obs target_obs Loop
+    Transport (P := Bool) BoolSem obs target_obs Loop
       ⟨(false, false), rfl⟩ ⟨(false, true), rfl⟩ :=
   Exists.intro (true, false) (
     And.intro
@@ -160,7 +155,7 @@ theorem DoubleCover_Recovery_Swap_False :
   )
 
 theorem DoubleCover_Recovery_Swap_True :
-    Transport (P := Base) BoolSem obs target_obs Loop
+    Transport (P := Bool) BoolSem obs target_obs Loop
       ⟨(false, true), rfl⟩ ⟨(false, false), rfl⟩ :=
   Exists.intro (true, true) (
     And.intro
@@ -169,8 +164,8 @@ theorem DoubleCover_Recovery_Swap_True :
   )
 
 -- Lemma: The semantics preserves the fiber structure (explicitly for BoolSem)
-theorem boolSem_preserves_fiber {h k : Base} (p : BoolPath h k) :
-    ∀ (s : Space), obs s = h → ∀ (y : Space), BoolSem.sem p s y → obs y = k := by
+theorem boolSem_preserves_fiber {h k : Bool} (p : BoolPath h k) :
+    ∀ (s : Bool × Bool), obs s = h → ∀ (y : Bool × Bool), BoolSem.sem p s y → obs y = k := by
   induction p with
   | id =>
     intro s hs y hrel
@@ -194,7 +189,7 @@ theorem boolSem_preserves_fiber {h k : Base} (p : BoolPath h k) :
 
 -- Add functional proof to complete the picture
 -- We define FunctionalSemOnFiber for this specific semantics
-theorem functional_BoolSem : FunctionalSemOnFiber (P := Base) BoolSem obs target_obs := by
+theorem functional_BoolSem : FunctionalSemOnFiber (P := Bool) BoolSem obs target_obs := by
   intro h k p x
   induction p with
   | id =>
@@ -235,6 +230,12 @@ theorem functional_BoolSem : FunctionalSemOnFiber (P := Base) BoolSem obs target
       have hy_eq : y' = y := hy_unique y' hy'p
       rw [hy_eq] at hy'q
       exact hz_unique z' hy'q
+
+/-- No lag on the double cover: direct corollary of Theorem 1 applied to BoolSem. -/
+theorem no_LagEvent_BoolSem {h k k' : Bool} {p q : BoolPath h k}
+    (α : HistoryGraph.Deformation p q) (step : BoolPath h k') :
+    ¬ LagEvent (P := Bool) BoolSem obs target_obs α step :=
+  no_LagEvent_of_Functional BoolSem obs target_obs functional_BoolSem boolSem_preserves_fiber α step
 
 #print axioms no_LagEvent_of_Functional
 #print axioms DoubleCover_Recovery_Swap_False

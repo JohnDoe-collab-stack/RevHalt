@@ -90,7 +90,7 @@ theorem rel_inv_det {X Y : Type w}
   obtain ⟨y₀, hRy0, hSy0⟩ := hxx
   have h01 : y₀ = y₁ := (hSR y₀ y₁).mp ⟨x, hSy0, hr1⟩
   have h02 : y₀ = y₂ := (hSR y₀ y₂).mp ⟨x, hSy0, hr2⟩
-  exact h01.symm.trans h02
+  exact Eq.trans h01.symm h02
 
 /-- ⟹ total. -/
 theorem rel_inv_tot {X Y : Type w}
