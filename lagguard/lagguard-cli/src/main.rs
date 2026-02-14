@@ -1,6 +1,13 @@
 use anyhow::{Context, Result};
-use lagguard_core::{types::ModelJson, model::Model, analyze::detect_lag};
-use lagguard_por::dpor::explore_cells;
+use lagguard_core::{
+    types::ModelJson, 
+    model::Model, 
+    analyze::detect_lag,
+    hb::hb_closure,
+    sigma::build_sigma_paths,
+    report::to_report
+};
+use lagguard_por::dpor::explore_cells_with_hb;
 use std::env;
 use std::fs;
 
@@ -18,39 +25,41 @@ fn main() -> Result<()> {
 
     println!("Loaded model with {} events.", model.events.len());
 
-    // build cells
-    println!("Exploring state space (horizon=200)...");
-    let cells = explore_cells(&model, 200)?;
+    // 1. Build HB Closure
+    println!("Building HB transitive closure...");
+    let hb = hb_closure(model.events.len(), &model.hb);
+
+    // 2. Explore cells
+    println!("Exploring state space (horizon=500)...");
+    let cells = explore_cells_with_hb(&model, &hb, 500)?;
     println!("Found {} cells.", cells.len());
 
-    // sigma paths: MVP = take sigma.step_path if present, else empty
-    let sigma_paths: Vec<Vec<String>> = model.sigma.iter()
-        .map(|s| s.step_path.clone().unwrap_or_default())
-        .collect();
+    // 3. Auto-generate Sigma (writes + sync)
+    // Note: we can also include explicit sigma from model if desired, but request says "Sigma auto"
+    let mut sigma_paths = build_sigma_paths(&model);
+    // Add explicit ones too
+    for s in &model.sigma {
+        if let Some(p) = &s.step_path {
+            if !p.is_empty() { sigma_paths.push(p.clone()); }
+        }
+    }
 
+    println!("Using {} sigma probe kinds.", sigma_paths.len());
+
+    // 4. Detect Lag
     match detect_lag(&model, &cells, &sigma_paths) {
         Ok(()) => { 
-            println!("✅ LagFreeSigma (MVP)"); 
+            println!("✅ LagFreeSigma (on abstract model)"); 
         }
         Err(w) => {
-            println!("❌ LagWitness");
-            println!("cell swap = {:?}, x={}, x'={}, sigma#={}", w.cell.swap, w.x, w.x_prime, w.sigma_index);
-             let witness_json = serde_json::json!({
-                "version": "0.1",
-                "result": "LagWitness",
-                "cell": {
-                    "p": w.cell.p,
-                    "q": w.cell.q,
-                    "swap": w.cell.swap
-                },
-                "states": {
-                    "x": w.x,
-                    "x_prime": w.x_prime
-                },
-                "sigma_index": w.sigma_index,
-                "explain": "Lag detected."
-            });
-            println!("{}", serde_json::to_string_pretty(&witness_json)?);
+            println!("❌ LagWitness detected");
+            println!("Swap: {:?} <-> {:?}", w.cell.swap.0, w.cell.swap.1);
+            
+            let report = to_report(&w);
+            let report_json = serde_json::to_string_pretty(&report)?;
+            
+            fs::write("witness.json", report_json).context("Failed to write witness.json")?;
+            println!("Written witness.json");
             std::process::exit(2);
         }
     }
