@@ -1,0 +1,8 @@
+import RevHalt.Theory.PrimitiveHolonomy_Unitarity
+
+#print axioms PrimitiveHolonomy.Unitarity.toLinear_adjoint_eq_converse
+#print axioms PrimitiveHolonomy.Unitarity.partial_isometry_domain
+#print axioms PrimitiveHolonomy.Unitarity.partial_isometry_image
+#print axioms PrimitiveHolonomy.Unitarity.full_unitary
+#print axioms PrimitiveHolonomy.Unitarity.eigenvalue_is_root_of_unity
+#print axioms PrimitiveHolonomy.Unitarity.bridge_unconditional
