@@ -1,0 +1,26 @@
+{
+    "version": "0.1",
+    "result": "LagWitness",
+    "cell": {
+        "src_prefix": "pfxH",
+        "tgt_prefix": "pfxK",
+        "p": [
+            "a",
+            "b"
+        ],
+        "q": [
+            "b",
+            "a"
+        ],
+        "swap": [
+            "a",
+            "b"
+        ]
+    },
+    "states": {
+        "x": 6,
+        "x_prime": 5
+    },
+    "sigma_index": 0,
+    "explain": "Lag detected."
+}

@@ -1,0 +1,5 @@
+[workspace]
+
+members = ["lagguard-core", "lagguard-por", "lagguard-cli"]
+
+resolver = "2"

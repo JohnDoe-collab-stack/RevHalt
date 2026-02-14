@@ -1,0 +1,21 @@
+{
+    "version": "0.1",
+    "result": "LagFreeSigma",
+    "model_hash": "sha256:examplehash...",
+    "sigma_hash": "sha256:examplehash...",
+    "cells": [
+        {
+            "cell_id": "c0",
+            "src_prefix": "pfxH",
+            "p": [
+                "eA",
+                "eB"
+            ],
+            "q": [
+                "eB",
+                "eA"
+            ],
+            "claim": "forall_pairs"
+        }
+    ]
+}

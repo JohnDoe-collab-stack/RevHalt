@@ -1,0 +1,8 @@
+[package]
+name = "lagguard-por"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lagguard-core = { path = "../lagguard-core" }
+anyhow = "1"
