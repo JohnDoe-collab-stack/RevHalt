@@ -1,12 +1,20 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use lagguard_core::{types::ModelJson, model::Model, analyze::detect_lag};
 use lagguard_por::dpor::explore_cells;
+use std::env;
+use std::fs;
 
 fn main() -> Result<()> {
-    let path = std::env::args().nth(1).expect("usage: lagc <model.json>");
-    let data = std::fs::read_to_string(path)?;
-    let mj: ModelJson = serde_json::from_str(&data)?;
-    let model = Model::from_json(mj)?;
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: lagc <model.json>");
+        std::process::exit(1);
+    }
+    let path = &args[1];
+    
+    let data = fs::read_to_string(path).with_context(|| format!("Failed to read {}", path))?;
+    let mj: ModelJson = serde_json::from_str(&data).context("Failed to parse JSON")?;
+    let model = Model::from_json(mj).context("Failed to build Model")?;
 
     println!("Loaded model with {} events.", model.events.len());
 
@@ -23,12 +31,10 @@ fn main() -> Result<()> {
     match detect_lag(&model, &cells, &sigma_paths) {
         Ok(()) => { 
             println!("✅ LagFreeSigma (MVP)"); 
-            // Emit cert if requested (mock for now)
         }
         Err(w) => {
             println!("❌ LagWitness");
             println!("cell swap = {:?}, x={}, x'={}, sigma#={}", w.cell.swap, w.x, w.x_prime, w.sigma_index);
-            // Serialize full witness to file for inspection
              let witness_json = serde_json::json!({
                 "version": "0.1",
                 "result": "LagWitness",

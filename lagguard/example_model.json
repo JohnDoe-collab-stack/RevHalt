@@ -1,0 +1,104 @@
+{
+    "version": "0.1",
+    "resources": [
+        {
+            "id": "r1",
+            "kind": "field"
+        },
+        {
+            "id": "r2",
+            "kind": "field"
+        }
+    ],
+    "events": [
+        {
+            "id": "e1",
+            "kind": "Write",
+            "resource": "r1",
+            "reads": [],
+            "writes": [
+                "r1"
+            ],
+            "hb_after": [],
+            "meta": null
+        },
+        {
+            "id": "e2",
+            "kind": "Write",
+            "resource": "r2",
+            "reads": [],
+            "writes": [
+                "r2"
+            ],
+            "hb_after": [],
+            "meta": null
+        }
+    ],
+    "hb_edges": [],
+    "sigma": [
+        {
+            "id": "sig1",
+            "kind": "Check",
+            "resource": "r1",
+            "step_path": null
+        }
+    ],
+    "abstract_domain": {
+        "type": "product_finite",
+        "components": [
+            {
+                "resource": "r1",
+                "domain": {
+                    "type": "mod",
+                    "bits": 1
+                }
+            },
+            {
+                "resource": "r2",
+                "domain": {
+                    "type": "mod",
+                    "bits": 1
+                }
+            }
+        ]
+    },
+    "post": [
+        {
+            "event": "e1",
+            "relation": {
+                "encoding": "sparse_pairs",
+                "pairs": [
+                    [
+                        0,
+                        2
+                    ],
+                    [
+                        1,
+                        3
+                    ]
+                ]
+            }
+        },
+        {
+            "event": "e2",
+            "relation": {
+                "encoding": "sparse_pairs",
+                "pairs": [
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        2,
+                        3
+                    ]
+                ]
+            }
+        }
+    ],
+    "observable": {
+        "type": "unit",
+        "resources": null
+    },
+    "targets": null
+}
