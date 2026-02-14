@@ -1,7 +1,9 @@
 import RevHalt.Theory.PrimitiveHolonomy_Unitarity
 
 #print axioms PrimitiveHolonomy.Unitarity.sum_eq_single_constructive
+#print axioms PrimitiveHolonomy.Unitarity.sum_comm_constructive
 #print axioms PrimitiveHolonomy.Unitarity.toLinear_adjoint_eq_converse
 #print axioms PrimitiveHolonomy.Unitarity.partial_isometry_domain
+#print axioms PrimitiveHolonomy.Unitarity.eigen_iterate
+#print axioms PrimitiveHolonomy.Unitarity.period_constrains_eigenvalue
 #print axioms PrimitiveHolonomy.Unitarity.eigenvalue_is_root_of_unity
-#print axioms PrimitiveHolonomy.Unitarity.sum_comm_constructive

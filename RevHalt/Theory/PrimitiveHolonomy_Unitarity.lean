@@ -309,7 +309,10 @@ theorem period_constrains_eigenvalue
   This is a **non-tautological** derivation: algebraic periodicity of the
   transport operator forces eigenvalues to be roots of unity.
 -/
-theorem eigenvalue_is_root_of_unity [IsDomain R] [DecidableEq R]
+class ConstructiveDomain (R : Type) [CommRing R] [DecidableEq R] : Prop where
+  mul_eq_zero_iff : ∀ {a b : R}, a * b = 0 ↔ a = 0 ∨ b = 0
+
+theorem eigenvalue_is_root_of_unity [ConstructiveDomain R]
     (L : (S → R) →ₗ[R] (S → R))
     (ψ : S → R) (μ : R) {n : ℕ}
     (hEig : L ψ = μ • ψ)
@@ -320,9 +323,15 @@ theorem eigenvalue_is_root_of_unity [IsDomain R] [DecidableEq R]
   -- At x₀: μ^n * ψ(x₀) = ψ(x₀)
   have hx : μ ^ n * ψ x₀ = ψ x₀ := congr_fun hψ x₀
   -- (μ^n - 1) * ψ(x₀) = 0
-  have hzero : (μ ^ n - 1) * ψ x₀ = 0 := by rw [sub_mul, one_mul, sub_eq_zero]; exact hx
-  -- In an integral domain, if product is zero and one factor is non-zero, the other must be zero
-  have h_left : μ ^ n - 1 = 0 := (mul_eq_zero.mp hzero).resolve_right hNZ
+  have hzero : (μ ^ n - 1) * ψ x₀ = 0 := by
+    rw [sub_mul, one_mul]
+    exact sub_eq_zero.mpr hx
+  -- Use ConstructiveDomain to avoid Classical logic in IsDomain
+  have h_left : μ ^ n - 1 = 0 := by
+    have hOr : μ ^ n - 1 = 0 ∨ ψ x₀ = 0 := ConstructiveDomain.mul_eq_zero_iff.mp hzero
+    cases hOr with
+    | inl h => exact h
+    | inr h => contradiction
   exact sub_eq_zero.mp h_left
 
 -- ═══════════════════════════════════════════════════════════════════════════════
