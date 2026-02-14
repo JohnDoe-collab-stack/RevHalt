@@ -1,7 +1,7 @@
 use lagguard_core::{model::Model, analyze::Cell, types::EventId, hb::HbClosure, prefix::Prefix};
 use crate::indep::indep;
 use anyhow::Result;
-use std::collections::{HashSet, VecDeque, HashMap};
+use std::collections::{HashSet, VecDeque};
 
 #[derive(Clone)]
 struct Node {
@@ -69,7 +69,7 @@ pub fn explore_cells_with_hb(model: &Model, hb: &HbClosure, horizon: usize) -> R
                     // src = prefix before a,b
                     // But here node.prefix_obj includes a,b.
                     // We can re-construct src bitset by unsetting a and b
-                    let mut src_p = next.prefix_obj.clone();
+                    // let mut src_p = next.prefix_obj.clone(); // Unused in MVP
                     // clearing bits is tricky with simple set(), need unset. 
                     // Re-make from previous step? 
                     // Easier: logic is (node) -> +a -> (next). 

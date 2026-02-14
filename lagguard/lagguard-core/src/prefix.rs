@@ -1,7 +1,7 @@
 use crate::types::*;
 use std::hash::{Hash, Hasher};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Prefix {
     pub done: Vec<u64>, // bitset events
 }

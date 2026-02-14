@@ -1,47 +1,12 @@
 {
-    "version": "0.1",
-    "result": "LagWitness",
-    "cell": {
-        "src_prefix": [
-            "e1",
-            "e2"
-        ],
-        "tgt_prefix": [
-            "e2",
-            "e1"
-        ],
-        "p": [
-            "e1",
-            "e2"
-        ],
-        "q": [
-            "e2",
-            "e1"
-        ],
-        "swap": [
-            "e1",
-            "e2"
-        ]
-    },
-    "states": {
-        "x": 6,
-        "x_prime": 5,
-        "x_obs": {},
-        "x_prime_obs": {}
-    },
-    "holonomy_witness": {
-        "comment": "Holonomy relates x (p-target) to x' (q-target) via loop structure."
-    },
-    "sigma": "sigma",
-    "compat": {
-        "x": true,
-        "x_prime": false,
-        "step_path": [
-            "sigma"
-        ]
-    },
-    "explain": {
-        "summary": "Holonomy relates two states (6, 5) which differ in future compatibility with 'sigma'.",
-        "spans": []
-    }
+  "kind": "LagWitness",
+  "swap": [
+    "e1",
+    "e2"
+  ],
+  "x": 0,
+  "x_prime": 1,
+  "y": 20,
+  "sigma_index": 2,
+  "note": "Holonomy relates x~x' now, but Sigma step differs => LagEventΣ witness"
 }
